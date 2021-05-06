@@ -90,14 +90,17 @@ type MobileNodeOptions struct {
 	ExperimentNATPunching          bool
 	MysteriumAPIAddress            string
 	BrokerAddresses                []string
-	EtherClientRPC                 string
+	EtherClientRPCL1               string
+	EtherClientRPCL2               string
 	FeedbackURL                    string
 	QualityOracleURL               string
 	IPDetectorURL                  string
 	LocationDetectorURL            string
 	TransactorEndpointAddress      string
 	HermesEndpointAddress          string
-	ChainID                        int64
+	Chain1ID                       int64
+	Chain2ID                       int64
+	ActiveChainID                  int64
 	PilvytisAddress                string
 	MystSCAddress                  string
 	RegistrySCAddress              string
@@ -120,13 +123,16 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		ExperimentNATPunching:          true,
 		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
-		EtherClientRPC:                 metadata.Testnet2Definition.Chain1.EtherClientRPC,
+		EtherClientRPCL1:               metadata.Testnet2Definition.Chain1.EtherClientRPC,
+		EtherClientRPCL2:               metadata.Testnet2Definition.Chain2.EtherClientRPC,
 		FeedbackURL:                    "https://feedback.mysterium.network",
 		QualityOracleURL:               "https://testnet2-quality.mysterium.network/api/v2",
 		IPDetectorURL:                  "https://testnet2-location.mysterium.network/api/v1/location",
 		LocationDetectorURL:            "https://testnet2-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:      metadata.Testnet2Definition.TransactorAddress,
-		ChainID:                        metadata.Testnet2Definition.DefaultChainID,
+		ActiveChainID:                  metadata.Testnet2Definition.DefaultChainID,
+		Chain1ID:                       metadata.Testnet2Definition.Chain1.ChainID,
+		Chain2ID:                       metadata.Testnet2Definition.Chain2.ChainID,
 		PilvytisAddress:                metadata.Testnet2Definition.PilvytisAddress,
 		MystSCAddress:                  metadata.Testnet2Definition.Chain1.MystAddress,
 		RegistrySCAddress:              metadata.Testnet2Definition.Chain1.RegistryAddress,
@@ -149,7 +155,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		return nil, err
 	}
 
-	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
+	config.Current.SetDefault(config.FlagChainID.Name, options.ActiveChainID)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMax)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMin)
@@ -162,8 +168,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ExperimentNATPunching: options.ExperimentNATPunching,
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
 		BrokerAddresses:       options.BrokerAddresses,
-		EtherClientRPCL1:      options.EtherClientRPC,
-		ChainID:               options.ChainID,
+		EtherClientRPCL1:      options.EtherClientRPCL1,
+		EtherClientRPCL2:      options.EtherClientRPCL2,
+		ChainID:               options.ActiveChainID,
 		DNSMap: map[string][]string{
 			"testnet-location.mysterium.network":  {"95.216.204.232"},
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
@@ -240,7 +247,14 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				HermesID:           options.HermesSCAddress,
 				ChannelImplAddress: options.ChannelImplementationSCAddress,
 				MystAddress:        options.MystSCAddress,
-				ChainID:            options.ChainID,
+				ChainID:            options.Chain1ID,
+			},
+			Chain2: metadata.ChainDefinition{
+				RegistryAddress:    options.RegistrySCAddress,
+				HermesID:           options.HermesSCAddress,
+				ChannelImplAddress: options.ChannelImplementationSCAddress,
+				MystAddress:        options.MystSCAddress,
+				ChainID:            options.Chain2ID,
 			},
 		},
 		Consumer:        true,
