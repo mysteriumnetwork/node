@@ -56,7 +56,7 @@ var (
 	registryAddress             = "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"
 	channelImplementation       = "0x599d43715DF3070f83355D9D90AE62c159E62A75"
 	addressForTopups            = "0xa29fb77b25181df094908b027821a7492ca4245b"
-	hundredthThou               = float64(1) / float64(100000)
+	tenthThou                   = float64(1) / float64(10000)
 )
 
 var ethClient *ethclient.Client
@@ -229,7 +229,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		hermesTwoEarnings := earningsByHermes[common.HexToAddress(hermes2ID)]
 		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
 		fdiff := getDiffFloat(providerStatus.EarningsTotal, totalEarnings)
-		assert.True(t, fdiff < hundredthThou)
+		assert.True(t, fdiff < tenthThou)
 
 		hic, err := bindings.NewHermesImplementationCaller(common.HexToAddress(hermesID), ethClient)
 		assert.NoError(t, err)
@@ -245,7 +245,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		diff := getDiffFloat(balance, expected)
 		diff = math.Abs(diff)
 
-		assert.True(t, diff >= 0 && diff <= hundredthThou, fmt.Sprintf("got diff %v", diff))
+		assert.True(t, diff >= 0 && diff <= tenthThou, fmt.Sprintf("got diff %v", diff))
 	})
 
 	t.Run("Provider withdraws to l1", func(t *testing.T) {
@@ -417,7 +417,7 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 		// Therefore, for these tests to be stable, the following solution is proposed:
 		// Make sure that the hermes and consumer reported spendings differ by no more than 1/100000 of a myst.
 		absDiffFloat := getDiffFloat(consumerSpending, promised)
-		res := absDiffFloat < hundredthThou
+		res := absDiffFloat < tenthThou
 		if res {
 			testSuccess = true
 		}
@@ -669,7 +669,7 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 		}
 
 		fdiff := getDiffFloat(providerStatus.Earnings, earningsExpected)
-		return fdiff < hundredthThou
+		return fdiff < tenthThou
 	}, time.Second*5, time.Millisecond*250)
 
 	providerStatus, err := tequilapi.Identity(id)
@@ -678,10 +678,10 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 
 	// For reasoning behind these, see the comment in recheckBalancesWithHermes
 	actualEarnings := getDiffFloat(earningsExpected, providerStatus.Earnings)
-	assert.True(t, actualEarnings < hundredthThou)
+	assert.True(t, actualEarnings < tenthThou)
 
 	actualEarnings = getDiffFloat(earningsExpected, providerStatus.EarningsTotal)
-	assert.True(t, actualEarnings < hundredthThou)
+	assert.True(t, actualEarnings < tenthThou)
 
 	assert.True(t, providerStatus.Earnings.Cmp(big.NewInt(500)) == 1, "earnings should be at least 500 but is %d", providerStatus.Earnings)
 	return providerStatus.Earnings

@@ -661,7 +661,7 @@ func (aps *hermesPromiseSettler) getWithdrawalAmountViaChain(chainID int64, cons
 		return nil, fmt.Errorf("Nothing to withdraw. Balance in channel %v is %v", consumerChannelAddress.Hex(), balance)
 	}
 
-	log.Info().Msgf("withdrawal amount is %v in channel %v on chain", balance.String(), consumerChannelAddress.Hex(), chainID)
+	log.Info().Msgf("withdrawal amount is %v in channel %v on chain %v", balance.String(), consumerChannelAddress.Hex(), chainID)
 
 	return balance, nil
 }
@@ -681,7 +681,7 @@ func (aps *hermesPromiseSettler) getWithdrawalAmountViaHermes(chainID int64, her
 		return nil, fmt.Errorf("Nothing to withdraw. Balance in channel %v is %v", data.ChannelID, data.Balance)
 	}
 
-	log.Info().Msgf("withdrawal amount is %v in channel %v on chain", data.Balance.String(), data.ChannelID, chainID)
+	log.Info().Msgf("withdrawal amount is %v in channel %v on chain %v", data.Balance.String(), data.ChannelID, chainID)
 
 	return data.Balance, nil
 }

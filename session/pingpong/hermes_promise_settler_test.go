@@ -168,7 +168,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	}
 	ks := identity.NewMockKeystore()
 	fac := &mockHermesCallerFactory{}
-	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesPromiseStorage{}, &mockPayAndSettler{},&mockAddressProvider{},fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})

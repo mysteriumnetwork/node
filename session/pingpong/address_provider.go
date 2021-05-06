@@ -22,7 +22,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/rs/zerolog/log"
 )
 
 // AddressProvider can calculate channel addresses as well as provide SC addresses for various chains.
@@ -53,8 +52,6 @@ func (ap *AddressProvider) GetChannelAddress(chainID int64, id identity.Identity
 	if err != nil {
 		return common.Address{}, nil
 	}
-
-	log.Info().Msgf("chimp: %v, registry: %v, hermesID: %v, consumer: %v ", channel.Hex(), registry.Hex(), hermes.Hex(), id.Address)
 
 	addr, err := crypto.GenerateChannelAddress(id.Address, hermes.Hex(), registry.Hex(), channel.Hex())
 	return common.HexToAddress(addr), err

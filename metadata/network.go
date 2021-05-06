@@ -88,7 +88,6 @@ var TestnetDefinition = NetworkDefinition{
 	MMNAPIAddress: "https://testnet1.mysterium.network/api/v1",
 	DNSMap: map[string][]string{
 		"testnet-api.mysterium.network":        {"78.47.176.149"},
-		"testnet-trust.mysterium.network":      {"82.196.2.118"},
 		"testnet-broker.mysterium.network":     {"82.196.2.118"},
 		"testnet-transactor.mysterium.network": {"116.203.17.150"},
 		"testnet1.mysterium.network":           {"168.119.183.173"},
