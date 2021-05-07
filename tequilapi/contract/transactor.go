@@ -226,4 +226,6 @@ type ReferralTokenResponse struct {
 type BeneficiaryTxStatus struct {
 	State beneficiary.SettleState `json:"state"`
 	Error string                  `json:"error"`
+	// example: 0x0000000000000000000000000000000000000001
+	ChangeTo string `json:"change_to"`
 }

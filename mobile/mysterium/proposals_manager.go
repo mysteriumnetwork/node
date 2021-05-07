@@ -18,7 +18,6 @@
 package mysterium
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -108,22 +107,65 @@ func newProposalsManager(
 	repository proposal.Repository,
 	mysteriumAPI mysteriumAPI,
 	qualityFinder qualityFinder,
+	filterPresetStorage *proposal.FilterPresetStorage,
 ) *proposalsManager {
 	return &proposalsManager{
-		repository:    repository,
-		mysteriumAPI:  mysteriumAPI,
-		qualityFinder: qualityFinder,
+		repository:          repository,
+		mysteriumAPI:        mysteriumAPI,
+		qualityFinder:       qualityFinder,
+		filterPresetStorage: filterPresetStorage,
 	}
 }
 
 type proposalsManager struct {
-	repository    proposal.Repository
-	cache         []market.ServiceProposal
-	mysteriumAPI  mysteriumAPI
-	qualityFinder qualityFinder
+	repository          proposal.Repository
+	cache               []market.ServiceProposal
+	mysteriumAPI        mysteriumAPI
+	qualityFinder       qualityFinder
+	filterPresetStorage *proposal.FilterPresetStorage
 }
 
-func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error) {
+func (m *proposalsManager) getProposalsByPreset(presetID int) (*getProposalsResponse, error) {
+	preset, err := m.filterPresetStorage.Get(presetID)
+	if err != nil {
+		return nil, err
+	}
+	proposals, err := m.getProposals(&GetProposalsRequest{ServiceType: "wireguard"})
+	if proposals == nil {
+		return &getProposalsResponse{Proposals: make([]*proposalDTO, 0)}, nil
+	}
+
+	idxToReturn := make([]int, 0)
+	// mock implementation
+	switch preset.ID {
+	case 1:
+		for i, p := range proposals.Proposals {
+			if p.NodeType == "residential" && p.QualityLevel == proposalQualityLevelMedium || p.QualityLevel == proposalQualityLevelHigh {
+				idxToReturn = append(idxToReturn, i)
+			}
+		}
+	case 2:
+		for i, p := range proposals.Proposals {
+			if p.QualityLevel == proposalQualityLevelMedium || p.QualityLevel == proposalQualityLevelHigh {
+				idxToReturn = append(idxToReturn, i)
+			}
+		}
+	case 3:
+		for i, p := range proposals.Proposals {
+			if p.NodeType == "hosting" {
+				idxToReturn = append(idxToReturn, i)
+			}
+		}
+	}
+
+	filteredByPreset := make([]*proposalDTO, len(idxToReturn))
+	for i, n := range idxToReturn {
+		filteredByPreset[i] = proposals.Proposals[n]
+	}
+	return &getProposalsResponse{Proposals: filteredByPreset}, nil
+}
+
+func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposalsResponse, error) {
 	// Get proposals from cache if exists.
 	if !req.Refresh {
 		cachedProposals := m.getFromCache()
@@ -171,7 +213,7 @@ func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
 	m.cache = proposals
 }
 
-func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) ([]byte, error) {
+func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) (*getProposalsResponse, error) {
 	qualityResp := m.qualityFinder.ProposalsQuality()
 	qualityMap := map[string]quality.ProposalQuality{}
 	for _, m := range qualityResp {
@@ -183,12 +225,7 @@ func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.Serv
 		proposals = append(proposals, m.mapProposal(&p, qualityMap))
 	}
 
-	res := &getProposalsResponse{Proposals: proposals}
-	bytes, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
+	return &getProposalsResponse{Proposals: proposals}, nil
 }
 
 func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map[string]quality.ProposalQuality) *proposalDTO {

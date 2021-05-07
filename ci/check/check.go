@@ -27,6 +27,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+
 	"github.com/mysteriumnetwork/go-ci/commands"
 	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/packages"
@@ -44,7 +45,7 @@ func Check() {
 
 // CheckCopyright checks for copyright headers in files.
 func CheckCopyright() error {
-	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets")
+	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets", "supervisor/daemon/wireguard/wginterface/firewall")
 }
 
 // CheckGoLint reports linting errors in the solution.
@@ -75,10 +76,6 @@ func CheckDNSMaps() error {
 	ipMissmatches := make([]string, 0)
 
 	valuesToCheck := make(map[string][]string, 0)
-	for k, v := range metadata.TestnetDefinition.DNSMap {
-		valuesToCheck[k] = v
-	}
-
 	for k, v := range metadata.Testnet2Definition.DNSMap {
 		valuesToCheck[k] = v
 	}
@@ -198,7 +195,7 @@ func CheckIPFallbacks() error {
 		return errors.New("unexpected errors present")
 	}
 
-	var initialResult = res[0].response
+	initialResult := res[0].response
 	for i := range res {
 		if res[i].response != initialResult {
 			fmt.Println("Missmatch for ips!")

@@ -21,9 +21,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 // OptionsDirectory describes data structure holding directories as parameters.
@@ -41,9 +42,6 @@ type OptionsDirectory struct {
 }
 
 const (
-	// NetworkSubDirTestnet represents testnet subdir
-	NetworkSubDirTestnet = "testnet"
-
 	// NetworkSubDirTestnet2 represents testnet2 subdir
 	NetworkSubDirTestnet2 = "testnet2"
 
@@ -58,8 +56,6 @@ func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	switch {
 	case network.Testnet2:
 		networkSubdir = NetworkSubDirTestnet2
-	case network.Testnet:
-		networkSubdir = "" // Leave testnet files intact before it's merged into master
 	case network.Localnet:
 		networkSubdir = NetworkSubDirLocalnet
 	}

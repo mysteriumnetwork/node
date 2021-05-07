@@ -250,13 +250,13 @@ services:
       -stakeAmount 62000000000000000000
       -topUpAmount 7000000000000000000
       -chain2MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain2Registries 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -chain2Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -chain2RPCEndpoint ws://ganache2:8545
       -chain2ChainID 80001
       -registrationGasLimit=450000
       -settlementCheckInterval=50ms
       -chain1MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain1Registries 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -chain1Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -balanceCheckInterval 1s
       -MongoUser transactor
@@ -298,20 +298,21 @@ services:
       -Chain1RPCEndpoint ws://ganache:8545
       -Chain1ChainID 5
       -transactorBaseUri "http://transactor:8888/api/v1/"
-      -Chain1chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain1Registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -Chain1HermesAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -Chain2Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -Chain2RPCEndpoint ws://ganache2:8545
       -Chain2ChainID 80001
-      -Chain2chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain2Registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      -Chain2HermesAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain2chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -Chain2Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain2HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -MongoReplSet rs0
       -keystoreDir /keystore
       -bcDataRefreshInterval 1ns
       -MongoUser hermes
+      -transactorBaseUri "http://transactor:8888/api/v1/"
       -MongoPass hermes
       -MongoHost "mongodb:27017"
       -MongoDatabase hermes
@@ -391,10 +392,10 @@ services:
       --discovery.ping=1s
       --discovery.fetch=1s
       --chains.1.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.1.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.1.hermes=0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771
+      --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.1.hermes=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --transactor.address=http://transactor:8888/api/v1
-      --chains.1.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --log-level=debug
@@ -402,8 +403,8 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://mysterium-api:8001/v1
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.2.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.2.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771
       --chains.2.chainID=80001
       --chain-id=80001
@@ -441,16 +442,16 @@ services:
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -Chain1RPCEndpoint ws://ganache:8545
       -Chain1ChainID 5
-      -Chain1HermesAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -Chain2Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -Chain2RPCEndpoint ws://ganache2:8545
       -Chain2ChainID 80001
-      -Chain2Registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      -Chain2HermesAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -Chain2chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain1Registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -Chain2Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain2HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -Chain2chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
-      -Chain1chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -keystoreDir /keystore
       -bcDataRefreshInterval 1ns
       -MongoUser hermes2
@@ -503,17 +504,17 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://mysterium-api:8001/v1
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.2.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.2.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --chains.2.chainID=80001
       --chain-id=80001
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=ws://ganache:8545
       --keystore.lightweight
-      --chains.1.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
-      --chains.1.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.1.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
       --quality.address=http://morqa:8085/api/v2
       --firewall.killSwitch.always
@@ -548,11 +549,11 @@ services:
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
+      --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --chains.1.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.1.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.1.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --transactor.address=http://transactor:8888/api/v1
-      --chains.1.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --log-level=debug
@@ -560,8 +561,8 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://mysterium-api:8001/v1
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.2.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.2.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --chains.2.chainID=80001
       --chain-id=80001
@@ -602,16 +603,16 @@ services:
       --discovery.ping=1s
       --discovery.fetch=1s
       --chains.1.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.1.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.1.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
-      --chains.1.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --log-level=debug
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.2.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.2.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --chains.2.chainID=80001
       --chain-id=80001
@@ -663,13 +664,13 @@ services:
       --location.country=e2e-land
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --chains.1.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.1.chainID=5
-      --chains.1.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.1.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --chains.2.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --chains.2.channelImplementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --chains.2.chainID=80001
       --chain-id=80001

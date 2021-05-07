@@ -114,9 +114,10 @@ type Dependencies struct {
 	IdentitySelector identity_selector.Handler
 	IdentityMover    *identity.Mover
 
-	DiscoveryFactory   service.DiscoveryFactory
-	ProposalRepository proposal.Repository
-	DiscoveryWorker    discovery.Worker
+	DiscoveryFactory    service.DiscoveryFactory
+	ProposalRepository  proposal.Repository
+	FilterPresetStorage *proposal.FilterPresetStorage
+	DiscoveryWorker     discovery.Worker
 
 	QualityClient *quality.MysteriumMORQA
 
@@ -239,6 +240,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapMMN(); err != nil {
 		return err
 	}
+
 	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
 		return err
 	}
@@ -274,7 +276,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.FilterPresetStorage = proposal.NewFilterPresetStorage(di.Storage)
 	appconfig.Current.EnableEventPublishing(di.EventBus)
+
+	di.handleNATStatusForPublicIP()
 
 	log.Info().Msg("Mysterium node started!")
 	return nil
@@ -574,7 +579,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	return nil
 }
 
-// function decides on network definition combined from testnet/localnet flags and possible overrides
+// function decides on network definition combined from testnet2/localnet flags and possible overrides
 func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
 	optionsNetwork := options.OptionsNetwork
 	network := metadata.DefaultNetwork
@@ -582,8 +587,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	switch {
 	case optionsNetwork.Testnet2:
 		network = metadata.Testnet2Definition
-	case optionsNetwork.Testnet:
-		network = metadata.TestnetDefinition
 	case optionsNetwork.Localnet:
 		network = metadata.LocalnetDefinition
 	}
@@ -845,13 +848,6 @@ func (di *Dependencies) migrateCrendentials() {
 		}
 	}
 
-	if !config.GetBool(config.FlagTestnet) {
-		testnet, err := boltdb.NewStorage(node.GetOptionsDirectoryDB(node.NetworkSubDirTestnet))
-		if err == nil {
-			s = append(s, testnet)
-		}
-	}
-
 	if err := auth.MigrateCredentials(s); err != nil {
 		log.Err(err).Msg("Credential migration did not finish correctly")
 	}
@@ -879,6 +875,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
+
 	return nil
 }
 
@@ -967,6 +964,22 @@ func (di *Dependencies) handleConnStateChange() error {
 		}
 		latestState = e.State
 	})
+}
+
+func (di *Dependencies) handleNATStatusForPublicIP() {
+	outIP, err := di.IPResolver.GetOutboundIP()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get outbound IP address")
+	}
+
+	pubIP, err := di.IPResolver.GetPublicIP()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get public IP address")
+	}
+
+	if outIP == pubIP && pubIP != "" {
+		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
+	}
 }
 
 func (di *Dependencies) bootstrapResidentCountry() error {

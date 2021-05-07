@@ -24,11 +24,6 @@ import (
 )
 
 var (
-	// FlagTestnet uses test network.
-	FlagTestnet = cli.BoolFlag{
-		Name:  "testnet",
-		Usage: "Defines test network configuration",
-	}
 	// FlagLocalnet uses local network.
 	FlagLocalnet = cli.BoolFlag{
 		Name:  "localnet",
@@ -106,7 +101,6 @@ var (
 func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		&FlagTestnet,
 		&FlagLocalnet,
 		&FlagPortMapping,
 		&FlagNATPunching,
@@ -124,7 +118,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) {
-	Current.ParseBoolFlag(ctx, FlagTestnet)
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
 	Current.ParseBoolFlag(ctx, FlagTestnet2)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)

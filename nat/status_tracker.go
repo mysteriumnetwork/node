@@ -29,9 +29,12 @@ type StatusTracker struct {
 }
 
 const (
-	statusNotFinished = "not_finished"
-	statusSuccessful  = "successful"
-	statusFailure     = "failure"
+	// StatusNotFinished describes unknown NAT status assigned before any checks done.
+	StatusNotFinished = "not_finished"
+	// StatusSuccessful describes success NAT status assigned when NAT traversal succeeded.
+	StatusSuccessful = "successful"
+	// StatusFailure describes failed NAT status assigned when NAT traversal failed.
+	StatusFailure = "failure"
 )
 
 // Status represents NAT traversal status (either "not_finished", "successful" or "failure") and an optional error.
@@ -48,22 +51,22 @@ func (t *StatusTracker) Status() Status {
 // ConsumeNATEvent processes NAT event to determine NAT traversal status
 func (t *StatusTracker) ConsumeNATEvent(event event.Event) {
 	if event.Stage == t.lastStageName && !event.Successful {
-		t.status = Status{Status: statusFailure, Error: event.Error}
+		t.status = Status{Status: StatusFailure, Error: event.Error}
 		return
 	}
 
 	if event.Successful {
-		t.status = Status{Status: statusSuccessful}
+		t.status = Status{Status: StatusSuccessful}
 		return
 	}
 
-	t.status = Status{Status: statusNotFinished}
+	t.status = Status{Status: StatusNotFinished}
 }
 
 // NewStatusTracker returns new instance of status tracker
 func NewStatusTracker(lastStageName string) *StatusTracker {
 	return &StatusTracker{
 		lastStageName: lastStageName,
-		status:        Status{Status: statusNotFinished},
+		status:        Status{Status: StatusNotFinished},
 	}
 }

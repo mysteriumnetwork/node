@@ -23,11 +23,12 @@ import (
 	"net"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/device"
+
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/rs/zerolog/log"
-	"golang.zx2c4.com/wireguard/device"
 )
 
 // WgInterface represents WireGuard tunnel with underlying device.
@@ -40,7 +41,7 @@ type WgInterface struct {
 
 // New creates new WgInterface instance.
 func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
-	tunnel, interfaceName, err := createTunnel(cfg.IfaceName)
+	tunnel, interfaceName, err := createTunnel(cfg.IfaceName, cfg.DNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TUN device %s: %w", cfg.IfaceName, err)
 	}
@@ -111,6 +112,9 @@ func down(uapi net.Listener, d *device.Device, dnsManager dns.Manager) {
 	if d != nil {
 		d.Close()
 	}
+
+	disableFirewall()
+
 	if dnsManager != nil {
 		if err := dnsManager.Clean(); err != nil {
 			log.Err(err).Msg("Could not clean DNS")

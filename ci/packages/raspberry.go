@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/mholt/archiver"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
@@ -169,8 +169,8 @@ func fetchRaspbianImage() (filename string, err error) {
 	}
 
 	log.Info().Msg("Looking up Raspbian image file")
-	localRaspbianZip, err := storageClient.GetCacheableFile("raspbian", func(object s3.Object) bool {
-		return strings.Contains(aws.StringValue(object.Key), "-raspbian-buster-lite")
+	localRaspbianZip, err := storageClient.GetCacheableFile("raspbian", func(object types.Object) bool {
+		return strings.Contains(aws.ToString(object.Key), "-raspbian-buster-lite")
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch raspbian image: %w", err)

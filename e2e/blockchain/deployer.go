@@ -60,7 +60,7 @@ func main() {
 
 	transactor := &bind.TransactOpts{
 		From: addr,
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		Signer: func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			return ks.SignTx(acc, tx, chainID)
 		},
 		Context:  context.Background(),
@@ -77,7 +77,6 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	checkError("get gasPrice", err)
 	gasLimit := uint64(21000) // in units
-	chainID, err := client.NetworkID(context.Background())
 	checkError("lookup chainid", err)
 
 	oldToken, tx, _, err := bindings.DeployOldMystToken(transactor, client)
@@ -91,10 +90,6 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println("v2 token address: ", mystTokenAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mystDexAddress, tx, _, err := bindings.DeployMystDEX(transactor, client)
-	checkError("Deploy mystDex v2", err)
-	checkTxStatus(client, tx)
-	fmt.Println("v2 mystDEX address: ", mystDexAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	channelImplAddress, tx, _, err := bindings.DeployChannelImplementation(transactor, client)
@@ -124,7 +119,8 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	checkError("create registry transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-
+	// mystDexAddress dex is not being used so no point in deploying it.
+	mystDexAddress := common.HexToAddress("0x0000123123123123")
 	_, err = txer.Initialize(transactor, mystTokenAddress, mystDexAddress, minimalStake, channelImplAddress, hermesImplAddress, common.Address{})
 	checkError("initialize registry", err)
 
@@ -184,10 +180,8 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 
 	var data []byte
 	tx = types.NewTransaction(transactor.Nonce.Uint64(), hermes2Address, value, gasLimit, gasPrice, data)
-	chainID, err = client.NetworkID(context.Background())
-	checkError("get chain id", err)
 
-	signedTx, err := transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
+	signedTx, err := transactor.Signer(transactor.From, tx)
 	checkError("sign tx", err)
 
 	err = client.SendTransaction(context.Background(), signedTx)
@@ -218,10 +212,8 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 
 	tx = types.NewTransaction(transactor.Nonce.Uint64(), common.HexToAddress("0xa29fb77b25181df094908b027821a7492ca4245b"), value, gasLimit, gasPrice, data)
-	chainID, err = client.NetworkID(context.Background())
-	checkError("get chain id", err)
 
-	signedTx, err = transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
+	signedTx, err = transactor.Signer(transactor.From, tx)
 	checkError("sign tx", err)
 
 	err = client.SendTransaction(context.Background(), signedTx)
@@ -268,7 +260,7 @@ func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAd
 
 	transactor := &bind.TransactOpts{
 		From: hermes2Address,
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		Signer: func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			return ks.SignTx(acc, tx, chainID)
 		},
 		Context:  context.Background(),

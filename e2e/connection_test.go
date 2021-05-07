@@ -50,23 +50,23 @@ var (
 	providerID                  = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase          = "localprovider"
 	chainID               int64 = 80001
-	hermesID                    = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
-	hermes2ID                   = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
+	hermesID                    = "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
+	hermes2ID                   = "0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
 	mystAddress                 = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
-	registryAddress             = "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"
-	channelImplementation       = "0x599d43715DF3070f83355D9D90AE62c159E62A75"
+	registryAddress             = "0x241F6e1d0bb17f45767dc60a6bd3d21cdb543a0c"
+	channelImplementation       = "0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21"
 	addressForTopups            = "0xa29fb77b25181df094908b027821a7492ca4245b"
 	tenthThou                   = float64(1) / float64(10000)
 )
 
 var ethClient *ethclient.Client
 var ethClientL2 *ethclient.Client
-var ethSigner func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error)
+var ethSigner func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
 var transactorMongo *Mongo
 
 var (
 	providerStake, _            = big.NewInt(0).SetString("50000000000000000000", 10)
-	providerChannelAddress      = "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3"
+	providerChannelAddress      = "0xa57b6Eb01f6883f59B41d525b603A1012B5879f9"
 	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
 	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
 )
@@ -470,7 +470,7 @@ func initEthClient(t *testing.T) {
 	assert.NoError(t, err)
 	ethClientL2 = c2
 
-	ethSigner = func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	ethSigner = func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
 		return ks.SignTx(acc, tx, cid)
 	}
 }
