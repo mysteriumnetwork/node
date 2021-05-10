@@ -19,44 +19,103 @@ package market
 
 import (
 	"encoding/json"
+	"math/big"
 
-	"github.com/mysteriumnetwork/node/identity"
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/utils/validateutil"
 )
 
 const (
-	proposalFormat = "service-proposal/v1"
+	proposalFormat = "service-proposal/v2"
 )
 
 // ServiceProposal is top level structure which is presented to marketplace by service provider, and looked up by service consumer
 // service proposal can be marked as unsupported by deserializer, because of unknown service, payment method, or contact type
 type ServiceProposal struct {
-	// Per provider unique serial number of service description provided
-	// TODO Not supported yet
-	ID int `json:"id"`
-
 	// A version number is included in the proposal to allow extensions to the proposal format
 	Format string `json:"format"`
 
-	// Type of service type offered
-	ServiceType string `json:"service_type"`
-
-	// Qualitative service definition
-	ServiceDefinition ServiceDefinition `json:"service_definition"`
-
-	// Type of service payment method
-	PaymentMethodType string `json:"payment_method_type"`
-
-	// Service payment & usage metering definition
-	PaymentMethod PaymentMethod `json:"payment_method"`
+	Compatibility int `json:"compatibility"`
 
 	// Unique identifier of a provider
 	ProviderID string `json:"provider_id"`
 
+	// Type of service type offered
+	ServiceType string `json:"service_type"`
+
+	// Service location
+	Location Location `json:"location"`
+
+	// Price of the service
+	Price Price `json:"price"`
+
 	// Communication methods possible
-	ProviderContacts ContactList `json:"provider_contacts"`
+	Contacts ContactList `json:"contacts"`
 
 	// AccessPolicies represents the access controls for proposal
 	AccessPolicies *[]AccessPolicy `json:"access_policies,omitempty"`
+
+	// Quality represents the service quality.
+	Quality Quality `json:"quality"`
+}
+
+// NewProposalOpts optional params for the new proposal creation.
+type NewProposalOpts struct {
+	Location       *Location
+	Price          *Price
+	AccessPolicies []AccessPolicy
+	Contacts       []Contact
+	Quality        *Quality
+}
+
+// NewProposal creates a new proposal.
+func NewProposal(providerID, serviceType string, opts NewProposalOpts) ServiceProposal {
+	p := ServiceProposal{
+		Format:        proposalFormat,
+		Compatibility: 0,
+		ProviderID:    providerID,
+		ServiceType:   serviceType,
+		Location:      Location{},
+		Price: Price{
+			Currency: money.Currency(config.GetString(config.FlagDefaultCurrency)),
+			PerGiB:   big.NewInt(0),
+			PerHour:  big.NewInt(0),
+		},
+		Contacts:       nil,
+		AccessPolicies: nil,
+	}
+	if loc := opts.Location; loc != nil {
+		p.Location = *loc
+	}
+	if price := opts.Price; price != nil {
+		p.Price = *price
+	}
+	if ap := opts.AccessPolicies; ap != nil {
+		p.AccessPolicies = &ap
+	}
+	if c := opts.Contacts; c != nil {
+		p.Contacts = c
+	}
+	if q := opts.Quality; q != nil {
+		p.Quality = *q
+	}
+	return p
+}
+
+// Validate validates the proposal.
+func (proposal *ServiceProposal) Validate() error {
+	return validation.ValidateStruct(proposal,
+		validation.Field(&proposal.Format, validation.Required, validation.By(validateutil.StringEquals(proposalFormat))),
+		validation.Field(&proposal.ProviderID, validation.Required),
+		validation.Field(&proposal.ServiceType, validation.Required),
+		validation.Field(&proposal.Price, validation.By(func(_ interface{}) error {
+			return proposal.Price.Validate()
+		})),
+		validation.Field(&proposal.Location, validation.Required),
+		validation.Field(&proposal.Contacts, validation.Required),
+	)
 }
 
 // UniqueID returns unique proposal composite ID
@@ -70,78 +129,41 @@ func (proposal *ServiceProposal) UniqueID() ProposalID {
 // UnmarshalJSON is custom json unmarshaler to dynamically fill in ServiceProposal values
 func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	var jsonData struct {
-		ID                int              `json:"id"`
-		Format            string           `json:"format"`
-		ServiceType       string           `json:"service_type"`
-		ProviderID        string           `json:"provider_id"`
-		PaymentMethodType string           `json:"payment_method_type"`
-		ServiceDefinition *json.RawMessage `json:"service_definition"`
-		PaymentMethod     *json.RawMessage `json:"payment_method"`
-		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
-		AccessPolicies    *[]AccessPolicy  `json:"access_policies,omitempty"`
+		Format         string           `json:"format"`
+		ProviderID     string           `json:"provider_id"`
+		ServiceType    string           `json:"service_type"`
+		Location       Location         `json:"location"`
+		Price          Price            `json:"price"`
+		Contacts       *json.RawMessage `json:"contacts"`
+		AccessPolicies *[]AccessPolicy  `json:"access_policies,omitempty"`
+		Quality        Quality          `json:"quality"`
 	}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
 	}
 
-	proposal.ID = jsonData.ID
 	proposal.Format = jsonData.Format
-	proposal.ServiceType = jsonData.ServiceType
 	proposal.ProviderID = jsonData.ProviderID
-	proposal.PaymentMethodType = jsonData.PaymentMethodType
-
-	// run the service definition implementation from our registry
-	proposal.ServiceDefinition = unserializeServiceDefinition(
-		jsonData.ServiceType,
-		jsonData.ServiceDefinition,
-	)
-
-	// run the payment method implementation from our registry
-	proposal.PaymentMethod = unserializePaymentMethod(
-		jsonData.PaymentMethodType,
-		jsonData.PaymentMethod,
-	)
+	proposal.ServiceType = jsonData.ServiceType
+	proposal.Location = jsonData.Location
+	proposal.Price = *NewPriceB(jsonData.Price.PerHour, jsonData.Price.PerGiB, jsonData.Price.Currency)
 
 	// run contact unserializer
-	proposal.ProviderContacts = unserializeContacts(jsonData.ProviderContacts)
-
+	proposal.Contacts = unserializeContacts(jsonData.Contacts)
 	proposal.AccessPolicies = jsonData.AccessPolicies
+	proposal.Quality = jsonData.Quality
+
 	return nil
-}
-
-// SetProviderContacts updates service proposal description with general data
-func (proposal *ServiceProposal) SetProviderContacts(providerID identity.Identity, contacts ContactList) {
-	proposal.Format = proposalFormat
-	// TODO This will be generated later
-	proposal.ID = 1
-	proposal.ProviderID = providerID.Address
-	proposal.ProviderContacts = contacts
-}
-
-// SetAccessPolicies updates service proposal with the given AccessPolicy
-func (proposal *ServiceProposal) SetAccessPolicies(ap *[]AccessPolicy) {
-	proposal.AccessPolicies = ap
-}
-
-// SetPaymentMethod updates payment method in the proposal.
-func (proposal *ServiceProposal) SetPaymentMethod(pm PaymentMethod) {
-	if pm != nil {
-		proposal.PaymentMethodType = pm.GetType()
-	}
-	proposal.PaymentMethod = pm
 }
 
 // IsSupported returns true if this service proposal can be used for connections by service consumer
 // can be used as a filter to filter out all proposals which are unsupported for any reason
 func (proposal *ServiceProposal) IsSupported() bool {
-	if _, serviceNotSupported := proposal.ServiceDefinition.(UnsupportedServiceDefinition); serviceNotSupported {
-		return false
-	}
-	if _, paymentNotSupported := proposal.PaymentMethod.(UnsupportedPaymentMethod); paymentNotSupported {
+	if _, ok := supportedServices[proposal.ServiceType]; !ok {
 		return false
 	}
 
-	for _, contact := range proposal.ProviderContacts {
+	for _, contact := range proposal.Contacts {
 		if _, notSupported := contact.Definition.(UnsupportedContactType); notSupported {
 			continue
 		}
@@ -150,4 +172,11 @@ func (proposal *ServiceProposal) IsSupported() bool {
 	}
 
 	return false
+}
+
+var supportedServices = make(map[string]struct{})
+
+// RegisterServiceType registers a supported service type.
+func RegisterServiceType(serviceType string) {
+	supportedServices[serviceType] = struct{}{}
 }

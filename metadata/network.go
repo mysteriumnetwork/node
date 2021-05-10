@@ -54,15 +54,13 @@ type Payments struct {
 // Consumer defines consumer side settings
 type Consumer struct {
 	DataLeewayMegabytes uint64
-	PricePerGIBMax      string
-	PricePerGIBMin      string
-	PricePerMinuteMax   string
-	PricePerMinuteMin   string
+	PriceGiBMax         string
+	PriceHourMax        string
 }
 
 // Testnet2Definition defines parameters for testnet2 network (currently default network)
 var Testnet2Definition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://testnet2-api.mysterium.network/v1",
+	MysteriumAPIAddress:       "https://testnet2-ndiscovery.mysterium.network/api/v3",
 	AccessPolicyOracleAddress: "https://testnet2-trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://testnet2-broker.mysterium.network"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
@@ -98,10 +96,8 @@ var Testnet2Definition = NetworkDefinition{
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,
-			PricePerGIBMax:      "500000000000000000", // 0.5 MYSTT
-			PricePerGIBMin:      "0",
-			PricePerMinuteMax:   "30000000000000", // 0.00003 MYSTT
-			PricePerMinuteMin:   "0",
+			PriceGiBMax:         "500000000000000000", // 0.5 MYSTT
+			PriceHourMax:        "180000000000000",    // 0.0018 MYSTT
 		},
 	},
 }

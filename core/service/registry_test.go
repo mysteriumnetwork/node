@@ -40,8 +40,8 @@ func TestRegistry_Register(t *testing.T) {
 
 	registry.Register(
 		"any",
-		func(options Options) (Service, market.ServiceProposal, error) {
-			return serviceMock, proposalMock, nil
+		func(options Options) (Service, error) {
+			return serviceMock, nil
 		},
 	)
 	assert.Len(t, registry.factories, 1)
@@ -50,23 +50,21 @@ func TestRegistry_Register(t *testing.T) {
 func TestRegistry_Create_NonExisting(t *testing.T) {
 	registry := mockRegistryEmpty()
 
-	service, proposal, err := registry.Create("missing-service", nil)
+	service, err := registry.Create("missing-service", nil)
 	assert.Nil(t, service)
-	assert.Equal(t, proposalMock, proposal)
 	assert.Equal(t, ErrUnsupportedServiceType, err)
 }
 
 func TestRegistry_Create_Existing(t *testing.T) {
 	registry := mockRegistryWith(
 		"fake-service",
-		func(options Options) (Service, market.ServiceProposal, error) {
-			return serviceMock, proposalMock, nil
+		func(options Options) (Service, error) {
+			return serviceMock, nil
 		},
 	)
 
-	service, proposal, err := registry.Create("fake-service", nil)
+	service, err := registry.Create("fake-service", nil)
 	assert.Equal(t, serviceMock, service)
-	assert.Equal(t, proposalMock, proposal)
 	assert.NoError(t, err)
 }
 
@@ -74,14 +72,13 @@ func TestRegistry_Create_BubblesErrors(t *testing.T) {
 	fakeErr := errors.New("I am broken")
 	registry := mockRegistryWith(
 		"broken-service",
-		func(options Options) (Service, market.ServiceProposal, error) {
-			return nil, proposalMock, fakeErr
+		func(options Options) (Service, error) {
+			return nil, fakeErr
 		},
 	)
 
-	service, proposal, err := registry.Create("broken-service", nil)
+	service, err := registry.Create("broken-service", nil)
 	assert.Nil(t, service)
-	assert.Equal(t, proposalMock, proposal)
 	assert.Exactly(t, fakeErr, err)
 }
 

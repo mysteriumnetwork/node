@@ -43,9 +43,9 @@ var (
 		ConsumerID: identity.FromAddress("consumer1"),
 		HermesID:   common.HexToAddress("0x00000000000000000000000000000000000000AC"),
 		Proposal: market.ServiceProposal{
-			ServiceDefinition: &StubServiceDefinition{},
-			ServiceType:       "serviceType",
-			ProviderID:        "providerID",
+			Location:    stubLocation,
+			ServiceType: "serviceType",
+			ProviderID:  "providerID",
 		},
 	}
 	connectionSessionMock = connectionstate.Status{
@@ -54,9 +54,9 @@ var (
 		ConsumerID: identity.FromAddress("consumerID"),
 		HermesID:   common.HexToAddress("0x00000000000000000000000000000000000000AC"),
 		Proposal: market.ServiceProposal{
-			ServiceDefinition: &StubServiceDefinition{},
-			ServiceType:       "serviceType",
-			ProviderID:        "providerID",
+			Location:    stubLocation,
+			ServiceType: "serviceType",
+			ProviderID:  "providerID",
 		},
 	}
 	connectionStatsMock   = connectionstate.Statistics{BytesReceived: 100000, BytesSent: 50000}
@@ -514,8 +514,4 @@ func newStorageWithSessions(sessions ...History) (*Storage, func()) {
 	return storage, storageCleanup
 }
 
-type StubServiceDefinition struct{}
-
-func (fs *StubServiceDefinition) GetLocation() market.Location {
-	return market.Location{Country: "MU"}
-}
+var stubLocation = market.Location{Country: "MU"}

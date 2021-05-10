@@ -18,31 +18,13 @@
 package noop
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 )
+
+// ServiceType indicates "noop" service type
+const ServiceType = "noop"
 
 // Bootstrap is called on program initialization time and registers various deserializers related to noop service
 func Bootstrap() {
-	market.RegisterServiceDefinitionUnserializer(
-		ServiceType,
-		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
-			var definition ServiceDefinition
-			err := json.Unmarshal(*rawDefinition, &definition)
-
-			return definition, err
-		},
-	)
-
-	market.RegisterPaymentMethodUnserializer(
-		pingpong.PaymentForDataWithTime,
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method pingpong.PaymentMethod
-			err := json.Unmarshal(*rawDefinition, &method)
-
-			return method, err
-		},
-	)
+	market.RegisterServiceType(ServiceType)
 }

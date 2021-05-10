@@ -20,15 +20,11 @@ package proposal
 import (
 	"math/big"
 	"testing"
-	"time"
 
-	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
-
-var bytesInGibibyte = uint64(datasize.GiB.Bytes())
 
 var (
 	provider1            = "0x1"
@@ -43,102 +39,45 @@ var (
 		ID:     "blacklist",
 		Source: "blacklist.txt",
 	}
-	locationDatacenter  = market.Location{ASN: 1000, Country: "DE", City: "Berlin", NodeType: "datacenter"}
-	locationResidential = market.Location{ASN: 124, Country: "LT", City: "Vilnius", NodeType: "residential"}
+	locationDatacenter  = market.Location{ASN: 1000, Country: "DE", City: "Berlin", IPType: "datacenter"}
+	locationResidential = market.Location{ASN: 124, Country: "LT", City: "Vilnius", IPType: "residential"}
 
-	proposalEmpty              = market.ServiceProposal{}
-	proposalProvider1Streaming = market.ServiceProposal{
-		ProviderID:        provider1,
-		ServiceType:       serviceTypeStreaming,
-		ServiceDefinition: mockService{Location: locationDatacenter},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist},
-	}
-	proposalProvider1Noop = market.ServiceProposal{
-		ProviderID:        provider1,
-		ServiceType:       serviceTypeNoop,
-		ServiceDefinition: mockService{},
-	}
-	proposalProvider2Streaming = market.ServiceProposal{
-		ProviderID:        provider2,
-		ServiceType:       serviceTypeStreaming,
-		ServiceDefinition: mockService{Location: locationResidential},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
-	}
-	proposalTimeExpensive = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(9999999999999), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Minute,
-			},
-		},
-	}
-	proposalTimeCheap = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(0), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Minute,
-			},
-		},
-	}
-	proposalTimeExact = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(1000000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Minute,
-			},
-		},
-	}
-	proposalBytesExpensive = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(7000001), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: bytesInGibibyte,
-			},
-		},
-	}
-	proposalBytesCheap = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(0), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: bytesInGibibyte,
-			},
-		},
-	}
-	proposalBytesExact = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(7000000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: bytesInGibibyte,
-			},
-		},
-	}
-	proposalBytesExactInParts = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(50000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: 7669584,
-			},
-		},
-	}
-	proposalSupported = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(50000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: 7669584,
-			},
-		},
-		ServiceDefinition: &mockServiceDefinition{},
-		ProviderContacts:  market.ContactList{market.Contact{}},
-	}
+	proposalEmpty              = market.NewProposal("0xbeef", "empty", market.NewProposalOpts{})
+	proposalProvider1Streaming = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Location:       &locationDatacenter,
+		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist},
+	})
+	proposalProvider1Noop      = market.NewProposal(provider1, serviceTypeNoop, market.NewProposalOpts{})
+	proposalProvider2Streaming = market.NewProposal(provider2, serviceTypeStreaming, market.NewProposalOpts{
+		Location:       &locationResidential,
+		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
+	})
+	proposalTimeExpensive = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
+		Price: market.NewPrice(9999999999999, 0, money.CurrencyMystt),
+	})
+	proposalTimeCheap = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
+		Price: market.NewPrice(0, 0, money.CurrencyMystt),
+	})
+	proposalTimeExact = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
+		Price: market.NewPrice(60000000, 0, money.CurrencyMystt),
+	})
+	proposalBytesExpensive = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
+		Price: market.NewPrice(0, 7000001, money.CurrencyMystt),
+	})
+	proposalBytesCheap = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
+		Price: market.NewPrice(0, 0, money.CurrencyMystt),
+	})
+	proposalBytesExact = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
+		Price: market.NewPrice(0, 7000000, money.CurrencyMystt),
+	})
+	proposalSupported = market.NewProposal("0xbeef", serviceTypeNoop, market.NewProposalOpts{
+		Price: market.NewPrice(0, 7168000427, money.CurrencyMystt),
+		Contacts: []market.Contact{{
+			Type:       "phone",
+			Definition: "69935951",
+		}},
+	})
 )
-
-type mockService struct {
-	Location market.Location
-}
-
-func (service mockService) GetLocation() market.Location {
-	return service.Location
-}
 
 func Test_ProposalFilter_FiltersAll(t *testing.T) {
 	filter := &Filter{}
@@ -193,7 +132,7 @@ func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
 
 func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 	filter := &Filter{
-		LocationType: "datacenter",
+		IPType: "datacenter",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -201,7 +140,7 @@ func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &Filter{
-		LocationType: "residential",
+		IPType: "residential",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
@@ -211,7 +150,7 @@ func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 
 func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	filter := &Filter{
-		AccessPolicyID: "whitelist",
+		AccessPolicy: "whitelist",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -219,7 +158,7 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.True(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &Filter{
-		AccessPolicyID: "blacklist",
+		AccessPolicy: "blacklist",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
@@ -227,7 +166,7 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.True(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &Filter{
-		AccessPolicyID:     "whitelist",
+		AccessPolicy:       "whitelist",
 		AccessPolicySource: "unknown.txt",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
@@ -237,23 +176,7 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 }
 
 func Test_ProposalFilter_Filters_ByTimeBounds(t *testing.T) {
-	var upper = big.NewInt(1000000)
-	var lower = big.NewInt(100)
-	filter := &Filter{
-		UpperTimePriceBound: upper,
-		LowerTimePriceBound: lower,
-	}
-
-	assert.True(t, filter.Matches(proposalEmpty))
-	assert.False(t, filter.Matches(proposalTimeExpensive))
-	assert.False(t, filter.Matches(proposalTimeCheap))
-	assert.True(t, filter.Matches(proposalTimeExact))
-
-	lower = big.NewInt(0)
-	filter = &Filter{
-		UpperTimePriceBound: upper,
-		LowerTimePriceBound: lower,
-	}
+	filter := &Filter{PriceHourMax: big.NewInt(60000000)}
 
 	assert.True(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalTimeExpensive))
@@ -262,60 +185,18 @@ func Test_ProposalFilter_Filters_ByTimeBounds(t *testing.T) {
 }
 
 func Test_ProposalFilter_Filters_Unsupported(t *testing.T) {
-	filter := &Filter{
-		ExcludeUnsupported: true,
-	}
+	filter := &Filter{ExcludeUnsupported: true}
+
+	market.RegisterServiceType(serviceTypeNoop)
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalSupported))
 }
 
 func Test_ProposalFilter_Filters_ByByteBounds(t *testing.T) {
-	var upper = big.NewInt(7000000)
-	var lower = big.NewInt(100)
-	filter := &Filter{
-		UpperGBPriceBound: upper,
-		LowerGBPriceBound: lower,
-	}
-
-	assert.True(t, filter.Matches(proposalEmpty))
-	assert.False(t, filter.Matches(proposalBytesExpensive))
-	assert.False(t, filter.Matches(proposalBytesCheap))
-	assert.True(t, filter.Matches(proposalBytesExact))
-	assert.True(t, filter.Matches(proposalBytesExactInParts))
-
-	lower = big.NewInt(0)
-	filter = &Filter{
-		UpperGBPriceBound: upper,
-		LowerGBPriceBound: lower,
-	}
+	filter := &Filter{PriceGiBMax: big.NewInt(7000000)}
 
 	assert.True(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalBytesExpensive))
 	assert.True(t, filter.Matches(proposalBytesCheap))
 	assert.True(t, filter.Matches(proposalBytesExact))
-	assert.True(t, filter.Matches(proposalBytesExactInParts))
-}
-
-type mockPaymentMethod struct {
-	rate        market.PaymentRate
-	paymentType string
-	price       money.Money
-}
-
-func (mpm *mockPaymentMethod) GetPrice() money.Money {
-	return mpm.price
-}
-
-func (mpm *mockPaymentMethod) GetType() string {
-	return mpm.paymentType
-}
-
-func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
-	return mpm.rate
-}
-
-type mockServiceDefinition struct{}
-
-func (msd *mockServiceDefinition) GetLocation() market.Location {
-	return market.Location{}
 }

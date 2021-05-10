@@ -28,13 +28,11 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
-	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -70,10 +68,10 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
-		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		func(serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
-				return nil, market.ServiceProposal{}, err
+				return nil, err
 			}
 
 			wgOptions := serviceOptions.(wireguard_service.Options)
@@ -97,24 +95,23 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				portPool,
 				di.ServiceFirewall,
 			)
-			return svc, wireguard_service.GetProposal(loc), nil
+			return svc, nil
 		},
 	)
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+	createService := func(serviceOptions service.Options) (service.Service, error) {
 		if err := nodeOptions.Openvpn.Check(); err != nil {
-			return nil, market.ServiceProposal{}, err
+			return nil, err
 		}
 
 		loc, err := di.LocationResolver.DetectLocation()
 		if err != nil {
-			return nil, market.ServiceProposal{}, err
+			return nil, err
 		}
 
 		transportOptions := serviceOptions.(openvpn_service.Options)
-		proposal := openvpn_discovery.NewServiceProposalWithLocation(loc, transportOptions.Protocol)
 
 		// TODO: Use global port pool once migrated to p2p.
 		var portPool port.ServicePortSupplier
@@ -136,7 +133,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.EventBus,
 			di.ServiceFirewall,
 		)
-		return manager, proposal, nil
+		return manager, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }
@@ -144,13 +141,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
-		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			loc, err := di.LocationResolver.DetectLocation()
-			if err != nil {
-				return nil, market.ServiceProposal{}, err
-			}
-
-			return service_noop.NewManager(), service_noop.GetProposal(loc), nil
+		func(serviceOptions service.Options) (service.Service, error) {
+			return service_noop.NewManager(), nil
 		},
 	)
 }
@@ -265,6 +257,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		di.P2PListener,
 		newP2PSessionHandler,
 		di.SessionConnectivityStatusStorage,
+		di.LocationResolver,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessions}

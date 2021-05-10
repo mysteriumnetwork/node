@@ -38,7 +38,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
-			proposalRegistry.AddRegistry(apidiscovery.NewRegistry(di.MysteriumAPI))
+			proposalRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
 
 		case node.DiscoveryTypeBroker:

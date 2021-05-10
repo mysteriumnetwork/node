@@ -48,17 +48,17 @@ var (
 		Value: "",
 	}
 
-	// FlagPaymentPricePerGB sets the price per GiB to provided service.
-	FlagPaymentPricePerGB = cli.Float64Flag{
-		Name:  "payment.price-gb",
-		Usage: "Sets the price per GiB applied to provider service.",
+	// FlagPaymentPriceGiB sets the price/GiB to provided service.
+	FlagPaymentPriceGiB = cli.Float64Flag{
+		Name:  "payment.price-gib",
+		Usage: "Sets the price/GiB applied to provider service.",
 		Value: 0.1,
 	}
-	// FlagPaymentPricePerMinute sets the price per minute to provided service.
-	FlagPaymentPricePerMinute = cli.Float64Flag{
-		Name:  "payment.price-minute",
-		Usage: "Sets the price per minute applied to provider service.",
-		Value: 0.000001,
+	// FlagPaymentPriceHour sets the price/hour to provided service.
+	FlagPaymentPriceHour = cli.Float64Flag{
+		Name:  "payment.price-hour",
+		Usage: "Sets the price/hour applied to provider service.",
+		Value: 0.00006,
 	}
 )
 
@@ -68,8 +68,8 @@ func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 		&FlagIdentity,
 		&FlagIdentityPassphrase,
 		&FlagAgreedTermsConditions,
-		&FlagPaymentPricePerGB,
-		&FlagPaymentPricePerMinute,
+		&FlagPaymentPriceGiB,
+		&FlagPaymentPriceHour,
 		&FlagAccessPolicyList,
 	)
 }
@@ -79,7 +79,7 @@ func ParseFlagsServiceStart(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIdentity)
 	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
-	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerGB)
-	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerMinute)
+	Current.ParseFloat64Flag(ctx, FlagPaymentPriceGiB)
+	Current.ParseFloat64Flag(ctx, FlagPaymentPriceHour)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
 }

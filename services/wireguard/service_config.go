@@ -20,27 +20,10 @@ package wireguard
 import (
 	"encoding/json"
 	"net"
-
-	"github.com/mysteriumnetwork/node/market"
 )
 
 // ServiceType indicates "wireguard" service type
 const ServiceType = "wireguard"
-
-// ServiceDefinition structure represents "wireguard" service parameters
-type ServiceDefinition struct {
-	// Approximate information on location where the service is provided from
-	Location market.Location `json:"location"`
-
-	// Approximate information on location where the actual tunnelled traffic will originate from.
-	// This is used by providers having their own means of setting tunnels to other remote exit points.
-	LocationOriginate market.Location `json:"location_originate"`
-}
-
-// GetLocation returns geographic location of service definition provider
-func (service ServiceDefinition) GetLocation() market.Location {
-	return service.Location
-}
 
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {

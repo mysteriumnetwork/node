@@ -19,9 +19,6 @@ package mysterium
 
 import (
 	"fmt"
-	"net/http"
-	"net/url"
-	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -36,11 +33,6 @@ import (
 type MysteriumAPI struct {
 	httpClient          *requests.HTTPClient
 	discoveryAPIAddress string
-
-	latestProposalsEtagMux sync.RWMutex
-	latestProposalsEtag    string
-	latestProposalsMux     sync.RWMutex
-	latestProposals        []market.ServiceProposal
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
@@ -48,7 +40,6 @@ func NewClient(httpClient *requests.HTTPClient, discoveryAPIAddress string) *Mys
 	return &MysteriumAPI{
 		httpClient:          httpClient,
 		discoveryAPIAddress: discoveryAPIAddress,
-		latestProposals:     []market.ServiceProposal{},
 	}
 }
 
@@ -207,42 +198,15 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 
 // Proposals fetches currently active service proposals from discovery
 func (mApi *MysteriumAPI) Proposals() ([]market.ServiceProposal, error) {
-	return mApi.QueryProposals(ProposalsQuery{
-		ServiceType:     "all",
-		AccessPolicyAll: true,
-	})
+	return mApi.QueryProposals(ProposalsQuery{})
 }
 
 // QueryProposals fetches currently active service proposals from discovery - by given query filter
 func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.ServiceProposal, error) {
-	values := url.Values{}
-	if query.NodeKey != "" {
-		values.Set("node_key", query.NodeKey)
-	}
-	if query.ServiceType != "" {
-		values.Set("service_type", query.ServiceType)
-	}
-	if query.AccessPolicyAll {
-		values.Set("access_policy", "*")
-	}
-	if query.AccessPolicyID != "" {
-		values.Set("access_policy[id]", query.AccessPolicyID)
-	}
-	if query.AccessPolicySource != "" {
-		values.Set("access_policy[source]", query.AccessPolicySource)
-	}
-	if query.NodeType != "" {
-		values.Set("node_type", query.NodeType)
-	}
-	if query.IncludeFailed {
-		values.Set("include_failed", "true")
-	}
-
-	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
+	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", query.ToURLValues())
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("If-None-Match", mApi.getLatestProposalsEtag())
 
 	res, err := mApi.httpClient.Do(req)
 	if err != nil {
@@ -250,50 +214,19 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode == http.StatusNotModified {
-		return mApi.getLatestProposals(), nil
-	}
-
 	if err := requests.ParseResponseError(res); err != nil {
 		return nil, err
 	}
 
-	var proposalsResponse ProposalsResponse
-	if err := requests.ParseResponseJSON(res, &proposalsResponse); err != nil {
+	var proposals []market.ServiceProposal
+	if err := requests.ParseResponseJSON(res, &proposals); err != nil {
 		return nil, errors.Wrap(err, "cannot parse proposals response")
 	}
 
-	mApi.setLatestProposalsEtag(res.Header.Get("ETag"))
-
-	total := len(proposalsResponse.Proposals)
-	supported := supportedProposalsOnly(proposalsResponse.Proposals)
-	mApi.setLatestProposals(supported)
+	total := len(proposals)
+	supported := supportedProposalsOnly(proposals)
 	log.Debug().Msgf("Total proposals: %d supported: %d", total, len(supported))
 	return supported, nil
-}
-
-func (mApi *MysteriumAPI) getLatestProposalsEtag() string {
-	mApi.latestProposalsEtagMux.RLock()
-	defer mApi.latestProposalsEtagMux.RUnlock()
-	return mApi.latestProposalsEtag
-}
-
-func (mApi *MysteriumAPI) setLatestProposalsEtag(etag string) {
-	mApi.latestProposalsEtagMux.Lock()
-	defer mApi.latestProposalsEtagMux.Unlock()
-	mApi.latestProposalsEtag = etag
-}
-
-func (mApi *MysteriumAPI) getLatestProposals() []market.ServiceProposal {
-	mApi.latestProposalsMux.RLock()
-	defer mApi.latestProposalsMux.RUnlock()
-	return mApi.latestProposals
-}
-
-func (mApi *MysteriumAPI) setLatestProposals(proposals []market.ServiceProposal) {
-	mApi.latestProposalsMux.Lock()
-	defer mApi.latestProposalsMux.Unlock()
-	mApi.latestProposals = proposals
 }
 
 // SendSessionStats sends session statistics
@@ -314,7 +247,7 @@ func (mApi *MysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats Se
 
 func supportedProposalsOnly(proposals []market.ServiceProposal) (supported []market.ServiceProposal) {
 	for _, proposal := range proposals {
-		if proposal.IsSupported() {
+		if proposal.Validate() == nil && proposal.IsSupported() {
 			supported = append(supported, proposal)
 		}
 	}

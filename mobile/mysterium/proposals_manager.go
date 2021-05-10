@@ -45,13 +45,25 @@ const (
 
 // GetProposalsRequest represents proposals request.
 type GetProposalsRequest struct {
-	ServiceType         string
-	Refresh             bool
-	IncludeFailed       bool
-	UpperTimePriceBound float64
-	LowerTimePriceBound float64
-	UpperGBPriceBound   float64
-	LowerGBPriceBound   float64
+	ServiceType     string
+	LocationCountry string
+	IPType          string
+	Refresh         bool
+	PriceHourMax    float64
+	PriceGiBMax     float64
+	QualityMin      float32
+}
+
+func (r GetProposalsRequest) toFilter() *proposal.Filter {
+	return &proposal.Filter{
+		ServiceType:        r.ServiceType,
+		LocationCountry:    r.LocationCountry,
+		IPType:             r.IPType,
+		PriceGiBMax:        crypto.FloatToBigMyst(r.PriceGiBMax),
+		PriceHourMax:       crypto.FloatToBigMyst(r.PriceHourMax),
+		QualityMin:         r.QualityMin,
+		ExcludeUnsupported: true,
+	}
 }
 
 // GetProposalRequest represents proposal request.
@@ -61,30 +73,18 @@ type GetProposalRequest struct {
 }
 
 type proposalDTO struct {
-	ID               int                    `json:"id"`
-	ProviderID       string                 `json:"providerId"`
-	ServiceType      string                 `json:"serviceType"`
-	CountryCode      string                 `json:"countryCode"`
-	NodeType         string                 `json:"nodeType"`
-	QualityLevel     proposalQualityLevel   `json:"qualityLevel"`
-	MonitoringFailed bool                   `json:"monitoringFailed"`
-	Payment          *proposalPaymentMethod `json:"payment"`
+	ProviderID   string               `json:"provider_id"`
+	ServiceType  string               `json:"service_type"`
+	Country      string               `json:"country"`
+	IPType       string               `json:"ip_type"`
+	QualityLevel proposalQualityLevel `json:"quality_level"`
+	Price        proposalPrice        `json:"price"`
 }
 
-type proposalPaymentMethod struct {
-	Type  string                `json:"type"`
-	Price *proposalPaymentPrice `json:"price"`
-	Rate  *proposalPaymentRate  `json:"rate"`
-}
-
-type proposalPaymentPrice struct {
-	Amount   float64 `json:"amount"`
+type proposalPrice struct {
 	Currency string  `json:"currency"`
-}
-
-type proposalPaymentRate struct {
-	PerSeconds int64 `json:"perSeconds"`
-	PerBytes   int64 `json:"perBytes"`
+	PerGiB   float64 `json:"per_gib"`
+	PerHour  float64 `json:"per_hour"`
 }
 
 type getProposalsResponse struct {
@@ -106,13 +106,11 @@ type qualityFinder interface {
 func newProposalsManager(
 	repository proposal.Repository,
 	mysteriumAPI mysteriumAPI,
-	qualityFinder qualityFinder,
 	filterPresetStorage *proposal.FilterPresetStorage,
 ) *proposalsManager {
 	return &proposalsManager{
 		repository:          repository,
 		mysteriumAPI:        mysteriumAPI,
-		qualityFinder:       qualityFinder,
 		filterPresetStorage: filterPresetStorage,
 	}
 }
@@ -121,7 +119,6 @@ type proposalsManager struct {
 	repository          proposal.Repository
 	cache               []market.ServiceProposal
 	mysteriumAPI        mysteriumAPI
-	qualityFinder       qualityFinder
 	filterPresetStorage *proposal.FilterPresetStorage
 }
 
@@ -140,7 +137,7 @@ func (m *proposalsManager) getProposalsByPreset(presetID int) (*getProposalsResp
 	switch preset.ID {
 	case 1:
 		for i, p := range proposals.Proposals {
-			if p.NodeType == "residential" && p.QualityLevel == proposalQualityLevelMedium || p.QualityLevel == proposalQualityLevelHigh {
+			if p.IPType == "residential" && p.QualityLevel == proposalQualityLevelMedium || p.QualityLevel == proposalQualityLevelHigh {
 				idxToReturn = append(idxToReturn, i)
 			}
 		}
@@ -152,7 +149,7 @@ func (m *proposalsManager) getProposalsByPreset(presetID int) (*getProposalsResp
 		}
 	case 3:
 		for i, p := range proposals.Proposals {
-			if p.NodeType == "hosting" {
+			if p.IPType == "hosting" {
 				idxToReturn = append(idxToReturn, i)
 			}
 		}
@@ -174,12 +171,7 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposals
 		}
 	}
 
-	filter := &proposal.Filter{
-		ServiceType:        req.ServiceType,
-		ExcludeUnsupported: true,
-		IncludeFailed:      req.IncludeFailed,
-	}
-	apiProposals, err := m.getFromRepository(filter)
+	apiProposals, err := m.getFromRepository(req.toFilter())
 	if err != nil {
 		return nil, err
 	}
@@ -214,53 +206,28 @@ func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
 }
 
 func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) (*getProposalsResponse, error) {
-	qualityResp := m.qualityFinder.ProposalsQuality()
-	qualityMap := map[string]quality.ProposalQuality{}
-	for _, m := range qualityResp {
-		qualityMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
-	}
-
 	var proposals []*proposalDTO
 	for _, p := range serviceProposals {
-		proposals = append(proposals, m.mapProposal(&p, qualityMap))
+		proposals = append(proposals, m.mapProposal(&p))
 	}
-
 	return &getProposalsResponse{Proposals: proposals}, nil
 }
 
-func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map[string]quality.ProposalQuality) *proposalDTO {
+func (m *proposalsManager) mapProposal(p *market.ServiceProposal) *proposalDTO {
 	prop := &proposalDTO{
-		ID:           p.ID,
 		ProviderID:   p.ProviderID,
 		ServiceType:  p.ServiceType,
 		QualityLevel: proposalQualityLevelUnknown,
 	}
 
-	if p.ServiceDefinition != nil {
-		loc := p.ServiceDefinition.GetLocation()
-		prop.CountryCode = loc.Country
-		prop.NodeType = loc.NodeType
+	prop.Country = p.Location.Country
+	prop.IPType = p.Location.IPType
+	prop.Price = proposalPrice{
+		Currency: string(p.Price.Currency),
+		PerGiB:   crypto.BigMystToFloat(p.Price.PerGiB),
+		PerHour:  crypto.BigMystToFloat(p.Price.PerHour),
 	}
-
-	payment := p.PaymentMethod
-	if payment != nil {
-		prop.Payment = &proposalPaymentMethod{
-			Type: payment.GetType(),
-			Price: &proposalPaymentPrice{
-				Amount:   crypto.BigMystToFloat(payment.GetPrice().Amount),
-				Currency: string(payment.GetPrice().Currency),
-			},
-			Rate: &proposalPaymentRate{
-				PerSeconds: int64(payment.GetRate().PerTime.Seconds()),
-				PerBytes:   int64(payment.GetRate().PerByte),
-			},
-		}
-	}
-
-	if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-		prop.QualityLevel = m.calculateMetricQualityLevel(mc.Quality)
-		prop.MonitoringFailed = mc.MonitoringFailed
-	}
+	prop.QualityLevel = m.calculateMetricQualityLevel(p.Quality.Quality)
 
 	return prop
 }

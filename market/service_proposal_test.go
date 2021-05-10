@@ -19,78 +19,17 @@ package market
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
-	"time"
 
-	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	providerID      = identity.FromAddress("123456")
-	providerContact = Contact{
-		Type: "type1",
-	}
-	serviceDefinition = mockServiceDefinition{}
-	paymentMethod     = mockPaymentMethod{}
-)
-
-func Test_ServiceProposal_SetProviderContact(t *testing.T) {
-	proposal := ServiceProposal{ID: 123, ProviderID: "123"}
-	proposal.SetProviderContacts(providerID, ContactList{providerContact})
-
-	assert.Exactly(
-		t,
-		ServiceProposal{
-			ID:               1,
-			Format:           proposalFormat,
-			ProviderID:       providerID.Address,
-			ProviderContacts: ContactList{providerContact},
-		},
-		proposal,
-	)
-}
-
-type mockServiceDefinition struct {
-}
-
-func (service mockServiceDefinition) GetLocation() Location {
-	return Location{}
-}
-
-type mockPaymentMethod struct {
-}
-
-func (method mockPaymentMethod) GetPrice() money.Money {
-	return money.Money{}
-}
-
-func (method mockPaymentMethod) GetType() string {
-	return "mock"
-}
-
-func (method mockPaymentMethod) GetRate() PaymentRate {
-	return PaymentRate{
-		PerTime: time.Minute,
-	}
-}
-
 type mockContact struct{}
 
 func init() {
-	RegisterServiceDefinitionUnserializer(
-		"mock_service",
-		func(rawDefinition *json.RawMessage) (ServiceDefinition, error) {
-			return serviceDefinition, nil
-		},
-	)
-	RegisterPaymentMethodUnserializer(
-		"mock_payment",
-		func(rawDefinition *json.RawMessage) (PaymentMethod, error) {
-			return paymentMethod, nil
-		},
-	)
 	RegisterContactUnserializer("mock_contact",
 		func(rawMessage *json.RawMessage) (ContactDefinition, error) {
 			return mockContact{}, nil
@@ -99,43 +38,54 @@ func init() {
 }
 
 func Test_ServiceProposal_Serialize(t *testing.T) {
-	sp := ServiceProposal{
-		ID:                1,
-		Format:            "format/X",
-		ServiceType:       "mock_service",
-		ServiceDefinition: serviceDefinition,
-		PaymentMethodType: "mock_payment",
-		PaymentMethod:     paymentMethod,
-		ProviderID:        "node",
-		ProviderContacts:  ContactList{},
-	}
+	config.Current.SetDefault(config.FlagDefaultCurrency.Name, "MYSTT")
+	sp := NewProposal("node", "mock_service", NewProposalOpts{
+		Price: NewPrice(10, 20, money.Currency(config.GetString(config.FlagDefaultCurrency))),
+		Quality: &Quality{
+			Quality:   2.0,
+			Latency:   5,
+			Bandwidth: 100,
+		},
+		Contacts: ContactList{},
+	})
 
 	jsonBytes, err := json.Marshal(sp)
 	assert.Nil(t, err)
 
 	expectedJSON := `{
-	  "id": 1,
-	  "format": "format/X",
+      "compatibility": 0,
+	  "format": "service-proposal/v2",
 	  "service_type": "mock_service",
-	  "service_definition": {},
-	  "payment_method_type": "mock_payment",
-	  "payment_method": {},
 	  "provider_id": "node",
-	  "provider_contacts": []
+      "location": {},
+      "price": {
+        "currency": "MYSTT",
+        "per_hour": 10,
+        "per_gib": 20
+      },
+      "quality": {
+        "quality": 2.0,
+        "latency": 5,
+        "bandwidth": 100
+      },
+      "contacts": []
 	}`
 	assert.JSONEq(t, expectedJSON, string(jsonBytes))
 }
 
 func Test_ServiceProposal_Unserialize(t *testing.T) {
+	RegisterServiceType("mock_service")
 	jsonData := []byte(`{
 		"id": 1,
-		"format": "format/X",
-		"service_type": "mock_service",
-		"service_definition": null,
-		"payment_method_type": "mock_payment",
-		"payment_method": {},
+		"format": "service-proposal/v2",
 		"provider_id": "node",
-		"provider_contacts": [
+		"service_type": "mock_service",
+        "price": {
+          "currency": "MYSTT",
+          "per_hour": 0,
+          "per_gib": 10
+        },
+		"contacts": [
 			{ "type" : "mock_contact" , "definition" : {}}
 		]
 	}`)
@@ -145,14 +95,15 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := ServiceProposal{
-		ID:                1,
-		Format:            "format/X",
-		ServiceType:       "mock_service",
-		ServiceDefinition: serviceDefinition,
-		PaymentMethodType: "mock_payment",
-		PaymentMethod:     paymentMethod,
-		ProviderID:        "node",
-		ProviderContacts: ContactList{
+		Format:      proposalFormat,
+		ServiceType: "mock_service",
+		Price: Price{
+			Currency: money.CurrencyMystt,
+			PerHour:  big.NewInt(0),
+			PerGiB:   big.NewInt(10),
+		},
+		ProviderID: "node",
+		Contacts: ContactList{
 			Contact{
 				Type:       "mock_contact",
 				Definition: mockContact{},
@@ -163,55 +114,19 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 	assert.True(t, actual.IsSupported())
 }
 
-func Test_ServiceProposal_UnserializeUnknownService(t *testing.T) {
-	jsonData := []byte(`{
-		"service_type": "unknown",
-		"service_definition": {}
-	}`)
-
-	var actual ServiceProposal
-	err := json.Unmarshal(jsonData, &actual)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "unknown", actual.ServiceType)
-	assert.IsType(t, UnsupportedServiceDefinition{}, actual.ServiceDefinition)
-}
-
-func Test_ServiceProposal_UnserializeUnknownPaymentMethod(t *testing.T) {
-	jsonData := []byte(`{
-		"payment_method_type": "unknown",
-		"payment_method": {}
-	}`)
-
-	var actual ServiceProposal
-	err := json.Unmarshal(jsonData, &actual)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "unknown", actual.PaymentMethodType)
-	assert.IsType(t, UnsupportedPaymentMethod{}, actual.PaymentMethod)
-}
-
-func Test_ServiceProposal_RegisterPaymentMethodUnserializer(t *testing.T) {
-	rand := func(*json.RawMessage) (payment PaymentMethod, err error) {
-		return
-	}
-
-	RegisterPaymentMethodUnserializer("testable", rand)
-	_, exists := paymentMethodMap["testable"]
-
-	assert.True(t, exists)
-}
-
 func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
+	RegisterServiceType("mock_service")
 	jsonData := []byte(`{
 		"id": 1,
-		"format": "format/X",
+		"format": "service-proposal/v2",
 		"service_type": "mock_service",
-		"service_definition": null,
-		"payment_method_type": "mock_payment",
-		"payment_method": {},
 		"provider_id": "node",
-		"provider_contacts": [
+        "price": {
+          "currency": "MYSTT",
+          "per_hour": 10,
+          "per_gib": 10
+        },
+		"contacts": [
 			{ "type" : "mock_contact" , "definition" : {}}
 		],
 		"access_policies": [{
@@ -239,14 +154,15 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 		},
 	}
 	expected := ServiceProposal{
-		ID:                1,
-		Format:            "format/X",
-		ServiceType:       "mock_service",
-		ServiceDefinition: serviceDefinition,
-		PaymentMethodType: "mock_payment",
-		PaymentMethod:     paymentMethod,
-		ProviderID:        "node",
-		ProviderContacts: ContactList{
+		Format:      proposalFormat,
+		ServiceType: "mock_service",
+		Price: Price{
+			Currency: money.CurrencyMystt,
+			PerHour:  big.NewInt(10),
+			PerGiB:   big.NewInt(10),
+		},
+		ProviderID: "node",
+		Contacts: ContactList{
 			Contact{
 				Type:       "mock_contact",
 				Definition: mockContact{},

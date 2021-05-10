@@ -82,12 +82,9 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		EventBus:                  mocks.NewEventBus(),
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -135,12 +132,9 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMyst),
+		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -208,6 +202,9 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(0, 0, money.CurrencyMystt),
+		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -270,12 +267,9 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 	defer InvoicePayer.Stop()
@@ -317,12 +311,9 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				proposal: market.ServiceProposal{
-					PaymentMethod: &mockPaymentMethod{
-						price: money.New(big.NewInt(100000), money.CurrencyMyst),
-						rate:  market.PaymentRate{PerTime: time.Minute},
-					},
-				},
+				proposal: market.NewProposal("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C", "mock", market.NewProposalOpts{
+					Price: market.NewPrice(6000000, 0, money.CurrencyMystt),
+				}),
 			},
 			invoice: crypto.Invoice{
 				TransactorFee:  big.NewInt(0),
@@ -339,12 +330,9 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				proposal: market.ServiceProposal{
-					PaymentMethod: &mockPaymentMethod{
-						price: money.New(big.NewInt(100000), money.CurrencyMyst),
-						rate:  market.PaymentRate{PerTime: time.Minute},
-					},
-				},
+				proposal: market.NewProposal("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C", "mock", market.NewProposalOpts{
+					Price: market.NewPrice(6000000, 0, money.CurrencyMystt),
+				}),
 			},
 			invoice: crypto.Invoice{
 				TransactorFee:  big.NewInt(0),

@@ -24,7 +24,7 @@ import (
 )
 
 func Test_EqualInt(t *testing.T) {
-	match := EqualInt(fieldID, 1)
+	match := EqualInt(fieldCompatibility, 1)
 
 	assert.False(t, match(proposalEmpty))
 	assert.False(t, match(proposalProvider1Streaming))

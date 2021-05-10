@@ -136,7 +136,7 @@ var defaultPresets = []FilterPreset{
 	{
 		ID:                1,
 		Name:              "Media Streaming",
-		NodeType:          Residential,
+		IPType:            Residential,
 		QualityLowerBound: 1.4,
 	},
 	{
@@ -145,35 +145,35 @@ var defaultPresets = []FilterPreset{
 		QualityLowerBound: 1.5,
 	},
 	{
-		ID:       3,
-		Name:     "Download",
-		NodeType: Hosting,
+		ID:     3,
+		Name:   "Download",
+		IPType: Hosting,
 	},
 }
 
-// NodeType represents type of node
-type NodeType string
+// IPType represents type of node
+type IPType string
 
 const (
 	// Residential node type value
-	Residential NodeType = "residential"
+	Residential IPType = "residential"
 	// Hosting node type value
-	Hosting NodeType = "hosting"
+	Hosting IPType = "hosting"
 	// Business node type value
-	Business NodeType = "business"
+	Business IPType = "business"
 	// Cellular node type value
-	Cellular NodeType = "cellular"
+	Cellular IPType = "cellular"
 	// Dialup node type value
-	Dialup NodeType = "dialup"
+	Dialup IPType = "dialup"
 	// College node type value
-	College NodeType = "college"
+	College IPType = "college"
 )
 
 // FilterPreset represent predefined or user stored proposal filter preset
 type FilterPreset struct {
 	ID                     int
 	Name                   string
-	NodeType               NodeType
+	IPType                 IPType
 	UpperTimeMinPriceBound string
 	UpperGBPriceBound      string
 	QualityLowerBound      float64

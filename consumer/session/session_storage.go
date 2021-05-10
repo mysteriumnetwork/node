@@ -165,7 +165,7 @@ func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession)
 			ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
 			ServiceType:     e.Session.Proposal.ServiceType,
 			ConsumerCountry: e.Session.ConsumerLocation.Country,
-			ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
+			ProviderCountry: e.Session.Proposal.Location.Country,
 			Started:         e.Session.StartedAt.UTC(),
 			Tokens:          new(big.Int),
 		}
@@ -223,9 +223,9 @@ func (repo *Storage) consumeConnectionSessionEvent(e connectionstate.AppEventCon
 			ProviderID:      identity.FromAddress(e.SessionInfo.Proposal.ProviderID),
 			ServiceType:     e.SessionInfo.Proposal.ServiceType,
 			ConsumerCountry: e.SessionInfo.ConsumerLocation.Country,
-			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
+			ProviderCountry: e.SessionInfo.Proposal.Location.Country,
 			Started:         e.SessionInfo.StartedAt.UTC(),
-			NodeType:        e.SessionInfo.Proposal.ServiceDefinition.GetLocation().NodeType,
+			IPType:          e.SessionInfo.Proposal.Location.IPType,
 			Tokens:          new(big.Int),
 		}
 		repo.mu.Unlock()

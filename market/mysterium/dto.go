@@ -18,6 +18,10 @@
 package mysterium
 
 import (
+	"fmt"
+	"net/url"
+	"strconv"
+
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -69,18 +73,52 @@ type ProposalUnregisterRequest struct {
 
 // ProposalsQuery represents URL query for proposal listing
 type ProposalsQuery struct {
-	NodeKey            string
-	ServiceType        string
-	AccessPolicyAll    bool
-	AccessPolicyID     string
-	AccessPolicySource string
-	NodeType           string
-	IncludeFailed      bool
+	ProviderID      string
+	ServiceType     string
+	LocationCountry string
+
+	CompatibilityMin, CompatibilityMax int
+	AccessPolicy, AccessPolicySource   string
+
+	IPType                    string
+	PriceGibMax, PriceHourMax uint64
+	QualityMin                float32
 }
 
-// ProposalsResponse represents JSON response for the list of proposals
-type ProposalsResponse struct {
-	Proposals []market.ServiceProposal `json:"proposals"`
+func (q ProposalsQuery) ToURLValues() url.Values {
+	values := url.Values{}
+	if q.ProviderID != "" {
+		values.Set("provider_id", q.ProviderID)
+	}
+	if q.ServiceType != "" {
+		values.Set("service_type", q.ServiceType)
+	}
+	if q.LocationCountry != "" {
+		values.Set("location_country", q.LocationCountry)
+	}
+	if q.IPType != "" {
+		values.Set("ip_type", q.IPType)
+	}
+	if !(q.CompatibilityMin == 0 && q.CompatibilityMax == 0) {
+		values.Set("compatibility_min", strconv.Itoa(q.CompatibilityMin))
+		values.Set("compatibility_max", strconv.Itoa(q.CompatibilityMax))
+	}
+	if q.AccessPolicy != "" {
+		values.Set("access_policy", q.AccessPolicy)
+	}
+	if q.AccessPolicySource != "" {
+		values.Set("access_policy_source", q.AccessPolicySource)
+	}
+	if q.PriceGibMax != 0 {
+		values.Set("price_gib_max", strconv.FormatUint(q.PriceGibMax, 10))
+	}
+	if q.PriceHourMax != 0 {
+		values.Set("price_hour_max", strconv.FormatUint(q.PriceHourMax, 10))
+	}
+	if q.QualityMin != 0 {
+		values.Set("quality_min", fmt.Sprintf("%.2f", q.QualityMin))
+	}
+	return values
 }
 
 // SessionStats mapped to json structure

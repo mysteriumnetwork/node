@@ -181,7 +181,7 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 	transferred := ip.getDataTransferred()
 	transferred.Up += ip.deps.DataLeeway.Bytes()
 
-	shouldBe := CalculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
+	shouldBe := CalculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.Price)
 	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transferred)
 
 	upperBound, _ := new(big.Float).Mul(new(big.Float).SetInt(shouldBe), big.NewFloat(estimatedTolerance)).Int(nil)

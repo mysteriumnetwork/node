@@ -27,18 +27,15 @@ import (
 
 // Filter defines all flags for proposal filtering in discovery of Mysterium Network
 type Filter struct {
-	ProviderID          string
-	ServiceType         string
-	LocationType        string
-	LocationCountry     string
-	AccessPolicyID      string
-	AccessPolicySource  string
-	UpperTimePriceBound *big.Int
-	LowerTimePriceBound *big.Int
-	UpperGBPriceBound   *big.Int
-	LowerGBPriceBound   *big.Int
-	ExcludeUnsupported  bool
-	IncludeFailed       bool
+	ProviderID                         string
+	ServiceType                        string
+	LocationCountry                    string
+	IPType                             string
+	AccessPolicy, AccessPolicySource   string
+	PriceGiBMax, PriceHourMax          *big.Int
+	CompatibilityMin, CompatibilityMax int
+	QualityMin                         float32
+	ExcludeUnsupported                 bool
 }
 
 // Matches return flag if filter matches given proposal
@@ -55,22 +52,24 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 	if filter.ServiceType != "" {
 		conditions = append(conditions, reducer.Equal(reducer.ServiceType, filter.ServiceType))
 	}
-	if filter.LocationType != "" {
-		conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.LocationType))
+	if filter.IPType != "" {
+		conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.IPType))
 	}
 	if filter.LocationCountry != "" {
 		conditions = append(conditions, reducer.Equal(reducer.LocationCountry, filter.LocationCountry))
 	}
-	if filter.AccessPolicyID != "" || filter.AccessPolicySource != "" {
-		conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicyID, filter.AccessPolicySource))
+	if filter.AccessPolicy != "all" {
+		if filter.AccessPolicy != "" || filter.AccessPolicySource != "" {
+			conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicy, filter.AccessPolicySource))
+		}
 	}
 
-	if filter.UpperTimePriceBound != nil && filter.LowerTimePriceBound != nil {
-		conditions = append(conditions, reducer.PriceMinute(filter.LowerTimePriceBound, filter.UpperTimePriceBound))
+	if filter.PriceHourMax != nil {
+		conditions = append(conditions, reducer.PriceHourMax(filter.PriceHourMax))
 	}
 
-	if filter.UpperGBPriceBound != nil && filter.LowerGBPriceBound != nil {
-		conditions = append(conditions, reducer.PriceGiB(filter.LowerGBPriceBound, filter.UpperGBPriceBound))
+	if filter.PriceGiBMax != nil {
+		conditions = append(conditions, reducer.PriceGiBMax(filter.PriceGiBMax))
 	}
 
 	if len(conditions) > 0 {
@@ -82,17 +81,20 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 // ToAPIQuery serialises filter to query of Mysterium API
 func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 	query := mysterium.ProposalsQuery{
-		NodeKey:            filter.ProviderID,
+		ProviderID:         filter.ProviderID,
 		ServiceType:        filter.ServiceType,
-		AccessPolicyID:     filter.AccessPolicyID,
+		LocationCountry:    filter.LocationCountry,
+		CompatibilityMin:   filter.CompatibilityMin,
+		CompatibilityMax:   filter.CompatibilityMax,
+		AccessPolicy:       filter.AccessPolicy,
 		AccessPolicySource: filter.AccessPolicySource,
-		IncludeFailed:      filter.IncludeFailed,
+		QualityMin:         filter.QualityMin,
 	}
-	if filter.ServiceType == "" {
-		query.ServiceType = "all"
+	if priceGibMax := filter.PriceGiBMax; priceGibMax != nil {
+		query.PriceGibMax = priceGibMax.Uint64()
 	}
-	if filter.LocationType != "" {
-		query.NodeType = filter.LocationType
+	if priceHourMax := filter.PriceHourMax; priceHourMax != nil {
+		query.PriceHourMax = priceHourMax.Uint64()
 	}
 
 	return query
