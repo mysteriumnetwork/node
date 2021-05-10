@@ -94,7 +94,6 @@ func (hug *HermesURLGetter) GetHermesURL(chainID int64, address common.Address) 
 	if err != nil {
 		return "", err
 	}
-
 	add, err = hug.normalizeAddress(add)
 	if err != nil {
 		return "", err
