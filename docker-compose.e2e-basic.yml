@@ -177,7 +177,7 @@ services:
         start_period: 5s
 
   hermes:
-    image: mysteriumnetwork/hermes:matic-rc1
+    image: mysteriumnetwork/hermes:matic-rc3
     environment:
       PORT: 8889
       LOG_LEVEL: trace
@@ -218,7 +218,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   hermes2:
-    image: mysteriumnetwork/hermes:matic-rc1
+    image: mysteriumnetwork/hermes:matic-rc3
     environment:
       PORT: 8889
       LOG_LEVEL: trace
