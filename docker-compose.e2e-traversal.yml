@@ -222,7 +222,7 @@ services:
         ipv4_address: 172.31.0.210
 
   transactor:
-    image: mysteriumnetwork/transactor:matic-rc1
+    image: mysteriumnetwork/transactor:matic-rc3
     environment:
       PORT: 8888
     expose:
@@ -239,9 +239,7 @@ services:
       - transactordatabase
       - http-mock
     command: >
-      -overrideEthGasStation=true
       -ethStaticGasPrice=0.001
-      -overrideMaticGasStation=true
       -maticStaticGasPrice=0.001
       -settlementThrottleTime=1ms
       -geckoUrl=http://http-mock:1080/gecko

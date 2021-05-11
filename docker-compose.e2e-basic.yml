@@ -105,7 +105,7 @@ services:
       - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   transactor:
-    image: mysteriumnetwork/transactor:matic-rc1
+    image: mysteriumnetwork/transactor:matic-rc3
     environment:
       PORT: 8888
     expose:
@@ -118,9 +118,7 @@ services:
       - http-mock
     command: >
       -geckoUrl=http://http-mock:1080/gecko
-      -overrideEthGasStation=true
       -ethStaticGasPrice=0.001
-      -overrideMaticGasStation=true
       -maticStaticGasPrice=0.001
       -settlementThrottleTime=1ms
       -stakeAmount 62000000000000000000
