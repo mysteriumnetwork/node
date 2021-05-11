@@ -52,6 +52,7 @@ type GetProposalsRequest struct {
 	PriceHourMax    float64
 	PriceGiBMax     float64
 	QualityMin      float32
+	PresetID        int
 }
 
 func (r GetProposalsRequest) toFilter() *proposal.Filter {
@@ -122,46 +123,6 @@ type proposalsManager struct {
 	filterPresetStorage *proposal.FilterPresetStorage
 }
 
-func (m *proposalsManager) getProposalsByPreset(presetID int) (*getProposalsResponse, error) {
-	preset, err := m.filterPresetStorage.Get(presetID)
-	if err != nil {
-		return nil, err
-	}
-	proposals, err := m.getProposals(&GetProposalsRequest{ServiceType: "wireguard"})
-	if proposals == nil {
-		return &getProposalsResponse{Proposals: make([]*proposalDTO, 0)}, nil
-	}
-
-	idxToReturn := make([]int, 0)
-	// mock implementation
-	switch preset.ID {
-	case 1:
-		for i, p := range proposals.Proposals {
-			if p.IPType == "residential" && p.QualityLevel == proposalQualityLevelMedium || p.QualityLevel == proposalQualityLevelHigh {
-				idxToReturn = append(idxToReturn, i)
-			}
-		}
-	case 2:
-		for i, p := range proposals.Proposals {
-			if p.QualityLevel == proposalQualityLevelMedium || p.QualityLevel == proposalQualityLevelHigh {
-				idxToReturn = append(idxToReturn, i)
-			}
-		}
-	case 3:
-		for i, p := range proposals.Proposals {
-			if p.IPType == "hosting" {
-				idxToReturn = append(idxToReturn, i)
-			}
-		}
-	}
-
-	filteredByPreset := make([]*proposalDTO, len(idxToReturn))
-	for i, n := range idxToReturn {
-		filteredByPreset[i] = proposals.Proposals[n]
-	}
-	return &getProposalsResponse{Proposals: filteredByPreset}, nil
-}
-
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposalsResponse, error) {
 	// Get proposals from cache if exists.
 	if !req.Refresh {
@@ -175,6 +136,15 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposals
 	if err != nil {
 		return nil, err
 	}
+
+	if req.PresetID != 0 {
+		preset, err := m.filterPresetStorage.Get(req.PresetID)
+		if err != nil {
+			return nil, err
+		}
+		apiProposals = preset.Filter(apiProposals)
+	}
+
 	m.addToCache(apiProposals)
 
 	return m.mapToProposalsResponse(apiProposals)
