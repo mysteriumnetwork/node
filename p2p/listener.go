@@ -258,7 +258,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	p2pConnConfig := p2pConnectConfig{
 		publicIP:         publicIP,
 		localPorts:       localPorts,
-		publicPorts:      stunPorts(m.eventBus, localPorts...),
+		publicPorts:      stunPorts(providerID, m.eventBus, localPorts...),
 		publicKey:        pubKey,
 		privateKey:       privateKey,
 		peerPubKey:       peerPubKey,

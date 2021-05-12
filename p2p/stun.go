@@ -27,6 +27,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // AppTopicSTUN represents the STUN detection topic.
@@ -34,7 +35,12 @@ const AppTopicSTUN = "STUN detection"
 
 var serverList = []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"}
 
-func stunPorts(eventBus eventbus.Publisher, localPorts ...int) (remotePorts []int) {
+type stunStatus struct {
+	identity string
+	natType  string
+}
+
+func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPorts ...int) (remotePorts []int) {
 	m := make(map[int]int)
 
 	mu := sync.Mutex{}
@@ -69,7 +75,12 @@ func stunPorts(eventBus eventbus.Publisher, localPorts ...int) (remotePorts []in
 				}
 			}
 
-			eventBus.Publish(AppTopicSTUN, natType)
+			if eventBus != nil {
+				eventBus.Publish(AppTopicSTUN, stunStatus{
+					identity: identity.Address,
+					natType:  natType,
+				})
+			}
 		}(p)
 	}
 
