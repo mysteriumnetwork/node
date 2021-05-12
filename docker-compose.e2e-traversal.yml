@@ -80,17 +80,19 @@ services:
         ipv4_address: 172.31.0.30
 
   db:
-    image: percona:5.7
-    cap_add:
-      - NET_ADMIN
-    restart: always
-    expose:
-      - 3306
+    image: postgres:13-alpine
+    container_name: discovery_db
+    ports:
+      - 5432:5432
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: myst_api
-      MYSQL_USER: myst_api
-      MYSQL_PASSWORD: myst_api
+      - POSTGRES_USER=discovery
+      - POSTGRES_DB=discovery
+      - POSTGRES_PASSWORD=discovery
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     dns: 172.30.0.254
     networks:
       public0:
@@ -98,10 +100,13 @@ services:
       public1:
         ipv4_address: 172.31.0.201
 
-  mysterium-api:
-    image: mysteriumnetwork/mysterium-api:latest
+  discovery:
+    image: mysteriumnetwork/discovery:latest
+    depends_on:
+      db:
+        condition: service_healthy
     expose:
-      - 8001
+      - 8080
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -110,18 +115,12 @@ services:
       - net.ipv4.conf.eth0.rp_filter=0
       - net.ipv4.conf.eth1.rp_filter=0
     environment:
-      APP_PORT: 8001
-      DB_HOST: db
-      DB_NAME: myst_api
-      DB_USER: myst_api
-      DB_PASSWORD: myst_api
-      ETHER_RPC_URL: "http://ganache:8545"
-      IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
-      ETHER_MINING_MODE: "poa"
-      DISCOVERY_VERIFY_IDENTITY: "false"
+      - PORT=8080
+      - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
+      - QUALITY_ORACLE_URL=http://morqa:8085
+      - BROKER_URL=broker
     depends_on:
       - db
-      - ganache
     dns: 172.30.0.254
     networks:
       public0:
@@ -310,7 +309,7 @@ services:
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     depends_on:
       - broker
-      - mysterium-api
+      - discovery
       - ipify
       - transactor
       - hermes2
@@ -335,7 +334,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://mysterium-api:8001/v1
+      --api.address=http://discovery:8080/api/v3
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
@@ -397,7 +396,7 @@ services:
     depends_on:
       - forwarder
       - broker
-      - mysterium-api
+      - discovery
       - ipify
       - transactor
       - hermes
@@ -419,7 +418,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://mysterium-api:8001/v1
+      --api.address=http://discovery:8080/api/v3
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
@@ -445,7 +444,7 @@ services:
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     depends_on:
       - broker
-      - mysterium-api
+      - discovery
       - ipify
       - transactor
       - hermes
@@ -469,7 +468,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://mysterium-api:8001/v1
+      --api.address=http://discovery:8080/api/v3
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
@@ -493,7 +492,7 @@ services:
       - ./e2e/myst-consumer/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3:/var/lib/mysterium-node/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
     depends_on:
       - broker
-      - mysterium-api
+      - discovery
       - ipify
       - transactor
       - hermes
@@ -515,7 +514,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://mysterium-api:8001/v1
+      --api.address=http://discovery:8080/api/v3
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
@@ -535,7 +534,7 @@ services:
     depends_on:
       - forwarder2
       - broker
-      - mysterium-api
+      - discovery
       - ipify
       - transactor
       - hermes
@@ -561,7 +560,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --firewall.protected.networks=""
-      --api.address=http://mysterium-api:8001/v1
+      --api.address=http://discovery:8080/api/v3
       --ether.client.rpc=ws://ganache:8545
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7

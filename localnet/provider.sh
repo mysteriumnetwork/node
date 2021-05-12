@@ -17,7 +17,7 @@ exec /node/build/myst/myst \
   --location.country=e2e-land \
   --broker-address=broker \
   --firewall.protected.networks= \
-  --api.address=http://mysterium-api:8001/v1 \
+  --api.address=http://discovery:8080/api/v3 \
   --ether.client.rpc=ws://ganache:8545 \
   --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10 \
   --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75 \
