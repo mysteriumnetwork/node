@@ -25,8 +25,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/trace"
 	nats_lib "github.com/nats-io/nats.go"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -34,9 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
-
-	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
+	"github.com/mysteriumnetwork/node/trace"
 )
 
 const maxBrokerConnectAttempts = 25
@@ -185,7 +184,7 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	// Parse provider response with public key and encrypted and signed connection config.
 	exchangeMsgReplySignedMsg, err := unpackSignedMsg(m.verifier, exchangeMsgBrokerReply)
 	if err != nil {
-		return nil, fmt.Errorf("could not unpack peer siged message: %w", err)
+		return nil, fmt.Errorf("could not unpack peer signed message: %w", err)
 	}
 	var exchangeMsgReply pb.P2PConfigExchangeMsg
 	if err := proto.Unmarshal(exchangeMsgReplySignedMsg.Data, &exchangeMsgReply); err != nil {

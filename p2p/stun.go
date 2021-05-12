@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/pion/stun"
 	"github.com/rs/zerolog/log"
@@ -28,11 +29,12 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
+// AppTopicSTUN represents the STUN detection topic.
 const AppTopicSTUN = "STUN detection"
 
-var serverList = []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun1.l.google.com:19302"}
+var serverList = []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"}
 
-func stunPorts(eventBus eventbus.EventBus, localPorts ...int) (remotePorts []int) {
+func stunPorts(eventBus eventbus.Publisher, localPorts ...int) (remotePorts []int) {
 	m := make(map[int]int)
 
 	mu := sync.Mutex{}
@@ -48,28 +50,40 @@ func stunPorts(eventBus eventbus.EventBus, localPorts ...int) (remotePorts []int
 			mu.Lock()
 			defer mu.Unlock()
 
+			natType := "unknown"
+
 			for _, port := range resp {
 				if m[p] != 0 {
-					// TODO use correct naming for NAT type detection
 					switch {
 					case m[p] == port && p == port:
-						eventBus.Publish(AppTopicSTUN, "full")
+						natType = "full"
 					case m[p] == port:
-						eventBus.Publish(AppTopicSTUN, "semi")
+						natType = "restricted"
 					default:
-						eventBus.Publish(AppTopicSTUN, "fail")
+						natType = "fail"
 					}
 				}
 
-				m[p] = port
+				if port != 0 {
+					m[p] = port
+				}
 			}
+
+			eventBus.Publish(AppTopicSTUN, natType)
 		}(p)
 	}
 
 	wg.Wait()
 
 	for _, p := range localPorts {
-		remotePorts = append(remotePorts, m[p])
+		if port, ok := m[p]; ok {
+			remotePorts = append(remotePorts, port)
+		}
+	}
+
+	if len(remotePorts) == 0 {
+		log.Warn().Msg("Failed to get ports from STUN servers, falling back to local ports")
+		return localPorts
 	}
 
 	return remotePorts
@@ -79,6 +93,11 @@ func multiServerSTUN(servers []string, p, limit int) (respPort []int) {
 	conn, err := net.ListenUDP("udp4", &net.UDPAddr{Port: p})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to listen UDP address for STUN server")
+		return nil
+	}
+
+	if err := conn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		log.Error().Err(err).Msg("failed to set connection deadline for STUN server")
 		return nil
 	}
 
@@ -114,7 +133,7 @@ func multiServerSTUN(servers []string, p, limit int) (respPort []int) {
 		}
 	}
 
-	return nil
+	return respPort
 }
 
 func stunPort(conn *net.UDPConn, server string) (remotePort int, err error) {
@@ -125,8 +144,7 @@ func stunPort(conn *net.UDPConn, server string) (remotePort int, err error) {
 
 	m := stun.MustBuild(stun.TransactionID, stun.BindingRequest)
 
-	_, err = conn.WriteToUDP(m.Raw, serverAddr)
-	if err != nil {
+	if _, err = conn.WriteToUDP(m.Raw, serverAddr); err != nil {
 		return 0, fmt.Errorf("failed to send binding request to STUN server: %w", err)
 	}
 
@@ -139,27 +157,18 @@ func stunPort(conn *net.UDPConn, server string) (remotePort int, err error) {
 
 	msg = msg[:n]
 
-	switch {
-	case stun.IsMessage(msg):
-		m := &stun.Message{
-			Raw: msg,
-		}
-
-		decErr := m.Decode()
-		if decErr != nil {
-			return 0, fmt.Errorf("failed to decode STUN server message: %w", err)
-		}
-
-		var xorAddr stun.XORMappedAddress
-		if getErr := xorAddr.GetFrom(m); getErr != nil {
-			return 0, fmt.Errorf("failed to decode STUN server message: %w", err)
-		}
-
-		return xorAddr.Port, nil
-
-	default:
-		log.Error().Msgf("unknown message: %s", msg)
+	if !stun.IsMessage(msg) {
+		return 0, fmt.Errorf("not correct response from STUN server")
 	}
 
-	return
+	if err := m.Decode(); err != nil {
+		return 0, fmt.Errorf("failed to decode STUN server message: %w", err)
+	}
+
+	var xorAddr stun.XORMappedAddress
+	if err := xorAddr.GetFrom(&stun.Message{Raw: msg}); err != nil {
+		return 0, fmt.Errorf("failed to decode STUN server message: %w", err)
+	}
+
+	return xorAddr.Port, nil
 }
