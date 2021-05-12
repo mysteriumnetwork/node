@@ -172,12 +172,14 @@ func stunPort(conn *net.UDPConn, server string) (remotePort int, err error) {
 		return 0, fmt.Errorf("not correct response from STUN server")
 	}
 
-	if err := m.Decode(); err != nil {
+	resp := &stun.Message{Raw: msg}
+
+	if err := resp.Decode(); err != nil {
 		return 0, fmt.Errorf("failed to decode STUN server message: %w", err)
 	}
 
 	var xorAddr stun.XORMappedAddress
-	if err := xorAddr.GetFrom(&stun.Message{Raw: msg}); err != nil {
+	if err := xorAddr.GetFrom(resp); err != nil {
 		return 0, fmt.Errorf("failed to decode STUN server message: %w", err)
 	}
 

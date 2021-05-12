@@ -101,6 +101,8 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("could not prepare ports: %w", err)
 	}
 
+	config.publicPorts = stunPorts(consumerID, nil, config.localPorts...)
+
 	// Finally send consumer encrypted and signed connect config in ack message.
 	err = m.ackConfigExchange(config, ctx, brokerConn, providerID, serviceType, consumerID)
 	if err != nil {
@@ -214,7 +216,7 @@ func (m *dialer) ackConfigExchange(config *p2pConnectConfig, ctx context.Context
 
 	connConfig := &pb.P2PConnectConfig{
 		PublicIP: config.publicIP,
-		Ports:    intToInt32Slice(config.localPorts),
+		Ports:    intToInt32Slice(config.publicPorts),
 	}
 	connConfigCiphertext, err := encryptConnConfigMsg(connConfig, config.privateKey, config.peerPubKey)
 	if err != nil {
