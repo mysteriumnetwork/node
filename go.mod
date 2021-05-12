@@ -59,6 +59,7 @@ require (
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
+	github.com/pion/stun v0.3.5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.17.2
 	github.com/sergi/go-diff v1.1.0 // indirect

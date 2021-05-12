@@ -89,6 +89,7 @@ type p2pConnectConfig struct {
 	peerPublicIP     string
 	peerPorts        []int
 	localPorts       []int
+	publicPorts      []int
 	publicKey        PublicKey
 	privateKey       PrivateKey
 	peerPubKey       PublicKey
@@ -254,9 +255,10 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 		return fmt.Errorf("could not prepare ports: %w", err)
 	}
 
-	m.setPendingConfig(p2pConnectConfig{
+	p2pConnConfig := p2pConnectConfig{
 		publicIP:         publicIP,
 		localPorts:       localPorts,
+		publicPorts:      stunPorts(m.eventBus, localPorts...),
 		publicKey:        pubKey,
 		privateKey:       privateKey,
 		peerPubKey:       peerPubKey,
@@ -264,11 +266,12 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 		upnpPortsRelease: portsRelease,
 		peerPublicIP:     "",
 		peerPorts:        nil,
-	})
+	}
+	m.setPendingConfig(p2pConnConfig)
 
 	config := pb.P2PConnectConfig{
 		PublicIP: publicIP,
-		Ports:    intToInt32Slice(localPorts),
+		Ports:    intToInt32Slice(p2pConnConfig.publicPorts),
 	}
 	configCiphertext, err := encryptConnConfigMsg(&config, privateKey, peerPubKey)
 	if err != nil {
@@ -346,9 +349,7 @@ func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer
 		return publicIP, nil, nil, fmt.Errorf("could not acquire more local ports: %w", err)
 	}
 
-	for _, p := range morePorts {
-		localPorts = append(localPorts, p)
-	}
+	localPorts = append(localPorts, morePorts...)
 
 	return publicIP, localPorts, nil, nil
 }
