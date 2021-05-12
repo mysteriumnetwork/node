@@ -159,7 +159,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.MysteriumAPI, di.SignerFactory, di.AddressProvider, di.BCHelper, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 

@@ -706,7 +706,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 	}
 	di.IdentitySelector = identity_selector.NewHandler(
 		di.IdentityManager,
-		di.MysteriumAPI,
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)

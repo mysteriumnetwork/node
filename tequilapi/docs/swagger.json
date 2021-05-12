@@ -780,50 +780,6 @@
         }
       }
     },
-    "/identities/{id}/email": {
-      "put": {
-        "description": "Registers email for identity",
-        "tags": [
-          "Identity"
-        ],
-        "summary": "Registers emailpayout_test.go",
-        "operationId": "updateEmail",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity stored in keystore",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Parameter in body (email) is required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/EmailInfoDTO"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email updated"
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/identities/{id}/payment-order": {
       "get": {
         "description": "Gets all orders for a given identity from the pilvytis service",
@@ -939,56 +895,6 @@
         }
       }
     },
-    "/identities/{id}/payout": {
-      "put": {
-        "description": "Registers payout address for identity",
-        "tags": [
-          "Identity"
-        ],
-        "summary": "Registers payout info",
-        "operationId": "updatePayoutInfo",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity stored in keystore",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Parameter in body (eth_address) is required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/PayoutInfoDTO"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Payout info registered"
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "422": {
-            "description": "Parameters validation error",
-            "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/identities/{id}/referral": {
       "get": {
         "description": "Gets a referral token for the given identity if a campaign exists",
@@ -1006,48 +912,6 @@
         "responses": {
           "200": {
             "description": "Token response"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      },
-      "put": {
-        "description": "Registers referral code for identity",
-        "tags": [
-          "Identity"
-        ],
-        "summary": "Registers referral info",
-        "operationId": "updateReferralInfo",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity stored in keystore",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Parameter in body (referral_code) is required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/ReferralInfoDTO"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Referral info registered"
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
           },
           "500": {
             "description": "Internal server error",
@@ -2572,20 +2436,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "EmailInfoDTO": {
-      "type": "object",
-      "required": [
-        "email"
-      ],
-      "properties": {
-        "email": {
-          "type": "string",
-          "x-go-name": "Email"
-        }
-      },
-      "x-go-name": "emailInfo",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-    },
     "Error": {
       "description": "Error represents a single error in an ErrorResponse",
       "type": "object",
@@ -3148,22 +2998,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "PayoutInfoDTO": {
-      "type": "object",
-      "required": [
-        "eth_address"
-      ],
-      "properties": {
-        "eth_address": {
-          "description": "in Ethereum address format",
-          "type": "string",
-          "x-go-name": "EthAddress",
-          "example": "0x000000000000000000000000000000000000000a"
-        }
-      },
-      "x-go-name": "payoutInfo",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-    },
     "Price": {
       "type": "object",
       "title": "Price represents the service price.",
@@ -3307,21 +3141,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ReferralInfoDTO": {
-      "type": "object",
-      "required": [
-        "referral_code"
-      ],
-      "properties": {
-        "referral_code": {
-          "type": "string",
-          "x-go-name": "ReferralCode",
-          "example": "ABC123"
-        }
-      },
-      "x-go-name": "referralInfo",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "ReferralTokenResponse": {
       "type": "object",
