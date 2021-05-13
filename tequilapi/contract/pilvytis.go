@@ -90,3 +90,18 @@ func NewOrdersResponse(r []pilvytis.OrderResponse) []OrderResponse {
 	}
 	return result
 }
+
+// PaymentOrderOptions represents pilvytis payment order options
+// swagger:model PaymentOrderOptions
+type PaymentOrderOptions struct {
+	Minimum   float64   `json:"minimum"`
+	Suggested []float64 `json:"suggested"`
+}
+
+// ToPaymentOrderOptions - convert pilvytis.PaymentOrderOptions to contract.ToPaymentOrderOptions
+func ToPaymentOrderOptions(poo *pilvytis.PaymentOrderOptions) *PaymentOrderOptions {
+	return &PaymentOrderOptions{
+		Minimum:   poo.Minimum,
+		Suggested: poo.Suggested,
+	}
+}

@@ -26,21 +26,21 @@ import (
 
 // StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
 type StaticResolver struct {
-	country  string
-	city     string
-	nodeType string
-	err      error
+	country string
+	city    string
+	ipType  string
+	err     error
 
 	ipResolver ip.Resolver
 }
 
 // NewStaticResolver creates new StaticResolver with specified country
-func NewStaticResolver(country, city, nodeType string, ipResolver ip.Resolver) *StaticResolver {
+func NewStaticResolver(country, city, ipType string, ipResolver ip.Resolver) *StaticResolver {
 	return &StaticResolver{
-		country:  country,
-		city:     city,
-		nodeType: nodeType,
-		err:      nil,
+		country: country,
+		city:    city,
+		ipType:  ipType,
+		err:     nil,
 
 		ipResolver: ipResolver,
 	}
@@ -62,9 +62,9 @@ func (d *StaticResolver) DetectLocation() (locationstate.Location, error) {
 		return locationstate.Location{}, errors.Wrap(err, "failed to get public IP")
 	}
 	return locationstate.Location{
-		Country:  d.country,
-		City:     d.city,
-		NodeType: d.nodeType,
-		IP:       pubIP,
+		Country: d.country,
+		City:    d.city,
+		IPType:  d.ipType,
+		IP:      pubIP,
 	}, d.err
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,22 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package noop
+package validateutil
 
 import (
-	"github.com/mysteriumnetwork/node/market"
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/pkg/errors"
 )
 
-// ServiceType indicates "noop" service type
-const ServiceType = "noop"
-
-// ServiceDefinition structure represents "noop" service parameters
-type ServiceDefinition struct {
-	// Approximate information on location where the service is provided from
-	Location market.Location `json:"location"`
-}
-
-// GetLocation returns geographic location of service definition provider
-func (service ServiceDefinition) GetLocation() market.Location {
-	return service.Location
+// StringEquals returns a validation rule checking if the value is equal to the given string.
+func StringEquals(str string) validation.RuleFunc {
+	return func(value interface{}) error {
+		s, _ := value.(string)
+		if s != str {
+			return errors.New("unexpected string")
+		}
+		return nil
+	}
 }

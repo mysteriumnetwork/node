@@ -41,11 +41,8 @@ import (
 
 var (
 	currentProposalID = 68
-	currentProposal   = market.ServiceProposal{
-		ServiceType: "mockservice",
-		ID:          currentProposalID,
-	}
-	currentService = NewInstance(
+	currentProposal   = market.NewProposal("0x1", "mockservice", market.NewProposalOpts{})
+	currentService    = NewInstance(
 		identity.FromAddress(currentProposal.ProviderID),
 		currentProposal.ServiceType,
 		struct{}{},
@@ -233,43 +230,6 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 		_, found := sessionStore.Find(sessionOld.ID)
 		return !found
 	}, 2*time.Second, 10*time.Millisecond, "Waiting for session destroy")
-}
-
-func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
-	publisher := mocks.NewEventBus()
-	sessionStore := NewSessionPool(mocks.NewEventBus())
-	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
-
-	_, err := manager.Start(&pb.SessionRequest{
-		Consumer: &pb.ConsumerInfo{
-			Id:       consumerID.Address,
-			HermesID: hermesID.String(),
-		},
-		ProposalID: int64(69),
-	})
-
-	assert.Exactly(t, err, ErrorInvalidProposal)
-	assert.Len(t, sessionStore.GetAll(), 0)
-	assert.Eventually(t, func() bool {
-		history := publisher.GetEventHistory()
-		if len(history) != 3 {
-			return false
-		}
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[0].Topic)
-		traceEvent1 := history[0].Event.(trace.Event)
-		assert.Equal(t, "Provider connect", traceEvent1.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
-		traceEvent2 := history[1].Event.(trace.Event)
-		assert.Equal(t, "Provider session create", traceEvent2.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[2].Topic)
-		traceEvent3 := history[2].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (start)", traceEvent3.Key)
-
-		return true
-	}, 2*time.Second, 10*time.Millisecond)
 }
 
 type MockNatEventTracker struct {

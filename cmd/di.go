@@ -720,7 +720,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 	}
 	di.IdentitySelector = identity_selector.NewHandler(
 		di.IdentityManager,
-		di.MysteriumAPI,
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
@@ -791,7 +790,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	var resolver location.Resolver
 	switch options.Location.Type {
 	case node.LocationTypeManual:
-		resolver = location.NewStaticResolver(options.Location.Country, options.Location.City, options.Location.NodeType, di.IPResolver)
+		resolver = location.NewStaticResolver(options.Location.Country, options.Location.City, options.Location.IPType, di.IPResolver)
 	case node.LocationTypeBuiltin:
 		resolver, err = location.NewBuiltInResolver(di.IPResolver)
 	case node.LocationTypeMMDB:

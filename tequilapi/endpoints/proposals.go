@@ -20,6 +20,7 @@ package endpoints
 import (
 	"math/big"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -37,14 +38,12 @@ type QualityFinder interface {
 
 type proposalsEndpoint struct {
 	proposalRepository proposal.Repository
-	qualityProvider    QualityFinder
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvider QualityFinder) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalRepository proposal.Repository) *proposalsEndpoint {
 	return &proposalsEndpoint{
 		proposalRepository: proposalRepository,
-		qualityProvider:    qualityProvider,
 	}
 }
 
@@ -62,7 +61,7 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
 //     type: string
 //   - in: query
-//     name: access_policy_id
+//     name: access_policy
 //     description: the access policy id to filter the proposals by
 //     type: string
 //   - in: query
@@ -70,17 +69,33 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     description: the access policy source to filter the proposals by
 //     type: string
 //   - in: query
-//     name: fetch_quality
-//     description: if set to true, fetches the quality metrics for nodes. False by default.
-//     type: boolean
-//   - in: query
-//     name: location_type
-//     description: If given will filter proposals by node location type.
-//     type: string
-//   - in: query
-//     name: location_country
+//     name: country
 //     description: If given will filter proposals by node location country.
 //     type: string
+//   - in: query
+//     name: ip_type
+//     description: IP Type (residential, datacenter, etc.).
+//     type: string
+//   - in: query
+//     name: price_hour_max
+//     description: Maximum price/hour.
+//     type: string
+//   - in: query
+//     name: price_gib_max
+//     description: Maximum price/GiB.
+//     type: string
+//   - in: query
+//     name: compatibility_min
+//     description: Minimum compatibility level of the proposal.
+//     type: integer
+//   - in: query
+//     name: compatibility_max
+//     description: Maximum compatibility level of the proposal.
+//     type: integer
+//   - in: query
+//     name: quality_min
+//     description: Minimum quality of the provider.
+//     type: number
 // responses:
 //   200:
 //     description: List of proposals
@@ -90,42 +105,42 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	upperTimePriceBound, err := parsePriceBound(req, "upper_time_price_bound")
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-	lowerTimePriceBound, err := parsePriceBound(req, "lower_time_price_bound")
+func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	priceHourMax, err := parsePriceBound(req, "price_hour_max")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	upperGBPriceBound, err := parsePriceBound(req, "upper_gb_price_bound")
+	priceGiBMax, err := parsePriceBound(req, "price_gib_max")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
-	lowerGBPriceBound, err := parsePriceBound(req, "lower_gb_price_bound")
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
+
+	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
+	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
+	qualityMin := func() float32 {
+		f, err := strconv.ParseFloat(req.URL.Query().Get("quality_min"), 32)
+		if err != nil {
+			return 0
+		}
+		return float32(f)
+	}()
 
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
-		ProviderID:          req.URL.Query().Get("provider_id"),
-		ServiceType:         req.URL.Query().Get("service_type"),
-		AccessPolicyID:      req.URL.Query().Get("access_policy_id"),
-		AccessPolicySource:  req.URL.Query().Get("access_policy_source"),
-		LocationType:        req.URL.Query().Get("location_type"),
-		LocationCountry:     req.URL.Query().Get("location_country"),
-		LowerGBPriceBound:   lowerGBPriceBound,
-		UpperGBPriceBound:   upperGBPriceBound,
-		LowerTimePriceBound: lowerTimePriceBound,
-		UpperTimePriceBound: upperTimePriceBound,
-		ExcludeUnsupported:  true,
-		IncludeFailed:       req.URL.Query().Get("monitoring_failed") == "true",
+		ProviderID:         req.URL.Query().Get("provider_id"),
+		ServiceType:        req.URL.Query().Get("service_type"),
+		AccessPolicy:       req.URL.Query().Get("access_policy"),
+		AccessPolicySource: req.URL.Query().Get("access_policy_source"),
+		LocationCountry:    req.URL.Query().Get("location_country"),
+		IPType:             req.URL.Query().Get("ip_type"),
+		PriceGiBMax:        priceGiBMax,
+		PriceHourMax:       priceHourMax,
+		CompatibilityMin:   compatibilityMin,
+		CompatibilityMax:   compatibilityMax,
+		QualityMin:         qualityMin,
+		ExcludeUnsupported: true,
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -137,27 +152,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
 
-	fetchQuality := req.URL.Query().Get("fetch_quality")
-	if fetchQuality == "true" {
-		metrics := pe.qualityProvider.ProposalsQuality()
-		addProposalQuality(proposalsRes.Proposals, metrics)
-	}
-
 	utils.WriteAsJSON(proposalsRes, resp)
-}
-
-// swagger:operation GET /proposals/quality Proposal quality metrics
-// ---
-// summary: Returns proposals quality metrics
-// description: Returns list of proposals  quality metrics
-// responses:
-//   200:
-//     description: List of quality metrics
-//     schema:
-//       "$ref": "#/definitions/ProposalQualityResponse"
-func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	quality := pe.qualityProvider.ProposalsQuality()
-	utils.WriteAsJSON(contract.NewProposalQualityResponse(quality), resp)
 }
 
 func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
@@ -172,27 +167,8 @@ func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
 	return upperPriceBound, nil
 }
 
-// addProposalQuality adds quality metrics to proposals.
-func addProposalQuality(proposals []contract.ProposalDTO, metrics []quality.ProposalQuality) {
-	// Convert metrics slice to map for fast lookup.
-	metricsMap := map[string]quality.ProposalQuality{}
-	for _, m := range metrics {
-		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
-	}
-
-	for i, p := range proposals {
-		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			proposals[i].Quality = &contract.QualityMetricsDTO{
-				Quality:          mc.Quality,
-				MonitoringFailed: mc.MonitoringFailed,
-			}
-		}
-	}
-}
-
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository, qualityProvider QualityFinder) {
-	pe := NewProposalsEndpoint(proposalRepository, qualityProvider)
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository) {
+	pe := NewProposalsEndpoint(proposalRepository)
 	router.GET("/proposals", pe.List)
-	router.GET("/proposals/quality", pe.Quality)
 }

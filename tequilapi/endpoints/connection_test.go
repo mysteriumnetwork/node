@@ -81,10 +81,9 @@ func (cm *mockConnectionManager) Reconnect() {
 
 func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRepository {
 	sampleProposal := market.ServiceProposal{
-		ID:                1,
-		ServiceType:       serviceType,
-		ServiceDefinition: TestServiceDefinition{},
-		ProviderID:        providerID,
+		ServiceType: serviceType,
+		Location:    TestLocation,
+		ProviderID:  providerID,
 	}
 
 	return &mockProposalRepository{

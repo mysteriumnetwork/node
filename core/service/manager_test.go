@@ -22,11 +22,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/utils/netutil"
@@ -46,8 +48,8 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
 	mockCopy.onStartReturnError = errors.New("some error")
-	registry.Register(serviceType, func(options Options) (Service, market.ServiceProposal, error) {
-		return &mockCopy, proposalMock, nil
+	registry.Register(serviceType, func(options Options) (Service, error) {
+		return &mockCopy, nil
 	})
 
 	discovery := mockDiscovery{}
@@ -57,9 +59,9 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
-		&mockP2PListener{}, nil, nil,
+		&mockP2PListener{}, nil, nil, mockLocationResolver{},
 	)
-	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, nil)
+	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPrice(0, 0, money.CurrencyMystt))
 	assert.Nil(t, err)
 
 	discovery.Wait()
@@ -70,8 +72,8 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
 	mockCopy.mockProcess = make(chan struct{})
-	registry.Register(serviceType, func(options Options) (Service, market.ServiceProposal, error) {
-		return &mockCopy, proposalMock, nil
+	registry.Register(serviceType, func(options Options) (Service, error) {
+		return &mockCopy, nil
 	})
 
 	discovery := mockDiscovery{}
@@ -82,8 +84,9 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		mocks.NewEventBus(),
 		mockPolicyOracle,
 		&mockP2PListener{}, nil, nil,
+		mockLocationResolver{},
 	)
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, nil)
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPrice(0, 0, money.CurrencyMystt))
 	assert.Nil(t, err)
 	err = manager.Stop(id)
 	assert.Nil(t, err)
@@ -95,8 +98,8 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
 	mockCopy.mockProcess = make(chan struct{})
-	registry.Register(serviceType, func(options Options) (Service, market.ServiceProposal, error) {
-		return &mockCopy, proposalMock, nil
+	registry.Register(serviceType, func(options Options) (Service, error) {
+		return &mockCopy, nil
 	})
 
 	discovery := mockDiscovery{}
@@ -108,9 +111,10 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		eventBus,
 		mockPolicyOracle,
 		&mockP2PListener{}, nil, nil,
+		mockLocationResolver{},
 	)
 
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, nil)
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPrice(0, 0, money.CurrencyMystt))
 	assert.NoError(t, err)
 
 	services := manager.servicePool.List()
@@ -152,6 +156,13 @@ func (m mockP2PListener) GetContact() market.Contact {
 	return market.Contact{}
 }
 
-func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) (func(), error) {
+func (m mockP2PListener) Listen(_ identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) (func(), error) {
 	return func() {}, nil
+}
+
+type mockLocationResolver struct {
+}
+
+func (m mockLocationResolver) DetectLocation() (locationstate.Location, error) {
+	return locationstate.Location{}, nil
 }

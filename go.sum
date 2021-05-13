@@ -320,6 +320,8 @@ github.com/go-openapi/swag v0.19.5/go.mod h1:POnQmlKehdgb5mhVOsnJFsivZCEZ/vjK9gh
 github.com/go-openapi/validate v0.18.0/go.mod h1:Uh4HdOzKt19xGIGm1qHf/ofbX1YQ4Y+MYsct2VUrAJ4=
 github.com/go-openapi/validate v0.19.2/go.mod h1:1tRCw7m3jtI8eNWEEliiAqUIcBztB2KDnRCRMUi7GTA=
 github.com/go-openapi/validate v0.19.3/go.mod h1:90Vh6jjkTn+OT1Eefm0ZixWNFjhtOH7vS9k0lo6zwJo=
+github.com/go-ozzo/ozzo-validation v3.6.0+incompatible h1:msy24VGS42fKO9K1vLz82/GeYW1cILu7Nuuj1N3BBkE=
+github.com/go-ozzo/ozzo-validation v3.6.0+incompatible/go.mod h1:gsEKFIVnabGBt6mXmxK0MoFy+cZoTJY6mu5Ll3LVLBU=
 github.com/go-sourcemap/sourcemap v2.1.2+incompatible/go.mod h1:F8jJfvm2KbVjc5NqelyYJmf/v5J0dwNLS2mL4sNA1Jg=
 github.com/go-sql-driver/mysql v1.4.0/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=
@@ -792,8 +794,8 @@ github.com/mysteriumnetwork/go-ci v0.0.0-20190912064927-c54e2b0b3b5c/go.mod h1:G
 github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4 h1:t18FszkN3GHd3lE95/5I6YlrvhiQCdWP58JOeVfhi1E=
 github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
-github.com/mysteriumnetwork/go-dvpn-web v0.1.28 h1:nrCyhHllSPfgtYDoLQ6j94WiMPvVlL2Cz4h5lahR2HQ=
-github.com/mysteriumnetwork/go-dvpn-web v0.1.28/go.mod h1:UzedvEQ35xwJRKE7oMSnwxQU1xAhLh4XCqTnT/0Yi6c=
+github.com/mysteriumnetwork/go-dvpn-web v0.1.30 h1:ORegeXom74pUfWU0KCEnSMCiqdnc26SQlPtxF5Z4k+U=
+github.com/mysteriumnetwork/go-dvpn-web v0.1.30/go.mod h1:UzedvEQ35xwJRKE7oMSnwxQU1xAhLh4XCqTnT/0Yi6c=
 github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/XZPDpElfzFjxM=
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N1RaVBCEBLi1VhmIrI=

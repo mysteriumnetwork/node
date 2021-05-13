@@ -27,5 +27,5 @@ type Location struct {
 	Country   string `json:"country"`
 	City      string `json:"city"`
 
-	NodeType string `json:"node_type"`
+	IPType string `json:"ip_type"`
 }

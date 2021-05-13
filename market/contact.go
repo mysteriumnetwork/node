@@ -53,9 +53,9 @@ type ContactDefinitionUnserializer func(*json.RawMessage) (ContactDefinition, er
 // TODO avoid global map variables and wrap this functionality into some kind of component?
 var contactDefinitionMap = make(map[string]ContactDefinitionUnserializer)
 
-// RegisterContactUnserializer registers unserializer for specified payment method
-func RegisterContactUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (ContactDefinition, error)) {
-	contactDefinitionMap[paymentMethod] = unserializer
+// RegisterContactUnserializer registers unserializer for specified contact type.
+func RegisterContactUnserializer(contactType string, unserializer func(*json.RawMessage) (ContactDefinition, error)) {
+	contactDefinitionMap[contactType] = unserializer
 }
 
 func unserializeContacts(message *json.RawMessage) (contactList ContactList) {

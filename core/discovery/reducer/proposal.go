@@ -19,9 +19,7 @@ package reducer
 
 import (
 	"math/big"
-	"time"
 
-	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -35,79 +33,32 @@ func ServiceType(proposal market.ServiceProposal) interface{} {
 	return proposal.ServiceType
 }
 
-// Service selects service definition from proposal
-func Service(proposal market.ServiceProposal) interface{} {
-	return proposal.ServiceDefinition
-}
-
 // Location selects service location from proposal
 func Location(proposal market.ServiceProposal) interface{} {
-	service := proposal.ServiceDefinition
-	if service == nil {
-		return nil
-	}
-	return service.GetLocation()
+	return proposal.Location
 }
 
 // LocationCountry selects location country from proposal
 func LocationCountry(proposal market.ServiceProposal) interface{} {
-	service := proposal.ServiceDefinition
-	if service == nil {
-		return nil
-	}
-	return service.GetLocation().Country
+	return proposal.Location.Country
 }
 
 // LocationType selects location type from proposal
 func LocationType(proposal market.ServiceProposal) interface{} {
-	service := proposal.ServiceDefinition
-	if service == nil {
-		return nil
-	}
-	return service.GetLocation().NodeType
+	return proposal.Location.IPType
 }
 
-// PriceMinute checks if the price per minute is below the given value
-func PriceMinute(lowerBound, upperBound *big.Int) func(market.ServiceProposal) bool {
-	return pricePerTime(lowerBound, upperBound, time.Minute)
-}
-
-// PriceGiB checks if the price per GiB is below the given value
-func PriceGiB(lowerBound, upperBound *big.Int) func(market.ServiceProposal) bool {
-	return pricePerDataTransfer(lowerBound, upperBound, datasize.GiB.Bytes())
-}
-
-func pricePerTime(lowerBound, upperBound *big.Int, duration time.Duration) func(market.ServiceProposal) bool {
+// PriceHourMax checks if the price per hour is lower than or equal to the given value.
+func PriceHourMax(max *big.Int) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
-		if proposal.PaymentMethod != nil {
-			price := proposal.PaymentMethod.GetPrice().Amount
-			rate := proposal.PaymentMethod.GetRate().PerTime
-			if rate == 0 {
-				return lowerBound.Cmp(big.NewInt(0)) == 0
-			}
-
-			chunks := big.NewFloat(float64(duration) / float64(rate))
-			totalPrice, _ := new(big.Float).Mul(chunks, new(big.Float).SetInt(price)).Int(nil)
-			return totalPrice.Cmp(lowerBound) >= 0 && totalPrice.Cmp(upperBound) <= 0
-		}
-		return true
+		return proposal.Price.PerHour.Cmp(max) <= 0
 	}
 }
 
-func pricePerDataTransfer(lowerBound, upperBound *big.Int, chunk uint64) func(market.ServiceProposal) bool {
+// PriceGiBMax checks if the price per GiB is lower than or equal to the given value.
+func PriceGiBMax(max *big.Int) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
-		if proposal.PaymentMethod != nil {
-			price := proposal.PaymentMethod.GetPrice().Amount
-			rate := proposal.PaymentMethod.GetRate().PerByte
-			if rate == 0 {
-				return lowerBound.Cmp(big.NewInt(0)) == 0
-			}
-
-			chunks := big.NewFloat(float64(chunk) / float64(rate))
-			totalPrice, _ := new(big.Float).Mul(chunks, new(big.Float).SetInt(price)).Int(nil)
-			return totalPrice.Cmp(lowerBound) >= 0 && totalPrice.Cmp(upperBound) <= 0
-		}
-		return true
+		return proposal.Price.PerGiB.Cmp(max) <= 0
 	}
 }
 

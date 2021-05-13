@@ -293,7 +293,7 @@ func (c *command) info() {
 
 	location, err := c.tequilapi.ConnectionLocation()
 	if err == nil {
-		inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+		inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.IPType, location.ISP))
 	}
 
 	if status.Status != string(connectionstate.Connected) {

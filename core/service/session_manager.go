@@ -221,10 +221,6 @@ func (manager *SessionManager) startSession(session *Session) error {
 }
 
 func (manager *SessionManager) validateSession(session *Session) error {
-	if manager.service.Proposal.ID != int(session.request.GetProposalID()) {
-		return ErrorInvalidProposal
-	}
-
 	if !manager.service.Policies().IsIdentityAllowed(session.ConsumerID) {
 		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
 	}

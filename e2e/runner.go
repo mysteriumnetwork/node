@@ -106,33 +106,13 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 
-	log.Info().Msg("Starting DB")
+	log.Info().Msg("Starting discovery DB")
 	if err := r.compose("up", "-d", "db"); err != nil {
 		return errors.Wrap(err, "starting DB failed!")
 	}
 
-	dbUp := false
-	for start := time.Now(); !dbUp && time.Since(start) < 60*time.Second; {
-		err := r.compose("exec", "-T", "db", "mysqladmin", "ping", "--protocol=TCP", "--silent")
-		if err != nil {
-			log.Info().Msg("Waiting...")
-		} else {
-			log.Info().Msg("DB is up")
-			dbUp = true
-			break
-		}
-	}
-	if !dbUp {
-		return errors.New("starting DB timed out")
-	}
-
-	log.Info().Msg("Migrating DB")
-	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "mysterium-api"); err != nil {
-		return errors.Wrap(err, "migrating DB failed!")
-	}
-
-	log.Info().Msg("Starting mysterium-api")
-	if err := r.compose("up", "-d", "mysterium-api"); err != nil {
+	log.Info().Msg("Starting discovery")
+	if err := r.compose("up", "-d", "discovery"); err != nil {
 		return errors.Wrap(err, "starting mysterium-api failed!")
 	}
 

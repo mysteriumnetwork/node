@@ -175,7 +175,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 		ConsumerID: identity.FromAddress("0x0000000000000000000000000000000000000001"),
 		HermesID:   common.HexToAddress("0x000000000000000000000000000000000000000a"),
 		Proposal: market.ServiceProposal{
-			ServiceDefinition: &StubServiceDefinition{},
+			Location: stubLocation,
 		},
 	}
 
@@ -334,7 +334,9 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 }
 
 func Test_ConsumesServiceEvents(t *testing.T) {
-	expected := service.Instance{}
+	expected := service.Instance{
+		Proposal: market.NewProposal("0xbeef", "wireguard", market.NewProposalOpts{}),
+	}
 	var id service.ID
 
 	natProvider := &natStatusProviderMock{
@@ -701,11 +703,7 @@ func serviceByID(services []contract.ServiceInfoDTO, id string) (se contract.Ser
 	return
 }
 
-type StubServiceDefinition struct{}
-
-func (fs *StubServiceDefinition) GetLocation() market.Location {
-	return market.Location{Country: "MU"}
-}
+var stubLocation = market.Location{Country: "MU"}
 
 type mockChannelAddressCalculator struct{}
 

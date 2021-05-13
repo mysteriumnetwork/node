@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -42,21 +41,6 @@ var (
 )
 
 var connectionEndpointStub = &mockConnectionEndpoint{}
-
-func Test_GetProposal(t *testing.T) {
-
-	assert.Exactly(
-		t,
-		market.ServiceProposal{
-			ServiceType: "wireguard",
-			ServiceDefinition: wg.ServiceDefinition{
-				Location:          market.Location{Country: country},
-				LocationOriginate: market.Location{Country: country},
-			},
-		},
-		GetProposal(locationstate.Location{Country: country}),
-	)
-}
 
 func Test_Manager_Stop(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)

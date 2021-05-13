@@ -128,9 +128,10 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		startRequest := contract.ServiceStartRequest{
 			ProviderID: providerID,
 			Type:       serviceType,
-			PaymentMethod: contract.ServicePaymentMethod{
-				PriceGB:     serviceOpts.PaymentPricePerGB,
-				PriceMinute: serviceOpts.PaymentPricePerMinute,
+			Price: contract.Price{
+				Currency: config.GetString(config.FlagDefaultCurrency),
+				PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
+				PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
 			},
 			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 			Options:        serviceOpts,

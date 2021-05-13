@@ -19,9 +19,7 @@ package reducer
 
 import (
 	"math/big"
-	"time"
 
-	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -39,126 +37,69 @@ var (
 		ID:     "blacklist",
 		Source: "blacklist.txt",
 	}
-	locationDatacenter  = market.Location{ASN: 1000, Country: "DE", City: "Berlin", NodeType: "datacenter"}
-	locationResidential = market.Location{ASN: 124, Country: "LT", City: "Vilnius", NodeType: "residential"}
+	locationDatacenter  = market.Location{ASN: 1000, Country: "DE", City: "Berlin", IPType: "datacenter"}
+	locationResidential = market.Location{ASN: 124, Country: "LT", City: "Vilnius", IPType: "residential"}
 
-	proposalEmpty              = market.ServiceProposal{}
-	proposalProvider1Streaming = market.ServiceProposal{
-		ProviderID:        provider1,
-		ServiceType:       serviceTypeStreaming,
-		ServiceDefinition: mockService{Location: locationDatacenter},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist},
-	}
-	proposalProvider1Noop = market.ServiceProposal{
-		ProviderID:        provider1,
-		ServiceType:       serviceTypeNoop,
-		ServiceDefinition: mockService{},
-	}
-	proposalProvider2Streaming = market.ServiceProposal{
-		ProviderID:        provider2,
-		ServiceType:       serviceTypeStreaming,
-		ServiceDefinition: mockService{Location: locationResidential},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
-	}
-	proposalTimeExpensive = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(9999999999999), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Minute,
-			},
+	proposalEmpty              = market.NewProposal("", serviceTypeNoop, market.NewProposalOpts{})
+	proposalProvider1Streaming = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Location:       &locationDatacenter,
+		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist},
+	})
+	proposalProvider1Noop      = market.NewProposal(provider1, serviceTypeNoop, market.NewProposalOpts{})
+	proposalProvider2Streaming = market.NewProposal(provider2, serviceTypeStreaming, market.NewProposalOpts{
+		Location:       &locationResidential,
+		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
+	})
+	proposalTimeExpensive = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(9999999999999),
+			PerGiB:   big.NewInt(0),
 		},
-	}
-	proposalTimeCheap = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(0), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Minute,
-			},
+	})
+	proposalTimeCheap = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(0),
+			PerGiB:   big.NewInt(0),
 		},
-	}
-	proposalTimeExact = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(1000000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Minute,
-			},
+	})
+	proposalTimeExact = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(60000000),
+			PerGiB:   big.NewInt(0),
 		},
-	}
-	proposalTimeExactSeconds = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(1000000/60), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Second,
-			},
+	})
+	proposalBytesExpensive = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(0),
+			PerGiB:   big.NewInt(7000001),
 		},
-	}
-	proposalTimeExpensiveSeconds = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(17000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerTime: time.Second,
-			},
+	})
+	proposalBytesCheap = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(0),
+			PerGiB:   big.NewInt(0),
 		},
-	}
-	proposalBytesExpensive = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(7000001), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: datasize.GiB.Bytes(),
-			},
+	})
+	proposalBytesExact = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(0),
+			PerGiB:   big.NewInt(7000000),
 		},
-	}
-	proposalBytesCheap = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(0), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: datasize.GiB.Bytes(),
-			},
+	})
+	proposalBytesExactInParts = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
+		Price: &market.Price{
+			Currency: money.CurrencyMyst,
+			PerHour:  big.NewInt(0),
+			PerGiB:   big.NewInt(7000000),
 		},
-	}
-	proposalBytesExact = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(7000000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: datasize.GiB.Bytes(),
-			},
-		},
-	}
-	proposalBytesExactInParts = market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{
-			price: money.New(big.NewInt(50000), money.CurrencyMyst),
-			rate: market.PaymentRate{
-				PerByte: 7669584,
-			},
-		},
-	}
+	})
 )
-
-type mockPaymentMethod struct {
-	rate        market.PaymentRate
-	paymentType string
-	price       money.Money
-}
-
-func (mpm *mockPaymentMethod) GetPrice() money.Money {
-	return mpm.price
-}
-
-func (mpm *mockPaymentMethod) GetType() string {
-	return mpm.paymentType
-}
-
-func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
-	return mpm.rate
-}
-
-type mockService struct {
-	Location market.Location
-}
-
-func (service mockService) GetLocation() market.Location {
-	return service.Location
-}
 
 func conditionAlwaysMatch(_ market.ServiceProposal) bool {
 	return true
@@ -176,8 +117,8 @@ func conditionIsStreaming(provider market.ServiceProposal) bool {
 	return provider.ServiceType == "streaming"
 }
 
-func fieldID(proposal market.ServiceProposal) interface{} {
-	return proposal.ID
+func fieldCompatibility(proposal market.ServiceProposal) interface{} {
+	return proposal.Compatibility
 }
 
 func fieldProviderID(proposal market.ServiceProposal) interface{} {

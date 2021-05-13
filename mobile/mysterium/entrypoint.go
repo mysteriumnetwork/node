@@ -111,10 +111,8 @@ type MobileNodeOptions struct {
 
 // ConsumerPaymentConfig defines consumer side payment configuration
 type ConsumerPaymentConfig struct {
-	PricePerGIBMax    string
-	PricePerGIBMin    string
-	PricePerMinuteMax string
-	PricePerMinuteMin string
+	PriceGiBMax  string
+	PriceHourMax string
 }
 
 // DefaultNodeOptions returns default options.
@@ -158,10 +156,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ActiveChainID)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
-	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMax)
-	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMin)
-	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerMinuteUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerMinuteMax)
-	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerMinuteLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerMinuteMin)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPriceGiBMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceGiBMax)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPriceHourMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceHourMax)
 
 	network := node.OptionsNetwork{
 		Testnet2:              options.Testnet2,
@@ -286,7 +282,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
 			di.MysteriumAPI,
-			di.QualityClient,
 			di.FilterPresetStorage,
 		),
 		pilvytis:       di.Pilvytis,
@@ -295,8 +290,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		sessionStorage: di.SessionStorage,
 		identityMover:  di.IdentityMover,
 		entertainmentEstimator: entertainment.NewEstimator(
-			config.FlagPaymentPricePerGB.Value,
-			config.FlagPaymentPricePerMinute.Value,
+			config.FlagPaymentPriceGiB.Value,
+			config.FlagPaymentPriceHour.Value,
 		),
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
@@ -308,10 +303,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 // GetConsumerPaymentConfig returns consumer payment config
 func (mb *MobileNode) GetConsumerPaymentConfig() *ConsumerPaymentConfig {
 	return &ConsumerPaymentConfig{
-		PricePerGIBMax:    config.Current.GetString(config.FlagPaymentsConsumerPricePerGBUpperBound.Name),
-		PricePerGIBMin:    config.Current.GetString(config.FlagPaymentsConsumerPricePerGBLowerBound.Name),
-		PricePerMinuteMax: config.Current.GetString(config.FlagPaymentsConsumerPricePerMinuteUpperBound.Name),
-		PricePerMinuteMin: config.Current.GetString(config.FlagPaymentsConsumerPricePerMinuteLowerBound.Name),
+		PriceGiBMax:  config.Current.GetString(config.FlagPaymentsConsumerPriceGiBMax.Name),
+		PriceHourMax: config.Current.GetString(config.FlagPaymentsConsumerPriceHourMax.Name),
 	}
 }
 

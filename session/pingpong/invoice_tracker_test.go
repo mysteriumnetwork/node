@@ -100,12 +100,9 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		EventBus:                   mocks.NewEventBus(),
@@ -152,12 +149,9 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -206,12 +200,9 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	NewHermesPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -258,12 +249,9 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -317,12 +305,9 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(1000000000000), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(60000000000000, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -372,12 +357,9 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(1000000000000), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(60000000000000, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -427,6 +409,9 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
+		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
+			Price: market.NewPrice(0, 0, money.CurrencyMystt),
+		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -462,15 +447,9 @@ func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		TimeTracker: &tracker,
 		EventBus:    mocks.NewEventBus(),
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate: market.PaymentRate{
-					PerTime: time.Minute,
-					PerByte: 1,
-				},
-			},
-		},
+		Proposal: market.NewProposal("0x1", "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 10995116277760, money.CurrencyMystt),
+		}),
 		MaxNotPaidInvoice: big.NewInt(100),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -493,15 +472,9 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		TimeTracker: &tracker,
 		EventBus:    mocks.NewEventBus(),
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate: market.PaymentRate{
-					PerTime: time.Minute,
-					PerByte: 1,
-				},
-			},
-		},
+		Proposal: market.NewProposal("0x1", "mock", market.NewProposalOpts{
+			Price: market.NewPrice(600, 1024^3*10, money.CurrencyMyst),
+		}),
 		MaxNotPaidInvoice: big.NewInt(100),
 		ChargePeriod:      time.Millisecond,
 	}
@@ -677,6 +650,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
 				AddressProvider:            tt.fields.addressProvider,
+				Proposal:                   market.NewProposal("0xbeef", "mock", market.NewProposalOpts{}),
 			}
 			it := &InvoiceTracker{
 				hermesFailureCount:  tt.fields.hermesFailureCount,
@@ -759,25 +733,6 @@ func TestInvoiceTracker_handleHermesError(t *testing.T) {
 			}
 		})
 	}
-}
-
-type mockPaymentMethod struct {
-	price money.Money
-	t     string
-	rate  market.PaymentRate
-}
-
-// Service price per unit of metering
-func (mpm *mockPaymentMethod) GetPrice() money.Money {
-	return mpm.price
-}
-
-func (mpm *mockPaymentMethod) GetType() string {
-	return mpm.t
-}
-
-func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
-	return mpm.rate
 }
 
 type mockEncryptor struct {

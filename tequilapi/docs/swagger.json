@@ -780,50 +780,6 @@
         }
       }
     },
-    "/identities/{id}/email": {
-      "put": {
-        "description": "Registers email for identity",
-        "tags": [
-          "Identity"
-        ],
-        "summary": "Registers emailpayout_test.go",
-        "operationId": "updateEmail",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity stored in keystore",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Parameter in body (email) is required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/EmailInfoDTO"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email updated"
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/identities/{id}/payment-order": {
       "get": {
         "description": "Gets all orders for a given identity from the pilvytis service",
@@ -939,56 +895,6 @@
         }
       }
     },
-    "/identities/{id}/payout": {
-      "put": {
-        "description": "Registers payout address for identity",
-        "tags": [
-          "Identity"
-        ],
-        "summary": "Registers payout info",
-        "operationId": "updatePayoutInfo",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity stored in keystore",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Parameter in body (eth_address) is required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/PayoutInfoDTO"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Payout info registered"
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "422": {
-            "description": "Parameters validation error",
-            "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/identities/{id}/referral": {
       "get": {
         "description": "Gets a referral token for the given identity if a campaign exists",
@@ -1006,48 +912,6 @@
         "responses": {
           "200": {
             "description": "Token response"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      },
-      "put": {
-        "description": "Registers referral code for identity",
-        "tags": [
-          "Identity"
-        ],
-        "summary": "Registers referral info",
-        "operationId": "updateReferralInfo",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity stored in keystore",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Parameter in body (referral_code) is required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/ReferralInfoDTO"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Referral info registered"
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
           },
           "500": {
             "description": "Internal server error",
@@ -1434,7 +1298,7 @@
           {
             "type": "string",
             "description": "the access policy id to filter the proposals by",
-            "name": "access_policy_id",
+            "name": "access_policy",
             "in": "query"
           },
           {
@@ -1444,21 +1308,45 @@
             "in": "query"
           },
           {
-            "type": "boolean",
-            "description": "if set to true, fetches the quality metrics for nodes. False by default.",
-            "name": "fetch_quality",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "If given will filter proposals by node location type.",
-            "name": "location_type",
-            "in": "query"
-          },
-          {
             "type": "string",
             "description": "If given will filter proposals by node location country.",
-            "name": "location_country",
+            "name": "country",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "IP Type (residential, datacenter, etc.).",
+            "name": "ip_type",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Maximum price/hour.",
+            "name": "price_hour_max",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Maximum price/GiB.",
+            "name": "price_gib_max",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Minimum compatibility level of the proposal.",
+            "name": "compatibility_min",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Maximum compatibility level of the proposal.",
+            "name": "compatibility_max",
+            "in": "query"
+          },
+          {
+            "type": "number",
+            "description": "Minimum quality of the provider.",
+            "name": "quality_min",
             "in": "query"
           }
         ],
@@ -1473,25 +1361,6 @@
             "description": "Internal server error",
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
-    "/proposals/quality": {
-      "get": {
-        "description": "Returns list of proposals  quality metrics",
-        "tags": [
-          "Proposal",
-          "quality"
-        ],
-        "summary": "Returns proposals quality metrics",
-        "operationId": "metrics",
-        "responses": {
-          "200": {
-            "description": "List of quality metrics",
-            "schema": {
-              "$ref": "#/definitions/ProposalQualityResponse"
             }
           }
         }
@@ -2560,11 +2429,6 @@
       "x-go-name": "sessionConnectivityStatusCollection",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
-    "Currency": {
-      "description": "Currency represents a supported currency",
-      "type": "string",
-      "x-go-package": "github.com/mysteriumnetwork/node/money"
-    },
     "CurrencyExchangeDTO": {
       "type": "object",
       "title": "CurrencyExchangeDTO the value of a given currency.",
@@ -2599,20 +2463,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "EmailInfoDTO": {
-      "type": "object",
-      "required": [
-        "email"
-      ],
-      "properties": {
-        "email": {
-          "type": "string",
-          "x-go-name": "Email"
-        }
-      },
-      "x-go-name": "emailInfo",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "Error": {
       "description": "Error represents a single error in an ErrorResponse",
@@ -2955,23 +2805,17 @@
           "x-go-name": "IP",
           "example": "1.2.3.4"
         },
+        "ip_type": {
+          "description": "IP type (data_center, residential, etc.)",
+          "type": "string",
+          "x-go-name": "IPType",
+          "example": "residential"
+        },
         "isp": {
           "description": "Internet Service Provider name",
           "type": "string",
           "x-go-name": "ISP",
           "example": "Telia Lietuva, AB"
-        },
-        "node_type": {
-          "description": "User type (DEPRECATED)",
-          "type": "string",
-          "x-go-name": "NodeType",
-          "example": "residential"
-        },
-        "user_type": {
-          "description": "User type (data_center, residential, etc.)",
-          "type": "string",
-          "x-go-name": "UserType",
-          "example": "residential"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2986,19 +2830,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "Money": {
-      "description": "Money holds the currency type and amount",
-      "type": "object",
-      "properties": {
-        "amount": {
-          "$ref": "#/definitions/Int"
-        },
-        "currency": {
-          "$ref": "#/definitions/Currency"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/money"
     },
     "NATStatusDTO": {
       "description": "NATStatusDTO gives information about NAT traversal success or failure",
@@ -3175,23 +3006,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "PaymentMethodDTO": {
-      "type": "object",
-      "title": "PaymentMethodDTO holds payment method details.",
-      "properties": {
-        "price": {
-          "$ref": "#/definitions/Money"
-        },
-        "rate": {
-          "$ref": "#/definitions/PaymentRateDTO"
-        },
-        "type": {
-          "type": "string",
-          "x-go-name": "Type"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "PaymentOrderOptions": {
       "description": "PaymentOrderOptions represents pilvytis payment order options",
       "type": "object",
@@ -3212,38 +3026,26 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "PaymentRateDTO": {
+    "Price": {
       "type": "object",
-      "title": "PaymentRateDTO holds payment frequencies.",
+      "title": "Price represents the service price.",
       "properties": {
-        "per_bytes": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "PerBytes"
+        "currency": {
+          "type": "string",
+          "x-go-name": "Currency"
         },
-        "per_seconds": {
+        "per_gib": {
           "type": "integer",
           "format": "uint64",
-          "x-go-name": "PerSeconds"
+          "x-go-name": "PerGiB"
+        },
+        "per_hour": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "PerHour"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "PayoutInfoDTO": {
-      "type": "object",
-      "required": [
-        "eth_address"
-      ],
-      "properties": {
-        "eth_address": {
-          "description": "in Ethereum address format",
-          "type": "string",
-          "x-go-name": "EthAddress",
-          "example": "0x000000000000000000000000000000000000000a"
-        }
-      },
-      "x-go-name": "payoutInfo",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "ProposalDTO": {
       "type": "object",
@@ -3257,15 +3059,22 @@
           },
           "x-go-name": "AccessPolicies"
         },
-        "id": {
-          "description": "per provider unique serial number of service description provided",
+        "compatibility": {
+          "description": "Compatibility level.",
           "type": "integer",
           "format": "int64",
-          "x-go-name": "ID",
-          "example": 5
+          "x-go-name": "Compatibility"
         },
-        "payment_method": {
-          "$ref": "#/definitions/PaymentMethodDTO"
+        "format": {
+          "description": "Proposal format.",
+          "type": "string",
+          "x-go-name": "Format"
+        },
+        "location": {
+          "$ref": "#/definitions/ServiceLocationDTO"
+        },
+        "price": {
+          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider who offers service",
@@ -3274,10 +3083,7 @@
           "example": "0x0000000000000000000000000000000000000001"
         },
         "quality": {
-          "$ref": "#/definitions/QualityMetricsDTO"
-        },
-        "service_definition": {
-          "$ref": "#/definitions/ServiceDefinitionDTO"
+          "$ref": "#/definitions/Quality"
         },
         "service_type": {
           "description": "type of service provider offers",
@@ -3326,6 +3132,28 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "Quality": {
+      "type": "object",
+      "title": "Quality holds proposal quality metrics.",
+      "properties": {
+        "bandwidth": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Bandwidth"
+        },
+        "latency": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Latency"
+        },
+        "quality": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Quality"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "QualityMetricsDTO": {
       "type": "object",
       "title": "QualityMetricsDTO holds proposal quality metrics from Quality Oracle.",
@@ -3341,21 +3169,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ReferralInfoDTO": {
-      "type": "object",
-      "required": [
-        "referral_code"
-      ],
-      "properties": {
-        "referral_code": {
-          "type": "string",
-          "x-go-name": "ReferralCode",
-          "example": "ABC123"
-        }
-      },
-      "x-go-name": "referralInfo",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "ReferralTokenResponse": {
       "type": "object",
@@ -3424,16 +3237,6 @@
             "type": "string"
           },
           "x-go-name": "IDs"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ServiceDefinitionDTO": {
-      "type": "object",
-      "title": "ServiceDefinitionDTO holds specific service details.",
-      "properties": {
-        "location_originate": {
-          "$ref": "#/definitions/ServiceLocationDTO"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3516,28 +3319,15 @@
           "x-go-name": "Country",
           "example": "NL"
         },
+        "ip_type": {
+          "type": "string",
+          "x-go-name": "IPType",
+          "example": "residential"
+        },
         "isp": {
           "type": "string",
           "x-go-name": "ISP",
           "example": "Telia Lietuva, AB"
-        },
-        "node_type": {
-          "type": "string",
-          "x-go-name": "NodeType",
-          "example": "residential"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ServicePaymentMethod": {
-      "type": "object",
-      "title": "ServicePaymentMethod payment parameters for service start.",
-      "properties": {
-        "price_gb": {
-          "$ref": "#/definitions/Int"
-        },
-        "price_minute": {
-          "$ref": "#/definitions/Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3562,8 +3352,8 @@
             "protocol": "udp"
           }
         },
-        "payment_method": {
-          "$ref": "#/definitions/ServicePaymentMethod"
+        "price": {
+          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider identity",
@@ -3651,9 +3441,9 @@
           "x-go-name": "ID",
           "example": "4cfb0324-daf6-4ad8-448b-e61fe0a1f918"
         },
-        "node_type": {
+        "ip_type": {
           "type": "string",
-          "x-go-name": "NodeType",
+          "x-go-name": "IPType",
           "example": "residential"
         },
         "provider_country": {

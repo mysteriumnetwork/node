@@ -43,7 +43,7 @@ func (r *locationResolverMock) DetectLocation() (locationstate.Location, error) 
 		Country:   "LT",
 		IP:        r.ip,
 		ISP:       "Telia Lietuva, AB",
-		NodeType:  "residential",
+		IPType:    "residential",
 	}
 
 	return loc, nil
@@ -57,7 +57,7 @@ func (r *locationResolverMock) GetOrigin() locationstate.Location {
 		Country:   "LT",
 		IP:        r.ipOrigin,
 		ISP:       "Telia Lietuva, AB",
-		NodeType:  "residential",
+		IPType:    "residential",
 	}
 }
 
@@ -93,8 +93,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"country": "LT",
 				"ip": "1.2.3.4",
 				"isp": "Telia Lietuva, AB",
-				"user_type": "residential",
-				"node_type": "residential"
+				"ip_type": "residential"
 			}`,
 		},
 		{
@@ -107,8 +106,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"country": "LT",
 				"ip": "1.2.3.1",
 				"isp": "Telia Lietuva, AB",
-				"user_type": "residential",
-				"node_type": "residential"
+				"ip_type": "residential"
 			}`,
 		},
 	}

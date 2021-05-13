@@ -56,10 +56,10 @@ var (
 		Name:  "location.city",
 		Usage: "Service location city",
 	}
-	// FlagLocationNodeType service location node type.
-	FlagLocationNodeType = cli.StringFlag{
-		Name:  "location.node-type",
-		Usage: "Service location node type",
+	// FlagLocationIPType service location node type.
+	FlagLocationIPType = cli.StringFlag{
+		Name:  "location.ip-type",
+		Usage: "Service location IP type (residential, datacenter, etc.)",
 	}
 )
 
@@ -71,7 +71,7 @@ func RegisterFlagsLocation(flags *[]cli.Flag) {
 		&FlagLocationAddress,
 		&FlagLocationCountry,
 		&FlagLocationCity,
-		&FlagLocationNodeType,
+		&FlagLocationIPType,
 	)
 }
 
@@ -82,5 +82,5 @@ func ParseFlagsLocation(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagLocationAddress)
 	Current.ParseStringFlag(ctx, FlagLocationCountry)
 	Current.ParseStringFlag(ctx, FlagLocationCity)
-	Current.ParseStringFlag(ctx, FlagLocationNodeType)
+	Current.ParseStringFlag(ctx, FlagLocationIPType)
 }

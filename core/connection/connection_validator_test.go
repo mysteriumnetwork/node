@@ -51,24 +51,17 @@ func TestValidator_Validate(t *testing.T) {
 					toReturn: true,
 				},
 				consumerBalanceGetter: &mockConsumerBalanceGetter{
-					toReturn:    big.NewInt(99),
+					toReturn:    big.NewInt(1),
 					forceReturn: big.NewInt(99),
 				},
 			},
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				proposal: market.ServiceProposal{
-					ProviderID:        activeProviderID.Address,
-					ProviderContacts:  []market.Contact{activeProviderContact},
-					ServiceType:       activeServiceType,
-					ServiceDefinition: &fakeServiceDefinition{},
-					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   big.NewInt(100),
-						Currency: "MYSTT",
-					}},
-					PaymentMethodType: "PER_MINUTE",
-				},
+				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
+					Price:    market.NewPrice(120, 100, money.CurrencyMystt),
+					Contacts: []market.Contact{activeProviderContact},
+				}),
 			},
 		},
 		{
@@ -86,17 +79,10 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				proposal: market.ServiceProposal{
-					ProviderID:        activeProviderID.Address,
-					ProviderContacts:  []market.Contact{activeProviderContact},
-					ServiceType:       activeServiceType,
-					ServiceDefinition: &fakeServiceDefinition{},
-					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   big.NewInt(100),
-						Currency: "MYSTT",
-					}},
-					PaymentMethodType: "PER_MINUTE",
-				},
+				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
+					Price:    market.NewPrice(15, 0, money.CurrencyMystt),
+					Contacts: []market.Contact{activeProviderContact},
+				}),
 			},
 		},
 		{
@@ -126,17 +112,10 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				proposal: market.ServiceProposal{
-					ProviderID:        activeProviderID.Address,
-					ProviderContacts:  []market.Contact{activeProviderContact},
-					ServiceType:       activeServiceType,
-					ServiceDefinition: &fakeServiceDefinition{},
-					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   big.NewInt(100),
-						Currency: "MYSTT",
-					}},
-					PaymentMethodType: "PER_MINUTE",
-				},
+				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
+					Price:    market.NewPrice(15, 0, money.CurrencyMystt),
+					Contacts: []market.Contact{activeProviderContact},
+				}),
 			},
 		},
 	}

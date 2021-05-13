@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/gofrs/uuid"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
@@ -58,6 +59,11 @@ type Discovery interface {
 	Wait()
 }
 
+// LocationResolver detects location for service proposal.
+type locationResolver interface {
+	DetectLocation() (locationstate.Location, error)
+}
+
 // WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT or until hole punching failed
 type WaitForNATHole func() error
 
@@ -70,6 +76,7 @@ func NewManager(
 	p2pListener p2p.Listener,
 	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager,
 	statusStorage connectivity.StatusStorage,
+	location locationResolver,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:  serviceRegistry,
@@ -80,6 +87,7 @@ func NewManager(
 		p2pListener:      p2pListener,
 		sessionManager:   sessionManager,
 		statusStorage:    statusStorage,
+		location:         location,
 	}
 }
 
@@ -95,38 +103,47 @@ type Manager struct {
 	p2pListener    p2p.Listener
 	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager
 	statusStorage  connectivity.StatusStorage
+	location       locationResolver
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options Options, pm market.PaymentMethod) (id ID, err error) {
-	service, proposal, err := manager.serviceRegistry.Create(serviceType, options)
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options Options, price market.Price) (id ID, err error) {
+	service, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return id, err
 	}
 
-	proposal.SetPaymentMethod(pm)
-	proposal.SetAccessPolicies(nil)
 	policyRules := policy.NewRepository()
+	var accessPolicies []market.AccessPolicy
 	if len(policyIDs) > 0 {
-		policies := manager.policyOracle.Policies(policyIDs)
-		if err = manager.policyOracle.SubscribePolicies(policies, policyRules); err != nil {
+		accessPolicies = manager.policyOracle.Policies(policyIDs)
+		if err = manager.policyOracle.SubscribePolicies(accessPolicies, policyRules); err != nil {
 			log.Warn().Err(err).Msg("Can't find given access policies")
 			return id, ErrUnsupportedAccessPolicy
 		}
-		proposal.SetAccessPolicies(&policies)
 	}
 
-	proposal.SetProviderContacts(providerID, market.ContactList{manager.p2pListener.GetContact()})
+	location, err := manager.location.DetectLocation()
+	if err != nil {
+		return "", err
+	}
+
+	proposal := market.NewProposal(providerID.Address, serviceType, market.NewProposalOpts{
+		Location:       market.NewLocation(location),
+		Price:          &price,
+		AccessPolicies: accessPolicies,
+		Contacts:       []market.Contact{manager.p2pListener.GetContact()},
+	})
+
+	discovery := manager.discoveryFactory()
+	discovery.Start(providerID, proposal)
 
 	id, err = generateID()
 	if err != nil {
 		return id, err
 	}
-
-	discovery := manager.discoveryFactory()
-	discovery.Start(providerID, proposal)
 
 	instance := &Instance{
 		ID:             id,
