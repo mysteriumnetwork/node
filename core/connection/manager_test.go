@@ -41,7 +41,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -78,10 +77,10 @@ var (
 	}
 	activeServiceType = "fake-service"
 	activeProposal    = market.ServiceProposal{
-		ProviderID:        activeProviderID.Address,
-		ProviderContacts:  []market.Contact{activeProviderContact},
-		ServiceType:       activeServiceType,
-		ServiceDefinition: &fakeServiceDefinition{},
+		ProviderID:  activeProviderID.Address,
+		Contacts:    []market.Contact{activeProviderContact},
+		ServiceType: activeServiceType,
+		Location:    market.Location{},
 	}
 	establishedSessionID = session.ID("session-100")
 )
@@ -139,8 +138,7 @@ func (tc *testContext) SetupTest() {
 		func(channel p2p.Channel,
 			consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
-				paymentDefinition: market.PaymentRate{},
-				stopChan:          make(chan struct{}),
+				stopChan: make(chan struct{}),
 			}
 			return tc.MockPaymentIssuer, nil
 		},
@@ -616,16 +614,11 @@ func waitABit() {
 	time.Sleep(10 * time.Millisecond)
 }
 
-type fakeServiceDefinition struct{}
-
-func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
-
 type MockPaymentIssuer struct {
-	paymentDefinition market.PaymentRate
-	startCalled       bool
-	stopCalled        bool
-	MockError         error
-	stopChan          chan struct{}
+	startCalled bool
+	stopCalled  bool
+	MockError   error
+	stopChan    chan struct{}
 	sync.Mutex
 }
 
@@ -657,24 +650,6 @@ func (mpm *MockPaymentIssuer) Stop() {
 }
 
 func (mpm *MockPaymentIssuer) SetSessionID(string) {
-}
-
-type mockPaymentMethod struct {
-	rate        market.PaymentRate
-	paymentType string
-	price       money.Money
-}
-
-func (mpm *mockPaymentMethod) GetPrice() money.Money {
-	return mpm.price
-}
-
-func (mpm *mockPaymentMethod) GetType() string {
-	return mpm.paymentType
-}
-
-func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
-	return mpm.rate
 }
 
 type mockP2PDialer struct {

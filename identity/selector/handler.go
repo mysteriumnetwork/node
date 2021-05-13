@@ -18,6 +18,7 @@
 package selector
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -25,16 +26,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// IdentityRegistry exposes identity registration method
-type IdentityRegistry interface {
-	IdentityExists(identity.Identity, identity.Signer) (bool, error)
-	RegisterIdentity(identity.Identity, identity.Signer) error
-}
-
 type handler struct {
 	mu            sync.Mutex
 	manager       identity.Manager
-	registry      IdentityRegistry
 	cache         identity.IdentityCacheInterface
 	signerFactory identity.SignerFactory
 }
@@ -42,13 +36,11 @@ type handler struct {
 //NewHandler creates new identity handler used by node
 func NewHandler(
 	manager identity.Manager,
-	registry IdentityRegistry,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
 ) *handler {
 	return &handler{
 		manager:       manager,
-		registry:      registry,
 		cache:         cache,
 		signerFactory: signerFactory,
 	}
@@ -95,18 +87,7 @@ func (h *handler) useExisting(address, passphrase string, chainID int64) (id ide
 	}
 
 	if err = h.manager.Unlock(chainID, id.Address, passphrase); err != nil {
-		return id, errors.Wrap(err, "failed to unlock identity")
-	}
-
-	registered, err := h.registry.IdentityExists(id, h.signerFactory(id))
-	if err != nil {
-		return id, errors.Wrap(err, "failed to verify registration status of local identity")
-	}
-	if !registered {
-		log.Info().Msg("Existing identity is not registered, attempting to register")
-		if err = h.registry.RegisterIdentity(id, h.signerFactory(id)); err != nil {
-			return id, errors.Wrap(err, "failed to register identity")
-		}
+		return id, fmt.Errorf("failed to unlock identity: %w", err)
 	}
 
 	err = h.cache.StoreIdentity(id)
@@ -139,10 +120,6 @@ func (h *handler) useNew(passphrase string, chainID int64) (id identity.Identity
 
 	if err = h.manager.Unlock(chainID, id.Address, passphrase); err != nil {
 		return id, errors.Wrap(err, "failed to unlock identity")
-	}
-
-	if err = h.registry.RegisterIdentity(id, h.signerFactory(id)); err != nil {
-		return id, errors.Wrap(err, "failed to register identity")
 	}
 
 	err = h.cache.StoreIdentity(id)

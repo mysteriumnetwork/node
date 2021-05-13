@@ -21,54 +21,33 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/rs/zerolog/log"
 )
 
-func isServiceFree(method market.PaymentMethod) bool {
-	if method == nil {
-		return true
-	}
-
-	if method.GetPrice().Amount.Cmp(big.NewInt(0)) == 0 {
-		return true
-	}
-
-	if method.GetRate().PerByte == 0 && method.GetRate().PerTime == 0 {
-		return true
-	}
-
-	return false
-}
-
 // CalculatePaymentAmount calculates the required payment amount.
-func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, method market.PaymentMethod) *big.Int {
-	if isServiceFree(method) {
-		return new(big.Int)
+func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, price market.Price) *big.Int {
+	if price.IsFree() {
+		return big.NewInt(0)
 	}
 
-	var ticksPassed float64
-	price := method.GetPrice().Amount
-
-	// avoid division by zero on free service
-	if method.GetRate().PerTime > 0 {
-		ticksPassed = float64(timePassed) / float64(method.GetRate().PerTime)
+	timeComponent := big.NewFloat(0)
+	if price.PerHour.Cmp(big.NewInt(0)) > 0 {
+		timeQuote := timePassed.Seconds() / time.Hour.Seconds()
+		timeComponent = new(big.Float).Mul(new(big.Float).SetInt(price.PerHour), big.NewFloat(timeQuote))
 	}
 
-	ticks := big.NewFloat(ticksPassed)
-	timeComponent := new(big.Float).Mul(ticks, new(big.Float).SetInt(price))
-
-	var chunksTransferred float64
-	if method.GetRate().PerByte > 0 {
-		chunksTransferred = float64(bytesTransferred.sum()) / float64(method.GetRate().PerByte)
+	dataComponent := big.NewFloat(0)
+	if price.PerGiB.Cmp(big.NewInt(0)) > 0 {
+		dataQuote := float64(bytesTransferred.sum()) / float64(datasize.GiB.Bytes())
+		dataComponent = new(big.Float).Mul(new(big.Float).SetInt(price.PerGiB), big.NewFloat(dataQuote))
 	}
 
-	chunks := big.NewFloat(chunksTransferred)
-	byteComponent := new(big.Float).Mul(chunks, new(big.Float).SetInt(price))
 	tc, _ := timeComponent.Int(nil)
-	bc, _ := byteComponent.Int(nil)
+	bc, _ := dataComponent.Int(nil)
 
 	total := new(big.Int).Add(tc, bc)
-	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v ", total, timeComponent, byteComponent)
+	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v ", total, timeComponent, dataComponent)
 	return total
 }

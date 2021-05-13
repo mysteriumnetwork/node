@@ -30,8 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market/mysterium"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -43,10 +41,6 @@ type registrationStatusChecker interface {
 type txer interface {
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
-}
-
-type payoutStatusChecker interface {
-	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
 }
 
 type multiChainAddressKeeper interface {
@@ -61,10 +55,8 @@ type bc interface {
 type ProviderRegistrar struct {
 	registrationStatusChecker registrationStatusChecker
 	txer                      txer
-	mysteriumAPI              payoutStatusChecker
 	multiChainAddressKeeper   multiChainAddressKeeper
 	bc                        bc
-	signerFactory             identity.SignerFactory
 	once                      sync.Once
 	stopChan                  chan struct{}
 	queue                     chan queuedEvent
@@ -90,8 +82,6 @@ type ProviderRegistrarConfig struct {
 func NewProviderRegistrar(
 	transactor txer,
 	registrationStatusChecker registrationStatusChecker,
-	mysteriumAPI payoutStatusChecker,
-	signerFactory identity.SignerFactory,
 	multiChainAddressKeeper multiChainAddressKeeper,
 	bc bc,
 	prc ProviderRegistrarConfig,
@@ -103,10 +93,8 @@ func NewProviderRegistrar(
 		registeredIdentities:      make(map[string]struct{}),
 		cfg:                       prc,
 		txer:                      transactor,
-		mysteriumAPI:              mysteriumAPI,
 		multiChainAddressKeeper:   multiChainAddressKeeper,
 		bc:                        bc,
-		signerFactory:             signerFactory,
 	}
 }
 
@@ -214,21 +202,10 @@ func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 		}
 	}
 
-	var benef common.Address
 	// check if we had a previous beneficiary set on old registry
-	b, err := pr.getBeneficiaryFromOldRegistry(id)
+	benef, err := pr.getBeneficiaryFromOldRegistry(id)
 	if err != nil {
 		return err
-	}
-	benef = b
-
-	// if not, check if we had it set in mmn
-	if isZeroAddress(benef) {
-		b, err := pr.getBeneficiaryFromMMN(id)
-		if err != nil {
-			return err
-		}
-		benef = b
 	}
 
 	return pr.registerIdentity(qe, id, benef)
@@ -274,22 +251,6 @@ func (pr *ProviderRegistrar) getBeneficiaryFromOldRegistry(id identity.Identity)
 	}
 
 	return common.Address{}, nil
-}
-
-func (pr *ProviderRegistrar) getBeneficiaryFromMMN(id identity.Identity) (common.Address, error) {
-	// This part migrates bounty payout address to BC beneficiary
-	payout, err := pr.mysteriumAPI.GetPayoutInfo(id, pr.signerFactory(id))
-	if err != nil {
-		if errHTTP, ok := err.(*requests.ErrorHTTP); ok && errHTTP.Code == 404 {
-			log.Info().Msgf("provider %q not have payout address for auto registration", id.Address)
-			return common.Address{}, nil
-		}
-
-		log.Error().Err(err).Msgf("beneficiary for registration check failed for %q", id.Address)
-		return common.Address{}, err
-	}
-
-	return common.HexToAddress(payout.EthAddress), nil
 }
 
 var zeroAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")

@@ -62,16 +62,16 @@ finder.MatchProposals(reducer.And(
 finder.MatchProposals(reducer.Or(
   reducer.And(
     reducer.EqualString(reducer.ServiceType, "wireguard"),
-    reducer.InString(reducer.LocationCountry, "US", "CA"),
-    reducer.EqualString(reducer.LocationType, "residential"),
+    reducer.InString(reducer.Country, "US", "CA"),
+    reducer.EqualString(reducer.IPType, "residential"),
   ),
   reducer.And(
     reducer.EqualString(reducer.ServiceType, "openvpn"),
     reducer.Or(
-      reducer.EqualString(reducer.LocationCountry, "US")),
-      reducer.EqualString(reducer.LocationCountry, "CA")),
+      reducer.EqualString(reducer.Country, "US")),
+      reducer.EqualString(reducer.Country, "CA")),
     ),
-    reducer.Not(reducer.EqualString(reducer.LocationType, "datacenter")),
+    reducer.Not(reducer.EqualString(reducer.IPType, "datacenter")),
   )
 ))
 ```

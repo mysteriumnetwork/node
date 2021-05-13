@@ -40,9 +40,6 @@ import (
 )
 
 const (
-	// PaymentForDataWithTime is a payment method type that is used for both data transfer and time.
-	PaymentForDataWithTime = "BYTES_TRANSFERRED_WITH_TIME"
-
 	// PromiseWaitTimeout is the time that the provider waits for the promise to arrive
 	PromiseWaitTimeout = time.Second * 50
 
@@ -53,56 +50,31 @@ const (
 	DefaultHermesFailureCount uint64 = 10
 )
 
-var gb = big.NewInt(1024 * 1024 * 1024)
+var giB = big.NewInt(1024 ^ 3)
 var accuracy = big.NewInt(500000000000000)
 
-// NewPaymentMethod returns the the default payment method of time + bytes.
-func NewPaymentMethod(pricePerGB, pricePerMinute *big.Int) PaymentMethod {
-	if pricePerGB == nil {
-		pricePerGB = new(big.Int)
+// NewPrice returns the the default payment method of time + bytes.
+func NewPrice(perGiB, perHour *big.Int) market.Price {
+	if perGiB == nil {
+		perGiB = new(big.Int)
 	}
-	if pricePerMinute == nil {
-		pricePerMinute = new(big.Int)
-	}
-
-	if pricePerGB.Cmp(big.NewInt(0)) > 0 {
-		mul := new(big.Int).Mul(gb, accuracy)
-		pricePerGB = new(big.Int).Div(mul, pricePerGB)
-	}
-	if pricePerMinute.Cmp(big.NewInt(0)) > 0 {
-		mul := new(big.Int).Mul(big.NewInt(int64(time.Minute)), accuracy)
-		pricePerMinute = new(big.Int).Div(mul, pricePerMinute)
+	if perHour == nil {
+		perHour = new(big.Int)
 	}
 
-	return PaymentMethod{
-		Price:    money.New(accuracy),
-		Duration: time.Duration(pricePerMinute.Int64()),
-		Type:     PaymentForDataWithTime,
-		Bytes:    pricePerGB.Uint64(),
+	if perGiB.Cmp(big.NewInt(0)) > 0 {
+		mul := new(big.Int).Mul(giB, accuracy)
+		perGiB = new(big.Int).Div(mul, perGiB)
 	}
-}
-
-// PaymentMethod represents a payment method
-type PaymentMethod struct {
-	Price    money.Money   `json:"price"`
-	Duration time.Duration `json:"duration"`
-	Bytes    uint64        `json:"bytes"`
-	Type     string        `json:"type"`
-}
-
-// GetPrice returns the payment methods price
-func (pm PaymentMethod) GetPrice() money.Money {
-	return pm.Price
-}
-
-// GetType gets the payment methods type
-func (pm PaymentMethod) GetType() string {
-	return pm.Type
-}
-
-// GetRate returns the payment rate for the method
-func (pm PaymentMethod) GetRate() market.PaymentRate {
-	return market.PaymentRate{PerByte: pm.Bytes, PerTime: pm.Duration}
+	if perHour.Cmp(big.NewInt(0)) > 0 {
+		mul := new(big.Int).Mul(big.NewInt(int64(time.Hour)), accuracy)
+		perHour = new(big.Int).Div(mul, perHour)
+	}
+	return market.Price{
+		Currency: money.Currency(config.GetString(config.FlagDefaultCurrency)),
+		PerGiB:   perGiB,
+		PerHour:  perHour,
+	}
 }
 
 // InvoiceFactoryCreator returns a payment engine factory.

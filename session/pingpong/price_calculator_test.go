@@ -22,65 +22,41 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
 
 func Test_isServiceFree(t *testing.T) {
 	tests := []struct {
-		name   string
-		method market.PaymentMethod
-		want   bool
+		name  string
+		price *market.Price
+		want  bool
 	}{
 		{
-			name: "not free if only time payment is set",
-			method: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-			want: false,
+			name:  "not free if only time payment is set",
+			price: market.NewPrice(10, 0, money.CurrencyMystt),
+			want:  false,
 		},
 		{
-			name: "not free if only byte payment is set",
-			method: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerByte: 1},
-			},
-			want: false,
+			name:  "not free if only byte payment is set",
+			price: market.NewPrice(0, 10, money.CurrencyMystt),
+			want:  false,
 		},
 		{
-			name: "not free if time + byte payment is set",
-			method: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerByte: 1, PerTime: time.Minute},
-			},
-			want: false,
+			name:  "not free if time + byte payment is set",
+			price: market.NewPrice(10, 10, money.CurrencyMystt),
+			want:  false,
 		},
 		{
-			name:   "free if nil",
-			method: nil,
-			want:   true,
-		},
-		{
-			name: "free if both zero",
-			method: &mockPaymentMethod{
-				price: money.New(big.NewInt(10), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerByte: 0, PerTime: 0},
-			},
-			want: true,
-		},
-		{
-			name: "free if price zero",
-			method: &mockPaymentMethod{
-				price: money.New(big.NewInt(0), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerByte: 1, PerTime: 2},
-			},
-			want: true,
+			name:  "free if empty",
+			price: market.NewPrice(0, 0, money.CurrencyMystt),
+			want:  true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isServiceFree(tt.method); got != tt.want {
+			if got := tt.price.IsFree(); got != tt.want {
 				t.Errorf("isServiceFree() = %v, want %v", got, tt.want)
 			}
 		})
@@ -91,7 +67,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 	type args struct {
 		timePassed       time.Duration
 		bytesTransferred DataTransferred
-		method           market.PaymentMethod
+		price            *market.Price
 	}
 	tests := []struct {
 		name string
@@ -105,10 +81,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 				bytesTransferred: DataTransferred{
 					Up: 100, Down: 100,
 				},
-				method: &mockPaymentMethod{
-					price: money.New(big.NewInt(0), money.CurrencyMyst),
-					rate:  market.PaymentRate{PerByte: 1, PerTime: 2},
-				},
+				price: market.NewPrice(0, 0, money.CurrencyMystt),
 			},
 			want: big.NewInt(0),
 		},
@@ -119,38 +92,18 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 				bytesTransferred: DataTransferred{
 					Up: 100, Down: 100,
 				},
-				method: &mockPaymentMethod{
-					price: money.New(big.NewInt(50000), money.CurrencyMyst),
-					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Minute},
-				},
+				price: market.NewPrice(3000000, 0, money.CurrencyMystt),
 			},
 			want: big.NewInt(60 * 50000),
-		},
-		{
-			name: "calculates time only with seconds",
-			args: args{
-				timePassed: time.Hour,
-				bytesTransferred: DataTransferred{
-					Up: 100, Down: 100,
-				},
-				method: &mockPaymentMethod{
-					price: money.New(big.NewInt(50000), money.CurrencyMyst),
-					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Second},
-				},
-			},
-			want: big.NewInt(60 * 60 * 50000),
 		},
 		{
 			name: "calculates bytes only",
 			args: args{
 				timePassed: time.Hour,
 				bytesTransferred: DataTransferred{
-					Up: 1000000000 / 2, Down: 1000000000 / 2,
+					Up: datasize.GiB.Bytes() / 2, Down: datasize.GiB.Bytes() / 2,
 				},
-				method: &mockPaymentMethod{
-					price: money.New(big.NewInt(7000000), money.CurrencyMyst),
-					rate:  market.PaymentRate{PerByte: 1000000000, PerTime: 0},
-				},
+				price: market.NewPrice(0, 7000000, money.CurrencyMystt),
 			},
 			want: big.NewInt(7000000),
 		},
@@ -159,21 +112,17 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 			args: args{
 				timePassed: time.Hour,
 				bytesTransferred: DataTransferred{
-					Up: 1000000000 / 2, Down: 1000000000 / 2,
+					Up: datasize.GiB.Bytes() / 2, Down: datasize.GiB.Bytes() / 2,
 				},
-				method: &mockPaymentMethod{
-					price: money.New(big.NewInt(50000), money.CurrencyMyst),
-					rate:  market.PaymentRate{PerByte: 7142857, PerTime: time.Minute},
-				},
+				price: market.NewPrice(3000000, 7000000, money.CurrencyMystt),
 			},
-			// 7000000 is the price per gigabyte
-			// 50000 is the price per minute, 60 is the number of minutes
-			want: big.NewInt(7000000 + 60*50000),
+			// 7000000 is the price per gibibyte, 3000000 is the price per hour
+			want: big.NewInt(7000000 + 3000000),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CalculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, tt.args.method); got.Cmp(tt.want) != 0 {
+			if got := CalculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, *tt.args.price); got.Cmp(tt.want) != 0 {
 				t.Errorf("CalculatePaymentAmount() = %v, want %v", got, tt.want)
 			}
 		})

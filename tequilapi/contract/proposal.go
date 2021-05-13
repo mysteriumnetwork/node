@@ -22,43 +22,27 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 )
 
 // NewProposalDTO maps to API service proposal.
 func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
 	return ProposalDTO{
-		ID:                p.ID,
-		ProviderID:        p.ProviderID,
-		ServiceType:       p.ServiceType,
-		ServiceDefinition: NewServiceDefinitionDTO(p.ServiceDefinition),
-		AccessPolicies:    p.AccessPolicies,
-		PaymentMethod:     NewPaymentMethodDTO(p.PaymentMethod),
-	}
-}
-
-// NewPaymentMethodDTO maps to API payment method.
-func NewPaymentMethodDTO(m market.PaymentMethod) PaymentMethodDTO {
-	if m == nil {
-		return PaymentMethodDTO{}
-	}
-	return PaymentMethodDTO{
-		Type:  m.GetType(),
-		Price: m.GetPrice(),
-		Rate: PaymentRateDTO{
-			PerSeconds: uint64(m.GetRate().PerTime.Seconds()),
-			PerBytes:   m.GetRate().PerByte,
+		Format:        p.Format,
+		Compatibility: p.Compatibility,
+		ProviderID:    p.ProviderID,
+		ServiceType:   p.ServiceType,
+		Location:      NewServiceLocationsDTO(p.Location),
+		Price: Price{
+			Currency: string(p.Price.Currency),
+			PerHour:  p.Price.PerHour.Uint64(),
+			PerGiB:   p.Price.PerGiB.Uint64(),
 		},
-	}
-}
-
-// NewServiceDefinitionDTO maps to API service definition.
-func NewServiceDefinitionDTO(s market.ServiceDefinition) ServiceDefinitionDTO {
-	if s == nil {
-		return ServiceDefinitionDTO{}
-	}
-	return ServiceDefinitionDTO{
-		LocationOriginate: NewServiceLocationsDTO(s.GetLocation()),
+		AccessPolicies: p.AccessPolicies,
+		Quality: Quality{
+			Quality:   p.Quality.Quality,
+			Latency:   p.Quality.Latency,
+			Bandwidth: p.Quality.Bandwidth,
+		},
 	}
 }
 
@@ -68,10 +52,9 @@ func NewServiceLocationsDTO(l market.Location) ServiceLocationDTO {
 		Continent: l.Continent,
 		Country:   l.Country,
 		City:      l.City,
-
-		ASN:      l.ASN,
-		ISP:      l.ISP,
-		NodeType: l.NodeType,
+		ASN:       l.ASN,
+		ISP:       l.ISP,
+		IPType:    l.IPType,
 	}
 }
 
@@ -84,9 +67,11 @@ type ListProposalsResponse struct {
 // ProposalDTO holds service proposal details.
 // swagger:model ProposalDTO
 type ProposalDTO struct {
-	// per provider unique serial number of service description provided
-	// example: 5
-	ID int `json:"id"`
+	// Proposal format.
+	Format string `json:"format"`
+
+	// Compatibility level.
+	Compatibility int `json:"compatibility"`
 
 	// provider who offers service
 	// example: 0x0000000000000000000000000000000000000001
@@ -96,27 +81,21 @@ type ProposalDTO struct {
 	// example: openvpn
 	ServiceType string `json:"service_type"`
 
-	// qualitative service definition
-	ServiceDefinition ServiceDefinitionDTO `json:"service_definition"`
+	// Service location
+	Location ServiceLocationDTO `json:"location"`
 
-	// Quality of the service
-	Quality *QualityMetricsDTO `json:"quality,omitempty"`
+	// Service price
+	Price Price `json:"price"`
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
 
-	// PaymentMethod
-	PaymentMethod PaymentMethodDTO `json:"payment_method"`
+	// Quality of the service.
+	Quality Quality `json:"quality"`
 }
 
 func (p ProposalDTO) String() string {
-	return fmt.Sprintf("Id: %d , Provider: %s, Country: %s", p.ID, p.ProviderID, p.ServiceDefinition.LocationOriginate.Country)
-}
-
-// ServiceDefinitionDTO holds specific service details.
-// swagger:model ServiceDefinitionDTO
-type ServiceDefinitionDTO struct {
-	LocationOriginate ServiceLocationDTO `json:"location_originate"`
+	return fmt.Sprintf("Provider: %s, ServiceType: %s, Country: %s", p.ProviderID, p.ServiceType, p.Location.Country)
 }
 
 // ServiceLocationDTO holds service location metadata.
@@ -135,22 +114,15 @@ type ServiceLocationDTO struct {
 	// example: Telia Lietuva, AB
 	ISP string `json:"isp,omitempty"`
 	// example: residential
-	NodeType string `json:"node_type,omitempty"`
+	IPType string `json:"ip_type,omitempty"`
 }
 
-// PaymentMethodDTO holds payment method details.
-// swagger:model PaymentMethodDTO
-type PaymentMethodDTO struct {
-	Type  string         `json:"type"`
-	Price money.Money    `json:"price"`
-	Rate  PaymentRateDTO `json:"rate"`
-}
-
-// PaymentRateDTO holds payment frequencies.
-// swagger:model PaymentRateDTO
-type PaymentRateDTO struct {
-	PerSeconds uint64 `json:"per_seconds"`
-	PerBytes   uint64 `json:"per_bytes"`
+// Price represents the service price.
+// swagger:model Price
+type Price struct {
+	Currency string `json:"currency"`
+	PerHour  uint64 `json:"per_hour"`
+	PerGiB   uint64 `json:"per_gib"`
 }
 
 // NewProposalQualityResponse maps to API proposal quality.
@@ -189,4 +161,12 @@ type ProposalQuality struct {
 type QualityMetricsDTO struct {
 	Quality          float64 `json:"quality"`
 	MonitoringFailed bool    `json:"monitoring_failed"`
+}
+
+// Quality holds proposal quality metrics.
+// swagger:model Quality
+type Quality struct {
+	Quality   float64 `json:"quality"`
+	Latency   float64 `json:"latency"`
+	Bandwidth float64 `json:"bandwidth"`
 }

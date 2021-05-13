@@ -39,16 +39,16 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 
 	switch serviceType {
 	case openvpn.ServiceType:
-		opts.PaymentPricePerGB = getPrice(config.FlagOpenVPNPriceGB, config.FlagPaymentPricePerGB)
-		opts.PaymentPricePerMinute = getPrice(config.FlagOpenVPNPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.PaymentPriceGiB = getPrice(config.FlagOpenVPNPriceGiB, config.FlagPaymentPriceGiB)
+		opts.PaymentPriceHour = getPrice(config.FlagOpenVPNPriceHour, config.FlagPaymentPriceHour)
 		opts.AccessPolicyList = getPolicies(config.FlagOpenVPNAccessPolicies, config.FlagAccessPolicyList)
 	case wireguard.ServiceType:
-		opts.PaymentPricePerGB = getPrice(config.FlagWireguardPriceGB, config.FlagPaymentPricePerGB)
-		opts.PaymentPricePerMinute = getPrice(config.FlagWireguardPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.PaymentPriceGiB = getPrice(config.FlagWireguardPriceGiB, config.FlagPaymentPriceGiB)
+		opts.PaymentPriceHour = getPrice(config.FlagWireguardPriceHour, config.FlagPaymentPriceHour)
 		opts.AccessPolicyList = getPolicies(config.FlagWireguardAccessPolicies, config.FlagAccessPolicyList)
 	case noop.ServiceType:
-		opts.PaymentPricePerGB = getPrice(config.FlagNoopPriceGB, config.FlagPaymentPricePerGB)
-		opts.PaymentPricePerMinute = getPrice(config.FlagNoopPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.PaymentPriceGiB = getPrice(config.FlagNoopPriceGB, config.FlagPaymentPriceGiB)
+		opts.PaymentPriceHour = getPrice(config.FlagNoopPriceHour, config.FlagPaymentPriceHour)
 		opts.AccessPolicyList = getPolicies(config.FlagNoopAccessPolicies, config.FlagAccessPolicyList)
 	}
 	return opts, nil
@@ -80,8 +80,8 @@ func getPolicies(flag cli.StringFlag, fallback cli.StringFlag) []string {
 
 // StartOptions describes options shared among multiple services
 type StartOptions struct {
-	PaymentPricePerGB     *big.Int
-	PaymentPricePerMinute *big.Int
-	AccessPolicyList      []string
-	TypeOptions           service.Options
+	PaymentPriceGiB  *big.Int
+	PaymentPriceHour *big.Int
+	AccessPolicyList []string
+	TypeOptions      service.Options
 }

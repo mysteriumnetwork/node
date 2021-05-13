@@ -232,14 +232,12 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 }
 
 func proposalEventToMetricsEvent(ctx market.ServiceProposal) (string, *metrics.Event) {
-	location := ctx.ServiceDefinition.GetLocation()
-
 	return ctx.ProviderID, &metrics.Event{
 		IsProvider: true,
 		Metric: &metrics.Event_ProposalPayload{
 			ProposalPayload: &metrics.ProposalPayload{
 				ServiceType: ctx.ServiceType,
-				NodeType:    location.NodeType,
+				NodeType:    ctx.Location.IPType,
 			},
 		},
 	}

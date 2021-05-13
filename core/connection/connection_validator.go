@@ -49,18 +49,23 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 
 // validateBalance checks if consumer has enough money for given proposal.
 func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) bool {
-	if proposal.PaymentMethodType == "" || proposal.PaymentMethod == nil {
-		return true
-	}
-
-	proposalPrice := proposal.PaymentMethod.GetPrice()
 	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
-	if balance.Cmp(proposalPrice.Amount) >= 0 {
-		return true
+
+	if perHour := proposal.Price.PerHour; perHour.Cmp(big.NewInt(0)) > 0 {
+		perMin := new(big.Int).Div(perHour, big.NewInt(60))
+		if balance.Cmp(perMin) < 0 {
+			return false
+		}
 	}
 
-	balance = v.consumerBalanceGetter.ForceBalanceUpdate(chainID, consumerID)
-	return balance.Cmp(proposalPrice.Amount) >= 0
+	if perGiB := proposal.Price.PerGiB; perGiB.Cmp(big.NewInt(0)) > 0 {
+		perMiB := new(big.Int).Div(perGiB, big.NewInt(1024))
+		if balance.Cmp(perMiB) < 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 // isUnlocked checks if the identity is unlocked or not.

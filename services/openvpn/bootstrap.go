@@ -18,10 +18,7 @@
 package openvpn
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/market"
-	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
 // ServiceType indicates "openvpn" service type
@@ -29,13 +26,5 @@ const ServiceType = "openvpn"
 
 // Bootstrap is called on program initialization time and registers various deserializers related to OpenVPN service
 func Bootstrap() {
-	market.RegisterServiceDefinitionUnserializer(
-		ServiceType,
-		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
-			var definition dto_openvpn.ServiceDefinition
-			err := json.Unmarshal(*rawDefinition, &definition)
-
-			return definition, err
-		},
-	)
+	market.RegisterServiceType(ServiceType)
 }

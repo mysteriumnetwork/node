@@ -22,16 +22,16 @@ import (
 )
 
 var (
-	// FlagNoopPriceMinute sets the price per minute for provided noop service.
-	FlagNoopPriceMinute = cli.Float64Flag{
-		Name:   "noop.price-minute",
-		Usage:  "Sets the price of the noop service per minute.",
+	// FlagNoopPriceHour sets the price/hour for provided noop service.
+	FlagNoopPriceHour = cli.Float64Flag{
+		Name:   "noop.price-hour",
+		Usage:  "Sets the price of the noop service/hour.",
 		Hidden: true,
 	}
 	// FlagNoopPriceGB sets the price per GiB for provided OpenVPN service.
 	FlagNoopPriceGB = cli.Float64Flag{
-		Name:   "noop.price-gb",
-		Usage:  "Sets the price of the noop service per GiB.",
+		Name:   "noop.price-gib",
+		Usage:  "Sets the price of the noop service/GiB.",
 		Hidden: true,
 	}
 	// FlagNoopAccessPolicies a comma-separated list of access policies that determines allowed identities to use the service.
@@ -45,7 +45,7 @@ var (
 // RegisterFlagsServiceNoop function register Wireguard flags to flag list
 func RegisterFlagsServiceNoop(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		&FlagNoopPriceMinute,
+		&FlagNoopPriceHour,
 		&FlagNoopPriceGB,
 		&FlagNoopAccessPolicies,
 	)
@@ -53,7 +53,7 @@ func RegisterFlagsServiceNoop(flags *[]cli.Flag) {
 
 // ParseFlagsServiceNoop parses CLI flags and registers value to configuration
 func ParseFlagsServiceNoop(ctx *cli.Context) {
-	Current.ParseFloat64Flag(ctx, FlagNoopPriceMinute)
+	Current.ParseFloat64Flag(ctx, FlagNoopPriceHour)
 	Current.ParseFloat64Flag(ctx, FlagNoopPriceGB)
 	Current.ParseStringFlag(ctx, FlagNoopAccessPolicies)
 }

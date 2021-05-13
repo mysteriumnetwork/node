@@ -120,6 +120,6 @@ func (c *Cache) HandleNodeEvent(se nodevent.Payload) {
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to detect original location")
 	} else {
-		log.Debug().Msgf("original location detected: %s (%s)", c.origin.Country, c.origin.NodeType)
+		log.Debug().Msgf("original location detected: %s (%s)", c.origin.Country, c.origin.IPType)
 	}
 }

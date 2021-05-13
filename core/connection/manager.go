@@ -412,7 +412,7 @@ func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, pr
 	trace := tracer.StartStage("Consumer P2P channel creation")
 	defer tracer.EndStage(trace)
 
-	contactDef, err := p2p.ParseContact(proposal.ProviderContacts)
+	contactDef, err := p2p.ParseContact(proposal.Contacts)
 	if err != nil {
 		return fmt.Errorf("provider does not support p2p communication: %w", err)
 	}
@@ -471,8 +471,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 				Country: m.Status().ConsumerLocation.Country,
 			},
 		},
-		ProposalID: int64(proposal.ID),
-		Config:     config,
+		Config: config,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)

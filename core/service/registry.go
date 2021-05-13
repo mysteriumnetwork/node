@@ -17,12 +17,8 @@
 
 package service
 
-import (
-	"github.com/mysteriumnetwork/node/market"
-)
-
 // RegistryFactory initiates instance which is able to serve
-type RegistryFactory func(options Options) (Service, market.ServiceProposal, error)
+type RegistryFactory func(options Options) (Service, error)
 
 // Registry holds all pluggable services
 type Registry struct {
@@ -42,10 +38,10 @@ func (registry *Registry) Register(serviceType string, creator RegistryFactory) 
 }
 
 // Create creates pluggable service
-func (registry *Registry) Create(serviceType string, options Options) (Service, market.ServiceProposal, error) {
+func (registry *Registry) Create(serviceType string, options Options) (Service, error) {
 	createService, exists := registry.factories[serviceType]
 	if !exists {
-		return nil, market.ServiceProposal{}, ErrUnsupportedServiceType
+		return nil, ErrUnsupportedServiceType
 	}
 
 	return createService(options)

@@ -19,103 +19,11 @@ package wireguard
 
 import (
 	"encoding/json"
-	"math/big"
 	"net"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
-
-func Test_PaymentMethod_Serialize(t *testing.T) {
-	price := money.New(big.NewInt(50000000), money.CurrencyMyst)
-
-	var tests = []struct {
-		model        pingpong.PaymentMethod
-		expectedJSON string
-	}{
-		{
-			pingpong.PaymentMethod{
-				Price: price,
-			},
-			`{
-				"bytes":0,
-				"duration":0,
-				"type":"",
-				"price": {
-					"amount": 50000000,
-					"currency": "MYST"
-				}
-			}`,
-		},
-		{
-			pingpong.PaymentMethod{},
-			`{
-				"bytes":0,
-				"duration":0,
-				"type":"",
-				"price": {}
-			}`,
-		},
-	}
-
-	for _, test := range tests {
-		jsonBytes, err := json.Marshal(test.model)
-
-		assert.Nil(t, err)
-		assert.JSONEq(t, test.expectedJSON, string(jsonBytes))
-	}
-}
-
-func Test_PaymentMethod_Unserialize(t *testing.T) {
-	price := money.New(big.NewInt(50000000), money.CurrencyMyst)
-
-	var tests = []struct {
-		json          string
-		expectedModel pingpong.PaymentMethod
-		expectedError error
-	}{
-		{
-			`{
-				"bytes":1,
-				"duration":2,
-				"type":"test",
-				"price": {
-					"amount": 50000000,
-					"currency": "MYST"
-				}
-			}`,
-			pingpong.PaymentMethod{
-				Price:    price,
-				Bytes:    1,
-				Type:     "test",
-				Duration: 2,
-			},
-			nil,
-		},
-		{
-			`{
-				"price": {}
-			}`,
-			pingpong.PaymentMethod{},
-			nil,
-		},
-		{
-			`{}`,
-			pingpong.PaymentMethod{},
-			nil,
-		},
-	}
-
-	for _, test := range tests {
-		var model pingpong.PaymentMethod
-		err := json.Unmarshal([]byte(test.json), &model)
-
-		assert.Equal(t, test.expectedModel, model)
-		assert.Equal(t, test.expectedError, err)
-	}
-}
 
 func TestServiceConfig_MarshalJSON(t *testing.T) {
 	endpoint, _ := net.ResolveUDPAddr("udp4", "127.0.0.1:51001")

@@ -62,7 +62,7 @@ type ConnectionInfoDTO struct {
 	// example: 0x00
 	HermesID string `json:"hermes_id,omitempty"`
 
-	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
+	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","service_type":"openvpn","location":{"country":"CA"}}
 	Proposal *ProposalDTO `json:"proposal,omitempty"`
 
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918

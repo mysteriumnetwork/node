@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,14 +44,11 @@ var (
 		Foo: "bar",
 	}
 	mockAccessPolicyEndpoint = "https://some.domain/api/v1/lists/"
-	mockProposal             = market.ServiceProposal{
-		ID:                1,
-		ServiceType:       mockServiceType,
-		ServiceDefinition: TestServiceDefinition{},
-		ProviderID:        mockProviderID.Address,
-		PaymentMethodType: mocks.DefaultPaymentMethodType,
-		PaymentMethod:     mocks.DefaultPaymentMethod(),
-	}
+	mockProposal             = market.NewProposal(mockProviderID.Address, mockServiceType, market.NewProposalOpts{
+		Location: &TestLocation,
+		Price:    &price,
+		Quality:  &mockQuality,
+	})
 	ap = []market.AccessPolicy{
 		{
 			ID:     "verified-traffic",
@@ -72,15 +68,12 @@ var (
 		},
 	}
 	serviceTypeWithAccessPolicy  = "mockAccessPolicyService"
-	mockProposalWithAccessPolicy = market.ServiceProposal{
-		ID:                1,
-		ServiceType:       serviceTypeWithAccessPolicy,
-		ServiceDefinition: TestServiceDefinition{},
-		ProviderID:        mockProviderID.Address,
-		AccessPolicies:    &ap,
-		PaymentMethodType: mocks.DefaultPaymentMethodType,
-		PaymentMethod:     mocks.DefaultPaymentMethod(),
-	}
+	mockProposalWithAccessPolicy = market.NewProposal(mockProviderID.Address, serviceTypeWithAccessPolicy, market.NewProposalOpts{
+		Location:       &TestLocation,
+		Price:          &price,
+		Quality:        &mockQuality,
+		AccessPolicies: ap,
+	})
 	mockServiceRunning                 = service.NewInstance(mockProviderID, mockServiceType, mockServiceOptions, mockProposal, servicestate.Running, nil, nil, nil)
 	mockServiceStopped                 = service.NewInstance(mockProviderID, mockServiceType, mockServiceOptions, mockProposal, servicestate.NotRunning, nil, nil, nil)
 	mockServiceRunningWithAccessPolicy = service.NewInstance(mockProviderID, serviceTypeWithAccessPolicy, mockServiceOptions, mockProposalWithAccessPolicy, servicestate.Running, nil, nil, nil)
@@ -92,7 +85,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options service.Options, _ market.PaymentMethod) (service.ID, error) {
+func (sm *mockServiceManager) Start(_ identity.Identity, serviceType string, _ []string, _ service.Options, _ market.Price) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}
@@ -150,23 +143,25 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
-					"id": 1,
+                    "format": "service-proposal/v2",
+                    "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
-					"service_definition": {
-						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					"location": {
+						"asn": 123,
+						"country": "Lithuania",
+						"city": "Vilnius"
 					},
-					"payment_method": {
-						"type": "BYTES_TRANSFERRED_WITH_TIME",
-						"price": {
-							"amount":50000,
-							"currency":"MYST"
-						},
-						"rate":{
-							"per_seconds":60,
-							"per_bytes":7669584
-						}
-					}
+					"price": {
+                      "currency": "MYST",
+                      "per_hour": 5e+15,
+                      "per_gib": 7e+15
+                    },
+                    "quality": {
+                      "quality": 2.0,
+                      "latency": 50,
+                      "bandwidth": 10
+                    }
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
 			}]`,
@@ -183,23 +178,25 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
-					"id": 1,
+                    "format": "service-proposal/v2",
+                    "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
-					"service_definition": {
-						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					"location": {
+						"asn": 123,
+						"country": "Lithuania",
+						"city": "Vilnius"
 					},
-					"payment_method": {
-						"type": "BYTES_TRANSFERRED_WITH_TIME",
-						"price": {
-							"amount":50000,
-							"currency":"MYST"
-						},
-						"rate":{
-							"per_seconds":60,
-							"per_bytes":7669584
-						}
-					}
+					"price": {
+                      "currency": "MYST",
+                      "per_hour": 5e+15,
+                      "per_gib": 7e+15
+                    },
+                    "quality": {
+                      "quality": 2.0,
+                      "latency": 50,
+                      "bandwidth": 10
+                    }
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
@@ -216,23 +213,25 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
-					"id": 1,
+                    "format": "service-proposal/v2",
+                    "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
-					"service_definition": {
-						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					"location": {
+						"asn": 123,
+						"country": "Lithuania",
+						"city": "Vilnius"
 					},
-					"payment_method": {
-						"type": "BYTES_TRANSFERRED_WITH_TIME",
-						"price": {
-							"amount":50000,
-							"currency":"MYST"
-						},
-						"rate":{
-							"per_seconds":60,
-							"per_bytes":7669584
-						}
-					}
+					"price": {
+                      "currency": "MYST",
+                      "per_hour": 5e+15,
+                      "per_gib": 7e+15
+                    },
+                    "quality": {
+                      "quality": 2.0,
+                      "latency": 50,
+                      "bandwidth": 10
+                    }
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
@@ -401,26 +400,24 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
-				"id": 1,
+				"format": "service-proposal/v2",
+				"compatibility": 0,
 				"provider_id": "0xproviderid",
 				"service_type": "testprotocol",
-				"service_definition": {
-					"location_originate": {
-						"asn": 123,
-						"country": "Lithuania",
-						"city": "Vilnius"
-					}
+				"location": {
+					"asn": 123,
+					"country": "Lithuania",
+					"city": "Vilnius"
 				},
-				"payment_method": {
-					"type": "BYTES_TRANSFERRED_WITH_TIME",
-					"price": {
-						"amount":50000,
-						"currency":"MYST"
-					},
-					"rate":{
-						"per_seconds":60,
-						"per_bytes":7669584
-					}
+				"price": {
+				  "currency": "MYST",
+				  "per_hour": 5e+15,
+				  "per_gib": 7e+15
+				},
+				"quality": {
+				  "quality": 2.0,
+				  "latency": 50,
+				  "bandwidth": 10
 				}
 			},
 			"connection_statistics": {"attempted":0, "successful":0}
@@ -495,22 +492,24 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
-				"id": 1,
+				"format": "service-proposal/v2",
+				"compatibility": 0,
 				"provider_id": "0xproviderid",
 				"service_type": "mockAccessPolicyService",
-				"service_definition": {
-					"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+				"location": {
+					"asn": 123,
+					"country": "Lithuania",
+					"city": "Vilnius"
 				},
-				"payment_method": {
-					"type": "BYTES_TRANSFERRED_WITH_TIME",
-					"price": {
-						"amount":50000,
-						"currency":"MYST"
-					},
-					"rate":{
-						"per_seconds":60,
-						"per_bytes":7669584
-					}
+				"price": {
+				  "currency": "MYST",
+				  "per_hour": 5e+15,
+				  "per_gib": 7e+15
+				},
+				"quality": {
+				  "quality": 2.0,
+				  "latency": 50,
+				  "bandwidth": 10
 				},
 				"access_policies": [
 					{

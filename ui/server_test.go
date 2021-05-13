@@ -36,13 +36,13 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 
 func Test_Server_ServesHTML(t *testing.T) {
 	// given
-	s := NewServer("localhost", 55555, "localhost", 55554, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
+	s := NewServer("localhost", 55565, "localhost", 55564, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
 	s.discovery = &mockDiscovery{}
 	s.Serve()
 	time.Sleep(time.Millisecond * 100)
 
 	// when
-	nilResp, err := http.Get("http://:55555/")
+	nilResp, err := http.Get("http://:55565/")
 	assert.Nil(t, err)
 	defer nilResp.Body.Close()
 

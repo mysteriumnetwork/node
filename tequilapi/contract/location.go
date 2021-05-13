@@ -48,10 +48,7 @@ type LocationDTO struct {
 	// example: Vilnius
 	City string `json:"city"`
 
-	// User type (data_center, residential, etc.)
+	// IP type (data_center, residential, etc.)
 	// example: residential
-	UserType string `json:"user_type"`
-	// User type (DEPRECATED)
-	// example: residential
-	NodeType string `json:"node_type"`
+	IPType string `json:"ip_type"`
 }

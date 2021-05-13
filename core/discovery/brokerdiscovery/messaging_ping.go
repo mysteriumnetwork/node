@@ -27,7 +27,7 @@ type pingMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const pingEndpoint = communication.MessageEndpoint("proposal-ping")
+const pingEndpoint = communication.MessageEndpoint("proposal-ping.v2")
 
 // pingProducer
 type pingProducer struct {

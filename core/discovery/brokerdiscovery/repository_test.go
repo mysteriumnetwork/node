@@ -30,18 +30,7 @@ import (
 )
 
 func init() {
-	market.RegisterServiceDefinitionUnserializer(
-		"mock_service",
-		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
-			return mockServiceDefinition{}, nil
-		},
-	)
-	market.RegisterPaymentMethodUnserializer(
-		"mock_payment",
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			return mockPaymentMethod{}, nil
-		},
-	)
+	market.RegisterServiceType("mock_service")
 	market.RegisterContactUnserializer("mock_contact",
 		func(rawMessage *json.RawMessage) (market.ContactDefinition, error) {
 			return mockContact{}, nil
@@ -51,24 +40,16 @@ func init() {
 
 var (
 	proposalFirst = func() market.ServiceProposal {
-		return market.ServiceProposal{
-			ProviderID:        "0x1",
-			ServiceType:       "mock_service",
-			ServiceDefinition: mockServiceDefinition{},
-			PaymentMethodType: "mock_payment",
-			PaymentMethod:     mockPaymentMethod{},
-			ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
-		}
+		return market.NewProposal("0x1", "mock_service", market.NewProposalOpts{
+			Price:    market.NewPrice(0, 0, money.CurrencyMystt),
+			Contacts: []market.Contact{{Type: "mock_contact", Definition: mockContact{}}},
+		})
 	}
 	proposalSecond = func() market.ServiceProposal {
-		return market.ServiceProposal{
-			ProviderID:        "0x2",
-			ServiceType:       "mock_service",
-			ServiceDefinition: mockServiceDefinition{},
-			PaymentMethodType: "mock_payment",
-			PaymentMethod:     mockPaymentMethod{},
-			ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
-		}
+		return market.NewProposal("0x2", "mock_service", market.NewProposalOpts{
+			Price:    market.NewPrice(0, 0, money.CurrencyMystt),
+			Contacts: []market.Contact{{Type: "mock_contact", Definition: mockContact{}}},
+		})
 	}
 )
 
@@ -76,14 +57,30 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Second)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 500*time.Millisecond, 1*time.Second)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
 
-	proposalRegister(connection, `{
-		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
-	}`)
+	proposalRegister(connection, `
+		{
+		  "proposal": {
+			"format": "service-proposal/v2",
+			"provider_id": "0x1",
+			"service_type": "mock_service",
+            "price": {
+              "currency": "MYSTT",
+              "per_hour": 0,
+              "per_gib": 0
+            },
+			"contacts": [
+			  {
+				"type": "mock_contact"
+			  }
+			]
+		  }
+		}
+	`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst()}, repo.storage.Proposals())
@@ -93,7 +90,7 @@ func Test_Subscriber_SkipUnsupportedProposal(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 500*time.Millisecond, 10*time.Millisecond)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
@@ -117,7 +114,21 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
-		"proposal": {"provider_id": "0x1"}
+	  "proposal": {
+		"format": "service-proposal/v2",
+		"provider_id": "0x1",
+		"service_type": "mock_service",
+		"price": {
+          "currency": "MYSTT",
+          "per_hour": 0,
+          "per_gib": 0
+        },
+		"contacts": [
+		  {
+			"type": "mock_contact"
+		  }
+		]
+	  }
 	}`)
 	assert.Eventually(t, proposalCountEquals(repo, 0), 2*time.Second, 10*time.Millisecond)
 }
@@ -126,17 +137,45 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 100*time.Millisecond, 10*time.Millisecond)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
-		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
+	  "proposal": {
+		"format": "service-proposal/v2",
+		"provider_id": "0x1",
+		"service_type": "mock_service",
+		"price": {
+          "currency": "MYSTT",
+          "per_hour": 0,
+          "per_gib": 0
+        },
+		"contacts": [
+		  {
+			"type": "mock_contact"
+		  }
+		]
+	  }
 	}`)
 
 	proposalPing(connection, `{
-		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
+	  "proposal": {
+        "format": "service-proposal/v2",
+		"provider_id": "0x1",
+		"service_type": "mock_service",
+		"price": {
+          "currency": "MYSTT",
+          "per_hour": 0,
+          "per_gib": 0
+        },
+		"contacts": [
+		  {
+			"type": "mock_contact"
+		  }
+		]
+	  }
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
@@ -149,36 +188,50 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 500*time.Millisecond, 10*time.Millisecond)
 	repo.storage.AddProposal(proposalFirst(), proposalSecond())
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
 
 	proposalUnregister(connection, `{
-		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
-	}`)
+	  "proposal": {
+		"format": "service-proposal/v2",
+		"provider_id": "0x1",
+		"service_type": "mock_service",
+		"price": {
+		  "currency": "MYSTT",
+		  "per_hour": 0,
+		  "per_gib": 0
+		},
+		"contacts": [
+		  {
+			"type": "mock_contact"
+		  }
+		]
+	  }
+}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalSecond()}, repo.storage.Proposals())
 }
 
 func proposalRegister(connection nats.Connection, payload string) {
-	err := connection.Publish("*.proposal-register", []byte(payload))
+	err := connection.Publish("*.proposal-register.v2", []byte(payload))
 	if err != nil {
 		panic(err)
 	}
 }
 
 func proposalUnregister(connection nats.Connection, payload string) {
-	err := connection.Publish("*.proposal-unregister", []byte(payload))
+	err := connection.Publish("*.proposal-unregister.v2", []byte(payload))
 	if err != nil {
 		panic(err)
 	}
 }
 
 func proposalPing(connection nats.Connection, payload string) {
-	err := connection.Publish("*.proposal-ping", []byte(payload))
+	err := connection.Publish("*.proposal-ping.v2", []byte(payload))
 	if err != nil {
 		panic(err)
 	}
@@ -187,30 +240,6 @@ func proposalPing(connection nats.Connection, payload string) {
 func proposalCountEquals(subscriber *Repository, count int) func() bool {
 	return func() bool {
 		return len(subscriber.storage.Proposals()) == count
-	}
-}
-
-type mockServiceDefinition struct {
-}
-
-func (service mockServiceDefinition) GetLocation() market.Location {
-	return market.Location{}
-}
-
-type mockPaymentMethod struct {
-}
-
-func (method mockPaymentMethod) GetPrice() money.Money {
-	return money.Money{}
-}
-
-func (method mockPaymentMethod) GetType() string {
-	return "mock"
-}
-
-func (method mockPaymentMethod) GetRate() market.PaymentRate {
-	return market.PaymentRate{
-		PerTime: time.Minute,
 	}
 }
 

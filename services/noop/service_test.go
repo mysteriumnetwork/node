@@ -21,27 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var _ service.Service = NewManager()
-
-func Test_GetProposal(t *testing.T) {
-	country := "LT"
-	assert.Exactly(
-		t,
-		market.ServiceProposal{
-			ServiceType: "noop",
-			ServiceDefinition: ServiceDefinition{
-				Location: market.Location{Country: country},
-			},
-		},
-		GetProposal(locationstate.Location{Country: country}),
-	)
-}
 
 func Test_Manager_ProvideConfig(t *testing.T) {
 	manager := NewManager()

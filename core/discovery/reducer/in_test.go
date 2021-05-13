@@ -24,7 +24,7 @@ import (
 )
 
 func Test_InInt(t *testing.T) {
-	match := InInt(fieldID, 1, 2, 3)
+	match := InInt(fieldCompatibility, 1, 2, 3)
 
 	assert.False(t, match(proposalEmpty))
 	assert.False(t, match(proposalProvider1Streaming))

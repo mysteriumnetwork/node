@@ -333,7 +333,7 @@ func (client *Client) ProposalsByLocationAndService(serviceType, locationType, l
 	queryParams := url.Values{}
 	queryParams.Add("service_type", serviceType)
 	queryParams.Add("location_type", locationType)
-	queryParams.Add("location_country", locationCountry)
+	queryParams.Add("country", locationCountry)
 	return client.proposals(queryParams)
 }
 
@@ -355,12 +355,11 @@ func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error
 }
 
 // ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB *big.Int) ([]contract.ProposalDTO, error) {
+func (client *Client) ProposalsByPrice(priceHourMax, priceGiBMax *big.Int) ([]contract.ProposalDTO, error) {
 	values := url.Values{}
-	values.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTime))
-	values.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTime))
-	values.Add("upper_gb_price_bound", fmt.Sprintf("%v", upperGB))
-	values.Add("lower_gb_price_bound", fmt.Sprintf("%v", lowerGB))
+	values.Add("price_gib_max", fmt.Sprintf("%v", priceGiBMax))
+	values.Add("price_hour_max", fmt.Sprintf("%v", priceHourMax))
+	values.Add("access_policy", "all")
 	return client.proposals(values)
 }
 

@@ -18,46 +18,25 @@
 package mocks
 
 import (
-	"math/big"
-	"time"
-
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// PaymentMethod is a test-friendly payment method.
-type PaymentMethod struct {
-	Rate        market.PaymentRate
-	PaymentType string
-	Price       money.Money
-}
-
-// GetPrice returns pre-defined price.
-func (mpm *PaymentMethod) GetPrice() money.Money {
-	return mpm.Price
-}
-
-// GetType returns pre-defined type.
-func (mpm *PaymentMethod) GetType() string {
-	return mpm.PaymentType
-}
-
-// GetRate returns pre-defined rate.
-func (mpm *PaymentMethod) GetRate() market.PaymentRate {
-	return mpm.Rate
-}
-
-// DefaultPaymentMethod is a mock default payment method (workaround package import cycles).
-func DefaultPaymentMethod() *PaymentMethod {
-	return &PaymentMethod{
-		Rate: market.PaymentRate{
-			PerTime: time.Minute,
-			PerByte: 7669584,
-		},
-		PaymentType: "BYTES_TRANSFERRED_WITH_TIME",
-		Price:       money.Money{Amount: big.NewInt(50000), Currency: money.CurrencyMyst},
+// Price is the default price for test proposals.
+func Price() market.Price {
+	return market.Price{
+		Currency: money.CurrencyMyst,
+		PerHour:  crypto.FloatToBigMyst(0.005),
+		PerGiB:   crypto.FloatToBigMyst(0.007),
 	}
 }
 
-// DefaultPaymentMethodType is a mock default.
-const DefaultPaymentMethodType = "BYTES_TRANSFERRED_WITH_TIME"
+// Quality is the default quality for test proposals.
+func Quality() market.Quality {
+	return market.Quality{
+		Quality:   2.0,
+		Latency:   50,
+		Bandwidth: 10,
+	}
+}
