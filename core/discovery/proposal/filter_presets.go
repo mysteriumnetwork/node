@@ -164,9 +164,8 @@ var defaultPresets = []FilterPreset{
 
 				if qx.Bandwidth == qy.Bandwidth {
 					return qx.Quality > qy.Quality
-				} else {
-					return qx.Bandwidth > qy.Bandwidth
 				}
+				return qx.Bandwidth > qy.Bandwidth
 			})
 
 			return filtered
@@ -203,9 +202,8 @@ var defaultPresets = []FilterPreset{
 						return px.PerHour.Cmp(py.PerHour) == -1
 					}
 					return px.PerGiB.Cmp(py.PerGiB) == -1
-				} else {
-					return qx.Quality > qy.Quality
 				}
+				return qx.Quality > qy.Quality
 			})
 
 			return filtered

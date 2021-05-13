@@ -37,6 +37,7 @@ type ProposalsQuery struct {
 	QualityMin                float32
 }
 
+// ToURLValues converts the query to url.Values.
 func (q ProposalsQuery) ToURLValues() url.Values {
 	values := url.Values{}
 	if q.ProviderID != "" {

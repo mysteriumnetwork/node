@@ -23,7 +23,7 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// Price is default price for test proposals.
+// Price is the default price for test proposals.
 func Price() market.Price {
 	return market.Price{
 		Currency: money.CurrencyMyst,
@@ -32,6 +32,7 @@ func Price() market.Price {
 	}
 }
 
+// Quality is the default quality for test proposals.
 func Quality() market.Quality {
 	return market.Quality{
 		Quality:   2.0,
