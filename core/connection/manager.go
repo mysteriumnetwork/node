@@ -109,19 +109,24 @@ type PaymentIssuer interface {
 	Stop()
 }
 
+type PriceGetter interface {
+	GetCurrentPrice() (market.Prices, error)
+}
+
 type validator interface {
-	Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error
+	Validate(chainID int64, consumerID identity.Identity, p market.Prices) error
 }
 
 // TimeGetter function returns current time
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Prices) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
+	priceGetter          PriceGetter
 	newConnection        Creator
 	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
@@ -161,6 +166,7 @@ func NewManager(
 	statsReportInterval time.Duration,
 	validator validator,
 	p2pDialer p2p.Dialer,
+	priceGetter PriceGetter,
 ) *connectionManager {
 	return &connectionManager{
 		newConnection:        connectionCreator,
@@ -176,6 +182,7 @@ func NewManager(
 		validator:            validator,
 		p2pDialer:            p2pDialer,
 		timeGetter:           time.Now,
+		priceGetter:          priceGetter,
 	}
 }
 
@@ -203,7 +210,12 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return ErrAlreadyExists
 	}
 
-	err = m.validator.Validate(m.chainID(), consumerID, proposal)
+	prc, err := m.priceGetter.GetCurrentPrice()
+	if err != nil {
+		return err
+	}
+
+	err = m.validator.Validate(m.chainID(), consumerID, prc)
 	if err != nil {
 		return err
 	}
@@ -232,12 +244,12 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
-	paymentSession, err := m.paymentLoop(m.channel, consumerID, providerID, hermesID, proposal)
+	paymentSession, err := m.paymentLoop(m.channel, consumerID, providerID, hermesID, proposal, prc)
 	if err != nil {
 		return err
 	}
 
-	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, m.channel, consumerID, hermesID, proposal, tracer)
+	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, m.channel, consumerID, hermesID, proposal, tracer, prc)
 	sessionID = session.ID(sessionDTO.GetID())
 	if err != nil {
 		m.sendSessionStatus(m.channel, consumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
@@ -350,8 +362,8 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
-	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, hermesID, proposal)
+func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, price market.Prices) (PaymentIssuer, error) {
+	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, hermesID, proposal, price)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +460,7 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, tracer *trace.Tracer) (*pb.SessionResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, tracer *trace.Tracer, requestedPrice market.Prices) (*pb.SessionResponse, error) {
 	trace := tracer.StartStage("Consumer session creation")
 	defer tracer.EndStage(trace)
 
@@ -469,6 +481,10 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 			PaymentVersion: "v3",
 			Location: &pb.LocationInfo{
 				Country: m.Status().ConsumerLocation.Country,
+			},
+			Pricing: &pb.Pricing{
+				PerGib:  requestedPrice.PricePerGiB.Bytes(),
+				PerHour: requestedPrice.PricePerHour.Bytes(),
 			},
 		},
 		Config: config,

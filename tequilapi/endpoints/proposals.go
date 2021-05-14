@@ -77,14 +77,6 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository) *proposalsEndp
 //     description: IP Type (residential, datacenter, etc.).
 //     type: string
 //   - in: query
-//     name: price_hour_max
-//     description: Maximum price/hour.
-//     type: string
-//   - in: query
-//     name: price_gib_max
-//     description: Maximum price/GiB.
-//     type: string
-//   - in: query
 //     name: compatibility_min
 //     description: Minimum compatibility level of the proposal.
 //     type: integer
@@ -106,18 +98,6 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository) *proposalsEndp
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	priceHourMax, err := parsePriceBound(req, "price_hour_max")
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-
-	priceGiBMax, err := parsePriceBound(req, "price_gib_max")
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-
 	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
 	qualityMin := func() float32 {
@@ -135,8 +115,6 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		AccessPolicySource: req.URL.Query().Get("access_policy_source"),
 		LocationCountry:    req.URL.Query().Get("location_country"),
 		IPType:             req.URL.Query().Get("ip_type"),
-		PriceGiBMax:        priceGiBMax,
-		PriceHourMax:       priceHourMax,
 		CompatibilityMin:   compatibilityMin,
 		CompatibilityMax:   compatibilityMax,
 		QualityMin:         qualityMin,

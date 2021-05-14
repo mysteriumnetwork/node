@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
@@ -61,7 +59,6 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 				Country: "US",
 				IPType:  "residential",
 			},
-			Price:   market.NewPrice(int64(crypto.Myst), 3*int64(crypto.Myst), money.CurrencyMystt),
 			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
 		}),
 	}
@@ -82,12 +79,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 		  "service_type": "openvpn",
 		  "country": "US",
 		  "ip_type": "residential",
-		  "quality_level": 3,
-		  "price": {
-			"currency": "MYSTT",
-			"per_hour": 1.0,
-			"per_gib": 3.0
-		  }
+		  "quality_level": 3
 		}
 	  ]
 	}`, string(bytes))
@@ -100,7 +92,6 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 				Country: "US",
 				IPType:  "residential",
 			},
-			Price:   market.NewPrice(int64(crypto.Myst), 2*int64(crypto.Myst), money.CurrencyMystt),
 			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
 		}),
 	}
@@ -119,12 +110,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 		  "service_type": "wireguard",
 		  "country": "US",
 		  "ip_type": "residential",
-		  "quality_level": 3,
-		  "price": {
-			"per_hour": 1.0,
-			"per_gib": 2.0,
-			"currency": "MYSTT"
-		  }
+		  "quality_level": 3
 		}
 	  ]
 	}`, string(bytes))

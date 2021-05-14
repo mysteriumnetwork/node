@@ -46,7 +46,6 @@ var (
 	mockAccessPolicyEndpoint = "https://some.domain/api/v1/lists/"
 	mockProposal             = market.NewProposal(mockProviderID.Address, mockServiceType, market.NewProposalOpts{
 		Location: &TestLocation,
-		Price:    &price,
 		Quality:  &mockQuality,
 	})
 	ap = []market.AccessPolicy{
@@ -70,7 +69,6 @@ var (
 	serviceTypeWithAccessPolicy  = "mockAccessPolicyService"
 	mockProposalWithAccessPolicy = market.NewProposal(mockProviderID.Address, serviceTypeWithAccessPolicy, market.NewProposalOpts{
 		Location:       &TestLocation,
-		Price:          &price,
 		Quality:        &mockQuality,
 		AccessPolicies: ap,
 	})
@@ -85,7 +83,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(_ identity.Identity, serviceType string, _ []string, _ service.Options, _ market.Price) (service.ID, error) {
+func (sm *mockServiceManager) Start(_ identity.Identity, serviceType string, _ []string, _ service.Options) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}
@@ -143,7 +141,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
@@ -152,11 +150,6 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-					"price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
@@ -178,7 +171,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
@@ -187,11 +180,6 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-					"price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
@@ -213,7 +201,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
@@ -222,11 +210,6 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-					"price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
@@ -400,7 +383,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
-				"format": "service-proposal/v2",
+				"format": "service-proposal/v3",
 				"compatibility": 0,
 				"provider_id": "0xproviderid",
 				"service_type": "testprotocol",
@@ -408,11 +391,6 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 					"asn": 123,
 					"country": "Lithuania",
 					"city": "Vilnius"
-				},
-				"price": {
-				  "currency": "MYST",
-				  "per_hour": 5e+15,
-				  "per_gib": 7e+15
 				},
 				"quality": {
 				  "quality": 2.0,
@@ -492,7 +470,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
-				"format": "service-proposal/v2",
+				"format": "service-proposal/v3",
 				"compatibility": 0,
 				"provider_id": "0xproviderid",
 				"service_type": "mockAccessPolicyService",
@@ -500,11 +478,6 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 					"asn": 123,
 					"country": "Lithuania",
 					"city": "Vilnius"
-				},
-				"price": {
-				  "currency": "MYST",
-				  "per_hour": 5e+15,
-				  "per_gib": 7e+15
 				},
 				"quality": {
 				  "quality": 2.0,

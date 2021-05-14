@@ -18,8 +18,6 @@
 package proposal
 
 import (
-	"math/big"
-
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -32,7 +30,6 @@ type Filter struct {
 	LocationCountry                    string
 	IPType                             string
 	AccessPolicy, AccessPolicySource   string
-	PriceGiBMax, PriceHourMax          *big.Int
 	CompatibilityMin, CompatibilityMax int
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
@@ -64,14 +61,6 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 		}
 	}
 
-	if filter.PriceHourMax != nil {
-		conditions = append(conditions, reducer.PriceHourMax(filter.PriceHourMax))
-	}
-
-	if filter.PriceGiBMax != nil {
-		conditions = append(conditions, reducer.PriceGiBMax(filter.PriceGiBMax))
-	}
-
 	if len(conditions) > 0 {
 		return reducer.And(conditions...)(proposal)
 	}
@@ -89,12 +78,6 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 		AccessPolicy:       filter.AccessPolicy,
 		AccessPolicySource: filter.AccessPolicySource,
 		QualityMin:         filter.QualityMin,
-	}
-	if priceGibMax := filter.PriceGiBMax; priceGibMax != nil {
-		query.PriceGibMax = priceGibMax.Uint64()
-	}
-	if priceHourMax := filter.PriceHourMax; priceHourMax != nil {
-		query.PriceHourMax = priceHourMax.Uint64()
 	}
 
 	return query

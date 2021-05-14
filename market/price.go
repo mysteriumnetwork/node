@@ -19,49 +19,31 @@ package market
 
 import (
 	"math/big"
-
-	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/mysteriumnetwork/node/money"
+	"time"
 )
 
-// Price represents the proposal price.
-type Price struct {
-	Currency money.Currency `json:"currency"`
-	PerHour  *big.Int       `json:"per_hour"`
-	PerGiB   *big.Int       `json:"per_gib"`
+// LatestPrices contains the current and previous prices.
+type LatestPrices struct {
+	Current  *Prices `json:"current"`
+	Previous *Prices `json:"previous"`
+}
+
+// Prices represents the per hour and per byte prices.
+type Prices struct {
+	ValidUntil   time.Time `json:"valid_until"`
+	PricePerHour *big.Int  `json:"price_per_hour"`
+	PricePerGiB  *big.Int  `json:"price_per_gib"`
+}
+
+// IsFree Determines if the price has any values set or not.
+func (p Prices) IsFree() bool {
+	return p.PricePerGiB.Cmp(big.NewInt(0)) == 0 && p.PricePerHour.Cmp(big.NewInt(0)) == 0
 }
 
 // NewPrice creates a new Price instance.
-func NewPrice(perHour, perGiB int64, currency money.Currency) *Price {
-	return &Price{
-		Currency: currency,
-		PerHour:  big.NewInt(perHour),
-		PerGiB:   big.NewInt(perGiB),
+func NewPrice(perHour, perGiB int64) *Prices {
+	return &Prices{
+		PricePerHour: big.NewInt(perHour),
+		PricePerGiB:  big.NewInt(perGiB),
 	}
-}
-
-// NewPriceB creates a new Price instance using big.Ints.
-func NewPriceB(perHour, perGiB *big.Int, currency money.Currency) *Price {
-	p := NewPrice(0, 0, currency)
-	if perHour != nil {
-		p.PerHour = perHour
-	}
-	if perGiB != nil {
-		p.PerGiB = perGiB
-	}
-	return p
-}
-
-// IsFree returns true if the service pricing is set to 0.
-func (p Price) IsFree() bool {
-	return p.PerHour.Cmp(big.NewInt(0)) == 0 && p.PerGiB.Cmp(big.NewInt(0)) == 0
-}
-
-// Validate validates the price.
-func (p Price) Validate() error {
-	return validation.ValidateStruct(&p,
-		validation.Field(&p.Currency, validation.Required),
-		validation.Field(&p.PerHour, validation.Required),
-		validation.Field(&p.PerGiB, validation.Required),
-	)
 }

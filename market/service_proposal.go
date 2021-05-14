@@ -19,16 +19,13 @@ package market
 
 import (
 	"encoding/json"
-	"math/big"
 
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/utils/validateutil"
 )
 
 const (
-	proposalFormat = "service-proposal/v2"
+	proposalFormat = "service-proposal/v3"
 )
 
 // ServiceProposal is top level structure which is presented to marketplace by service provider, and looked up by service consumer
@@ -48,9 +45,6 @@ type ServiceProposal struct {
 	// Service location
 	Location Location `json:"location"`
 
-	// Price of the service
-	Price Price `json:"price"`
-
 	// Communication methods possible
 	Contacts ContactList `json:"contacts"`
 
@@ -64,7 +58,6 @@ type ServiceProposal struct {
 // NewProposalOpts optional params for the new proposal creation.
 type NewProposalOpts struct {
 	Location       *Location
-	Price          *Price
 	AccessPolicies []AccessPolicy
 	Contacts       []Contact
 	Quality        *Quality
@@ -73,24 +66,16 @@ type NewProposalOpts struct {
 // NewProposal creates a new proposal.
 func NewProposal(providerID, serviceType string, opts NewProposalOpts) ServiceProposal {
 	p := ServiceProposal{
-		Format:        proposalFormat,
-		Compatibility: 0,
-		ProviderID:    providerID,
-		ServiceType:   serviceType,
-		Location:      Location{},
-		Price: Price{
-			Currency: money.Currency(config.GetString(config.FlagDefaultCurrency)),
-			PerGiB:   big.NewInt(0),
-			PerHour:  big.NewInt(0),
-		},
+		Format:         proposalFormat,
+		Compatibility:  0,
+		ProviderID:     providerID,
+		ServiceType:    serviceType,
+		Location:       Location{},
 		Contacts:       nil,
 		AccessPolicies: nil,
 	}
 	if loc := opts.Location; loc != nil {
 		p.Location = *loc
-	}
-	if price := opts.Price; price != nil {
-		p.Price = *price
 	}
 	if ap := opts.AccessPolicies; ap != nil {
 		p.AccessPolicies = &ap
@@ -110,9 +95,6 @@ func (proposal *ServiceProposal) Validate() error {
 		validation.Field(&proposal.Format, validation.Required, validation.By(validateutil.StringEquals(proposalFormat))),
 		validation.Field(&proposal.ProviderID, validation.Required),
 		validation.Field(&proposal.ServiceType, validation.Required),
-		validation.Field(&proposal.Price, validation.By(func(_ interface{}) error {
-			return proposal.Price.Validate()
-		})),
 		validation.Field(&proposal.Location, validation.Required),
 		validation.Field(&proposal.Contacts, validation.Required),
 	)
@@ -133,7 +115,6 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		ProviderID     string           `json:"provider_id"`
 		ServiceType    string           `json:"service_type"`
 		Location       Location         `json:"location"`
-		Price          Price            `json:"price"`
 		Contacts       *json.RawMessage `json:"contacts"`
 		AccessPolicies *[]AccessPolicy  `json:"access_policies,omitempty"`
 		Quality        Quality          `json:"quality"`
@@ -146,7 +127,6 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	proposal.ProviderID = jsonData.ProviderID
 	proposal.ServiceType = jsonData.ServiceType
 	proposal.Location = jsonData.Location
-	proposal.Price = *NewPriceB(jsonData.Price.PerHour, jsonData.Price.PerGiB, jsonData.Price.Currency)
 
 	// run contact unserializer
 	proposal.Contacts = unserializeContacts(jsonData.Contacts)

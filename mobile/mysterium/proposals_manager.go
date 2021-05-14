@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 const (
@@ -60,8 +59,6 @@ func (r GetProposalsRequest) toFilter() *proposal.Filter {
 		ServiceType:        r.ServiceType,
 		LocationCountry:    r.LocationCountry,
 		IPType:             r.IPType,
-		PriceGiBMax:        crypto.FloatToBigMyst(r.PriceGiBMax),
-		PriceHourMax:       crypto.FloatToBigMyst(r.PriceHourMax),
 		QualityMin:         r.QualityMin,
 		ExcludeUnsupported: true,
 	}
@@ -79,13 +76,6 @@ type proposalDTO struct {
 	Country      string               `json:"country"`
 	IPType       string               `json:"ip_type"`
 	QualityLevel proposalQualityLevel `json:"quality_level"`
-	Price        proposalPrice        `json:"price"`
-}
-
-type proposalPrice struct {
-	Currency string  `json:"currency"`
-	PerGiB   float64 `json:"per_gib"`
-	PerHour  float64 `json:"per_hour"`
 }
 
 type getProposalsResponse struct {
@@ -192,11 +182,6 @@ func (m *proposalsManager) mapProposal(p *market.ServiceProposal) *proposalDTO {
 
 	prop.Country = p.Location.Country
 	prop.IPType = p.Location.IPType
-	prop.Price = proposalPrice{
-		Currency: string(p.Price.Currency),
-		PerGiB:   crypto.BigMystToFloat(p.Price.PerGiB),
-		PerHour:  crypto.BigMystToFloat(p.Price.PerHour),
-	}
 	prop.QualityLevel = m.calculateMetricQualityLevel(p.Quality.Quality)
 
 	return prop

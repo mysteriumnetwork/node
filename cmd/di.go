@@ -99,6 +99,7 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
+	PricingHelper     *pingpong.Pricer
 	EtherClientL1     *paymentClient.ReconnectableEthClient
 	EtherClientL2     *paymentClient.ReconnectableEthClient
 
@@ -552,6 +553,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.IdentityManager,
 		),
 		di.P2PDialer,
+		di.PricingHelper,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -623,7 +625,12 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
-
+	di.PricingHelper = pingpong.NewPricer(di.MysteriumAPI)
+	err = di.PricingHelper.Subscribe(di.EventBus)
+	if err != nil {
+		return err
+	}
+	
 	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
 		brokerURL, err := nats.ParseServerURL(brokerAddress)

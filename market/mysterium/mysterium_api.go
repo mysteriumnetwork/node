@@ -67,6 +67,26 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	return supported, nil
 }
 
+// GetPricing gets the pricing from discovery.
+func (mApi *MysteriumAPI) GetPricing() (market.LatestPrices, error) {
+	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "prices", nil)
+	if err != nil {
+		return market.LatestPrices{}, err
+	}
+
+	res, err := mApi.httpClient.Do(req)
+	if err != nil {
+		return market.LatestPrices{}, errors.Wrap(err, "cannot fetch pricing")
+	}
+	defer res.Body.Close()
+
+	result := market.LatestPrices{}
+	if err := requests.ParseResponseJSON(res, &result); err != nil {
+		return market.LatestPrices{}, errors.Wrap(err, "cannot parse pricing response")
+	}
+	return result, nil
+}
+
 func supportedProposalsOnly(proposals []market.ServiceProposal) (supported []market.ServiceProposal) {
 	for _, proposal := range proposals {
 		if proposal.Validate() == nil && proposal.IsSupported() {

@@ -27,16 +27,11 @@ import (
 // NewProposalDTO maps to API service proposal.
 func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
 	return ProposalDTO{
-		Format:        p.Format,
-		Compatibility: p.Compatibility,
-		ProviderID:    p.ProviderID,
-		ServiceType:   p.ServiceType,
-		Location:      NewServiceLocationsDTO(p.Location),
-		Price: Price{
-			Currency: string(p.Price.Currency),
-			PerHour:  p.Price.PerHour.Uint64(),
-			PerGiB:   p.Price.PerGiB.Uint64(),
-		},
+		Format:         p.Format,
+		Compatibility:  p.Compatibility,
+		ProviderID:     p.ProviderID,
+		ServiceType:    p.ServiceType,
+		Location:       NewServiceLocationsDTO(p.Location),
 		AccessPolicies: p.AccessPolicies,
 		Quality: Quality{
 			Quality:   p.Quality.Quality,
@@ -83,9 +78,6 @@ type ProposalDTO struct {
 
 	// Service location
 	Location ServiceLocationDTO `json:"location"`
-
-	// Service price
-	Price Price `json:"price"`
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`

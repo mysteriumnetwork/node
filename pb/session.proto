@@ -25,10 +25,16 @@ message ConsumerInfo {
   string hermesID = 2;
   string paymentVersion = 3;
   LocationInfo location = 4;
+  Pricing pricing = 5;
 }
 
 message LocationInfo {
   string country = 1;
+}
+
+message Pricing {
+  bytes PerGib = 1;
+  bytes PerHour = 2;
 }
 
 message SessionStatus {

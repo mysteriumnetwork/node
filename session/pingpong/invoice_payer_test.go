@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -82,9 +81,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		EventBus:                  mocks.NewEventBus(),
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:               *market.NewPrice(600, 0),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -132,9 +129,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMyst),
-		}),
+		AgreedPrice:               *market.NewPrice(600, 0),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -202,9 +197,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(0, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:               *market.NewPrice(600, 0),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -267,9 +260,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:               *market.NewPrice(600, 0),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 	defer InvoicePayer.Stop()
@@ -286,7 +277,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 	type fields struct {
 		peer        identity.Identity
 		timeTracker timeTracker
-		proposal    market.ServiceProposal
+		price       market.Prices
 	}
 	tests := []struct {
 		name    string
@@ -311,9 +302,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				proposal: market.NewProposal("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C", "mock", market.NewProposalOpts{
-					Price: market.NewPrice(6000000, 0, money.CurrencyMystt),
-				}),
+				price: *market.NewPrice(6000000, 0),
 			},
 			invoice: crypto.Invoice{
 				TransactorFee:  big.NewInt(0),
@@ -330,9 +319,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				proposal: market.NewProposal("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C", "mock", market.NewProposalOpts{
-					Price: market.NewPrice(6000000, 0, money.CurrencyMystt),
-				}),
+				price: *market.NewPrice(6000000, 0),
 			},
 			invoice: crypto.Invoice{
 				TransactorFee:  big.NewInt(0),
@@ -348,7 +335,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 			emt := &InvoicePayer{
 				deps: InvoicePayerDeps{
 					TimeTracker: tt.fields.timeTracker,
-					Proposal:    tt.fields.proposal,
+					AgreedPrice: tt.fields.price,
 					Peer:        tt.fields.peer,
 				},
 			}

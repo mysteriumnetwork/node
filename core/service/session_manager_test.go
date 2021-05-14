@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math/big"
 	"net"
 	"testing"
 	"time"
@@ -97,12 +98,16 @@ func (m *mockP2PChannel) Close() error { return nil }
 func TestManager_Start_StoresSession(t *testing.T) {
 	publisher := mocks.NewEventBus()
 	sessionStore := NewSessionPool(publisher)
-	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
+	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{}, true)
 
 	_, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:       consumerID.Address,
 			HermesID: hermesID.String(),
+			Pricing: &pb.Pricing{
+				PerGib:  big.NewInt(1).Bytes(),
+				PerHour: big.NewInt(1).Bytes(),
+			},
 		},
 		ProposalID: int64(currentProposalID),
 	})
@@ -153,12 +158,16 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 	sessionStore := NewSessionPool(publisher)
 	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{
 		firstPaymentError: errors.New("sorry, your money ended"),
-	})
+	}, true)
 
 	_, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:       consumerID.Address,
 			HermesID: hermesID.String(),
+			Pricing: &pb.Pricing{
+				PerGib:  big.NewInt(1).Bytes(),
+				PerHour: big.NewInt(1).Bytes(),
+			},
 		},
 		ProposalID: int64(currentProposalID),
 	})
@@ -208,13 +217,17 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 		Consumer: &pb.ConsumerInfo{
 			Id:       consumerID.Address,
 			HermesID: hermesID.String(),
+			Pricing: &pb.Pricing{
+				PerGib:  big.NewInt(1).Bytes(),
+				PerHour: big.NewInt(1).Bytes(),
+			},
 		},
 		ProposalID: int64(currentProposalID),
 	}
 
 	publisher := mocks.NewEventBus()
 	sessionStore := NewSessionPool(publisher)
-	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
+	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{}, true)
 
 	_, err := manager.Start(sessionRequest)
 	assert.NoError(t, err)
@@ -242,7 +255,7 @@ func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	publisher := mocks.NewEventBus()
 	sessionStore := NewSessionPool(publisher)
-	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
+	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{}, true)
 
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
@@ -251,12 +264,16 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	publisher := mocks.NewEventBus()
 	sessionStore := NewSessionPool(mocks.NewEventBus())
-	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
+	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{}, true)
 
 	session, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:       consumerID.Address,
 			HermesID: hermesID.String(),
+			Pricing: &pb.Pricing{
+				PerGib:  big.NewInt(1).Bytes(),
+				PerHour: big.NewInt(1).Bytes(),
+			},
 		},
 		ProposalID: int64(currentProposalID),
 	})
@@ -277,7 +294,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	)
 	sessionStore.Add(session)
 
-	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
+	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{}, true)
 
 	err := manager.Acknowledge(consumerID, string(session.ID))
 	assert.Nil(t, err)
@@ -293,16 +310,47 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
-func newManager(service *Instance, sessions *SessionPool, publisher publisher, paymentEngine PaymentEngine) *SessionManager {
+func newManager(service *Instance, sessions *SessionPool, publisher publisher, paymentEngine PaymentEngine, isPriceValid bool) *SessionManager {
 	return NewSessionManager(
 		service,
 		sessions,
-		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage) (PaymentEngine, error) {
+		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage, price market.Prices) (PaymentEngine, error) {
 			return paymentEngine, nil
 		},
 		&MockNatEventTracker{},
 		publisher,
 		&mockP2PChannel{tracer: trace.NewTracer("Provider connect")},
 		DefaultConfig(),
+		&mockPriceValidator{
+			toReturn: isPriceValid,
+		},
 	)
+}
+
+func TestManager_Start_RejectsInvalidPricing(t *testing.T) {
+	publisher := mocks.NewEventBus()
+	sessionStore := NewSessionPool(publisher)
+	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{}, false)
+
+	_, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
+			Pricing: &pb.Pricing{
+				PerGib:  big.NewInt(1).Bytes(),
+				PerHour: big.NewInt(1).Bytes(),
+			},
+		},
+		ProposalID: int64(currentProposalID),
+	})
+	assert.Error(t, err)
+	assert.Equal(t, "consumer asking for invalid price", err.Error())
+}
+
+type mockPriceValidator struct {
+	toReturn bool
+}
+
+func (mpv *mockPriceValidator) IsPriceValid(in market.Prices) bool {
+	return mpv.toReturn
 }

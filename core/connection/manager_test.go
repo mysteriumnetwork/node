@@ -136,7 +136,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.connManager = NewManager(
 		func(channel p2p.Channel,
-			consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
+			consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Prices) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				stopChan: make(chan struct{}),
 			}
@@ -150,6 +150,7 @@ func (tc *testContext) SetupTest() {
 		tc.statsReportInterval,
 		&mockValidator{},
 		tc.mockP2P,
+		&mockPriceGetter{},
 	)
 	tc.connManager.timeGetter = func() time.Time {
 		return tc.mockTime
@@ -717,7 +718,7 @@ type mockValidator struct {
 	errorToReturn error
 }
 
-func (mv *mockValidator) Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error {
+func (mv *mockValidator) Validate(chainID int64, consumerID identity.Identity, price market.Prices) error {
 	return mv.errorToReturn
 }
 
@@ -725,4 +726,13 @@ type mockLocationResolver struct{}
 
 func (mlr *mockLocationResolver) GetOrigin() locationstate.Location {
 	return consumerLocation
+}
+
+type mockPriceGetter struct {
+	priceToReturn market.Prices
+	errToReturn   error
+}
+
+func (mpg *mockPriceGetter) GetCurrentPrice() (market.Prices, error) {
+	return mpg.priceToReturn, mpg.errToReturn
 }

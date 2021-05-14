@@ -32,9 +32,8 @@ type ProposalsQuery struct {
 	CompatibilityMin, CompatibilityMax int
 	AccessPolicy, AccessPolicySource   string
 
-	IPType                    string
-	PriceGibMax, PriceHourMax uint64
-	QualityMin                float32
+	IPType     string
+	QualityMin float32
 }
 
 // ToURLValues converts the query to url.Values.
@@ -61,12 +60,6 @@ func (q ProposalsQuery) ToURLValues() url.Values {
 	}
 	if q.AccessPolicySource != "" {
 		values.Set("access_policy_source", q.AccessPolicySource)
-	}
-	if q.PriceGibMax != 0 {
-		values.Set("price_gib_max", strconv.FormatUint(q.PriceGibMax, 10))
-	}
-	if q.PriceHourMax != 0 {
-		values.Set("price_hour_max", strconv.FormatUint(q.PriceHourMax, 10))
 	}
 	if q.QualityMin != 0 {
 		values.Set("quality_min", fmt.Sprintf("%.2f", q.QualityMin))

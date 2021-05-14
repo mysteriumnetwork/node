@@ -27,21 +27,21 @@ import (
 )
 
 // CalculatePaymentAmount calculates the required payment amount.
-func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, price market.Price) *big.Int {
-	if price.IsFree() {
+func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, price market.Prices) *big.Int {
+	if price.PricePerGiB.Cmp(big.NewInt(0)) == 0 && price.PricePerHour.Cmp(big.NewInt(0)) == 0 {
 		return big.NewInt(0)
 	}
 
 	timeComponent := big.NewFloat(0)
-	if price.PerHour.Cmp(big.NewInt(0)) > 0 {
+	if price.PricePerHour.Cmp(big.NewInt(0)) > 0 {
 		timeQuote := timePassed.Seconds() / time.Hour.Seconds()
-		timeComponent = new(big.Float).Mul(new(big.Float).SetInt(price.PerHour), big.NewFloat(timeQuote))
+		timeComponent = new(big.Float).Mul(new(big.Float).SetInt(price.PricePerHour), big.NewFloat(timeQuote))
 	}
 
 	dataComponent := big.NewFloat(0)
-	if price.PerGiB.Cmp(big.NewInt(0)) > 0 {
+	if price.PricePerGiB.Cmp(big.NewInt(0)) > 0 {
 		dataQuote := float64(bytesTransferred.sum()) / float64(datasize.GiB.Bytes())
-		dataComponent = new(big.Float).Mul(new(big.Float).SetInt(price.PerGiB), big.NewFloat(dataQuote))
+		dataComponent = new(big.Float).Mul(new(big.Float).SetInt(price.PricePerGiB), big.NewFloat(dataQuote))
 	}
 
 	tc, _ := timeComponent.Int(nil)

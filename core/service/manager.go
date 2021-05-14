@@ -109,7 +109,7 @@ type Manager struct {
 // Start starts an instance of the given service type if knows one in service registry.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options Options, price market.Price) (id ID, err error) {
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options Options) (id ID, err error) {
 	service, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return id, err
@@ -132,7 +132,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	proposal := market.NewProposal(providerID.Address, serviceType, market.NewProposalOpts{
 		Location:       market.NewLocation(location),
-		Price:          &price,
 		AccessPolicies: accessPolicies,
 		Contacts:       []market.Contact{manager.p2pListener.GetContact()},
 	})
