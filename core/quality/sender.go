@@ -20,6 +20,7 @@ package quality
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -376,10 +377,15 @@ func (s *Sender) SendNATMappingFailEvent(id, stage string, gateways []map[string
 }
 
 func (s *Sender) sendEvent(eventName string, context interface{}) {
+	hostOS := runtime.GOOS
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		hostOS += "(docker)"
+	}
+
 	err := s.Transport.SendEvent(Event{
 		Application: appInfo{
 			Name:    appName,
-			OS:      runtime.GOOS,
+			OS:      hostOS,
 			Arch:    runtime.GOARCH,
 			Version: s.AppVersion,
 		},
