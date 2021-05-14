@@ -339,6 +339,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -427,6 +428,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --quality.address=http://morqa:8085/api/v2
       --firewall.killSwitch.always
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -473,6 +475,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -519,6 +522,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -572,6 +576,7 @@ services:
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/
       --access-policy.fetch=1s
+      --stun-servers=""
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
