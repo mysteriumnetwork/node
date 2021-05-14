@@ -307,13 +307,8 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 	}
 
 	service, err := c.tequilapi.ServiceStart(contract.ServiceStartRequest{
-		ProviderID: providerID,
-		Type:       serviceType,
-		Price: contract.Price{
-			Currency: config.GetString(config.FlagDefaultCurrency),
-			PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
-			PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
-		},
+		ProviderID:     providerID,
+		Type:           serviceType,
 		AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 		Options:        serviceOpts.TypeOptions,
 	})
@@ -586,9 +581,7 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	priceHourMax := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPriceHourMax)
-	priceGiBMax := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPriceGiBMax)
-	proposals, err := c.tequilapi.ProposalsByPrice(priceHourMax, priceGiBMax)
+	proposals, err := c.tequilapi.Proposals()
 	if err != nil {
 		clio.Warn(err)
 		return []contract.ProposalDTO{}

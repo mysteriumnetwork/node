@@ -154,8 +154,6 @@ func GetOptions() *Options {
 			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
 			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
 			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
-			ConsumerPriceGiBMax:            config.GetBigInt(config.FlagPaymentsConsumerPriceGiBMax),
-			ConsumerPriceHourMax:           config.GetBigInt(config.FlagPaymentsConsumerPriceHourMax),
 			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),

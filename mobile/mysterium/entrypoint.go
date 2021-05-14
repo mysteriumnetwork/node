@@ -156,8 +156,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ActiveChainID)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
-	config.Current.SetDefault(config.FlagPaymentsConsumerPriceGiBMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceGiBMax)
-	config.Current.SetDefault(config.FlagPaymentsConsumerPriceHourMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceHourMax)
 
 	network := node.OptionsNetwork{
 		Testnet2:              options.Testnet2,
@@ -298,14 +296,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	return mobileNode, nil
-}
-
-// GetConsumerPaymentConfig returns consumer payment config
-func (mb *MobileNode) GetConsumerPaymentConfig() *ConsumerPaymentConfig {
-	return &ConsumerPaymentConfig{
-		PriceGiBMax:  config.Current.GetString(config.FlagPaymentsConsumerPriceGiBMax.Name),
-		PriceHourMax: config.Current.GetString(config.FlagPaymentsConsumerPriceHourMax.Name),
-	}
 }
 
 // GetDefaultCurrency returns the current default currency set.

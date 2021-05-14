@@ -225,7 +225,6 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID     string                          `json:"provider_id"`
 		Type           string                          `json:"type"`
 		Options        *json.RawMessage                `json:"options"`
-		Price          contract.Price                  `json:"price"`
 		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
 	}
 	decoder := json.NewDecoder(req.Body)
@@ -239,7 +238,6 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID: jsonData.ProviderID,
 		Type:       se.toServiceType(jsonData.Type),
 		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
-		Price:      jsonData.Price,
 		AccessPolicies: contract.ServiceAccessPolicies{
 			IDs: serviceOpts.AccessPolicyList,
 		},

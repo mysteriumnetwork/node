@@ -109,14 +109,6 @@ type ServiceLocationDTO struct {
 	IPType string `json:"ip_type,omitempty"`
 }
 
-// Price represents the service price.
-// swagger:model Price
-type Price struct {
-	Currency string `json:"currency"`
-	PerHour  uint64 `json:"per_hour"`
-	PerGiB   uint64 `json:"per_gib"`
-}
-
 // NewProposalQualityResponse maps to API proposal quality.
 func NewProposalQualityResponse(metrics []quality.ProposalQuality) ProposalQualityResponse {
 	var res []ProposalQuality

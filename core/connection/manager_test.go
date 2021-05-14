@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"sync"
 	"testing"
@@ -150,7 +151,12 @@ func (tc *testContext) SetupTest() {
 		tc.statsReportInterval,
 		&mockValidator{},
 		tc.mockP2P,
-		&mockPriceGetter{},
+		&mockPriceGetter{
+			priceToReturn: market.Prices{
+				PricePerHour: big.NewInt(0),
+				PricePerGiB:  big.NewInt(0),
+			},
+		},
 	)
 	tc.connManager.timeGetter = func() time.Time {
 		return tc.mockTime

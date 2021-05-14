@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
@@ -307,13 +306,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	t.Run("Provider starts whitelisted noop services", func(t *testing.T) {
 		req := contract.ServiceStartRequest{
-			ProviderID: providerID,
-			Type:       "noop",
-			Price: contract.Price{
-				Currency: string(money.CurrencyMyst),
-				PerHour:  600000000000000000,
-				PerGiB:   10000000000000000,
-			},
+			ProviderID:     providerID,
+			Type:           "noop",
 			AccessPolicies: contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
 		}
 

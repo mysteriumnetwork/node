@@ -126,13 +126,8 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 			return err
 		}
 		startRequest := contract.ServiceStartRequest{
-			ProviderID: providerID,
-			Type:       serviceType,
-			Price: contract.Price{
-				Currency: config.GetString(config.FlagDefaultCurrency),
-				PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
-				PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
-			},
+			ProviderID:     providerID,
+			Type:           serviceType,
 			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 			Options:        serviceOpts,
 		}
