@@ -26,6 +26,7 @@ import (
 	"github.com/pion/stun"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 )
@@ -33,14 +34,13 @@ import (
 // AppTopicSTUN represents the STUN detection topic.
 const AppTopicSTUN = "STUN detection"
 
-var serverList = []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"}
-
 type stunStatus struct {
 	identity string
 	natType  string
 }
 
 func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPorts ...int) (remotePorts []int) {
+	serverList := config.GetStringSlice(config.FlagSTUNservers)
 	m := make(map[int]int)
 
 	mu := sync.Mutex{}
