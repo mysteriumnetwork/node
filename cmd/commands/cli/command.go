@@ -309,9 +309,10 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 	service, err := c.tequilapi.ServiceStart(contract.ServiceStartRequest{
 		ProviderID: providerID,
 		Type:       serviceType,
-		PaymentMethod: contract.ServicePaymentMethod{
-			PriceGB:     serviceOpts.PaymentPricePerGB,
-			PriceMinute: serviceOpts.PaymentPricePerMinute,
+		Price: contract.Price{
+			Currency: config.GetString(config.FlagDefaultCurrency),
+			PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
+			PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
 		},
 		AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 		Options:        serviceOpts.TypeOptions,
@@ -505,7 +506,7 @@ func (c *cliApp) status() {
 	if err != nil {
 		clio.Warn(err)
 	} else {
-		clio.Info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+		clio.Info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.IPType, location.ISP))
 	}
 
 	if status.Status == statusConnected {
@@ -562,7 +563,7 @@ func (c *cliApp) proposals(filter string) {
 	clio.Info(fmt.Sprintf("Found %v proposals %s", len(proposals), filterMsg))
 
 	for _, proposal := range proposals {
-		country := proposal.ServiceDefinition.LocationOriginate.Country
+		country := proposal.Location.Country
 		if country == "" {
 			country = "Unknown"
 		}
@@ -585,11 +586,9 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
-	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
+	priceHourMax := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPriceHourMax)
+	priceGiBMax := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPriceGiBMax)
+	proposals, err := c.tequilapi.ProposalsByPrice(priceHourMax, priceGiBMax)
 	if err != nil {
 		clio.Warn(err)
 		return []contract.ProposalDTO{}
@@ -604,7 +603,7 @@ func (c *cliApp) location() {
 		return
 	}
 
-	clio.Info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+	clio.Info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.IPType, location.ISP))
 }
 
 func (c *cliApp) help() {

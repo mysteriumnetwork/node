@@ -51,7 +51,7 @@ func Test_Location_FiltersByCountry(t *testing.T) {
 	assert.False(t, match(proposalProvider2Streaming))
 }
 
-func Test_Location_FiltersByNodeType(t *testing.T) {
+func Test_Location_FiltersByIPType(t *testing.T) {
 	match := EqualString(LocationType, "residential")
 
 	assert.False(t, match(proposalEmpty))
@@ -88,28 +88,26 @@ func Test_AccessPolicy_FiltersByIDAndSource(t *testing.T) {
 }
 
 func Test_PriceMinute_FiltersByPrice(t *testing.T) {
-	match := PriceMinute(big.NewInt(100), big.NewInt(1000000))
+	match := PriceHourMax(big.NewInt(60000000))
 
 	assert.True(t, match(proposalEmpty))
 	assert.False(t, match(proposalTimeExpensive))
-	assert.False(t, match(proposalTimeCheap))
+	assert.True(t, match(proposalTimeCheap))
 	assert.True(t, match(proposalTimeExact))
-	assert.True(t, match(proposalTimeExactSeconds))
-	assert.False(t, match(proposalTimeExpensiveSeconds))
 
-	match = PriceMinute(big.NewInt(0), big.NewInt(1000000))
+	match = PriceHourMax(big.NewInt(60000000))
 	assert.True(t, match(proposalTimeCheap))
 }
 
 func Test_PriceGiB_FiltersByPrice(t *testing.T) {
-	match := PriceGiB(big.NewInt(100), big.NewInt(7000000))
+	match := PriceGiBMax(big.NewInt(7000000))
 
 	assert.True(t, match(proposalEmpty))
 	assert.False(t, match(proposalBytesExpensive))
-	assert.False(t, match(proposalBytesCheap))
+	assert.True(t, match(proposalBytesCheap))
 	assert.True(t, match(proposalBytesExact))
 	assert.True(t, match(proposalBytesExactInParts))
 
-	match = PriceGiB(big.NewInt(0), big.NewInt(7000000))
+	match = PriceGiBMax(big.NewInt(7000000))
 	assert.True(t, match(proposalBytesCheap))
 }

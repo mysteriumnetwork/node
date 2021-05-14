@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package contract
+package market
 
-import "github.com/mysteriumnetwork/node/pilvytis"
-
-// PaymentOrderOptions represents pilvytis payment order options
-// swagger:model PaymentOrderOptions
-type PaymentOrderOptions struct {
-	Minimum   float64   `json:"minimum"`
-	Suggested []float64 `json:"suggested"`
-}
-
-// ToPaymentOrderOptions - convert pilvytis.PaymentOrderOptions to contract.ToPaymentOrderOptions
-func ToPaymentOrderOptions(poo *pilvytis.PaymentOrderOptions) *PaymentOrderOptions {
-	return &PaymentOrderOptions{
-		Minimum:   poo.Minimum,
-		Suggested: poo.Suggested,
-	}
+// Quality represents service quality.
+type Quality struct {
+	Quality   float64 `json:"quality"`
+	Latency   float64 `json:"latency"`
+	Bandwidth float64 `json:"bandwidth"`
 }

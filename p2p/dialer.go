@@ -25,8 +25,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/trace"
 	nats_lib "github.com/nats-io/nats.go"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -34,9 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
-
-	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
+	"github.com/mysteriumnetwork/node/trace"
 )
 
 const maxBrokerConnectAttempts = 25
@@ -101,6 +100,8 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare ports: %w", err)
 	}
+
+	config.publicPorts = stunPorts(consumerID, nil, config.localPorts...)
 
 	// Finally send consumer encrypted and signed connect config in ack message.
 	err = m.ackConfigExchange(config, ctx, brokerConn, providerID, serviceType, consumerID)
@@ -185,7 +186,7 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	// Parse provider response with public key and encrypted and signed connection config.
 	exchangeMsgReplySignedMsg, err := unpackSignedMsg(m.verifier, exchangeMsgBrokerReply)
 	if err != nil {
-		return nil, fmt.Errorf("could not unpack peer siged message: %w", err)
+		return nil, fmt.Errorf("could not unpack peer signed message: %w", err)
 	}
 	var exchangeMsgReply pb.P2PConfigExchangeMsg
 	if err := proto.Unmarshal(exchangeMsgReplySignedMsg.Data, &exchangeMsgReply); err != nil {
@@ -215,7 +216,7 @@ func (m *dialer) ackConfigExchange(config *p2pConnectConfig, ctx context.Context
 
 	connConfig := &pb.P2PConnectConfig{
 		PublicIP: config.publicIP,
-		Ports:    intToInt32Slice(config.localPorts),
+		Ports:    intToInt32Slice(config.publicPorts),
 	}
 	connConfigCiphertext, err := encryptConnConfigMsg(connConfig, config.privateKey, config.peerPubKey)
 	if err != nil {

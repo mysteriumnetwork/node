@@ -25,10 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-var (
-	// ErrContactNotFound represents that no p2p contact is found.
-	ErrContactNotFound = errors.New("p2p contact not found")
-)
+// ErrContactNotFound represents that no p2p contact is found.
+var ErrContactNotFound = errors.New("p2p contact not found")
 
 const (
 	// ContactTypeV1 is p2p contact type.

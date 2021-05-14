@@ -27,7 +27,7 @@ type unregisterMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const unregisterEndpoint = communication.MessageEndpoint("proposal-unregister")
+const unregisterEndpoint = communication.MessageEndpoint("proposal-unregister.v2")
 
 // unregisterProducer
 type unregisterProducer struct {

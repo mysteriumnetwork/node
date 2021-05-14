@@ -28,10 +28,8 @@ type OptionsPayments struct {
 	BCTimeout                      time.Duration
 	HermesPromiseSettlingThreshold float64
 	SettlementTimeout              time.Duration
-	ConsumerUpperGBPriceBound      *big.Int
-	ConsumerLowerGBPriceBound      *big.Int
-	ConsumerUpperMinutePriceBound  *big.Int
-	ConsumerLowerMinutePriceBound  *big.Int
+	ConsumerPriceGiBMax            *big.Int
+	ConsumerPriceHourMax           *big.Int
 	ConsumerDataLeewayMegabytes    uint64
 	ProviderInvoiceFrequency       time.Duration
 	MaxUnpaidInvoiceValue          *big.Int

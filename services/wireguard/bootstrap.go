@@ -18,20 +18,10 @@
 package wireguard
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/market"
 )
 
 // Bootstrap is called on program initialization time and registers various deserializers related to wireguard service
 func Bootstrap() {
-	market.RegisterServiceDefinitionUnserializer(
-		ServiceType,
-		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
-			var definition ServiceDefinition
-			err := json.Unmarshal(*rawDefinition, &definition)
-
-			return definition, err
-		},
-	)
+	market.RegisterServiceType(ServiceType)
 }

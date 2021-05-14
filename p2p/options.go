@@ -19,5 +19,5 @@
 
 package p2p
 
-//providerInitialTTL initial ttl to start punching a hole with
+// providerInitialTTL initial ttl to start punching a hole with.
 const providerInitialTTL = 1

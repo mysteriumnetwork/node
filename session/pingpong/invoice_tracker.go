@@ -258,7 +258,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 	it.resetNotSentExchangeMessageCount()
 
 	// incase of zero payment, we'll just skip going to the hermes
-	if isServiceFree(it.deps.Proposal.PaymentMethod) {
+	if it.deps.Proposal.Price.IsFree() {
 		return nil
 	}
 
@@ -351,7 +351,7 @@ func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
 			return
 		case <-time.After(interval):
 			currentlyElapsed := it.deps.TimeTracker.Elapsed()
-			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
+			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.Proposal.Price)
 			lastEM := it.getLastExchangeMessage()
 			diff := safeSub(shouldBe, lastEM.AgreementTotal)
 			if diff.Cmp(it.deps.MaxNotPaidInvoice) >= 0 && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
@@ -459,7 +459,7 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 		return ErrExchangeWaitTimeout
 	}
 
-	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
+	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.Price)
 
 	lastEm := it.getLastExchangeMessage()
 	if lastEm.AgreementTotal.Cmp(big.NewInt(0)) == 0 && shouldBe.Cmp(big.NewInt(0)) == 1 {

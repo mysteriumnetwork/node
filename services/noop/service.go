@@ -22,9 +22,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -60,22 +58,4 @@ func (manager *Manager) Stop() error {
 	manager.process.Done()
 	log.Info().Msg("Noop service stopped")
 	return nil
-}
-
-// GetProposal returns the proposal for NOOP service for given country
-func GetProposal(location locationstate.Location) market.ServiceProposal {
-	return market.ServiceProposal{
-		ServiceType: ServiceType,
-		ServiceDefinition: ServiceDefinition{
-			Location: market.Location{
-				Continent: location.Continent,
-				Country:   location.Country,
-				City:      location.City,
-
-				ASN:      location.ASN,
-				ISP:      location.ISP,
-				NodeType: location.NodeType,
-			},
-		},
-	}
 }

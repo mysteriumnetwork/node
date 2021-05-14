@@ -19,10 +19,10 @@ package mysterium
 
 import (
 	"encoding/json"
-	"math/big"
 	"testing"
-	"time"
 
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
-	"github.com/mysteriumnetwork/node/money"
 )
 
 type proposalManagerTestSuite struct {
@@ -51,54 +50,59 @@ func (s *proposalManagerTestSuite) SetupTest() {
 	s.proposalsManager = newProposalsManager(
 		s.repository,
 		s.mysteriumAPI,
-		s.qualityFinder,
 		nil,
 	)
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 	s.proposalsManager.cache = []market.ServiceProposal{
-		{
-			ProviderID:        "p1",
-			ServiceType:       "openvpn",
-			ServiceDefinition: &mockServiceDefinition{country: "usa", nodeType: "residential"},
-			PaymentMethod:     &mockPayment{},
-		},
-	}
-	s.proposalsManager.qualityFinder = &mockQualityFinder{
-		quality: []quality.ProposalQuality{
-			{
-				ProposalID: quality.ProposalID{
-					ProviderID:  "p1",
-					ServiceType: "openvpn",
-				},
-				Quality: 2,
+		market.NewProposal("p1", "openvpn", market.NewProposalOpts{
+			Location: &market.Location{
+				Country: "US",
+				IPType:  "residential",
 			},
-		},
+			Price:   market.NewPrice(int64(crypto.Myst), 3*int64(crypto.Myst), money.CurrencyMystt),
+			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
+		}),
 	}
 
 	proposals, err := s.proposalsManager.getProposals(&GetProposalsRequest{
-		Refresh:             false,
-		UpperTimePriceBound: 0.005,
-		LowerTimePriceBound: 0,
-		UpperGBPriceBound:   0.7,
-		LowerGBPriceBound:   0,
+		Refresh:      false,
+		PriceHourMax: 0.005,
+		PriceGiBMax:  0.7,
 	})
 	assert.NoError(s.T(), err)
 
 	bytes, err := json.Marshal(&proposals)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"openvpn\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":3,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
+	assert.JSONEq(s.T(), `{
+	  "proposals": [
+		{
+		  "provider_id": "p1",
+		  "service_type": "openvpn",
+		  "country": "US",
+		  "ip_type": "residential",
+		  "quality_level": 3,
+		  "price": {
+			"currency": "MYSTT",
+			"per_hour": 1.0,
+			"per_gib": 3.0
+		  }
+		}
+	  ]
+	}`, string(bytes))
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() {
 	s.repository.data = []market.ServiceProposal{
-		{
-			ProviderID:        "p1",
-			ServiceType:       "wireguard",
-			ServiceDefinition: mockServiceDefinition{country: "usa", nodeType: "residential"},
-			PaymentMethod:     &mockPayment{},
-		},
+		market.NewProposal("p1", "wireguard", market.NewProposalOpts{
+			Location: &market.Location{
+				Country: "US",
+				IPType:  "residential",
+			},
+			Price:   market.NewPrice(int64(crypto.Myst), 2*int64(crypto.Myst), money.CurrencyMystt),
+			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
+		}),
 	}
 	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{}
 	proposals, err := s.proposalsManager.getProposals(&GetProposalsRequest{
@@ -108,7 +112,22 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 
 	bytes, err := json.Marshal(&proposals)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"wireguard\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":0,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
+	assert.JSONEq(s.T(), `{
+	  "proposals": [
+		{
+		  "provider_id": "p1",
+		  "service_type": "wireguard",
+		  "country": "US",
+		  "ip_type": "residential",
+		  "quality_level": 3,
+		  "price": {
+			"per_hour": 1.0,
+			"per_gib": 2.0,
+			"currency": "MYSTT"
+		  }
+		}
+	  ]
+	}`, string(bytes))
 }
 
 func TestProposalManagerSuite(t *testing.T) {
@@ -144,40 +163,4 @@ type mockQualityFinder struct {
 
 func (m *mockQualityFinder) ProposalsQuality() []quality.ProposalQuality {
 	return m.quality
-}
-
-type mockServiceDefinition struct {
-	country  string
-	nodeType string
-}
-
-func (m mockServiceDefinition) GetLocation() market.Location {
-	return market.Location{
-		Continent: "",
-		Country:   m.country,
-		City:      "",
-		ASN:       0,
-		ISP:       "",
-		NodeType:  m.nodeType,
-	}
-}
-
-type mockPayment struct{}
-
-func (m mockPayment) GetType() string {
-	return "pt"
-}
-
-func (m mockPayment) GetPrice() money.Money {
-	return money.Money{
-		Amount:   big.NewInt(10),
-		Currency: "MYSTT",
-	}
-}
-
-func (m mockPayment) GetRate() market.PaymentRate {
-	return market.PaymentRate{
-		PerTime: 10 * time.Second,
-		PerByte: 15,
-	}
 }

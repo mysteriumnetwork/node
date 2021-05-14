@@ -17,13 +17,26 @@
 
 package market
 
+import "github.com/mysteriumnetwork/node/core/location/locationstate"
+
 // Location struct represents geographic location of service provider
 type Location struct {
 	Continent string `json:"continent,omitempty"`
 	Country   string `json:"country,omitempty"`
 	City      string `json:"city,omitempty"`
+	ASN       int    `json:"asn,omitempty"`
+	ISP       string `json:"isp,omitempty"`
+	IPType    string `json:"ip_type,omitempty"`
+}
 
-	ASN      int    `json:"asn,omitempty"`
-	ISP      string `json:"isp,omitempty"`
-	NodeType string `json:"node_type,omitempty"`
+// NewLocation creates a new Location.
+func NewLocation(loc locationstate.Location) *Location {
+	return &Location{
+		Continent: loc.Continent,
+		Country:   loc.Country,
+		City:      loc.City,
+		ASN:       loc.ASN,
+		ISP:       loc.ISP,
+		IPType:    loc.IPType,
+	}
 }

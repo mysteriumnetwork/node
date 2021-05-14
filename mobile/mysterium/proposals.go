@@ -31,7 +31,7 @@ func (mb *MobileNode) GetProposals(req *GetProposalsRequest) ([]byte, error) {
 
 // GetProposalsByPreset returns service proposals by presetID.
 func (mb *MobileNode) GetProposalsByPreset(presetID int) ([]byte, error) {
-	proposals, err := mb.proposalsManager.getProposalsByPreset(presetID)
+	proposals, err := mb.proposalsManager.getProposals(&GetProposalsRequest{PresetID: presetID})
 	if err != nil {
 		return nil, err
 	}

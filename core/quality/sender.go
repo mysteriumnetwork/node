@@ -20,6 +20,7 @@ package quality
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -275,7 +276,7 @@ func (s *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
 		Consumer:        e.Session.ConsumerID.Address,
 		Provider:        e.Session.Proposal.ProviderID,
 		ServiceType:     e.Session.Proposal.ServiceType,
-		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
+		ProviderCountry: e.Session.Proposal.Location.Country,
 		ConsumerCountry: e.Session.ConsumerLocation.Country,
 		AccountantID:    e.Session.HermesID.Hex(),
 		StartedAt:       e.Session.StartedAt,
@@ -376,10 +377,15 @@ func (s *Sender) SendNATMappingFailEvent(id, stage string, gateways []map[string
 }
 
 func (s *Sender) sendEvent(eventName string, context interface{}) {
+	hostOS := runtime.GOOS
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		hostOS += "(docker)"
+	}
+
 	err := s.Transport.SendEvent(Event{
 		Application: appInfo{
 			Name:    appName,
-			OS:      runtime.GOOS,
+			OS:      hostOS,
 			Arch:    runtime.GOARCH,
 			Version: s.AppVersion,
 		},
@@ -424,7 +430,7 @@ func (s *Sender) toSessionContext(session connectionstate.Status) sessionContext
 		Consumer:        session.ConsumerID.Address,
 		Provider:        session.Proposal.ProviderID,
 		ServiceType:     session.Proposal.ServiceType,
-		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
+		ProviderCountry: session.Proposal.Location.Country,
 		ConsumerCountry: session.ConsumerLocation.Country,
 		AccountantID:    session.HermesID.Hex(),
 		StartedAt:       session.StartedAt,

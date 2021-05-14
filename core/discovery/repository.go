@@ -58,7 +58,9 @@ func (c *repository) Proposal(id market.ProposalID) (*market.ServiceProposal, er
 
 // Proposals returns proposals matching the filter.
 func (c *repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
-	log.Debug().Msgf("Retrieving proposals from %d repositories", len(c.delegates))
+	log.Debug().
+		Interface("filter", filter).
+		Msgf("Retrieving proposals from %d repositories", len(c.delegates))
 	proposals := make([][]market.ServiceProposal, len(c.delegates))
 	errors := make([]error, len(c.delegates))
 

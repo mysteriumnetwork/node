@@ -96,7 +96,7 @@ type SessionDTO struct {
 	BytesSent       uint64   `json:"bytes_sent"`
 	Tokens          *big.Int `json:"tokens"`
 	Status          string   `json:"status"`
-	NodeType        string   `json:"node_type"`
+	IPType          string   `json:"ip_type"`
 }
 
 func sessionDTO(se session.History) SessionDTO {
@@ -115,6 +115,6 @@ func sessionDTO(se session.History) SessionDTO {
 		Duration:        uint64(se.GetDuration().Seconds()),
 		Tokens:          se.Tokens,
 		Status:          se.Status,
-		NodeType:        se.NodeType,
+		IPType:          se.IPType,
 	}
 }

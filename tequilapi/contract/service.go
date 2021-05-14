@@ -17,8 +17,6 @@
 
 package contract
 
-import "math/big"
-
 // ServiceStartRequest request used to start a service.
 // swagger:model ServiceStartRequestDTO
 type ServiceStartRequest struct {
@@ -32,9 +30,9 @@ type ServiceStartRequest struct {
 	// example: openvpn
 	Type string `json:"type"`
 
-	// PaymentMethod describes payment options that should be used for service creation.
+	// Price describes service pricing.
 	// required: false
-	PaymentMethod ServicePaymentMethod `json:"payment_method"`
+	Price Price `json:"price"`
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
@@ -44,13 +42,6 @@ type ServiceStartRequest struct {
 	// required: false
 	// example: {"port": 1123, "protocol": "udp"}
 	Options interface{} `json:"options"`
-}
-
-// ServicePaymentMethod payment parameters for service start.
-// swagger:model ServicePaymentMethod
-type ServicePaymentMethod struct {
-	PriceGB     *big.Int `json:"price_gb"`
-	PriceMinute *big.Int `json:"price_minute"`
 }
 
 // ServiceAccessPolicies represents the access controls for service start

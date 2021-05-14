@@ -56,29 +56,17 @@ var (
 		Value: time.Minute,
 		Usage: "Determines how often the provider sends invoices.",
 	}
-	// FlagPaymentsConsumerPricePerMinuteUpperBound sets the upper price bound per minute to a set value.
-	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.StringFlag{
-		Name:  "payments.consumer.price-perminute-max",
-		Usage: "Sets the maximum price of the service per minute. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerMinuteMax,
+	// FlagPaymentsConsumerPriceGiBMax sets the maximum price/GiB.
+	FlagPaymentsConsumerPriceGiBMax = cli.StringFlag{
+		Name:  "payments.consumer.price-gib-max",
+		Usage: "Sets the maximum price of the service per GiB. All proposals with a price above this bound will be filtered out and not visible.",
+		Value: metadata.Testnet2Definition.Payments.Consumer.PriceGiBMax,
 	}
-	// FlagPaymentsConsumerPricePerMinuteLowerBound sets the lower price bound per minute to a set value.
-	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.StringFlag{
-		Name:  "payments.consumer.price-perminute-min",
-		Usage: "Sets the minimum price of the service per minute. All proposals with a below above this bound will be filtered out and not visible.",
-		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerMinuteMin,
-	}
-	// FlagPaymentsConsumerPricePerGBUpperBound sets the upper price bound per GiB to a set value.
-	FlagPaymentsConsumerPricePerGBUpperBound = cli.StringFlag{
-		Name:  "payments.consumer.price-pergib-max",
-		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerGIBMax,
-	}
-	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
-	FlagPaymentsConsumerPricePerGBLowerBound = cli.StringFlag{
-		Name:  "payments.consumer.price-pergib-min",
-		Usage: "Sets the minimum price of the service per gb. All proposals with a below above this bound will be filtered out and not visible.",
-		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerGIBMin,
+	// FlagPaymentsConsumerPriceHourMax sets the maximum price/hour.
+	FlagPaymentsConsumerPriceHourMax = cli.StringFlag{
+		Name:  "payments.consumer.price-hour-max",
+		Usage: "Sets the maximum price of the service per hour. All proposals with a price above this bound will be filtered out and not visible.",
+		Value: metadata.Testnet2Definition.Payments.Consumer.PriceHourMax,
 	}
 	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
@@ -110,10 +98,8 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsHermesPromiseSettleThreshold,
 		&FlagPaymentsHermesPromiseSettleTimeout,
 		&FlagPaymentsProviderInvoiceFrequency,
-		&FlagPaymentsConsumerPricePerMinuteUpperBound,
-		&FlagPaymentsConsumerPricePerMinuteLowerBound,
-		&FlagPaymentsConsumerPricePerGBUpperBound,
-		&FlagPaymentsConsumerPricePerGBLowerBound,
+		&FlagPaymentsConsumerPriceGiBMax,
+		&FlagPaymentsConsumerPriceHourMax,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
@@ -127,10 +113,8 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
-	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
-	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
-	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)
-	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
+	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPriceGiBMax)
+	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPriceHourMax)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)

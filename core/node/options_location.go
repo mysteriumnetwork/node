@@ -35,9 +35,9 @@ const (
 type OptionsLocation struct {
 	IPDetectorURL string
 
-	Type     LocationType
-	Address  string
-	Country  string
-	City     string
-	NodeType string
+	Type    LocationType
+	Address string
+	Country string
+	City    string
+	IPType  string
 }
