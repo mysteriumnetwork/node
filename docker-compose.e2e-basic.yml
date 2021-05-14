@@ -243,6 +243,7 @@ services:
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/
       --access-policy.fetch=1s
+      --stun-servers=""
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -289,6 +290,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
 
   myst-consumer-hermes2:
@@ -327,6 +329,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
 
   myst-consumer-openvpn:
@@ -365,6 +368,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
 
   myst-consumer-wireguard:
@@ -403,6 +407,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
