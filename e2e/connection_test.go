@@ -625,9 +625,15 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	// call the custom asserter for the given service type
 	serviceTypeAssertionMap[serviceType](t, se)
-
-	consumerStatus, err := tequilapi.Identity(consumerID)
-	assert.NoError(t, err)
+	var consumerStatus = contract.IdentityDTO{}
+	assert.Eventually(t, func() bool {
+		cs, err := tequilapi.Identity(consumerID)
+		if err != nil {
+			return false
+		}
+		consumerStatus = cs
+		return true
+	}, time.Second*20, time.Millisecond*150)
 	assert.True(t, consumerStatus.Balance.Cmp(big.NewInt(0)) == 1, "consumer balance should not be empty")
 	assert.True(t, consumerStatus.Balance.Cmp(balanceAfterRegistration) == -1, "balance should decrease but is %s", consumerStatus.Balance)
 	assert.Zero(t, consumerStatus.Earnings.Uint64())

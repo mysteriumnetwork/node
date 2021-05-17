@@ -116,7 +116,7 @@ func (p *Pricer) loadPricing() {
 	defer p.mut.Unlock()
 	prices, err := p.discoAPI.GetPricing()
 	if err != nil {
-		log.Err(err).Msgf("could not load pricing")
+		log.Err(err).Msg("could not load pricing")
 		return
 	}
 	log.Info().Msg("pricing info loaded")
