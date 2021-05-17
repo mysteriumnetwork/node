@@ -34,6 +34,8 @@ const (
 // ServiceProposal is top level structure which is presented to marketplace by service provider, and looked up by service consumer
 // service proposal can be marked as unsupported by deserializer, because of unknown service, payment method, or contact type
 type ServiceProposal struct {
+	ID int64 `json:"id"`
+
 	// A version number is included in the proposal to allow extensions to the proposal format
 	Format string `json:"format"`
 
@@ -129,6 +131,7 @@ func (proposal *ServiceProposal) UniqueID() ProposalID {
 // UnmarshalJSON is custom json unmarshaler to dynamically fill in ServiceProposal values
 func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	var jsonData struct {
+		ID             int64            `json:"id"`
 		Format         string           `json:"format"`
 		ProviderID     string           `json:"provider_id"`
 		ServiceType    string           `json:"service_type"`
@@ -142,6 +145,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	proposal.ID = jsonData.ID
 	proposal.Format = jsonData.Format
 	proposal.ProviderID = jsonData.ProviderID
 	proposal.ServiceType = jsonData.ServiceType
