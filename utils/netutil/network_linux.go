@@ -20,6 +20,9 @@ package netutil
 import (
 	"net"
 	"os/exec"
+	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
@@ -48,12 +51,14 @@ func addDefaultRoute(iface string) error {
 		return err
 	}
 
-	if err := cmdutil.SudoExec("ip", "-6", "route", "add", "::/1", "dev", iface); err != nil {
-		return err
-	}
+	if ipv6Enabled() {
+		if err := cmdutil.SudoExec("ip", "-6", "route", "add", "::/1", "dev", iface); err != nil {
+			return err
+		}
 
-	if err := cmdutil.SudoExec("ip", "-6", "route", "add", "8000::/1", "dev", iface); err != nil {
-		return err
+		if err := cmdutil.SudoExec("ip", "-6", "route", "add", "8000::/1", "dev", iface); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -64,4 +69,15 @@ func logNetworkStats() {
 		out, err := exec.Command("sudo", args...).CombinedOutput()
 		logOutputToTrace(out, err, args...)
 	}
+}
+
+func ipv6Enabled() bool {
+	out, err := cmdutil.ExecOutput("sysctl", "net.ipv6.conf.all.disable_ipv6")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to detect if IPv6 disabled on the host")
+
+		return true
+	}
+
+	return strings.Contains(string(out), "net.ipv6.conf.all.disable_ipv6 = 0")
 }
