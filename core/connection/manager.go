@@ -109,6 +109,7 @@ type PaymentIssuer interface {
 	Stop()
 }
 
+// PriceGetter fetches the current price.
 type PriceGetter interface {
 	GetCurrentPrice() (market.Prices, error)
 }

@@ -19,31 +19,33 @@ package pingpong
 
 import (
 	"errors"
-	"math/big"
 	"sync"
 	"time"
 
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
 var defaultPrice = market.Prices{
-	PricePerHour: new(big.Int).SetInt64(180_000_000_000_000),
-	PricePerGiB:  new(big.Int).SetInt64(500_000_000_000_000_000),
+	PricePerHour: crypto.FloatToBigMyst(0.00006),
+	PricePerGiB:  crypto.FloatToBigMyst(0.1),
 }
 
 type discoAPI interface {
 	GetPricing() (market.LatestPrices, error)
 }
 
+// Pricer fetches and caches prices from discovery api.
 type Pricer struct {
 	discoAPI discoAPI
 	lastLoad market.LatestPrices
 	mut      sync.Mutex
 }
 
+// NewPricer creates a new instance of pricer.
 func NewPricer(discoAPI discoAPI) *Pricer {
 	return &Pricer{
 		lastLoad: market.LatestPrices{
@@ -57,6 +59,7 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 	}
 }
 
+// GetCurrentPrice gets the current price from cache if possible, fetches it otherwise.
 func (p *Pricer) GetCurrentPrice() (market.Prices, error) {
 	pricing := p.getPricing()
 	if pricing.Current != nil {
@@ -66,6 +69,7 @@ func (p *Pricer) GetCurrentPrice() (market.Prices, error) {
 	return market.Prices{}, errors.New("could not load pricing info")
 }
 
+// IsPriceValid checks if the given price is valid or not.
 func (p *Pricer) IsPriceValid(in market.Prices) bool {
 	pricing := p.getPricing()
 	if p.pricesEqual(pricing.Current, in) {
@@ -91,6 +95,7 @@ func (p *Pricer) isCheaperThanDefault(in market.Prices) bool {
 	return in.PricePerGiB.Cmp(defaultPrice.PricePerGiB) <= 0 && in.PricePerHour.Cmp(defaultPrice.PricePerHour) <= 0
 }
 
+// Subscribe subscribes to node events.
 func (p *Pricer) Subscribe(bus eventbus.Subscriber) error {
 	return bus.SubscribeAsync(nodevent.AppTopicNode, p.preloadOnNodeStart)
 }
