@@ -630,7 +630,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	if err != nil {
 		return err
 	}
-	
+
 	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
 		brokerURL, err := nats.ParseServerURL(brokerAddress)

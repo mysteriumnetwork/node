@@ -1320,18 +1320,6 @@
             "in": "query"
           },
           {
-            "type": "string",
-            "description": "Maximum price/hour.",
-            "name": "price_hour_max",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "Maximum price/GiB.",
-            "name": "price_gib_max",
-            "in": "query"
-          },
-          {
             "type": "integer",
             "description": "Minimum compatibility level of the proposal.",
             "name": "compatibility_min",
@@ -3026,27 +3014,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "Price": {
-      "type": "object",
-      "title": "Price represents the service price.",
-      "properties": {
-        "currency": {
-          "type": "string",
-          "x-go-name": "Currency"
-        },
-        "per_gib": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "PerGiB"
-        },
-        "per_hour": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "PerHour"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "ProposalDTO": {
       "type": "object",
       "title": "ProposalDTO holds service proposal details.",
@@ -3072,9 +3039,6 @@
         },
         "location": {
           "$ref": "#/definitions/ServiceLocationDTO"
-        },
-        "price": {
-          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider who offers service",
@@ -3351,9 +3315,6 @@
             "port": 1123,
             "protocol": "udp"
           }
-        },
-        "price": {
-          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider identity",
