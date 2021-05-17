@@ -471,7 +471,8 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 				Country: m.Status().ConsumerLocation.Country,
 			},
 		},
-		Config: config,
+		ProposalID: proposal.ID,
+		Config:     config,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
