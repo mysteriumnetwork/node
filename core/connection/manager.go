@@ -456,7 +456,7 @@ func (m *connectionManager) createP2PChannel(opts ConnectOptions, tracer *trace.
 	trace := tracer.StartStage("Consumer P2P channel creation")
 	defer tracer.EndStage(trace)
 
-	contactDef, err := p2p.ParseContact(opts.Proposal.ProviderContacts)
+	contactDef, err := p2p.ParseContact(opts.Proposal.Contacts)
 	if err != nil {
 		return fmt.Errorf("provider does not support p2p communication: %w", err)
 	}
