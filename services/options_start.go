@@ -34,7 +34,12 @@ import (
 func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	opts.TypeOptions, err = TypeConfiguredOptions(serviceType)
 	if err != nil {
-		return
+		return StartOptions{
+			PaymentPriceGiB:  big.NewInt(0),
+			PaymentPriceHour: big.NewInt(0),
+			AccessPolicyList: nil,
+			TypeOptions:      nil,
+		}, err
 	}
 
 	switch serviceType {

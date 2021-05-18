@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -229,7 +230,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID     string                          `json:"provider_id"`
 		Type           string                          `json:"type"`
 		Options        *json.RawMessage                `json:"options"`
-		Price          contract.Price                  `json:"price"`
+		Price          *contract.Price                 `json:"price"`
 		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
 	}
 	decoder := json.NewDecoder(req.Body)
@@ -243,10 +244,17 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID: jsonData.ProviderID,
 		Type:       se.toServiceType(jsonData.Type),
 		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
-		Price:      jsonData.Price,
+		Price: contract.Price{
+			Currency: config.GetString(config.FlagDefaultCurrency),
+			PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
+			PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
+		},
 		AccessPolicies: contract.ServiceAccessPolicies{
 			IDs: serviceOpts.AccessPolicyList,
 		},
+	}
+	if jsonData.Price != nil {
+		sr.Price = *jsonData.Price
 	}
 	if jsonData.AccessPolicies != nil {
 		sr.AccessPolicies = *jsonData.AccessPolicies
