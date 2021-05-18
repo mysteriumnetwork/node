@@ -26,7 +26,7 @@ import (
 )
 
 func TestParseServerURL(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		uri         string
 		wantAddress *url.URL
 		wantError   error
@@ -63,23 +63,23 @@ func TestParseServerURL(t *testing.T) {
 }
 
 func TestConnectionWrap_NewConnection(t *testing.T) {
-	connection, err := newConnection("nats://127.0.0.1:4222")
+	connection, err := newConnection(nil, "nats://127.0.0.1:4222")
 	assert.NoError(t, err)
 	assert.Nil(t, connection.Conn)
 	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.Servers())
 
-	connection, err = newConnection("nats://127.0.0.1:4222", "nats://example.com:4222")
+	connection, err = newConnection(nil, "nats://127.0.0.1:4222", "nats://example.com:4222")
 	assert.Nil(t, connection.Conn)
 	assert.Equal(t, []string{"nats://127.0.0.1:4222", "nats://example.com:4222"}, connection.Servers())
 }
 
 func TestConnectionWrap_Close_AfterFailedOpen(t *testing.T) {
-	connection, _ := newConnection("nats://far-server:1234")
+	connection, _ := newConnection(nil, "nats://far-server:1234")
 	assert.Equal(t, "failed to connect to NATS servers [nats://far-server:1234]: nats: no servers available for connection", connection.Open().Error())
 	connection.Close()
 }
 
 func TestConnectionWrap_Servers(t *testing.T) {
-	connection, _ := newConnection("nats://far-server:1234")
+	connection, _ := newConnection(nil, "nats://far-server:1234")
 	assert.Equal(t, []string{"nats://far-server:1234"}, connection.Servers())
 }

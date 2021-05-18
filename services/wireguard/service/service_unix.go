@@ -26,6 +26,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -41,8 +44,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // NATEventGetter allows us to fetch the last known NAT event
@@ -241,6 +242,7 @@ func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg
 			AllowedIPs:             []string{"0.0.0.0/0", "::/0"},
 			KeepAlivePeriodSeconds: 0,
 		},
+		ReplacePeers: true,
 	}, nil
 }
 

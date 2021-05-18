@@ -46,7 +46,8 @@ type DeviceConfig struct {
 	// Used only for unix.
 	DNSScriptDir string `json:"dns_script_dir"`
 
-	Peer Peer `json:"peer"`
+	Peer         Peer `json:"peer"`
+	ReplacePeers bool `json:"replace_peers"`
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
@@ -66,6 +67,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 		DNS          []string `json:"dns"`
 		DNSScriptDir string   `json:"dns_script_dir"`
 		Peer         peer     `json:"peer"`
+		ReplacePeers bool     `json:"replace_peers"`
 	}
 
 	var peerEndpoint string
@@ -86,6 +88,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 			AllowedIPs:             dc.Peer.AllowedIPs,
 			KeepAlivePeriodSeconds: dc.Peer.KeepAlivePeriodSeconds,
 		},
+		ReplacePeers: dc.ReplacePeers,
 	})
 }
 
@@ -157,6 +160,7 @@ func (dc *DeviceConfig) Encode() string {
 
 	res.WriteString(fmt.Sprintf("private_key=%s\n", hexKey))
 	res.WriteString(fmt.Sprintf("listen_port=%d\n", dc.ListenPort))
+	res.WriteString(fmt.Sprintf("replace_peers=%t\n", dc.ReplacePeers))
 	res.WriteString(dc.Peer.Encode())
 	return res.String()
 }

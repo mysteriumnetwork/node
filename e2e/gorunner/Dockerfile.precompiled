@@ -3,5 +3,5 @@ FROM alpine:3.12
 RUN apk add --update --no-cache bash gcc musl-dev make linux-headers iptables ipset ca-certificates openvpn bash sudo openresolv
 RUN ln -s /sbin/iptables /usr/sbin/iptables
 
-COPY ./build/e2e/test /usr/bin/test
-COPY ./build/e2e/deployer /usr/bin/deployer
+COPY ./build/e2e/test /usr/local/bin/test
+COPY ./build/e2e/deployer /usr/local/bin/deployer

@@ -28,6 +28,7 @@ type EndpointFactory func() (ConnectionEndpoint, error)
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
 	StartConsumerMode(config wgcfg.DeviceConfig) error
+	ReconfigureConsumerMode(config wgcfg.DeviceConfig) error
 	StartProviderMode(publicIP string, config wgcfg.DeviceConfig) error
 	PeerStats() (*wgcfg.Stats, error)
 	Config() (ServiceConfig, error)
