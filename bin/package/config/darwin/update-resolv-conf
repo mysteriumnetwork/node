@@ -42,11 +42,15 @@ update_all_dns()
         echo updating dns for $adapter
         # set dns server to the vpn dns server
         if [[ "${SRCHS[@]}" ]]; then
-            $NETWORKSETUP -getsearchdomains "$adapter" | grep -v "There aren't any" > "/tmp/myst.$adapter.searchdomains"
+            if [ ! -f "/tmp/myst.$adapter.searchdomains" ]; then
+                $NETWORKSETUP -getsearchdomains "$adapter" | grep -v "There aren't any" > "/tmp/myst.$adapter.searchdomains"
+            fi
             $NETWORKSETUP -setsearchdomains "$adapter" "${SRCHS[@]}"
         fi
         if [[ "${NMSRVRS[@]}" ]]; then
-            $NETWORKSETUP -getdnsservers "$adapter" | grep -v "There aren't any" > "/tmp/myst.$adapter.dnsservers"
+            if [ ! -f "/tmp/myst.$adapter.dnsservers" ]; then
+                $NETWORKSETUP -getdnsservers "$adapter" | grep -v "There aren't any" > "/tmp/myst.$adapter.dnsservers"
+            fi
             $NETWORKSETUP -setdnsservers "$adapter" "${NMSRVRS[@]}"
         fi
     done

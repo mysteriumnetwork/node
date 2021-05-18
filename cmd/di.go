@@ -73,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -629,8 +630,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		brokerURLs[i] = brokerURL
 	}
 
-	di.BrokerConnector = nats.NewBrokerConnector()
-	di.BrokerConnector.ResolveContext = resolver
+	di.BrokerConnector = nats.NewBrokerConnector(dialer.DialContext, resolver)
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}
@@ -661,19 +661,12 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	if _, err := firewall.AllowURLAccess(
+	if err := di.AllowURLAccess(
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
 		hermesURL,
-	); err != nil {
-		return err
-	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(
-		network.EtherClientRPC,
-		network.MysteriumAPIAddress,
-		options.Transactor.TransactorEndpointAddress,
-		hermesURL,
+		options.PilvytisAddress,
 	); err != nil {
 		return err
 	}
@@ -717,10 +710,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
-	if _, err := firewall.AllowURLAccess(options.Address); err != nil {
-		return err
-	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
+	if err := di.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
 
@@ -764,12 +754,10 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err error) {
-	if _, err = firewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
+	if err = di.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
-		return errors.Wrap(err, "failed to add firewall exception")
-	}
+
 	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL, ip.IPFallbackAddresses)
 	di.IPResolver = ip.NewCachedResolver(ipResolver, 5*time.Minute)
 
@@ -782,10 +770,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	case node.LocationTypeMMDB:
 		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Script, options.Location.Address), di.IPResolver)
 	case node.LocationTypeOracle:
-		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
-			return err
-		}
-		if _, err := di.ServiceFirewall.AllowURLAccess(options.Location.Address); err != nil {
+		if err := di.AllowURLAccess(options.Location.Address); err != nil {
 			return err
 		}
 		resolver, err = location.NewOracleResolver(di.HTTPClient, options.Location.Address), nil
@@ -975,4 +960,23 @@ func (di *Dependencies) bootstrapResidentCountry() error {
 
 func errMissingDependency(dep string) error {
 	return errors.New("Missing dependency: " + dep)
+}
+
+// AllowURLAccess allows the requested addresses to be served when the tunnel is active.
+func (di *Dependencies) AllowURLAccess(servers ...string) error {
+	if _, err := firewall.AllowURLAccess(servers...); err != nil {
+		return err
+	}
+
+	if _, err := di.ServiceFirewall.AllowURLAccess(servers...); err != nil {
+		return err
+	}
+
+	if config.GetBool(config.FlagKeepConnectedOnFail) {
+		if err := router.AllowURLAccess(servers...); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

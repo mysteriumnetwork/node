@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -31,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -82,6 +83,10 @@ func waitABit() {
 type mockConnectionEndpoint struct{}
 
 func (mce *mockConnectionEndpoint) StartConsumerMode(config wgcfg.DeviceConfig) error { return nil }
+func (mce *mockConnectionEndpoint) ReconfigureConsumerMode(config wgcfg.DeviceConfig) error {
+	return nil
+}
+
 func (mce *mockConnectionEndpoint) StartProviderMode(ip string, config wgcfg.DeviceConfig) error {
 	return nil
 }
