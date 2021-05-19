@@ -20,7 +20,6 @@ package contract
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -123,44 +122,6 @@ type Price struct {
 	Currency string `json:"currency"`
 	PerHour  uint64 `json:"per_hour"`
 	PerGiB   uint64 `json:"per_gib"`
-}
-
-// NewProposalQualityResponse maps to API proposal quality.
-func NewProposalQualityResponse(metrics []quality.ProposalQuality) ProposalQualityResponse {
-	var res []ProposalQuality
-	for _, m := range metrics {
-		res = append(res, ProposalQuality{
-			ProviderID:  m.ProposalID.ProviderID,
-			ServiceType: m.ProposalID.ServiceType,
-			Quality:     m.Quality,
-		})
-	}
-
-	return ProposalQualityResponse{
-		Quality: res,
-	}
-}
-
-// ProposalQualityResponse holds all proposals quality metrics.
-// swagger:model ProposalQualityResponse
-type ProposalQualityResponse struct {
-	Quality []ProposalQuality `json:"quality"`
-}
-
-// ProposalQuality holds quality metrics per service.
-// swagger:model ProposalQuality
-type ProposalQuality struct {
-	ProviderID       string  `json:"provider_id"`
-	ServiceType      string  `json:"service_type"`
-	Quality          float64 `json:"quality"`
-	MonitoringFailed bool    `json:"monitoring_failed"`
-}
-
-// QualityMetricsDTO holds proposal quality metrics from Quality Oracle.
-// swagger:model QualityMetricsDTO
-type QualityMetricsDTO struct {
-	Quality          float64 `json:"quality"`
-	MonitoringFailed bool    `json:"monitoring_failed"`
 }
 
 // Quality holds proposal quality metrics.

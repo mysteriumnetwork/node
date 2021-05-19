@@ -26,29 +26,6 @@ import (
 
 var defaultFormats = strfmt.NewFormats()
 
-func bindString(ptr *string, str string) *validation.FieldError {
-	if str == "" {
-		return &validation.FieldError{Code: "required", Message: "Field is required"}
-	}
-
-	*ptr = str
-	return nil
-}
-
-func bindInt(ptr *int, str string) *validation.FieldError {
-	if str == "" {
-		return &validation.FieldError{Code: "required", Message: "Field is required"}
-	}
-
-	value, err := parseInt(str)
-	if err != nil {
-		return err
-	}
-
-	*ptr = *value
-	return nil
-}
-
 func parseInt(str string) (*int, *validation.FieldError) {
 	value, err := strconv.Atoi(str)
 	if err != nil {
@@ -56,20 +33,6 @@ func parseInt(str string) (*int, *validation.FieldError) {
 	}
 
 	return &value, nil
-}
-
-func bindDate(ptr *strfmt.Date, str string) *validation.FieldError {
-	if str == "" {
-		return &validation.FieldError{Code: "required", Message: "Field is required"}
-	}
-
-	value, err := parseDate(str)
-	if err != nil {
-		return err
-	}
-
-	*ptr = *value
-	return nil
 }
 
 func parseDate(str string) (*strfmt.Date, *validation.FieldError) {
