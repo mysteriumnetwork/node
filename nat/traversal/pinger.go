@@ -388,7 +388,7 @@ func (p *Pinger) singlePing(ctx context.Context, remoteIP string, localPort, rem
 
 	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", remoteIP, remotePort))
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve remote addres: %w", err)
+		return nil, fmt.Errorf("failed to resolve remote address: %w", err)
 	}
 
 	pingReceived := make(chan struct{}, 1)
@@ -409,14 +409,14 @@ func (p *Pinger) singlePing(ctx context.Context, remoteIP string, localPort, rem
 
 	conn.Close()
 
-	conn, err = net.DialUDP("udp4", laddr, raddr)
+	newConn, err := net.DialUDP("udp4", laddr, raddr)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := router.ProtectUDPConn(conn); err != nil {
+	if err := router.ProtectUDPConn(newConn); err != nil {
 		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
 	}
 
-	return conn, nil
+	return newConn, nil
 }
