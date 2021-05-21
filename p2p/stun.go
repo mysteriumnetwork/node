@@ -34,9 +34,10 @@ import (
 // AppTopicSTUN represents the STUN detection topic.
 const AppTopicSTUN = "STUN detection"
 
-type stunStatus struct {
-	identity string
-	natType  string
+// STUNDetectionStatus represents information about detected NAT type using STUN servers.
+type STUNDetectionStatus struct {
+	Identity string
+	NATType  string
 }
 
 func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPorts ...int) (remotePorts []int) {
@@ -76,9 +77,9 @@ func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPor
 			}
 
 			if eventBus != nil {
-				eventBus.Publish(AppTopicSTUN, stunStatus{
-					identity: identity.Address,
-					natType:  natType,
+				eventBus.Publish(AppTopicSTUN, STUNDetectionStatus{
+					Identity: identity.Address,
+					NATType:  natType,
 				})
 			}
 		}(p)

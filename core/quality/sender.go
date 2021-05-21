@@ -33,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/p2p"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -52,6 +53,7 @@ const (
 	natMappingEventName      = "nat_mapping"
 	pingEventName            = "ping_event"
 	residentCountryEventName = "resident_country_event"
+	stunDetectionEvent       = "stun_detection_event"
 )
 
 // Transport allows sending events
@@ -151,6 +153,11 @@ type residentCountryEvent struct {
 	Country string
 }
 
+type natTypeEvent struct {
+	ID      string
+	NATType string
+}
+
 // Subscribe subscribes to relevant events of event bus.
 func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 	subscription := map[string]interface{}{
@@ -168,6 +175,7 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 		AppTopicConsumerPingP2P:                      s.sendConsumerPingDistance,
 		AppTopicProviderPingP2P:                      s.sendProviderPingDistance,
 		identity.AppTopicResidentCountry:             s.sendResidentCountry,
+		p2p.AppTopicSTUN:                             s.sendSTUNDetectionStatus,
 	}
 
 	for topic, fn := range subscription {
@@ -177,6 +185,13 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 	}
 
 	return nil
+}
+
+func (s *Sender) sendSTUNDetectionStatus(status p2p.STUNDetectionStatus) {
+	s.sendEvent(stunDetectionEvent, natTypeEvent{
+		ID:      status.Identity,
+		NATType: status.NATType,
+	})
 }
 
 func (s *Sender) sendResidentCountry(e identity.ResidentCountryEvent) {

@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
@@ -49,7 +50,7 @@ type Dialer interface {
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
-func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) Dialer {
+func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier, eventBus eventbus.EventBus) Dialer {
 	return &dialer{
 		broker:         broker,
 		ipResolver:     ipResolver,
@@ -57,6 +58,7 @@ func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifier i
 		verifier:       verifier,
 		portPool:       portPool,
 		consumerPinger: consumerPinger,
+		eventBus:       eventBus,
 	}
 }
 
@@ -68,6 +70,7 @@ type dialer struct {
 	signer         identity.SignerFactory
 	verifier       identity.Verifier
 	ipResolver     ip.Resolver
+	eventBus       eventbus.EventBus
 }
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
@@ -102,7 +105,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("could not prepare ports: %w", err)
 	}
 
-	config.publicPorts = stunPorts(consumerID, nil, config.localPorts...)
+	config.publicPorts = stunPorts(consumerID, m.eventBus, config.localPorts...)
 
 	// Finally send consumer encrypted and signed connect config in ack message.
 	err = m.ackConfigExchange(config, ctx, brokerConn, providerID, serviceType, consumerID)
