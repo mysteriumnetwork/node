@@ -1,8 +1,7 @@
 FROM golang:1.13-alpine AS builder
 
 # Install packages
-RUN apk add --update --no-cache git bash gcc musl-dev make linux-headers \
-    && rm -rf /var/cache/apk/*
+RUN apk add --update --no-cache git bash gcc musl-dev make linux-headers
 
 ARG BUILD_BRANCH=$BUILD_BRANCH
 ARG BUILD_COMMIT=$BUILD_COMMIT
