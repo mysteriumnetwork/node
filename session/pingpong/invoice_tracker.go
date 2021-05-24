@@ -141,7 +141,7 @@ type InvoiceTracker struct {
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
 type InvoiceTrackerDeps struct {
-	AgreedPrice                market.Prices
+	AgreedPrice                market.Price
 	Peer                       identity.Identity
 	PeerInvoiceSender          PeerInvoiceSender
 	InvoiceStorage             providerInvoiceStorage

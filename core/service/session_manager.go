@@ -107,11 +107,11 @@ type PromiseProcessor interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Prices) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Price) (PaymentEngine, error)
 
 // PriceValidator allows to validate prices against those in discovery.
 type PriceValidator interface {
-	IsPriceValid(in market.Prices) bool
+	IsPriceValid(in market.Price, nodeType string, country string) bool
 }
 
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
@@ -167,7 +167,7 @@ type SessionManager struct {
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
 	prices := manager.remapPricing(request.Consumer.Pricing)
-	err = manager.validatePrice(prices)
+	err = manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country)
 	if err != nil {
 		return pb.SessionResponse{}, err
 	}
@@ -200,24 +200,24 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 	return manager.providerService(session, manager.channel)
 }
 
-func (manager *SessionManager) validatePrice(in market.Prices) error {
-	if !manager.priceValidator.IsPriceValid(in) {
+func (manager *SessionManager) validatePrice(in market.Price, nodeType, country string) error {
+	if !manager.priceValidator.IsPriceValid(in, nodeType, country) {
 		return errors.New("consumer asking for invalid price")
 	}
 
 	return nil
 }
 
-func (manager *SessionManager) remapPricing(in *pb.Pricing) market.Prices {
+func (manager *SessionManager) remapPricing(in *pb.Pricing) market.Price {
 	// This prevents panics in case of malicious consumers.
 	if in == nil || in.PerGib == nil || in.PerHour == nil {
-		return market.Prices{
+		return market.Price{
 			PricePerHour: big.NewInt(0),
 			PricePerGiB:  big.NewInt(0),
 		}
 	}
 
-	return market.Prices{
+	return market.Price{
 		PricePerHour: big.NewInt(0).SetBytes(in.PerHour),
 		PricePerGiB:  big.NewInt(0).SetBytes(in.PerGib),
 	}
@@ -295,7 +295,7 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 	return nil
 }
 
-func (manager *SessionManager) paymentLoop(session *Session, price market.Prices) error {
+func (manager *SessionManager) paymentLoop(session *Session, price market.Price) error {
 	trace := session.tracer.StartStage("Provider session create (payment)")
 	defer session.tracer.EndStage(trace)
 

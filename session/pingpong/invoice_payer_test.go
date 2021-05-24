@@ -277,7 +277,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 	type fields struct {
 		peer        identity.Identity
 		timeTracker timeTracker
-		price       market.Prices
+		price       market.Price
 	}
 	tests := []struct {
 		name    string

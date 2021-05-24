@@ -18,7 +18,7 @@
 package pingpong
 
 import (
-	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,7 +29,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var defaultPrice = market.Prices{
+var defaultPrice = market.Price{
 	PricePerHour: crypto.FloatToBigMyst(0.00006),
 	PricePerGiB:  crypto.FloatToBigMyst(0.1),
 }
@@ -49,33 +49,67 @@ type Pricer struct {
 func NewPricer(discoAPI discoAPI) *Pricer {
 	return &Pricer{
 		lastLoad: market.LatestPrices{
-			Current: &market.Prices{
-				ValidUntil:   time.Now().Add(-time.Hour * 1000),
-				PricePerHour: defaultPrice.PricePerHour,
-				PricePerGiB:  defaultPrice.PricePerGiB,
+			PerCountry: make(map[string]*market.PriceHistory),
+			Defaults: &market.PriceHistory{
+				Current: &market.PriceByType{
+					Residential: &market.Price{
+						PricePerHour: defaultPrice.PricePerHour,
+						PricePerGiB:  defaultPrice.PricePerGiB,
+					},
+					Other: &market.Price{
+						PricePerHour: defaultPrice.PricePerHour,
+						PricePerGiB:  defaultPrice.PricePerGiB,
+					},
+				},
 			},
+			CurrentValidUntil: time.Now().Add(-time.Hour * 1000),
 		},
 		discoAPI: discoAPI,
 	}
 }
 
 // GetCurrentPrice gets the current price from cache if possible, fetches it otherwise.
-func (p *Pricer) GetCurrentPrice() (market.Prices, error) {
+func (p *Pricer) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
 	pricing := p.getPricing()
-	if pricing.Current != nil {
-		return *pricing.Current, nil
-	}
 
-	return market.Prices{}, errors.New("could not load pricing info")
+	return *p.getCurrentByType(pricing, nodeType, country), nil
+}
+
+func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string) *market.PriceHistory {
+	v, ok := pricing.PerCountry[strings.ToUpper(country)]
+	if ok {
+		return v
+	}
+	return pricing.Defaults
+}
+
+func (p *Pricer) getCurrentByType(pricing market.LatestPrices, nodeType string, country string) *market.Price {
+	base := p.getPriceForCountry(pricing, country)
+	switch strings.ToLower(nodeType) {
+	case "residential":
+		return base.Current.Residential
+	default:
+		return base.Current.Other
+	}
+}
+
+func (p *Pricer) getPreviousByType(pricing market.LatestPrices, nodeType string, country string) *market.Price {
+	base := p.getPriceForCountry(pricing, country)
+	switch strings.ToLower(nodeType) {
+	case "residential":
+		return base.Previous.Residential
+	default:
+		return base.Previous.Other
+	}
 }
 
 // IsPriceValid checks if the given price is valid or not.
-func (p *Pricer) IsPriceValid(in market.Prices) bool {
+func (p *Pricer) IsPriceValid(in market.Price, nodeType string, country string) bool {
 	pricing := p.getPricing()
-	if p.pricesEqual(pricing.Current, in) {
+	if p.pricesEqual(p.getCurrentByType(pricing, nodeType, country), in) {
 		return true
 	}
-	if p.pricesEqual(pricing.Previous, in) {
+	if p.pricesEqual(p.getPreviousByType(pricing, nodeType, country), in) {
 		return true
 	}
 
@@ -83,7 +117,7 @@ func (p *Pricer) IsPriceValid(in market.Prices) bool {
 	return p.isCheaperThanDefault(in)
 }
 
-func (p *Pricer) pricesEqual(api *market.Prices, local market.Prices) bool {
+func (p *Pricer) pricesEqual(api *market.Price, local market.Price) bool {
 	if api == nil || api.PricePerGiB == nil || api.PricePerHour == nil {
 		return false
 	}
@@ -91,7 +125,7 @@ func (p *Pricer) pricesEqual(api *market.Prices, local market.Prices) bool {
 	return api.PricePerGiB.Cmp(local.PricePerGiB) == 0 && api.PricePerHour.Cmp(local.PricePerHour) == 0
 }
 
-func (p *Pricer) isCheaperThanDefault(in market.Prices) bool {
+func (p *Pricer) isCheaperThanDefault(in market.Price) bool {
 	return in.PricePerGiB.Cmp(defaultPrice.PricePerGiB) <= 0 && in.PricePerHour.Cmp(defaultPrice.PricePerHour) <= 0
 }
 
@@ -101,7 +135,7 @@ func (p *Pricer) Subscribe(bus eventbus.Subscriber) error {
 }
 
 func (p *Pricer) getPricing() market.LatestPrices {
-	if time.Now().UTC().After(p.lastLoad.Current.ValidUntil) {
+	if time.Now().UTC().After(p.lastLoad.CurrentValidUntil) {
 		p.loadPricing()
 	}
 
@@ -117,6 +151,10 @@ func (p *Pricer) loadPricing() {
 	prices, err := p.discoAPI.GetPricing()
 	if err != nil {
 		log.Err(err).Msg("could not load pricing")
+		return
+	}
+	if prices.Defaults == nil {
+		log.Info().Msg("pricing info empty")
 		return
 	}
 	log.Info().Msg("pricing info loaded")

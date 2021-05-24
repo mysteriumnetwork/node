@@ -22,27 +22,40 @@ import (
 	"time"
 )
 
-// LatestPrices contains the current and previous prices.
+// LatestPrices represents the latest pricing.
 type LatestPrices struct {
-	Current  *Prices `json:"current"`
-	Previous *Prices `json:"previous"`
+	Defaults           *PriceHistory            `json:"defaults"`
+	PerCountry         map[string]*PriceHistory `json:"per_country"`
+	CurrentValidUntil  time.Time                `json:"current_valid_until"`
+	PreviousValidUNtil time.Time                `json:"previous_valid_until"`
 }
 
-// Prices represents the per hour and per byte prices.
-type Prices struct {
-	ValidUntil   time.Time `json:"valid_until"`
-	PricePerHour *big.Int  `json:"price_per_hour"`
-	PricePerGiB  *big.Int  `json:"price_per_gib"`
+// PriceHistory represents the current and previous price.
+type PriceHistory struct {
+	Current  *PriceByType `json:"current"`
+	Previous *PriceByType `json:"previous"`
+}
+
+// PriceByType is a slice of pricing by type.
+type PriceByType struct {
+	Residential *Price `json:"residential"`
+	Other       *Price `json:"other"`
+}
+
+// Price represents the price.
+type Price struct {
+	PricePerHour *big.Int `json:"price_per_hour"`
+	PricePerGiB  *big.Int `json:"price_per_gib"`
 }
 
 // IsFree Determines if the price has any values set or not.
-func (p Prices) IsFree() bool {
+func (p Price) IsFree() bool {
 	return p.PricePerGiB.Cmp(big.NewInt(0)) == 0 && p.PricePerHour.Cmp(big.NewInt(0)) == 0
 }
 
 // NewPrice creates a new Price instance.
-func NewPrice(perHour, perGiB int64) *Prices {
-	return &Prices{
+func NewPrice(perHour, perGiB int64) *Price {
+	return &Price{
 		PricePerHour: big.NewInt(perHour),
 		PricePerGiB:  big.NewInt(perGiB),
 	}

@@ -95,7 +95,7 @@ type InvoicePayerDeps struct {
 	TimeTracker               timeTracker
 	Ks                        hashSigner
 	Identity, Peer            identity.Identity
-	AgreedPrice               market.Prices
+	AgreedPrice               market.Price
 	SessionID                 string
 	AddressProvider           addressProvider
 	EventBus                  eventbus.EventBus

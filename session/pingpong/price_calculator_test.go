@@ -29,7 +29,7 @@ import (
 func Test_isServiceFree(t *testing.T) {
 	tests := []struct {
 		name  string
-		price *market.Prices
+		price *market.Price
 		want  bool
 	}{
 		{
@@ -66,7 +66,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 	type args struct {
 		timePassed       time.Duration
 		bytesTransferred DataTransferred
-		price            *market.Prices
+		price            *market.Price
 	}
 	tests := []struct {
 		name string

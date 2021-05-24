@@ -27,7 +27,7 @@ import (
 )
 
 // CalculatePaymentAmount calculates the required payment amount.
-func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, price market.Prices) *big.Int {
+func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, price market.Price) *big.Int {
 	if price.PricePerGiB.Cmp(big.NewInt(0)) == 0 && price.PricePerHour.Cmp(big.NewInt(0)) == 0 {
 		return big.NewInt(0)
 	}

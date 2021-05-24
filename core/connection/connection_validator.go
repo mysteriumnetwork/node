@@ -48,7 +48,7 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 }
 
 // validateBalance checks if consumer has enough money for given proposal.
-func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, price market.Prices) bool {
+func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, price market.Price) bool {
 	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
 
 	if perHour := price.PricePerHour; perHour.Cmp(big.NewInt(0)) > 0 {
@@ -74,7 +74,7 @@ func (v *Validator) isUnlocked(consumerID identity.Identity) bool {
 }
 
 // Validate checks whether the pre-connection conditions are fulfilled.
-func (v *Validator) Validate(chainID int64, consumerID identity.Identity, price market.Prices) error {
+func (v *Validator) Validate(chainID int64, consumerID identity.Identity, price market.Price) error {
 	if !v.isUnlocked(consumerID) {
 		return ErrUnlockRequired
 	}

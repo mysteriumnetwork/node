@@ -111,18 +111,18 @@ type PaymentIssuer interface {
 
 // PriceGetter fetches the current price.
 type PriceGetter interface {
-	GetCurrentPrice() (market.Prices, error)
+	GetCurrentPrice(nodeType string, country string) (market.Price, error)
 }
 
 type validator interface {
-	Validate(chainID int64, consumerID identity.Identity, p market.Prices) error
+	Validate(chainID int64, consumerID identity.Identity, p market.Price) error
 }
 
 // TimeGetter function returns current time
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Prices) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Price) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -211,7 +211,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return ErrAlreadyExists
 	}
 
-	prc, err := m.priceGetter.GetCurrentPrice()
+	prc, err := m.priceGetter.GetCurrentPrice(proposal.Location.IPType, proposal.Location.Country)
 	if err != nil {
 		return err
 	}
@@ -363,7 +363,7 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, price market.Prices) (PaymentIssuer, error) {
+func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, price market.Price) (PaymentIssuer, error) {
 	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, hermesID, proposal, price)
 	if err != nil {
 		return nil, err
@@ -461,7 +461,7 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, tracer *trace.Tracer, requestedPrice market.Prices) (*pb.SessionResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, tracer *trace.Tracer, requestedPrice market.Price) (*pb.SessionResponse, error) {
 	trace := tracer.StartStage("Consumer session creation")
 	defer tracer.EndStage(trace)
 

@@ -314,7 +314,7 @@ func newManager(service *Instance, sessions *SessionPool, publisher publisher, p
 	return NewSessionManager(
 		service,
 		sessions,
-		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage, price market.Prices) (PaymentEngine, error) {
+		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage, price market.Price) (PaymentEngine, error) {
 			return paymentEngine, nil
 		},
 		&MockNatEventTracker{},
@@ -351,6 +351,6 @@ type mockPriceValidator struct {
 	toReturn bool
 }
 
-func (mpv *mockPriceValidator) IsPriceValid(in market.Prices) bool {
+func (mpv *mockPriceValidator) IsPriceValid(in market.Price, nodeType, country string) bool {
 	return mpv.toReturn
 }

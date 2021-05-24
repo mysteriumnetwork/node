@@ -33,7 +33,7 @@ func TestValidator_Validate(t *testing.T) {
 	}
 	type args struct {
 		consumerID identity.Identity
-		price      market.Prices
+		price      market.Price
 		chainID    int64
 	}
 	tests := []struct {
@@ -57,7 +57,7 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				price: market.Prices{
+				price: market.Price{
 					PricePerHour: big.NewInt(6000),
 					PricePerGiB:  big.NewInt(6000),
 				},
@@ -78,7 +78,7 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				price: market.Prices{
+				price: market.Price{
 					PricePerHour: big.NewInt(600),
 					PricePerGiB:  big.NewInt(600),
 				},
@@ -111,7 +111,7 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				price: market.Prices{
+				price: market.Price{
 					PricePerHour: big.NewInt(100),
 					PricePerGiB:  big.NewInt(100),
 				},
