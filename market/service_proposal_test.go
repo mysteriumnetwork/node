@@ -55,6 +55,7 @@ func Test_ServiceProposal_Serialize(t *testing.T) {
 	  "service_type": "mock_service",
 	  "provider_id": "node",
       "location": {},
+	  "id": 0,
       "quality": {
         "quality": 2.0,
         "latency": 5,
@@ -82,6 +83,7 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := ServiceProposal{
+		ID:          1,
 		Format:      proposalFormat,
 		ServiceType: "mock_service",
 		ProviderID:  "node",
@@ -131,6 +133,7 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 		},
 	}
 	expected := ServiceProposal{
+		ID:          1,
 		Format:      proposalFormat,
 		ServiceType: "mock_service",
 		ProviderID:  "node",

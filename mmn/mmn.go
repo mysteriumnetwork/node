@@ -25,12 +25,12 @@ import (
 	"runtime"
 	"strings"
 
-	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/ip"
+	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -102,7 +102,7 @@ func (m *MMN) register() error {
 		Identity:    m.lastIdentity,
 		APIKey:      config.GetString(config.FlagMMNAPIKey),
 		VendorID:    config.GetString(config.FlagVendorID),
-		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
+		Arch:        runtime.GOOS + docker() + "/" + runtime.GOARCH,
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
 	})
@@ -131,9 +131,9 @@ func getOS() string {
 		distro, err := parseLinuxOS()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get OS information")
-			return "linux (unknown)"
+			return "linux (unknown)" + docker()
 		}
-		return distro
+		return distro + docker()
 	case "windows":
 		output, err := exec.Command("wmic", "os", "get", "Caption", "/value").Output()
 		if err != nil {
@@ -181,4 +181,12 @@ func parseLinuxOS() (string, error) {
 	}
 
 	return "linux (unknown)", nil
+}
+
+func docker() string {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return "(docker)"
+	}
+
+	return ""
 }

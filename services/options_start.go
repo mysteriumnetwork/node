@@ -32,7 +32,10 @@ import (
 func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	opts.TypeOptions, err = TypeConfiguredOptions(serviceType)
 	if err != nil {
-		return
+		return StartOptions{
+			AccessPolicyList: nil,
+			TypeOptions:      nil,
+		}, err
 	}
 
 	switch serviceType {

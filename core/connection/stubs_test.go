@@ -96,53 +96,57 @@ type connectionMock struct {
 	sync.RWMutex
 }
 
-func (foc *connectionMock) State() <-chan connectionstate.State {
-	return foc.stateChannel
+func (c *connectionMock) State() <-chan connectionstate.State {
+	return c.stateChannel
 }
 
-func (foc *connectionMock) Statistics() (connectionstate.Statistics, error) {
-	return foc.onStartReportStats, nil
+func (c *connectionMock) Statistics() (connectionstate.Statistics, error) {
+	return c.onStartReportStats, nil
 }
 
-func (foc *connectionMock) GetConfig() (ConsumerConfig, error) {
+func (c *connectionMock) GetConfig() (ConsumerConfig, error) {
 	return nil, nil
 }
 
-func (foc *connectionMock) Start(ctx context.Context, connectionParams ConnectOptions) error {
-	foc.RLock()
-	defer foc.RUnlock()
+func (c *connectionMock) Reconnect(ctx context.Context, connectionParams ConnectOptions) error {
+	return c.Start(ctx, connectionParams)
+}
 
-	if foc.onStartReturnError != nil {
-		return foc.onStartReturnError
+func (c *connectionMock) Start(ctx context.Context, connectionParams ConnectOptions) error {
+	c.RLock()
+	defer c.RUnlock()
+
+	if c.onStartReturnError != nil {
+		return c.onStartReturnError
 	}
 
-	foc.fakeProcess.Add(1)
-	for _, fakeState := range foc.onStartReportStates {
-		foc.reportState(fakeState)
+	c.fakeProcess.Add(1)
+	for _, fakeState := range c.onStartReportStates {
+		c.reportState(fakeState)
 	}
 	return nil
 }
 
-func (foc *connectionMock) Stop() {
-	for _, fakeState := range foc.onStopReportStates {
-		foc.reportState(fakeState)
+func (c *connectionMock) Stop() {
+	for _, fakeState := range c.onStopReportStates {
+		c.reportState(fakeState)
 	}
-	if foc.stopBlock != nil {
-		<-foc.stopBlock
+	if c.stopBlock != nil {
+		<-c.stopBlock
 	}
-	foc.fakeProcess.Done()
+	c.fakeProcess.Done()
 }
 
-func (foc *connectionMock) reportState(state fakeState) {
-	foc.RLock()
-	defer foc.RUnlock()
+func (c *connectionMock) reportState(state fakeState) {
+	c.RLock()
+	defer c.RUnlock()
 
-	foc.stateCallback(state)
+	c.stateCallback(state)
 }
 
-func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
-	foc.Lock()
-	defer foc.Unlock()
+func (c *connectionMock) StateCallback(callback func(state fakeState)) {
+	c.Lock()
+	defer c.Unlock()
 
-	foc.stateCallback = callback
+	c.stateCallback = callback
 }

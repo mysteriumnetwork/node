@@ -48,6 +48,7 @@ func TestInstall(t *testing.T) {
 		"ubuntu-bionic",
 		"ubuntu-focal",
 		"ubuntu-groovy",
+		"ubuntu-hirsute",
 	}
 	for _, img := range images {
 		t.Run(img, func(t *testing.T) {
@@ -108,7 +109,7 @@ func testImage(t *testing.T, image string) {
 	tb := time.Now()
 	assert.Eventually(func() bool {
 		return tequilaIsHealthy(t, containerId)
-	}, 3*time.Second, 500*time.Millisecond)
+	}, 30*time.Second, 500*time.Millisecond)
 	log.Info().Msgf("Startup took, ms: %d", time.Now().Sub(tb).Milliseconds())
 }
 

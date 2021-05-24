@@ -20,9 +20,10 @@ package release
 import (
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
-	"github.com/rs/zerolog/log"
 )
 
 type releaseDebianOpts struct {
@@ -32,7 +33,7 @@ type releaseDebianOpts struct {
 }
 
 func releaseDebianPPA(opts *releaseDebianOpts) error {
-	for _, codename := range []string{"bionic", "focal", "groovy"} {
+	for _, codename := range []string{"bionic", "focal", "groovy", "hirsute"} {
 		err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, codename).Run()
 		if err != nil {
 			return err

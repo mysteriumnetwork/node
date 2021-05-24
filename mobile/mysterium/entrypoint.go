@@ -49,6 +49,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -89,6 +90,7 @@ type MobileNodeOptions struct {
 	Testnet2                       bool
 	Localnet                       bool
 	ExperimentNATPunching          bool
+	KeepConnectedOnFail            bool
 	MysteriumAPIAddress            string
 	BrokerAddresses                []string
 	EtherClientRPCL1               string
@@ -120,6 +122,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
 		Testnet2:                       true,
 		ExperimentNATPunching:          true,
+		KeepConnectedOnFail:            true,
 		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
 		EtherClientRPCL1:               metadata.Testnet2Definition.Chain1.EtherClientRPC,
@@ -155,6 +158,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ActiveChainID)
+	config.Current.SetDefault(config.FlagKeepConnectedOnFail.Name, options.KeepConnectedOnFail)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 
 	network := node.OptionsNetwork{
@@ -596,6 +600,8 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 		)
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
+
+	router.SetProtectFunc(wgTunnelSetup.Protect)
 }
 
 // HealthCheckData represents node health check info.

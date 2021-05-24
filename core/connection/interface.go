@@ -33,6 +33,7 @@ type ConsumerConfig interface{}
 // Connection represents a connection
 type Connection interface {
 	Start(context.Context, ConnectOptions) error
+	Reconnect(context.Context, ConnectOptions) error
 	Stop()
 	GetConfig() (ConsumerConfig, error)
 	State() <-chan connectionstate.State

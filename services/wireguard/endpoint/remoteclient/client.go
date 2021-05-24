@@ -24,10 +24,11 @@ import (
 	"os/user"
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	supervisorclient "github.com/mysteriumnetwork/node/supervisor/client"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/rs/zerolog/log"
 )
 
 type client struct {
@@ -39,6 +40,11 @@ type client struct {
 func New() (*client, error) {
 	log.Debug().Msg("Creating remote wg client")
 	return &client{}, nil
+}
+
+func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
+	// TODO add reconnect support
+	return fmt.Errorf("not supported")
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
