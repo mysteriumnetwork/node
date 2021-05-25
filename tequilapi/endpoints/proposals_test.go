@@ -38,21 +38,33 @@ var (
 	mockQuality  = mocks.Quality()
 )
 
-var serviceProposals = []market.ServiceProposal{
-	market.NewProposal("0xProviderId", "testprotocol", market.NewProposalOpts{
-		Location: &TestLocation,
-		Quality:  &mockQuality,
-	}),
-	market.NewProposal("other_provider", "testprotocol", market.NewProposalOpts{
-		Location: &TestLocation,
-		Quality:  &mockQuality,
-	}),
+var serviceProposals = []proposal.PricedServiceProposal{
+	{
+		ServiceProposal: market.NewProposal("0xProviderId", "testprotocol", market.NewProposalOpts{
+			Location: &TestLocation,
+			Quality:  &mockQuality,
+		}),
+		Price: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	},
+	{
+		ServiceProposal: market.NewProposal("other_provider", "testprotocol", market.NewProposalOpts{
+			Location: &TestLocation,
+			Quality:  &mockQuality,
+		}),
+		Price: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	},
 }
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	repository := &mockProposalRepository{
 		// we assume that underling component does correct filtering
-		proposals: []market.ServiceProposal{serviceProposals[0]},
+		proposals: []proposal.PricedServiceProposal{serviceProposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -88,7 +100,12 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 }
             ]
         }`,
@@ -103,7 +120,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	repository := &mockProposalRepository{
-		proposals: []market.ServiceProposal{serviceProposals[0]},
+		proposals: []proposal.PricedServiceProposal{serviceProposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -140,7 +157,12 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 }
             ]
         }`,
@@ -190,7 +212,12 @@ func TestProposalsEndpointList(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 },
                 {
                     "format": "service-proposal/v3",
@@ -206,7 +233,12 @@ func TestProposalsEndpointList(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 }
             ]
         }`,
@@ -215,18 +247,26 @@ func TestProposalsEndpointList(t *testing.T) {
 }
 
 type mockProposalRepository struct {
-	proposals      []market.ServiceProposal
+	proposals      []proposal.PricedServiceProposal
 	recordedFilter *proposal.Filter
+	priceToAdd     market.Price
 }
 
-func (m *mockProposalRepository) Proposal(_ market.ProposalID) (*market.ServiceProposal, error) {
+func (m *mockProposalRepository) Proposal(_ market.ProposalID) (*proposal.PricedServiceProposal, error) {
 	if len(m.proposals) == 0 {
 		return nil, nil
 	}
 	return &m.proposals[0], nil
 }
 
-func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
 	m.recordedFilter = filter
 	return m.proposals, nil
+}
+
+func (m *mockProposalRepository) EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error) {
+	return proposal.PricedServiceProposal{
+		Price:           m.priceToAdd,
+		ServiceProposal: in,
+	}, nil
 }

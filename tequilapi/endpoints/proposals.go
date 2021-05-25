@@ -37,11 +37,11 @@ type QualityFinder interface {
 }
 
 type proposalsEndpoint struct {
-	proposalRepository proposal.Repository
+	proposalRepository proposalRepository
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalRepository proposal.Repository) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalRepository proposalRepository) *proposalsEndpoint {
 	return &proposalsEndpoint{
 		proposalRepository: proposalRepository,
 	}
@@ -146,7 +146,7 @@ func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository) {
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository) {
 	pe := NewProposalsEndpoint(proposalRepository)
 	router.GET("/proposals", pe.List)
 }

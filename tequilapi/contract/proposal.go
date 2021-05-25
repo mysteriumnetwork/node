@@ -20,11 +20,12 @@ package contract
 import (
 	"fmt"
 
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
 )
 
 // NewProposalDTO maps to API service proposal.
-func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
+func NewProposalDTO(p proposal.PricedServiceProposal) ProposalDTO {
 	return ProposalDTO{
 		Format:         p.Format,
 		Compatibility:  p.Compatibility,
@@ -36,6 +37,11 @@ func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
 			Quality:   p.Quality.Quality,
 			Latency:   p.Quality.Latency,
 			Bandwidth: p.Quality.Bandwidth,
+		},
+		Price: Price{
+			Currency: "MYSTT",
+			PerHour:  p.Price.PricePerHour.Uint64(),
+			PerGiB:   p.Price.PricePerGiB.Uint64(),
 		},
 	}
 }
@@ -78,11 +84,22 @@ type ProposalDTO struct {
 	// Service location
 	Location ServiceLocationDTO `json:"location"`
 
+	// Service price
+	Price Price `json:"price"`
+
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
 
 	// Quality of the service.
 	Quality Quality `json:"quality"`
+}
+
+// Price represents the service price.
+// swagger:model Price
+type Price struct {
+	Currency string `json:"currency"`
+	PerHour  uint64 `json:"per_hour"`
+	PerGiB   uint64 `json:"per_gib"`
 }
 
 func (p ProposalDTO) String() string {

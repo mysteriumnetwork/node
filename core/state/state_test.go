@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/datasize"
@@ -334,6 +335,13 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 }
 
 func Test_ConsumesServiceEvents(t *testing.T) {
+	mpr := mockProposalRepository{
+		priceToAdd: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	}
+
 	expected := service.Instance{
 		Proposal: market.NewProposal("0xbeef", "wireguard", market.NewProposalOpts{}),
 	}
@@ -356,6 +364,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 		ServiceLister:     sl,
 		IdentityProvider:  &mocks.IdentityProvider{},
 		EarningsProvider:  &mockEarningsProvider{},
+		ProposalPricer:    &mpr,
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -372,7 +381,8 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.ProviderID.Address, actual.ProviderID)
 	assert.Equal(t, expected.Options, actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
-	assert.EqualValues(t, contract.NewProposalDTO(expected.Proposal), actual.Proposal)
+	expt, _ := mpr.EnrichProposalWithPrice(expected.Proposal)
+	assert.EqualValues(t, contract.NewProposalDTO(expt), actual.Proposal)
 }
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
@@ -709,4 +719,15 @@ type mockChannelAddressCalculator struct{}
 
 func (mcac *mockChannelAddressCalculator) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
 	return common.Address{}, nil
+}
+
+type mockProposalRepository struct {
+	priceToAdd market.Price
+}
+
+func (m *mockProposalRepository) EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error) {
+	return proposal.PricedServiceProposal{
+		Price:           m.priceToAdd,
+		ServiceProposal: in,
+	}, nil
 }

@@ -30,6 +30,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -125,12 +126,11 @@ type validator interface {
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Price) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
-	priceGetter          PriceGetter
 	newConnection        Creator
 	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
@@ -172,7 +172,6 @@ func NewManager(
 	statsReportInterval time.Duration,
 	validator validator,
 	p2pDialer p2p.Dialer,
-	priceGetter PriceGetter,
 ) *connectionManager {
 	return &connectionManager{
 		newConnection:        connectionCreator,
@@ -188,7 +187,6 @@ func NewManager(
 		validator:            validator,
 		p2pDialer:            p2pDialer,
 		timeGetter:           time.Now,
-		priceGetter:          priceGetter,
 	}
 }
 
@@ -196,7 +194,7 @@ func (m *connectionManager) chainID() int64 {
 	return config.GetInt64(config.FlagChainID)
 }
 
-func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal proposal.PricedServiceProposal, params ConnectParams) (err error) {
 	var sessionID session.ID
 
 	tracer := trace.NewTracer("Consumer whole Connect")
@@ -216,10 +214,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return ErrAlreadyExists
 	}
 
-	prc, err := m.priceGetter.GetCurrentPrice(proposal.Location.IPType, proposal.Location.Country)
-	if err != nil {
-		return err
-	}
+	prc := m.priceFromProposal(proposal)
 
 	err = m.validator.Validate(m.chainID(), consumerID, prc)
 	if err != nil {
@@ -253,7 +248,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
-	sessionID, err = m.initSession(tracer)
+	sessionID, err = m.initSession(tracer, prc)
 	if err != nil {
 		return err
 	}
@@ -277,7 +272,7 @@ func (m *connectionManager) autoReconnect() (err error) {
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
-	sessionID, err = m.initSession(tracer)
+	sessionID, err = m.initSession(tracer, m.priceFromProposal(m.connectOptions.Proposal))
 	if err != nil {
 		return err
 	}
@@ -290,7 +285,14 @@ func (m *connectionManager) autoReconnect() (err error) {
 	return nil
 }
 
-func (m *connectionManager) initSession(tracer *trace.Tracer) (sessionID session.ID, err error) {
+func (m *connectionManager) priceFromProposal(proposal proposal.PricedServiceProposal) market.Price {
+	return market.Price{
+		PricePerHour: proposal.Price.PricePerHour,
+		PricePerGiB:  proposal.Price.PricePerGiB,
+	}
+}
+
+func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) (sessionID session.ID, err error) {
 	err = m.createP2PChannel(m.connectOptions, tracer)
 	if err != nil {
 		return sessionID, fmt.Errorf("could not create p2p channel during connect: %w", err)
@@ -298,11 +300,6 @@ func (m *connectionManager) initSession(tracer *trace.Tracer) (sessionID session
 
 	m.connectOptions.ProviderNATConn = m.channel.ServiceConn()
 	m.connectOptions.ChannelConn = m.channel.Conn()
-
-	prc, err := m.priceGetter.GetCurrentPrice(m.connectOptions.Proposal.Location.IPType, m.connectOptions.Proposal.Location.Country)
-	if err != nil {
-		return sessionID, err
-	}
 
 	paymentSession, err := m.paymentLoop(m.connectOptions, prc)
 	if err != nil {
@@ -676,7 +673,7 @@ func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)
 	}
 }
 
-func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
+func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal proposal.PricedServiceProposal) {
 	m.setStatus(func(status *connectionstate.Status) {
 		*status = connectionstate.Status{
 			StartedAt:        m.timeGetter(),

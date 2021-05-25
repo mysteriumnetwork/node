@@ -22,9 +22,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -78,7 +78,7 @@ type Status struct {
 	HermesID         common.Address
 	State            State
 	SessionID        session.ID
-	Proposal         market.ServiceProposal
+	Proposal         proposal.PricedServiceProposal
 }
 
 // Duration returns elapsed time from marked session start

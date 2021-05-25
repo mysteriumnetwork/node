@@ -47,7 +47,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository)
-	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, services.JSONParsersByType)
+	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, services.JSONParsersByType, di.ProposalRepository)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiarySaver, di.BeneficiaryProvider)

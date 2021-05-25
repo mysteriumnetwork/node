@@ -29,6 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/trace"
@@ -77,11 +78,17 @@ var (
 		Definition: p2p.ContactDefinition{},
 	}
 	activeServiceType = "fake-service"
-	activeProposal    = market.ServiceProposal{
-		ProviderID:  activeProviderID.Address,
-		Contacts:    []market.Contact{activeProviderContact},
-		ServiceType: activeServiceType,
-		Location:    market.Location{},
+	activeProposal    = proposal.PricedServiceProposal{
+		ServiceProposal: market.ServiceProposal{
+			ProviderID:  activeProviderID.Address,
+			Contacts:    []market.Contact{activeProviderContact},
+			ServiceType: activeServiceType,
+			Location:    market.Location{},
+		},
+		Price: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
 	}
 	establishedSessionID = session.ID("session-100")
 )
@@ -137,7 +144,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.connManager = NewManager(
 		func(channel p2p.Channel,
-			consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Price) (PaymentIssuer, error) {
+			consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				stopChan: make(chan struct{}),
 			}
@@ -151,12 +158,6 @@ func (tc *testContext) SetupTest() {
 		tc.statsReportInterval,
 		&mockValidator{},
 		tc.mockP2P,
-		&mockPriceGetter{
-			priceToReturn: market.Price{
-				PricePerHour: big.NewInt(0),
-				PricePerGiB:  big.NewInt(0),
-			},
-		},
 	)
 	tc.connManager.timeGetter = func() time.Time {
 		return tc.mockTime
@@ -732,13 +733,4 @@ type mockLocationResolver struct{}
 
 func (mlr *mockLocationResolver) GetOrigin() locationstate.Location {
 	return consumerLocation
-}
-
-type mockPriceGetter struct {
-	priceToReturn market.Price
-	errToReturn   error
-}
-
-func (mpg *mockPriceGetter) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
-	return mpg.priceToReturn, mpg.errToReturn
 }

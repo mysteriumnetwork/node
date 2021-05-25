@@ -22,8 +22,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -39,7 +39,7 @@ type ConnectParams struct {
 type ConnectOptions struct {
 	ConsumerID      identity.Identity
 	ProviderID      identity.Identity
-	Proposal        market.ServiceProposal
+	Proposal        proposal.PricedServiceProposal
 	SessionID       session.ID
 	Params          ConnectParams
 	SessionConfig   []byte

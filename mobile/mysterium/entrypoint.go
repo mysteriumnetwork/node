@@ -283,7 +283,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		identityChannelCalculator: di.AddressProvider,
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
-			di.MysteriumAPI,
 			di.FilterPresetStorage,
 		),
 		pilvytis:       di.Pilvytis,

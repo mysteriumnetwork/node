@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -98,8 +99,8 @@ func ExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	addressProvider addressProvider,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
-	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err

@@ -19,48 +19,47 @@ package mysterium
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
-	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
 type proposalManagerTestSuite struct {
 	suite.Suite
 
-	repository    *mockRepository
-	mysteriumAPI  mysteriumAPI
-	qualityFinder qualityFinder
-
+	repository       *mockRepository
 	proposalsManager *proposalsManager
 }
 
 func (s *proposalManagerTestSuite) SetupTest() {
 	s.repository = &mockRepository{}
-	s.mysteriumAPI = &mockMysteriumAPI{}
-	s.qualityFinder = &mockQualityFinder{}
 
 	s.proposalsManager = newProposalsManager(
 		s.repository,
-		s.mysteriumAPI,
 		nil,
 	)
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
-	s.proposalsManager.cache = []market.ServiceProposal{
-		market.NewProposal("p1", "openvpn", market.NewProposalOpts{
-			Location: &market.Location{
-				Country: "US",
-				IPType:  "residential",
+	s.proposalsManager.cache = []proposal.PricedServiceProposal{
+		{
+			ServiceProposal: market.NewProposal("p1", "openvpn", market.NewProposalOpts{
+				Location: &market.Location{
+					Country: "US",
+					IPType:  "residential",
+				},
+				Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
+			}),
+			Price: market.Price{
+				PricePerHour: big.NewInt(1),
+				PricePerGiB:  big.NewInt(2),
 			},
-			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
-		}),
+		},
 	}
 
 	proposals, err := s.proposalsManager.getProposals(&GetProposalsRequest{
@@ -79,23 +78,33 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 		  "service_type": "openvpn",
 		  "country": "US",
 		  "ip_type": "residential",
-		  "quality_level": 3
+		  "quality_level": 3,
+		  "price": {
+			  "per_gib": 2.0,
+			  "per_hour": 1.0,
+			  "currency": "MYSTT"
+		  }
 		}
 	  ]
 	}`, string(bytes))
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() {
-	s.repository.data = []market.ServiceProposal{
-		market.NewProposal("p1", "wireguard", market.NewProposalOpts{
-			Location: &market.Location{
-				Country: "US",
-				IPType:  "residential",
+	s.repository.data = []proposal.PricedServiceProposal{
+		{
+			ServiceProposal: market.NewProposal("p1", "wireguard", market.NewProposalOpts{
+				Location: &market.Location{
+					Country: "US",
+					IPType:  "residential",
+				},
+				Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
+			}),
+			Price: market.Price{
+				PricePerHour: big.NewInt(1),
+				PricePerGiB:  big.NewInt(2),
 			},
-			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
-		}),
+		},
 	}
-	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{}
 	proposals, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		Refresh: true,
 	})
@@ -110,7 +119,12 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 		  "service_type": "wireguard",
 		  "country": "US",
 		  "ip_type": "residential",
-		  "quality_level": 3
+		  "quality_level": 3,
+		  "price": {
+			"per_gib": 2.0,
+			"per_hour": 1.0,
+			"currency": "MYSTT"
+		  }
 		}
 	  ]
 	}`, string(bytes))
@@ -121,32 +135,16 @@ func TestProposalManagerSuite(t *testing.T) {
 }
 
 type mockRepository struct {
-	data []market.ServiceProposal
+	data []proposal.PricedServiceProposal
 }
 
-func (m *mockRepository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
+func (m *mockRepository) Proposal(id market.ProposalID) (*proposal.PricedServiceProposal, error) {
 	if len(m.data) == 0 {
 		return nil, nil
 	}
 	return &m.data[0], nil
 }
 
-func (m *mockRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+func (m *mockRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
 	return m.data, nil
-}
-
-type mockMysteriumAPI struct {
-	proposals []market.ServiceProposal
-}
-
-func (m *mockMysteriumAPI) QueryProposals(query mysterium.ProposalsQuery) ([]market.ServiceProposal, error) {
-	return m.proposals, nil
-}
-
-type mockQualityFinder struct {
-	quality []quality.ProposalQuality
-}
-
-func (m *mockQualityFinder) ProposalsQuality() []quality.ProposalQuality {
-	return m.quality
 }

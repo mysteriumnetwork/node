@@ -117,7 +117,7 @@ type Dependencies struct {
 	IdentityMover    *identity.Mover
 
 	DiscoveryFactory    service.DiscoveryFactory
-	ProposalRepository  proposal.Repository
+	ProposalRepository  *discovery.PricedServiceProposalRepository
 	FilterPresetStorage *proposal.FilterPresetStorage
 	DiscoveryWorker     discovery.Worker
 
@@ -353,7 +353,9 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		BalanceProvider:           di.ConsumerBalanceTracker,
 		EarningsProvider:          di.HermesChannelRepository,
 		ChainID:                   options.ChainID,
+		ProposalPricer:            di.ProposalRepository,
 	}
+
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
 }
@@ -554,7 +556,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.IdentityManager,
 		),
 		di.P2PDialer,
-		di.PricingHelper,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)

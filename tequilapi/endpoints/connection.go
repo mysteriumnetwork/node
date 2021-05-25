@@ -63,13 +63,13 @@ type ConnectionEndpoint struct {
 	publisher     eventbus.Publisher
 	stateProvider stateProvider
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
-	proposalRepository proposal.Repository
+	proposalRepository proposalRepository
 	identityRegistry   identityRegistry
 	addressProvider    addressProvider
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:            manager,
 		publisher:          publisher,
@@ -280,9 +280,15 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 	utils.WriteAsJSON(response, writer)
 }
 
+type proposalRepository interface {
+	Proposal(id market.ProposalID) (*proposal.PricedServiceProposal, error)
+	Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error)
+	EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error)
+}
+
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) {
+	stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) {
 	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry, publisher, addressProvider)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
