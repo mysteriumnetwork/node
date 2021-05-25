@@ -29,6 +29,28 @@ type oracleResolver struct {
 	address    string
 }
 
+type oracleLocation struct {
+	ASN       int    `json:"asn"`
+	City      string `json:"city"`
+	Continent string `json:"continent"`
+	Country   string `json:"country"`
+	IP        string `json:"ip"`
+	ISP       string `json:"isp"`
+	NodeType  string `json:"node_type"`
+}
+
+func (l oracleLocation) ToLocation() locationstate.Location {
+	return locationstate.Location{
+		ASN:       l.ASN,
+		City:      l.City,
+		Continent: l.Continent,
+		Country:   l.Country,
+		IP:        l.IP,
+		ISP:       l.ISP,
+		IPType:    l.NodeType,
+	}
+}
+
 // NewOracleResolver returns new db resolver initialized from Location Oracle service
 func NewOracleResolver(httpClient *requests.HTTPClient, address string) *oracleResolver {
 	return &oracleResolver{
@@ -46,6 +68,8 @@ func (o *oracleResolver) DetectLocation() (location locationstate.Location, err 
 		return locationstate.Location{}, errors.Wrap(err, "failed to create request")
 	}
 
-	err = o.httpClient.DoRequestAndParseResponse(request, &location)
-	return location, errors.Wrap(err, "failed to execute request")
+	var res oracleLocation
+	err = o.httpClient.DoRequestAndParseResponse(request, &res)
+
+	return res.ToLocation(), errors.Wrap(err, "failed to execute request")
 }
