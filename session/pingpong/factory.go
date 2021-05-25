@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -49,33 +48,6 @@ const (
 	// DefaultHermesFailureCount defines how many times we're allowed to fail to reach hermes in a row before announcing the failure.
 	DefaultHermesFailureCount uint64 = 10
 )
-
-var giB = big.NewInt(1024 ^ 3)
-var accuracy = big.NewInt(500000000000000)
-
-// NewPrice returns the the default payment method of time + bytes.
-func NewPrice(perGiB, perHour *big.Int) market.Price {
-	if perGiB == nil {
-		perGiB = new(big.Int)
-	}
-	if perHour == nil {
-		perHour = new(big.Int)
-	}
-
-	if perGiB.Cmp(big.NewInt(0)) > 0 {
-		mul := new(big.Int).Mul(giB, accuracy)
-		perGiB = new(big.Int).Div(mul, perGiB)
-	}
-	if perHour.Cmp(big.NewInt(0)) > 0 {
-		mul := new(big.Int).Mul(big.NewInt(int64(time.Hour)), accuracy)
-		perHour = new(big.Int).Div(mul, perHour)
-	}
-	return market.Price{
-		Currency: money.Currency(config.GetString(config.FlagDefaultCurrency)),
-		PerGiB:   perGiB,
-		PerHour:  perHour,
-	}
-}
 
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
