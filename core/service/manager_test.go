@@ -61,7 +61,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		mockPolicyOracle,
 		&mockP2PListener{}, nil, nil, mockLocationResolver{},
 	)
-	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPrice(0, 0, money.CurrencyMystt))
+	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPricePtr(0, 0, money.CurrencyMystt))
 	assert.Nil(t, err)
 
 	discovery.Wait()
@@ -86,7 +86,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		&mockP2PListener{}, nil, nil,
 		mockLocationResolver{},
 	)
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPrice(0, 0, money.CurrencyMystt))
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPricePtr(0, 0, money.CurrencyMystt))
 	assert.Nil(t, err)
 	err = manager.Stop(id)
 	assert.Nil(t, err)
@@ -114,7 +114,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		mockLocationResolver{},
 	)
 
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPrice(0, 0, money.CurrencyMystt))
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, *market.NewPricePtr(0, 0, money.CurrencyMystt))
 	assert.NoError(t, err)
 
 	services := manager.servicePool.List()

@@ -59,7 +59,7 @@ func TestValidator_Validate(t *testing.T) {
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
-					Price:    market.NewPrice(120, 100, money.CurrencyMystt),
+					Price:    market.NewPricePtr(120, 100, money.CurrencyMystt),
 					Contacts: []market.Contact{activeProviderContact},
 				}),
 			},
@@ -80,7 +80,7 @@ func TestValidator_Validate(t *testing.T) {
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
-					Price:    market.NewPrice(15, 0, money.CurrencyMystt),
+					Price:    market.NewPricePtr(15, 0, money.CurrencyMystt),
 					Contacts: []market.Contact{activeProviderContact},
 				}),
 			},
@@ -113,7 +113,7 @@ func TestValidator_Validate(t *testing.T) {
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
-					Price:    market.NewPrice(15, 0, money.CurrencyMystt),
+					Price:    market.NewPricePtr(15, 0, money.CurrencyMystt),
 					Contacts: []market.Contact{activeProviderContact},
 				}),
 			},

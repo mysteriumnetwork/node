@@ -61,7 +61,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 				Country: "US",
 				IPType:  "residential",
 			},
-			Price:   market.NewPrice(int64(crypto.Myst), 3*int64(crypto.Myst), money.CurrencyMystt),
+			Price:   market.NewPricePtr(crypto.Myst, 3*crypto.Myst, money.CurrencyMystt),
 			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
 		}),
 	}
@@ -100,7 +100,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 				Country: "US",
 				IPType:  "residential",
 			},
-			Price:   market.NewPrice(int64(crypto.Myst), 2*int64(crypto.Myst), money.CurrencyMystt),
+			Price:   market.NewPricePtr(crypto.Myst, 2*crypto.Myst, money.CurrencyMystt),
 			Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
 		}),
 	}

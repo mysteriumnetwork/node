@@ -41,13 +41,13 @@ func init() {
 var (
 	proposalFirst = func() market.ServiceProposal {
 		return market.NewProposal("0x1", "mock_service", market.NewProposalOpts{
-			Price:    market.NewPrice(0, 0, money.CurrencyMystt),
+			Price:    market.NewPricePtr(0, 0, money.CurrencyMystt),
 			Contacts: []market.Contact{{Type: "mock_contact", Definition: mockContact{}}},
 		})
 	}
 	proposalSecond = func() market.ServiceProposal {
 		return market.NewProposal("0x2", "mock_service", market.NewProposalOpts{
-			Price:    market.NewPrice(0, 0, money.CurrencyMystt),
+			Price:    market.NewPricePtr(0, 0, money.CurrencyMystt),
 			Contacts: []market.Contact{{Type: "mock_contact", Definition: mockContact{}}},
 		})
 	}

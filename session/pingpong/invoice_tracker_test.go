@@ -93,7 +93,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -142,7 +142,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -193,7 +193,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	NewHermesPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -242,7 +242,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -298,7 +298,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(60000000000000, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(60000000000000, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -350,7 +350,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(60000000000000, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(60000000000000, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -402,7 +402,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(0, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
 		}),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -440,7 +440,7 @@ func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
 		TimeTracker: &tracker,
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.NewProposal("0x1", "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 10995116277760, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 10995116277760, money.CurrencyMystt),
 		}),
 		MaxNotPaidInvoice: big.NewInt(100),
 	}
@@ -465,7 +465,7 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 		TimeTracker: &tracker,
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.NewProposal("0x1", "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 1024^3*10, money.CurrencyMyst),
+			Price: market.NewPricePtr(600, 1024^3*10, money.CurrencyMyst),
 		}),
 		MaxNotPaidInvoice: big.NewInt(100),
 		ChargePeriod:      time.Millisecond,
