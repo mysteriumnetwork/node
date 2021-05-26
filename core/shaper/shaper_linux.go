@@ -18,13 +18,12 @@
 package shaper
 
 import (
-	"github.com/mysteriumnetwork/go-wondershaper/wondershaper"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-)
 
-const limitKbps = 5000
+	"github.com/mysteriumnetwork/go-wondershaper/wondershaper"
+	"github.com/mysteriumnetwork/node/config"
+)
 
 type linuxShaper struct {
 	ws          *wondershaper.Shaper
@@ -49,12 +48,12 @@ func (s *linuxShaper) Start(interfaceName string) error {
 		s.ws.Clear(interfaceName)
 
 		if config.GetBool(config.FlagShaperEnabled) {
-			err := s.ws.LimitDownlink(interfaceName, limitKbps)
+			err := s.ws.LimitDownlink(interfaceName, int(config.GetUInt64(config.FlagShaperBandwidth)))
 			if err != nil {
 				log.Error().Err(err).Msg("Could not limit download speed")
 				return err
 			}
-			err = s.ws.LimitUplink(interfaceName, limitKbps)
+			err = s.ws.LimitUplink(interfaceName, int(config.GetUInt64(config.FlagShaperBandwidth)))
 			if err != nil {
 				log.Error().Err(err).Msg("Could not limit upload speed")
 				return err
