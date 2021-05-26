@@ -84,6 +84,7 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 		ProviderID:         filter.ProviderID,
 		ServiceType:        filter.ServiceType,
 		LocationCountry:    filter.LocationCountry,
+		IPType:             filter.IPType,
 		CompatibilityMin:   filter.CompatibilityMin,
 		CompatibilityMax:   filter.CompatibilityMax,
 		AccessPolicy:       filter.AccessPolicy,
