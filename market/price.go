@@ -60,3 +60,7 @@ func NewPrice(perHour, perGiB int64) *Price {
 		PricePerGiB:  big.NewInt(perGiB),
 	}
 }
+
+func (p Price) String() string {
+	return p.PricePerHour.String() + "/h, " + p.PricePerGiB.String() + "/GiB "
+}

@@ -110,6 +110,12 @@ type Manager struct {
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
 func (manager *Manager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options Options) (id ID, err error) {
+	log.Debug().Fields(map[string]interface{}{
+		"providerID":  providerID.Address,
+		"serviceType": serviceType,
+		"policyIDs":   policyIDs,
+		"options":     options,
+	}).Msg("Starting service")
 	service, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return id, err

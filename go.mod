@@ -28,6 +28,7 @@ require (
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/protobuf v1.5.0
+	github.com/google/go-github/v35 v35.2.0
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88
 	github.com/jackpal/gateway v1.0.6
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
@@ -80,6 +81,7 @@ require (
 	go.mongodb.org/mongo-driver v1.1.1
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
 	golang.org/x/net v0.0.0-20210220033124-5f55cee0dc0d
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20210223212115-eede4237b368
 	golang.org/x/tools v0.0.0-20201013053347-2db1cd791039 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200320
