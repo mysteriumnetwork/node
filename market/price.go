@@ -32,24 +32,18 @@ type Price struct {
 }
 
 // NewPrice creates a new Price instance.
-func NewPrice(perHour, perGiB int64, currency money.Currency) *Price {
-	return &Price{
+func NewPrice(perHour, perGiB uint64, currency money.Currency) Price {
+	return Price{
 		Currency: currency,
-		PerHour:  big.NewInt(perHour),
-		PerGiB:   big.NewInt(perGiB),
+		PerHour:  new(big.Int).SetUint64(perHour),
+		PerGiB:   new(big.Int).SetUint64(perGiB),
 	}
 }
 
-// NewPriceB creates a new Price instance using big.Ints.
-func NewPriceB(perHour, perGiB *big.Int, currency money.Currency) *Price {
-	p := NewPrice(0, 0, currency)
-	if perHour != nil {
-		p.PerHour = perHour
-	}
-	if perGiB != nil {
-		p.PerGiB = perGiB
-	}
-	return p
+// NewPricePtr returns a pointer to a new Price instance.
+func NewPricePtr(perHour, perGiB uint64, currency money.Currency) *Price {
+	price := NewPrice(perHour, perGiB, currency)
+	return &price
 }
 
 // IsFree returns true if the service pricing is set to 0.
@@ -64,4 +58,8 @@ func (p Price) Validate() error {
 		validation.Field(&p.PerHour, validation.Required),
 		validation.Field(&p.PerGiB, validation.Required),
 	)
+}
+
+func (p Price) String() string {
+	return p.PerHour.String() + "/h, " + p.PerGiB.String() + "/GiB, " + "Currency: " + string(p.Currency)
 }

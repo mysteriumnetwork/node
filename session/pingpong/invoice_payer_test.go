@@ -83,7 +83,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		EventBus:                  mocks.NewEventBus(),
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
 		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
@@ -133,7 +133,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMyst),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMyst),
 		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
@@ -203,7 +203,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(0, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
 		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
@@ -268,7 +268,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPrice(600, 0, money.CurrencyMystt),
+			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
 		}),
 	}
 	InvoicePayer := NewInvoicePayer(deps)
@@ -312,7 +312,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 					timeToReturn: time.Minute,
 				},
 				proposal: market.NewProposal("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C", "mock", market.NewProposalOpts{
-					Price: market.NewPrice(6000000, 0, money.CurrencyMystt),
+					Price: market.NewPricePtr(6000000, 0, money.CurrencyMystt),
 				}),
 			},
 			invoice: crypto.Invoice{
@@ -331,7 +331,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 					timeToReturn: time.Minute,
 				},
 				proposal: market.NewProposal("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C", "mock", market.NewProposalOpts{
-					Price: market.NewPrice(6000000, 0, money.CurrencyMystt),
+					Price: market.NewPricePtr(6000000, 0, money.CurrencyMystt),
 				}),
 			},
 			invoice: crypto.Invoice{
