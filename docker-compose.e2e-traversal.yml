@@ -101,7 +101,7 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery:
-    image: mysteriumnetwork/discovery:matic-rc1
+    image: mysteriumnetwork/discovery:matic-rc2
     depends_on:
       db:
         condition: service_healthy
@@ -119,8 +119,12 @@ services:
       - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
       - QUALITY_ORACLE_URL=http://morqa:8085
       - BROKER_URL=broker
+      - GECKO_URL=http://http-mock:1080/gecko
+      - COINRANKING_URL=http://http-mock:1080/gecko
+      - COINRANKING_TOKEN=suchtoken
     depends_on:
       - db
+      - http-mock
     dns: 172.30.0.254
     networks:
       public0:
