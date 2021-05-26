@@ -150,7 +150,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	proposal.ProviderID = jsonData.ProviderID
 	proposal.ServiceType = jsonData.ServiceType
 	proposal.Location = jsonData.Location
-	proposal.Price = *NewPriceB(jsonData.Price.PerHour, jsonData.Price.PerGiB, jsonData.Price.Currency)
+	proposal.Price = jsonData.Price
 
 	// run contact unserializer
 	proposal.Contacts = unserializeContacts(jsonData.Contacts)

@@ -53,25 +53,25 @@ var (
 		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	})
 	proposalTimeExpensive = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPrice(9999999999999, 0, money.CurrencyMystt),
+		Price: market.NewPricePtr(9999999999999, 0, money.CurrencyMystt),
 	})
 	proposalTimeCheap = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPrice(0, 0, money.CurrencyMystt),
+		Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
 	})
 	proposalTimeExact = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPrice(60000000, 0, money.CurrencyMystt),
+		Price: market.NewPricePtr(60000000, 0, money.CurrencyMystt),
 	})
 	proposalBytesExpensive = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPrice(0, 7000001, money.CurrencyMystt),
+		Price: market.NewPricePtr(0, 7000001, money.CurrencyMystt),
 	})
 	proposalBytesCheap = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPrice(0, 0, money.CurrencyMystt),
+		Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
 	})
 	proposalBytesExact = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPrice(0, 7000000, money.CurrencyMystt),
+		Price: market.NewPricePtr(0, 7000000, money.CurrencyMystt),
 	})
 	proposalSupported = market.NewProposal("0xbeef", serviceTypeNoop, market.NewProposalOpts{
-		Price: market.NewPrice(0, 7168000427, money.CurrencyMystt),
+		Price: market.NewPricePtr(0, 7168000427, money.CurrencyMystt),
 		Contacts: []market.Contact{{
 			Type:       "phone",
 			Definition: "69935951",

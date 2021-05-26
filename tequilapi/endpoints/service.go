@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"math/big"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -27,8 +26,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
@@ -156,7 +155,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		sr.Type,
 		sr.AccessPolicies.IDs,
 		sr.Options,
-		pingpong.NewPrice(new(big.Int).SetUint64(sr.Price.PerGiB), new(big.Int).SetUint64(sr.Price.PerHour)),
+		market.NewPrice(sr.Price.PerHour, sr.Price.PerGiB, money.Currency(config.GetString(config.FlagDefaultCurrency))),
 	)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
