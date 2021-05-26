@@ -3014,6 +3014,27 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "Price": {
+      "type": "object",
+      "title": "Price represents the service price.",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "x-go-name": "Currency"
+        },
+        "per_gib": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "PerGiB"
+        },
+        "per_hour": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "PerHour"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ProposalDTO": {
       "type": "object",
       "title": "ProposalDTO holds service proposal details.",
@@ -3039,6 +3060,9 @@
         },
         "location": {
           "$ref": "#/definitions/ServiceLocationDTO"
+        },
+        "price": {
+          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider who offers service",
