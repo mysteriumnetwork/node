@@ -104,6 +104,12 @@ var (
 		Name:  "shaper.enabled",
 		Usage: "Limit service bandwidth",
 	}
+	// FlagShaperBandwidth set the bandwidth limit.
+	FlagShaperBandwidth = cli.Uint64Flag{
+		Name:  "shaper.bandwidth",
+		Usage: "Set the bandwidth limit in bytes",
+		Value: 5000,
+	}
 	// FlagKeystoreLightweight determines the scrypt memory complexity.
 	FlagKeystoreLightweight = cli.BoolFlag{
 		Name:  "keystore.lightweight",
@@ -292,6 +298,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
 		&FlagShaperEnabled,
+		&FlagShaperBandwidth,
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
@@ -345,6 +352,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
+	Current.ParseUInt64Flag(ctx, FlagShaperBandwidth)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseBoolFlag(ctx, FlagVerbose)

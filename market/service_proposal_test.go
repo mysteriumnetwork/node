@@ -40,7 +40,7 @@ func init() {
 func Test_ServiceProposal_Serialize(t *testing.T) {
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, "MYSTT")
 	sp := NewProposal("node", "mock_service", NewProposalOpts{
-		Price: NewPrice(10, 20, money.Currency(config.GetString(config.FlagDefaultCurrency))),
+		Price: NewPricePtr(10, 20, money.Currency(config.GetString(config.FlagDefaultCurrency))),
 		Quality: &Quality{
 			Quality:   2.0,
 			Latency:   5,

@@ -35,22 +35,22 @@ func Test_isServiceFree(t *testing.T) {
 	}{
 		{
 			name:  "not free if only time payment is set",
-			price: market.NewPrice(10, 0, money.CurrencyMystt),
+			price: market.NewPricePtr(10, 0, money.CurrencyMystt),
 			want:  false,
 		},
 		{
 			name:  "not free if only byte payment is set",
-			price: market.NewPrice(0, 10, money.CurrencyMystt),
+			price: market.NewPricePtr(0, 10, money.CurrencyMystt),
 			want:  false,
 		},
 		{
 			name:  "not free if time + byte payment is set",
-			price: market.NewPrice(10, 10, money.CurrencyMystt),
+			price: market.NewPricePtr(10, 10, money.CurrencyMystt),
 			want:  false,
 		},
 		{
 			name:  "free if empty",
-			price: market.NewPrice(0, 0, money.CurrencyMystt),
+			price: market.NewPricePtr(0, 0, money.CurrencyMystt),
 			want:  true,
 		},
 	}
@@ -81,7 +81,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 				bytesTransferred: DataTransferred{
 					Up: 100, Down: 100,
 				},
-				price: market.NewPrice(0, 0, money.CurrencyMystt),
+				price: market.NewPricePtr(0, 0, money.CurrencyMystt),
 			},
 			want: big.NewInt(0),
 		},
@@ -92,7 +92,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 				bytesTransferred: DataTransferred{
 					Up: 100, Down: 100,
 				},
-				price: market.NewPrice(3000000, 0, money.CurrencyMystt),
+				price: market.NewPricePtr(3000000, 0, money.CurrencyMystt),
 			},
 			want: big.NewInt(60 * 50000),
 		},
@@ -103,7 +103,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 				bytesTransferred: DataTransferred{
 					Up: datasize.GiB.Bytes() / 2, Down: datasize.GiB.Bytes() / 2,
 				},
-				price: market.NewPrice(0, 7000000, money.CurrencyMystt),
+				price: market.NewPricePtr(0, 7000000, money.CurrencyMystt),
 			},
 			want: big.NewInt(7000000),
 		},
@@ -114,7 +114,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 				bytesTransferred: DataTransferred{
 					Up: datasize.GiB.Bytes() / 2, Down: datasize.GiB.Bytes() / 2,
 				},
-				price: market.NewPrice(3000000, 7000000, money.CurrencyMystt),
+				price: market.NewPricePtr(3000000, 7000000, money.CurrencyMystt),
 			},
 			// 7000000 is the price per gibibyte, 3000000 is the price per hour
 			want: big.NewInt(7000000 + 3000000),
