@@ -101,7 +101,7 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery:
-    image: mysteriumnetwork/discovery:latest
+    image: mysteriumnetwork/discovery:1.0.0
     depends_on:
       db:
         condition: service_healthy
