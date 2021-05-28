@@ -95,6 +95,12 @@ var (
 		Usage: "Do not disconnect consumer on session fail to prevent traffic leaks",
 		Value: false,
 	}
+	// FlagSTUNservers list of STUN server to be used to detect NAT type.
+	FlagSTUNservers = cli.StringSliceFlag{
+		Name:  "stun-servers",
+		Usage: "Comma separated list of STUN server to be used to detect NAT type",
+		Value: cli.NewStringSlice("stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"),
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -113,6 +119,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagTestnet2,
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
+		&FlagSTUNservers,
 	)
 }
 
@@ -130,4 +137,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
+	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
 }

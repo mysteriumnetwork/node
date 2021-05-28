@@ -73,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -99,6 +100,7 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
+	PricingHelper     *pingpong.Pricer
 	EtherClientL1     *paymentClient.ReconnectableEthClient
 	EtherClientL2     *paymentClient.ReconnectableEthClient
 
@@ -115,7 +117,7 @@ type Dependencies struct {
 	IdentityMover    *identity.Mover
 
 	DiscoveryFactory    service.DiscoveryFactory
-	ProposalRepository  proposal.Repository
+	ProposalRepository  *discovery.PricedServiceProposalRepository
 	FilterPresetStorage *proposal.FilterPresetStorage
 	DiscoveryWorker     discovery.Worker
 
@@ -318,7 +320,7 @@ func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 	}
 
 	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.EventBus)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -351,7 +353,9 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		BalanceProvider:           di.ConsumerBalanceTracker,
 		EarningsProvider:          di.HermesChannelRepository,
 		ChainID:                   options.ChainID,
+		ProposalPricer:            di.ProposalRepository,
 	}
+
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
 }
@@ -623,6 +627,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
+	di.PricingHelper = pingpong.NewPricer(di.MysteriumAPI)
+	err = di.PricingHelper.Subscribe(di.EventBus)
+	if err != nil {
+		return err
+	}
 
 	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
@@ -633,8 +642,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		brokerURLs[i] = brokerURL
 	}
 
-	di.BrokerConnector = nats.NewBrokerConnector()
-	di.BrokerConnector.ResolveContext = resolver
+	di.BrokerConnector = nats.NewBrokerConnector(dialer.DialContext, resolver)
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}
@@ -673,25 +681,16 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	if _, err := firewall.AllowURLAccess(
+	if err := di.AllowURLAccess(
 		network.Chain1.EtherClientRPC,
 		network.Chain2.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
 		hermesURL,
+		options.PilvytisAddress,
 	); err != nil {
 		return err
 	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(
-		network.Chain1.EtherClientRPC,
-		network.Chain2.EtherClientRPC,
-		network.MysteriumAPIAddress,
-		options.Transactor.TransactorEndpointAddress,
-		hermesURL,
-	); err != nil {
-		return err
-	}
-
 	return di.IdentityRegistry.Subscribe(di.EventBus)
 }
 
@@ -731,10 +730,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
-	if _, err := firewall.AllowURLAccess(options.Address); err != nil {
-		return err
-	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
+	if err := di.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
 
@@ -778,12 +774,10 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err error) {
-	if _, err = firewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
+	if err = di.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
-		return errors.Wrap(err, "failed to add firewall exception")
-	}
+
 	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL, ip.IPFallbackAddresses)
 	di.IPResolver = ip.NewCachedResolver(ipResolver, 5*time.Minute)
 
@@ -796,10 +790,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	case node.LocationTypeMMDB:
 		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Script, options.Location.Address), di.IPResolver)
 	case node.LocationTypeOracle:
-		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
-			return err
-		}
-		if _, err := di.ServiceFirewall.AllowURLAccess(options.Location.Address); err != nil {
+		if err := di.AllowURLAccess(options.Location.Address); err != nil {
 			return err
 		}
 		resolver, err = location.NewOracleResolver(di.HTTPClient, options.Location.Address), nil
@@ -995,4 +986,23 @@ func (di *Dependencies) bootstrapResidentCountry() error {
 
 func errMissingDependency(dep string) error {
 	return errors.New("Missing dependency: " + dep)
+}
+
+// AllowURLAccess allows the requested addresses to be served when the tunnel is active.
+func (di *Dependencies) AllowURLAccess(servers ...string) error {
+	if _, err := firewall.AllowURLAccess(servers...); err != nil {
+		return err
+	}
+
+	if _, err := di.ServiceFirewall.AllowURLAccess(servers...); err != nil {
+		return err
+	}
+
+	if config.GetBool(config.FlagKeepConnectedOnFail) {
+		if err := router.AllowURLAccess(servers...); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

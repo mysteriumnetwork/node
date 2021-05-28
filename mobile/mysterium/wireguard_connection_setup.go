@@ -113,6 +113,10 @@ func (c *wireguardConnection) Statistics() (connectionstate.Statistics, error) {
 	}, nil
 }
 
+func (c *wireguardConnection) Reconnect(ctx context.Context, options connection.ConnectOptions) (err error) {
+	return c.Start(ctx, options)
+}
+
 func (c *wireguardConnection) Start(ctx context.Context, options connection.ConnectOptions) (err error) {
 	var config wireguard.ServiceConfig
 	err = json.Unmarshal(options.SessionConfig, &config)
@@ -196,6 +200,13 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 		return errors.Wrap(err, "could not create tunnel device")
 	}
 
+	oldDevice := w.device
+	defer func() {
+		if oldDevice != nil {
+			oldDevice.Close()
+		}
+	}()
+
 	w.device = device.NewDevice(tunDevice, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
 
 	err = w.applyConfig(w.device, privateKey, config)
@@ -259,6 +270,7 @@ func (w *wireguardDeviceImpl) applyConfig(devApi *device.Device, privateKey stri
 			// All traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
 			AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
 		},
+		ReplacePeers: true,
 	}
 
 	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(deviceConfig.Encode()))); err != nil {

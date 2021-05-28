@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,13 +40,11 @@ func init() {
 var (
 	proposalFirst = func() market.ServiceProposal {
 		return market.NewProposal("0x1", "mock_service", market.NewProposalOpts{
-			Price:    market.NewPrice(0, 0, money.CurrencyMystt),
 			Contacts: []market.Contact{{Type: "mock_contact", Definition: mockContact{}}},
 		})
 	}
 	proposalSecond = func() market.ServiceProposal {
 		return market.NewProposal("0x2", "mock_service", market.NewProposalOpts{
-			Price:    market.NewPrice(0, 0, money.CurrencyMystt),
 			Contacts: []market.Contact{{Type: "mock_contact", Definition: mockContact{}}},
 		})
 	}
@@ -65,14 +62,9 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	proposalRegister(connection, `
 		{
 		  "proposal": {
-			"format": "service-proposal/v2",
+			"format": "service-proposal/v3",
 			"provider_id": "0x1",
 			"service_type": "mock_service",
-            "price": {
-              "currency": "MYSTT",
-              "per_hour": 0,
-              "per_gib": 0
-            },
 			"contacts": [
 			  {
 				"type": "mock_contact"
@@ -118,11 +110,6 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 		"format": "service-proposal/v2",
 		"provider_id": "0x1",
 		"service_type": "mock_service",
-		"price": {
-          "currency": "MYSTT",
-          "per_hour": 0,
-          "per_gib": 0
-        },
 		"contacts": [
 		  {
 			"type": "mock_contact"
@@ -144,14 +131,9 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 
 	proposalRegister(connection, `{
 	  "proposal": {
-		"format": "service-proposal/v2",
+		"format": "service-proposal/v3",
 		"provider_id": "0x1",
 		"service_type": "mock_service",
-		"price": {
-          "currency": "MYSTT",
-          "per_hour": 0,
-          "per_gib": 0
-        },
 		"contacts": [
 		  {
 			"type": "mock_contact"
@@ -162,14 +144,9 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 
 	proposalPing(connection, `{
 	  "proposal": {
-        "format": "service-proposal/v2",
+        "format": "service-proposal/v3",
 		"provider_id": "0x1",
 		"service_type": "mock_service",
-		"price": {
-          "currency": "MYSTT",
-          "per_hour": 0,
-          "per_gib": 0
-        },
 		"contacts": [
 		  {
 			"type": "mock_contact"
@@ -199,11 +176,6 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 		"format": "service-proposal/v2",
 		"provider_id": "0x1",
 		"service_type": "mock_service",
-		"price": {
-		  "currency": "MYSTT",
-		  "per_hour": 0,
-		  "per_gib": 0
-		},
 		"contacts": [
 		  {
 			"type": "mock_contact"

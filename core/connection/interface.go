@@ -23,8 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 )
 
 // ConsumerConfig are the parameters used for the initiation of connection
@@ -33,6 +33,7 @@ type ConsumerConfig interface{}
 // Connection represents a connection
 type Connection interface {
 	Start(context.Context, ConnectOptions) error
+	Reconnect(context.Context, ConnectOptions) error
 	Stop()
 	GetConfig() (ConsumerConfig, error)
 	State() <-chan connectionstate.State
@@ -45,7 +46,7 @@ type StateChannel chan connectionstate.State
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) error
+	Connect(consumerID identity.Identity, hermesID common.Address, proposal proposal.PricedServiceProposal, params ConnectParams) error
 	// Status queries current status of connection
 	Status() connectionstate.Status
 	// Disconnect closes established connection, reports error if no connection

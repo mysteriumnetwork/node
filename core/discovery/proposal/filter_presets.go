@@ -19,11 +19,8 @@ package proposal
 
 import (
 	"fmt"
-	"math/big"
 	"sort"
 	"sync"
-
-	"github.com/mysteriumnetwork/node/market"
 
 	"github.com/pkg/errors"
 )
@@ -141,7 +138,7 @@ var defaultPresets = []FilterPreset{
 		ID:     1,
 		Name:   "Media Streaming",
 		IPType: Residential,
-		filter: func(proposals []market.ServiceProposal) []market.ServiceProposal {
+		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
 			var totalBandwidth, averageBandwidth float64
 			var totalQuality, avgQuality float64
 
@@ -152,7 +149,7 @@ var defaultPresets = []FilterPreset{
 			averageBandwidth = totalBandwidth / float64(len(proposals))
 			avgQuality = totalQuality / float64(len(proposals))
 
-			var filtered []market.ServiceProposal
+			var filtered []PricedServiceProposal
 			for _, p := range proposals {
 				if p.Quality.Quality >= avgQuality && p.Quality.Bandwidth >= averageBandwidth && p.Location.IPType == "residential" {
 					filtered = append(filtered, p)
@@ -161,7 +158,6 @@ var defaultPresets = []FilterPreset{
 
 			sort.SliceStable(filtered, func(i, j int) bool {
 				qx, qy := filtered[i].Quality, filtered[j].Quality
-
 				if qx.Bandwidth == qy.Bandwidth {
 					return qx.Quality > qy.Quality
 				}
@@ -174,35 +170,22 @@ var defaultPresets = []FilterPreset{
 	{
 		ID:   2,
 		Name: "Browsing",
-		filter: func(proposals []market.ServiceProposal) []market.ServiceProposal {
-			totalPerHour, totalPerGiB := new(big.Int), new(big.Int)
-			avgPerHour, avgPerGiB := new(big.Int), new(big.Int)
+		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
 			var totalQuality, avgQuality float64
 
 			for _, p := range proposals {
-				totalPerHour = new(big.Int).Add(totalPerHour, p.Price.PerHour)
-				totalPerGiB = new(big.Int).Add(totalPerGiB, p.Price.PerGiB)
 				totalQuality += p.Quality.Quality
 			}
-			avgPerHour = new(big.Int).Sub(totalPerHour, avgPerHour)
-			avgPerGiB = new(big.Int).Sub(totalPerGiB, avgPerGiB)
 			avgQuality = totalQuality / float64(len(proposals))
 
-			var filtered []market.ServiceProposal
+			var filtered []PricedServiceProposal
 			for _, p := range proposals {
-				if p.Price.PerGiB.Cmp(avgPerGiB) <= 0 && p.Price.PerHour.Cmp(avgPerHour) <= 0 && p.Quality.Quality > avgQuality {
+				if p.Quality.Quality > avgQuality {
 					filtered = append(filtered, p)
 				}
 			}
 			sort.SliceStable(filtered, func(i, j int) bool {
 				qx, qy := filtered[i].Quality, filtered[j].Quality
-				px, py := filtered[i].Price, filtered[j].Price
-				if qx.Quality == qy.Quality {
-					if px.PerGiB.Cmp(py.PerGiB) == 0 {
-						return px.PerHour.Cmp(py.PerHour) == -1
-					}
-					return px.PerGiB.Cmp(py.PerGiB) == -1
-				}
 				return qx.Quality > qy.Quality
 			})
 
@@ -213,31 +196,13 @@ var defaultPresets = []FilterPreset{
 		ID:     3,
 		Name:   "Download",
 		IPType: Hosting,
-		filter: func(proposals []market.ServiceProposal) []market.ServiceProposal {
-			totalPerHour, totalPerGiB := new(big.Int), new(big.Int)
-			avgPerHour, avgPerGiB := new(big.Int), new(big.Int)
-
+		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
+			var filtered []PricedServiceProposal
 			for _, p := range proposals {
-				totalPerHour = new(big.Int).Add(totalPerHour, p.Price.PerHour)
-				totalPerGiB = new(big.Int).Add(totalPerGiB, p.Price.PerGiB)
-			}
-			avgPerHour = new(big.Int).Sub(totalPerHour, avgPerHour)
-			avgPerGiB = new(big.Int).Sub(totalPerGiB, avgPerGiB)
-
-			var filtered []market.ServiceProposal
-			for _, p := range proposals {
-				if p.Price.PerGiB.Cmp(avgPerGiB) <= 0 && p.Price.PerHour.Cmp(avgPerHour) <= 0 && p.Location.IPType == "hosting" {
+				if p.Location.IPType == "hosting" {
 					filtered = append(filtered, p)
 				}
 			}
-			sort.SliceStable(filtered, func(i, j int) bool {
-				px, py := filtered[i].Price, filtered[j].Price
-				if px.PerGiB.Cmp(py.PerGiB) == 0 {
-					return px.PerHour.Cmp(py.PerHour) == -1
-				}
-				return px.PerGiB.Cmp(py.PerGiB) == -1
-			})
-
 			return filtered
 		},
 	},
@@ -266,11 +231,11 @@ type FilterPreset struct {
 	ID     int
 	Name   string
 	IPType IPType
-	filter func(proposals []market.ServiceProposal) []market.ServiceProposal
+	filter func(proposals []PricedServiceProposal) []PricedServiceProposal
 }
 
 // Filter filters proposals according to preset
-func (fps *FilterPreset) Filter(proposals []market.ServiceProposal) []market.ServiceProposal {
+func (fps *FilterPreset) Filter(proposals []PricedServiceProposal) []PricedServiceProposal {
 	return fps.filter(proposals) // because of storage, fps.filter can't be exported as a struct property
 }
 

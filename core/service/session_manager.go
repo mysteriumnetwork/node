@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net"
 	"time"
 
@@ -106,7 +107,12 @@ type PromiseProcessor interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Price) (PaymentEngine, error)
+
+// PriceValidator allows to validate prices against those in discovery.
+type PriceValidator interface {
+	IsPriceValid(in market.Price, nodeType string, country string) bool
+}
 
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
 type PaymentEngine interface {
@@ -129,6 +135,7 @@ func NewSessionManager(
 	publisher publisher,
 	channel p2p.Channel,
 	config Config,
+	priceValidator PriceValidator,
 ) *SessionManager {
 	return &SessionManager{
 		service:              service,
@@ -139,6 +146,7 @@ func NewSessionManager(
 		paymentEngineChan:    make(chan crypto.ExchangeMessage, 1),
 		channel:              channel,
 		config:               config,
+		priceValidator:       priceValidator,
 	}
 }
 
@@ -152,11 +160,18 @@ type SessionManager struct {
 	publisher            publisher
 	channel              p2p.Channel
 	config               Config
+	priceValidator       PriceValidator
 }
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
+	prices := manager.remapPricing(request.Consumer.Pricing)
+	err = manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country)
+	if err != nil {
+		return pb.SessionResponse{}, err
+	}
+
 	session, err := NewSession(manager.service, request, manager.channel.Tracer())
 	if err != nil {
 		return pb.SessionResponse{}, errors.Wrap(err, "cannot create new session")
@@ -178,11 +193,34 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 	if err = manager.startSession(session); err != nil {
 		return pb.SessionResponse{}, err
 	}
-	if err = manager.paymentLoop(session); err != nil {
+	if err = manager.paymentLoop(session, prices); err != nil {
 		return pb.SessionResponse{}, err
 	}
 
 	return manager.providerService(session, manager.channel)
+}
+
+func (manager *SessionManager) validatePrice(in market.Price, nodeType, country string) error {
+	if !manager.priceValidator.IsPriceValid(in, nodeType, country) {
+		return errors.New("consumer asking for invalid price")
+	}
+
+	return nil
+}
+
+func (manager *SessionManager) remapPricing(in *pb.Pricing) market.Price {
+	// This prevents panics in case of malicious consumers.
+	if in == nil || in.PerGib == nil || in.PerHour == nil {
+		return market.Price{
+			PricePerHour: big.NewInt(0),
+			PricePerGiB:  big.NewInt(0),
+		}
+	}
+
+	return market.Price{
+		PricePerHour: big.NewInt(0).SetBytes(in.PerHour),
+		PricePerGiB:  big.NewInt(0).SetBytes(in.PerGib),
+	}
 }
 
 // Acknowledge marks the session as successfully established as far as the consumer is concerned.
@@ -257,14 +295,14 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 	return nil
 }
 
-func (manager *SessionManager) paymentLoop(session *Session) error {
+func (manager *SessionManager) paymentLoop(session *Session, price market.Price) error {
 	trace := session.tracer.StartStage("Provider session create (payment)")
 	defer session.tracer.EndStage(trace)
 
 	log.Info().Msg("Using new payments")
 
 	chainID := config.GetInt64(config.FlagChainID)
-	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, chainID, session.HermesID, string(session.ID), manager.paymentEngineChan)
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, chainID, session.HermesID, string(session.ID), manager.paymentEngineChan, price)
 	if err != nil {
 		return err
 	}

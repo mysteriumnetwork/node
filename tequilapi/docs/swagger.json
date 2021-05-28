@@ -1320,18 +1320,6 @@
             "in": "query"
           },
           {
-            "type": "string",
-            "description": "Maximum price/hour.",
-            "name": "price_hour_max",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "Maximum price/GiB.",
-            "name": "price_gib_max",
-            "in": "query"
-          },
-          {
             "type": "integer",
             "description": "Minimum compatibility level of the proposal.",
             "name": "compatibility_min",
@@ -3094,44 +3082,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProposalQuality": {
-      "type": "object",
-      "title": "ProposalQuality holds quality metrics per service.",
-      "properties": {
-        "monitoring_failed": {
-          "type": "boolean",
-          "x-go-name": "MonitoringFailed"
-        },
-        "provider_id": {
-          "type": "string",
-          "x-go-name": "ProviderID"
-        },
-        "quality": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "Quality"
-        },
-        "service_type": {
-          "type": "string",
-          "x-go-name": "ServiceType"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ProposalQualityResponse": {
-      "type": "object",
-      "title": "ProposalQualityResponse holds all proposals quality metrics.",
-      "properties": {
-        "quality": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ProposalQuality"
-          },
-          "x-go-name": "Quality"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "Quality": {
       "type": "object",
       "title": "Quality holds proposal quality metrics.",
@@ -3145,22 +3095,6 @@
           "type": "number",
           "format": "double",
           "x-go-name": "Latency"
-        },
-        "quality": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "Quality"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "QualityMetricsDTO": {
-      "type": "object",
-      "title": "QualityMetricsDTO holds proposal quality metrics from Quality Oracle.",
-      "properties": {
-        "monitoring_failed": {
-          "type": "boolean",
-          "x-go-name": "MonitoringFailed"
         },
         "quality": {
           "type": "number",
@@ -3351,9 +3285,6 @@
             "port": 1123,
             "protocol": "udp"
           }
-        },
-        "price": {
-          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider identity",

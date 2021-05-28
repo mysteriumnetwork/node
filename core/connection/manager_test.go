@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"sync"
 	"testing"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/trace"
@@ -76,11 +78,17 @@ var (
 		Definition: p2p.ContactDefinition{},
 	}
 	activeServiceType = "fake-service"
-	activeProposal    = market.ServiceProposal{
-		ProviderID:  activeProviderID.Address,
-		Contacts:    []market.Contact{activeProviderContact},
-		ServiceType: activeServiceType,
-		Location:    market.Location{},
+	activeProposal    = proposal.PricedServiceProposal{
+		ServiceProposal: market.ServiceProposal{
+			ProviderID:  activeProviderID.Address,
+			Contacts:    []market.Contact{activeProviderContact},
+			ServiceType: activeServiceType,
+			Location:    market.Location{},
+		},
+		Price: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
 	}
 	establishedSessionID = session.ID("session-100")
 )
@@ -136,7 +144,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.connManager = NewManager(
 		func(channel p2p.Channel,
-			consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
+			consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				stopChan: make(chan struct{}),
 			}
@@ -717,7 +725,7 @@ type mockValidator struct {
 	errorToReturn error
 }
 
-func (mv *mockValidator) Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error {
+func (mv *mockValidator) Validate(chainID int64, consumerID identity.Identity, price market.Price) error {
 	return mv.errorToReturn
 }
 

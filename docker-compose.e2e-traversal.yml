@@ -101,7 +101,7 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery:
-    image: mysteriumnetwork/discovery:latest
+    image: mysteriumnetwork/discovery:matic-rc2
     depends_on:
       db:
         condition: service_healthy
@@ -119,8 +119,12 @@ services:
       - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
       - QUALITY_ORACLE_URL=http://morqa:8085
       - BROKER_URL=broker
+      - GECKO_URL=http://http-mock:1080/gecko
+      - COINRANKING_URL=http://http-mock:1080/gecko
+      - COINRANKING_TOKEN=suchtoken
     depends_on:
       - db
+      - http-mock
     dns: 172.30.0.254
     networks:
       public0:
@@ -410,6 +414,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -515,6 +520,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --quality.address=http://morqa:8085/api/v2
       --firewall.killSwitch.always
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -568,6 +574,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -621,6 +628,7 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
+      --stun-servers=""
       daemon
     dns: 172.30.0.254
     networks:
@@ -662,7 +670,6 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --firewall.protected.networks=""
-      --api.address=http://discovery:8080/api/v3
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.1.chainID=5
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
@@ -676,7 +683,7 @@ services:
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=ws://ganache:8545
       --firewall.protected.networks=""
-      --api.address=http://mysterium-api:8001/v1
+      --api.address=http://discovery:8080/api/v3
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
@@ -685,6 +692,7 @@ services:
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/
       --access-policy.fetch=1s
+      --stun-servers=""
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5

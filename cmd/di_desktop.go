@@ -239,7 +239,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.HermesStatusChecker,
 			di.EventBus,
-			serviceInstance.Proposal,
 			di.HermesPromiseHandler,
 			di.AddressProvider,
 		)
@@ -251,6 +250,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.EventBus,
 			channel,
 			service.DefaultConfig(),
+			di.PricingHelper,
 		)
 	}
 

@@ -25,12 +25,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -50,33 +50,6 @@ const (
 	DefaultHermesFailureCount uint64 = 10
 )
 
-var giB = big.NewInt(1024 ^ 3)
-var accuracy = big.NewInt(500000000000000)
-
-// NewPrice returns the the default payment method of time + bytes.
-func NewPrice(perGiB, perHour *big.Int) market.Price {
-	if perGiB == nil {
-		perGiB = new(big.Int)
-	}
-	if perHour == nil {
-		perHour = new(big.Int)
-	}
-
-	if perGiB.Cmp(big.NewInt(0)) > 0 {
-		mul := new(big.Int).Mul(giB, accuracy)
-		perGiB = new(big.Int).Div(mul, perGiB)
-	}
-	if perHour.Cmp(big.NewInt(0)) > 0 {
-		mul := new(big.Int).Mul(big.NewInt(int64(time.Hour)), accuracy)
-		perHour = new(big.Int).Div(mul, perHour)
-	}
-	return market.Price{
-		Currency: money.Currency(config.GetString(config.FlagDefaultCurrency)),
-		PerGiB:   perGiB,
-		PerHour:  perHour,
-	}
-}
-
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	channel p2p.Channel,
@@ -87,14 +60,13 @@ func InvoiceFactoryCreator(
 	maxUnpaidInvoiceValue *big.Int,
 	hermesStatusChecker hermesStatusChecker,
 	eventBus eventbus.EventBus,
-	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
 	addressProvider addressProvider,
-) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage, market.Price) (service.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Price) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoiceTrackerDeps{
-			Proposal:                   proposal,
+			AgreedPrice:                price,
 			Peer:                       consumerID,
 			PeerInvoiceSender:          NewInvoiceSender(channel),
 			InvoiceStorage:             invoiceStorage,
@@ -127,8 +99,8 @@ func ExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	addressProvider addressProvider,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
-	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
@@ -142,7 +114,7 @@ func ExchangeFactoryFunc(
 			Ks:                        keystore,
 			Identity:                  consumer,
 			Peer:                      provider,
-			Proposal:                  proposal,
+			AgreedPrice:               price,
 			AddressProvider:           addressProvider,
 			EventBus:                  eventBus,
 			HermesAddress:             hermes,

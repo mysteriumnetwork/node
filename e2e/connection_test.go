@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
@@ -60,10 +59,12 @@ var (
 	tenthThou                   = float64(1) / float64(10000)
 )
 
-var ethClient *ethclient.Client
-var ethClientL2 *ethclient.Client
-var ethSigner func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
-var transactorMongo *Mongo
+var (
+	ethClient       *ethclient.Client
+	ethClientL2     *ethclient.Client
+	ethSigner       func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
+	transactorMongo *Mongo
+)
 
 var (
 	providerStake, _            = big.NewInt(0).SetString("50000000000000000000", 10)
@@ -176,7 +177,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		wg.Wait()
 	})
 	t.Run("Validate provider earnings", func(t *testing.T) {
-		var sum = new(big.Int)
+		sum := new(big.Int)
 		for _, v := range consumersToTest {
 			sum = new(big.Int).Add(sum, v.balanceSpent)
 		}
@@ -307,13 +308,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	t.Run("Provider starts whitelisted noop services", func(t *testing.T) {
 		req := contract.ServiceStartRequest{
-			ProviderID: providerID,
-			Type:       "noop",
-			Price: contract.Price{
-				Currency: string(money.CurrencyMyst),
-				PerHour:  600000000000000000,
-				PerGiB:   10000000000000000,
-			},
+			ProviderID:     providerID,
+			Type:           "noop",
 			AccessPolicies: contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
 		}
 
@@ -631,9 +627,15 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	// call the custom asserter for the given service type
 	serviceTypeAssertionMap[serviceType](t, se)
-
-	consumerStatus, err := tequilapi.Identity(consumerID)
-	assert.NoError(t, err)
+	var consumerStatus = contract.IdentityDTO{}
+	assert.Eventually(t, func() bool {
+		cs, err := tequilapi.Identity(consumerID)
+		if err != nil {
+			return false
+		}
+		consumerStatus = cs
+		return true
+	}, time.Second*20, time.Millisecond*150)
 	assert.True(t, consumerStatus.Balance.Cmp(big.NewInt(0)) == 1, "consumer balance should not be empty")
 	assert.True(t, consumerStatus.Balance.Cmp(balanceAfterRegistration) == -1, "balance should decrease but is %s", consumerStatus.Balance)
 	assert.Zero(t, consumerStatus.Earnings.Uint64())

@@ -18,8 +18,6 @@
 package reducer
 
 import (
-	"math/big"
-
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -46,20 +44,6 @@ func LocationCountry(proposal market.ServiceProposal) interface{} {
 // LocationType selects location type from proposal
 func LocationType(proposal market.ServiceProposal) interface{} {
 	return proposal.Location.IPType
-}
-
-// PriceHourMax checks if the price per hour is lower than or equal to the given value.
-func PriceHourMax(max *big.Int) func(market.ServiceProposal) bool {
-	return func(proposal market.ServiceProposal) bool {
-		return proposal.Price.PerHour.Cmp(max) <= 0
-	}
-}
-
-// PriceGiBMax checks if the price per GiB is lower than or equal to the given value.
-func PriceGiBMax(max *big.Int) func(market.ServiceProposal) bool {
-	return func(proposal market.ServiceProposal) bool {
-		return proposal.Price.PerGiB.Cmp(max) <= 0
-	}
 }
 
 // AccessPolicy returns a matcher for checking if proposal allows given access policy

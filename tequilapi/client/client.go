@@ -355,15 +355,6 @@ func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error
 	return proposals.Proposals, err
 }
 
-// ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(priceHourMax, priceGiBMax *big.Int) ([]contract.ProposalDTO, error) {
-	values := url.Values{}
-	values.Add("price_gib_max", fmt.Sprintf("%v", priceGiBMax))
-	values.Add("price_hour_max", fmt.Sprintf("%v", priceHourMax))
-	values.Add("access_policy", "all")
-	return client.proposals(values)
-}
-
 // Unlock allows using identity in following commands
 func (client *Client) Unlock(identity, passphrase string) error {
 	payload := contract.IdentityUnlockRequest{

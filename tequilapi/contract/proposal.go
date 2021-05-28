@@ -20,28 +20,28 @@ package contract
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
 )
 
 // NewProposalDTO maps to API service proposal.
-func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
+func NewProposalDTO(p proposal.PricedServiceProposal) ProposalDTO {
 	return ProposalDTO{
-		Format:        p.Format,
-		Compatibility: p.Compatibility,
-		ProviderID:    p.ProviderID,
-		ServiceType:   p.ServiceType,
-		Location:      NewServiceLocationsDTO(p.Location),
-		Price: Price{
-			Currency: string(p.Price.Currency),
-			PerHour:  p.Price.PerHour.Uint64(),
-			PerGiB:   p.Price.PerGiB.Uint64(),
-		},
+		Format:         p.Format,
+		Compatibility:  p.Compatibility,
+		ProviderID:     p.ProviderID,
+		ServiceType:    p.ServiceType,
+		Location:       NewServiceLocationsDTO(p.Location),
 		AccessPolicies: p.AccessPolicies,
 		Quality: Quality{
 			Quality:   p.Quality.Quality,
 			Latency:   p.Quality.Latency,
 			Bandwidth: p.Quality.Bandwidth,
+		},
+		Price: Price{
+			Currency: "MYSTT",
+			PerHour:  p.Price.PricePerHour.Uint64(),
+			PerGiB:   p.Price.PricePerGiB.Uint64(),
 		},
 	}
 }
@@ -94,6 +94,14 @@ type ProposalDTO struct {
 	Quality Quality `json:"quality"`
 }
 
+// Price represents the service price.
+// swagger:model Price
+type Price struct {
+	Currency string `json:"currency"`
+	PerHour  uint64 `json:"per_hour"`
+	PerGiB   uint64 `json:"per_gib"`
+}
+
 func (p ProposalDTO) String() string {
 	return fmt.Sprintf("Provider: %s, ServiceType: %s, Country: %s", p.ProviderID, p.ServiceType, p.Location.Country)
 }
@@ -115,52 +123,6 @@ type ServiceLocationDTO struct {
 	ISP string `json:"isp,omitempty"`
 	// example: residential
 	IPType string `json:"ip_type,omitempty"`
-}
-
-// Price represents the service price.
-// swagger:model Price
-type Price struct {
-	Currency string `json:"currency"`
-	PerHour  uint64 `json:"per_hour"`
-	PerGiB   uint64 `json:"per_gib"`
-}
-
-// NewProposalQualityResponse maps to API proposal quality.
-func NewProposalQualityResponse(metrics []quality.ProposalQuality) ProposalQualityResponse {
-	var res []ProposalQuality
-	for _, m := range metrics {
-		res = append(res, ProposalQuality{
-			ProviderID:  m.ProposalID.ProviderID,
-			ServiceType: m.ProposalID.ServiceType,
-			Quality:     m.Quality,
-		})
-	}
-
-	return ProposalQualityResponse{
-		Quality: res,
-	}
-}
-
-// ProposalQualityResponse holds all proposals quality metrics.
-// swagger:model ProposalQualityResponse
-type ProposalQualityResponse struct {
-	Quality []ProposalQuality `json:"quality"`
-}
-
-// ProposalQuality holds quality metrics per service.
-// swagger:model ProposalQuality
-type ProposalQuality struct {
-	ProviderID       string  `json:"provider_id"`
-	ServiceType      string  `json:"service_type"`
-	Quality          float64 `json:"quality"`
-	MonitoringFailed bool    `json:"monitoring_failed"`
-}
-
-// QualityMetricsDTO holds proposal quality metrics from Quality Oracle.
-// swagger:model QualityMetricsDTO
-type QualityMetricsDTO struct {
-	Quality          float64 `json:"quality"`
-	MonitoringFailed bool    `json:"monitoring_failed"`
 }
 
 // Quality holds proposal quality metrics.

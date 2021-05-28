@@ -28,3 +28,9 @@ type Repository interface {
 	// Proposals returns proposals matching the filter.
 	Proposals(filter *Filter) ([]market.ServiceProposal, error)
 }
+
+// PricedServiceProposal enriches proposals with price data.
+type PricedServiceProposal struct {
+	market.ServiceProposal
+	Price market.Price `json:"price,omitempty"`
+}

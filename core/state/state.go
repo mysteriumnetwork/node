@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state/event"
@@ -35,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	nodeSession "github.com/mysteriumnetwork/node/session"
@@ -108,6 +110,11 @@ type KeeperDeps struct {
 	BalanceProvider           balanceProvider
 	EarningsProvider          earningsProvider
 	ChainID                   int64
+	ProposalPricer            proposalPricer
+}
+
+type proposalPricer interface {
+	EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error)
 }
 
 // NewKeeper returns a new instance of the keeper.
@@ -239,13 +246,18 @@ func (k *Keeper) updateServices() {
 		// merge in the connection statistics
 		match, _ := k.getServiceByID(string(key))
 
+		priced, err := k.deps.ProposalPricer.EnrichProposalWithPrice(v.Proposal)
+		if err != nil {
+			log.Warn().Msgf("could not load price for proposal %v(%v)", v.Proposal.ProviderID, v.Proposal.ServiceType)
+		}
+
 		result[i] = contract.ServiceInfoDTO{
 			ID:                   string(key),
 			ProviderID:           v.ProviderID.Address,
 			Type:                 v.Type,
 			Options:              v.Options,
 			Status:               string(v.State()),
-			Proposal:             contract.NewProposalDTO(v.Proposal),
+			Proposal:             contract.NewProposalDTO(priced),
 			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++

@@ -30,10 +30,6 @@ type ServiceStartRequest struct {
 	// example: openvpn
 	Type string `json:"type"`
 
-	// Price describes service pricing.
-	// required: false
-	Price Price `json:"price"`
-
 	// access list which determines which identities will be able to receive the service
 	// required: false
 	AccessPolicies ServiceAccessPolicies `json:"access_policies"`

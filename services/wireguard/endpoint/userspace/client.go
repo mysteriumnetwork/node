@@ -22,12 +22,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
-	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
+
+	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 type client struct {
@@ -49,6 +50,19 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 	}
 
 	c.devAPI = device.NewDevice(c.tun, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+
+	return c.configureDevice(config)
+}
+
+func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) (err error) {
+	if err = netutil.AssignIP(config.IfaceName, config.Subnet); err != nil {
+		return fmt.Errorf("failed to assign IP address: %w", err)
+	}
+
+	return c.configureDevice(config)
+}
+
+func (c *client) configureDevice(config wgcfg.DeviceConfig) (err error) {
 	if err := c.setDeviceConfig(config.Encode()); err != nil {
 		return errors.Wrap(err, "failed to configure initial device")
 	}

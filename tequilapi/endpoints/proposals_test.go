@@ -18,11 +18,9 @@
 package endpoints
 
 import (
-	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,27 +35,36 @@ var TestLocation = market.Location{ASN: 123, Country: "Lithuania", City: "Vilniu
 var (
 	priceHourMax = big.NewInt(50000)
 	priceGiBMax  = big.NewInt(7000000)
-	price        = mocks.Price()
 	mockQuality  = mocks.Quality()
 )
 
-var serviceProposals = []market.ServiceProposal{
-	market.NewProposal("0xProviderId", "testprotocol", market.NewProposalOpts{
-		Location: &TestLocation,
-		Price:    &price,
-		Quality:  &mockQuality,
-	}),
-	market.NewProposal("other_provider", "testprotocol", market.NewProposalOpts{
-		Location: &TestLocation,
-		Price:    &price,
-		Quality:  &mockQuality,
-	}),
+var serviceProposals = []proposal.PricedServiceProposal{
+	{
+		ServiceProposal: market.NewProposal("0xProviderId", "testprotocol", market.NewProposalOpts{
+			Location: &TestLocation,
+			Quality:  &mockQuality,
+		}),
+		Price: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	},
+	{
+		ServiceProposal: market.NewProposal("other_provider", "testprotocol", market.NewProposalOpts{
+			Location: &TestLocation,
+			Quality:  &mockQuality,
+		}),
+		Price: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	},
 }
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	repository := &mockProposalRepository{
 		// we assume that underling component does correct filtering
-		proposals: []market.ServiceProposal{serviceProposals[0]},
+		proposals: []proposal.PricedServiceProposal{serviceProposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -69,7 +76,6 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 
 	query := req.URL.Query()
 	query.Set("provider_id", "0xProviderId")
-	setPricingBounds(query)
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
@@ -81,7 +87,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 		`{
             "proposals": [
                 {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
                     "provider_id": "0xProviderId",
                     "service_type": "testprotocol",
@@ -90,36 +96,31 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-                    "price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 }
             ]
         }`,
 		resp.Body.String(),
 	)
 
-	upperTime := priceHourMax
-	upperGB := priceGiBMax
-
 	assert.EqualValues(t, &proposal.Filter{
 		ProviderID:         "0xProviderId",
-		PriceHourMax:       upperTime,
-		PriceGiBMax:        upperGB,
 		ExcludeUnsupported: true,
 	}, repository.recordedFilter)
 }
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	repository := &mockProposalRepository{
-		proposals: []market.ServiceProposal{serviceProposals[0]},
+		proposals: []proposal.PricedServiceProposal{serviceProposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -143,7 +144,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 		`{
             "proposals": [
                 {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
                     "provider_id": "0xProviderId",
                     "service_type": "testprotocol",
@@ -152,16 +153,16 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-                    "price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 }
             ]
         }`,
@@ -198,7 +199,7 @@ func TestProposalsEndpointList(t *testing.T) {
 		`{
             "proposals": [
                 {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
                     "provider_id": "0xProviderId",
                     "service_type": "testprotocol",
@@ -207,19 +208,19 @@ func TestProposalsEndpointList(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-                    "price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 },
                 {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
                     "provider_id": "other_provider",
                     "service_type": "testprotocol",
@@ -228,16 +229,16 @@ func TestProposalsEndpointList(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-                    "price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
                 }
             ]
         }`,
@@ -246,23 +247,26 @@ func TestProposalsEndpointList(t *testing.T) {
 }
 
 type mockProposalRepository struct {
-	proposals      []market.ServiceProposal
+	proposals      []proposal.PricedServiceProposal
 	recordedFilter *proposal.Filter
+	priceToAdd     market.Price
 }
 
-func (m *mockProposalRepository) Proposal(_ market.ProposalID) (*market.ServiceProposal, error) {
+func (m *mockProposalRepository) Proposal(_ market.ProposalID) (*proposal.PricedServiceProposal, error) {
 	if len(m.proposals) == 0 {
 		return nil, nil
 	}
 	return &m.proposals[0], nil
 }
 
-func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
 	m.recordedFilter = filter
 	return m.proposals, nil
 }
 
-func setPricingBounds(v url.Values) {
-	v.Add("price_hour_max", fmt.Sprintf("%v", priceHourMax))
-	v.Add("price_gib_max", fmt.Sprintf("%v", priceGiBMax))
+func (m *mockProposalRepository) EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error) {
+	return proposal.PricedServiceProposal{
+		Price:           m.priceToAdd,
+		ServiceProposal: in,
+	}, nil
 }

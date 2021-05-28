@@ -18,10 +18,7 @@
 package reducer
 
 import (
-	"math/big"
-
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 )
 
 var (
@@ -49,55 +46,6 @@ var (
 	proposalProvider2Streaming = market.NewProposal(provider2, serviceTypeStreaming, market.NewProposalOpts{
 		Location:       &locationResidential,
 		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
-	})
-	proposalTimeExpensive = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(9999999999999),
-			PerGiB:   big.NewInt(0),
-		},
-	})
-	proposalTimeCheap = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(0),
-			PerGiB:   big.NewInt(0),
-		},
-	})
-	proposalTimeExact = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(60000000),
-			PerGiB:   big.NewInt(0),
-		},
-	})
-	proposalBytesExpensive = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(0),
-			PerGiB:   big.NewInt(7000001),
-		},
-	})
-	proposalBytesCheap = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(0),
-			PerGiB:   big.NewInt(0),
-		},
-	})
-	proposalBytesExact = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(0),
-			PerGiB:   big.NewInt(7000000),
-		},
-	})
-	proposalBytesExactInParts = market.NewProposal(provider1, serviceTypeStreaming, market.NewProposalOpts{
-		Price: &market.Price{
-			Currency: money.CurrencyMyst,
-			PerHour:  big.NewInt(0),
-			PerGiB:   big.NewInt(7000000),
-		},
 	})
 )
 

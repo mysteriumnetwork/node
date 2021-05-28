@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -54,7 +55,7 @@ type mockConnectionManager struct {
 	requestedServiceType string
 }
 
-func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, options connection.ConnectParams) error {
+func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal proposal.PricedServiceProposal, options connection.ConnectParams) error {
 	cm.requestedConsumerID = consumerID
 	cm.requestedHermesID = hermesID
 	cm.requestedProvider = identity.FromAddress(proposal.ProviderID)
@@ -80,14 +81,16 @@ func (cm *mockConnectionManager) Reconnect() {
 }
 
 func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRepository {
-	sampleProposal := market.ServiceProposal{
-		ServiceType: serviceType,
-		Location:    TestLocation,
-		ProviderID:  providerID,
+	sampleProposal := proposal.PricedServiceProposal{
+		ServiceProposal: market.ServiceProposal{
+			ServiceType: serviceType,
+			Location:    TestLocation,
+			ProviderID:  providerID,
+		},
 	}
 
 	return &mockProposalRepository{
-		proposals: []market.ServiceProposal{sampleProposal},
+		proposals: []proposal.PricedServiceProposal{sampleProposal},
 	}
 }
 
@@ -157,7 +160,7 @@ func TestStateIsReturnedFromStore(t *testing.T) {
 			HermesID:   common.Address{},
 			State:      connectionstate.Disconnecting,
 			SessionID:  "1",
-			Proposal:   market.ServiceProposal{},
+			Proposal:   proposal.PricedServiceProposal{},
 		},
 	}
 

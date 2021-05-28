@@ -19,11 +19,9 @@ package market
 
 import (
 	"encoding/json"
-	"math/big"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +38,6 @@ func init() {
 func Test_ServiceProposal_Serialize(t *testing.T) {
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, "MYSTT")
 	sp := NewProposal("node", "mock_service", NewProposalOpts{
-		Price: NewPrice(10, 20, money.Currency(config.GetString(config.FlagDefaultCurrency))),
 		Quality: &Quality{
 			Quality:   2.0,
 			Latency:   5,
@@ -54,15 +51,11 @@ func Test_ServiceProposal_Serialize(t *testing.T) {
 
 	expectedJSON := `{
       "compatibility": 0,
-	  "format": "service-proposal/v2",
+	  "format": "service-proposal/v3",
 	  "service_type": "mock_service",
 	  "provider_id": "node",
       "location": {},
-      "price": {
-        "currency": "MYSTT",
-        "per_hour": 10,
-        "per_gib": 20
-      },
+	  "id": 0,
       "quality": {
         "quality": 2.0,
         "latency": 5,
@@ -77,14 +70,9 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 	RegisterServiceType("mock_service")
 	jsonData := []byte(`{
 		"id": 1,
-		"format": "service-proposal/v2",
+		"format": "service-proposal/v3",
 		"provider_id": "node",
 		"service_type": "mock_service",
-        "price": {
-          "currency": "MYSTT",
-          "per_hour": 0,
-          "per_gib": 10
-        },
 		"contacts": [
 			{ "type" : "mock_contact" , "definition" : {}}
 		]
@@ -95,14 +83,10 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := ServiceProposal{
+		ID:          1,
 		Format:      proposalFormat,
 		ServiceType: "mock_service",
-		Price: Price{
-			Currency: money.CurrencyMystt,
-			PerHour:  big.NewInt(0),
-			PerGiB:   big.NewInt(10),
-		},
-		ProviderID: "node",
+		ProviderID:  "node",
 		Contacts: ContactList{
 			Contact{
 				Type:       "mock_contact",
@@ -118,14 +102,9 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 	RegisterServiceType("mock_service")
 	jsonData := []byte(`{
 		"id": 1,
-		"format": "service-proposal/v2",
+		"format": "service-proposal/v3",
 		"service_type": "mock_service",
 		"provider_id": "node",
-        "price": {
-          "currency": "MYSTT",
-          "per_hour": 10,
-          "per_gib": 10
-        },
 		"contacts": [
 			{ "type" : "mock_contact" , "definition" : {}}
 		],
@@ -154,14 +133,10 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 		},
 	}
 	expected := ServiceProposal{
+		ID:          1,
 		Format:      proposalFormat,
 		ServiceType: "mock_service",
-		Price: Price{
-			Currency: money.CurrencyMystt,
-			PerHour:  big.NewInt(10),
-			PerGiB:   big.NewInt(10),
-		},
-		ProviderID: "node",
+		ProviderID:  "node",
 		Contacts: ContactList{
 			Contact{
 				Type:       "mock_contact",

@@ -24,12 +24,12 @@ import (
 	"net"
 	"net/url"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
-
-	"google.golang.org/protobuf/proto"
 )
 
 const (

@@ -72,7 +72,7 @@ func (r *Runner) Test(providerHost string) error {
 	log.Info().Msg("Running tests for env: " + r.testEnv)
 
 	err := r.compose("run", "go-runner",
-		"/usr/bin/test", "-test.v",
+		"/usr/local/bin/test", "-test.v",
 		"-provider.tequilapi-host", providerHost,
 		"-provider.tequilapi-port=4050",
 		"-consumer.tequilapi-port=4050",
@@ -128,7 +128,7 @@ func (r *Runner) Init() error {
 
 	log.Info().Msg("Deploying contracts")
 	err := r.compose("run", "go-runner",
-		"/usr/bin/deployer",
+		"/usr/local/bin/deployer",
 		"--keystore.directory=./keystore",
 		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
 		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
@@ -139,7 +139,7 @@ func (r *Runner) Init() error {
 
 	log.Info().Msg("Deploying contracts to bc2")
 	err = r.compose("run", "go-runner",
-		"/usr/bin/deployer",
+		"/usr/local/bin/deployer",
 		"--keystore.directory=./keystore",
 		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
 		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),

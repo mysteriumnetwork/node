@@ -21,31 +21,41 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/requests"
+	nats_lib "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
-	// ResolveContext specifies the resolve function for doing custom DNS lookup.
+	// resolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
-	ResolveContext requests.ResolveContext
+	resolveContext requests.ResolveContext
+
+	dialer requests.DialContext
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
-func NewBrokerConnector() *BrokerConnector {
-	return &BrokerConnector{}
+func NewBrokerConnector(dialer requests.DialContext, resolveContext requests.ResolveContext) *BrokerConnector {
+	return &BrokerConnector{
+		resolveContext: resolveContext,
+		dialer:         dialer,
+	}
 }
 
 func (b *BrokerConnector) resolveServers(serverURLs []*url.URL) ([]*url.URL, error) {
-	if b.ResolveContext == nil {
+	if b.resolveContext == nil {
 		return serverURLs, nil
 	}
 
 	for _, serverURL := range serverURLs {
-		addrs, err := b.ResolveContext(context.Background(), "tcp", serverURL.Host)
+		ctx, cancel := context.WithTimeout(context.Background(), nats_lib.DefaultTimeout)
+		defer cancel()
+
+		addrs, err := b.resolveContext(ctx, "tcp", serverURL.Host)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to resolve NATS server "%s"`, serverURL.Hostname())
 		}
@@ -79,7 +89,7 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 		return nil, errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, servers)
 	}
 
-	conn, err := newConnection(servers...)
+	conn, err := newConnection(b.dialer, servers...)
 	if err != nil {
 		return nil, err
 	}
