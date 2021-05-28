@@ -49,10 +49,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:matic-rc2
-    depends_on:
-      db:
-        condition: service_healthy
+    image: mysteriumnetwork/discovery:matic-rc3
     expose:
       - 8080
     environment:
@@ -63,6 +60,7 @@ services:
       - GECKO_URL=http://http-mock:1080/gecko
       - COINRANKING_URL=http://http-mock:1080/gecko
       - COINRANKING_TOKEN=suchtoken
+      - UNIVERSE_JWT_SECRET=suchsecret
     depends_on:
       - db
       - http-mock
