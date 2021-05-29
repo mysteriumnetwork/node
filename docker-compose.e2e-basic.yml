@@ -49,7 +49,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:latest
+    image: mysteriumnetwork/discovery:1.0.0
     depends_on:
       db:
         condition: service_healthy
