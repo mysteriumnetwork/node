@@ -265,15 +265,24 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
+	ip.publishInvoicePayedEvent(invoice)
+
+	// TODO: we'd probably want to check if we have enough balance here
+	err = ip.incrementGrandTotalPromised(*diff)
+	return errors.Wrap(err, "could not increment grand total")
+}
+
+func (ip *InvoicePayer) publishInvoicePayedEvent(invoice crypto.Invoice) {
+	// session id might be set later than we start paying invoices, skip in that case.
+	if ip.deps.SessionID == "" {
+		return
+	}
+
 	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
 		ConsumerID: ip.deps.Identity,
 		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,
 	})
-
-	// TODO: we'd probably want to check if we have enough balance here
-	err = ip.incrementGrandTotalPromised(*diff)
-	return errors.Wrap(err, "could not increment grand total")
 }
 
 // Stop stops the message tracker.
