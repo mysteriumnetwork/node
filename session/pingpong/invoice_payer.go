@@ -81,6 +81,8 @@ type InvoicePayer struct {
 
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
+
+	sessionIDLock sync.Mutex
 }
 
 type hashSigner interface {
@@ -273,6 +275,9 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 }
 
 func (ip *InvoicePayer) publishInvoicePayedEvent(invoice crypto.Invoice) {
+	ip.sessionIDLock.Lock()
+	defer ip.sessionIDLock.Unlock()
+
 	// session id might be set later than we start paying invoices, skip in that case.
 	if ip.deps.SessionID == "" {
 		return
@@ -330,5 +335,7 @@ func (ip *InvoicePayer) getDataTransferred() DataTransferred {
 
 // SetSessionID updates invoice payer dependencies to set session ID once session established.
 func (ip *InvoicePayer) SetSessionID(sessionID string) {
+	ip.sessionIDLock.Lock()
+	defer ip.sessionIDLock.Unlock()
 	ip.deps.SessionID = sessionID
 }
