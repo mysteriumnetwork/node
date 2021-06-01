@@ -17,7 +17,9 @@
 
 package requests
 
-import "sync"
+import (
+	"sync"
+)
 
 var defaultResolveCache = NewResolverCache()
 
