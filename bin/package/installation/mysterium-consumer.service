@@ -15,7 +15,6 @@ LogsDirectory=mysterium-node
 EnvironmentFile=-/etc/default/mysterium-node
 ExecStart=/usr/bin/myst $CONF_DIR $SCRIPT_DIR $DATA_DIR $RUN_DIR $DAEMON_OPTS daemon
 KillMode=process
-TimeoutStopSec=10
 SendSIGKILL=yes
 Restart=on-failure
 RestartSec=5

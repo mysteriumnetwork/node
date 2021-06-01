@@ -81,6 +81,8 @@ type InvoicePayer struct {
 
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
+
+	sessionIDLock sync.Mutex
 }
 
 type hashSigner interface {
@@ -265,15 +267,27 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
+	ip.publishInvoicePayedEvent(invoice)
+
+	// TODO: we'd probably want to check if we have enough balance here
+	err = ip.incrementGrandTotalPromised(*diff)
+	return errors.Wrap(err, "could not increment grand total")
+}
+
+func (ip *InvoicePayer) publishInvoicePayedEvent(invoice crypto.Invoice) {
+	ip.sessionIDLock.Lock()
+	defer ip.sessionIDLock.Unlock()
+
+	// session id might be set later than we start paying invoices, skip in that case.
+	if ip.deps.SessionID == "" {
+		return
+	}
+
 	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
 		ConsumerID: ip.deps.Identity,
 		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,
 	})
-
-	// TODO: we'd probably want to check if we have enough balance here
-	err = ip.incrementGrandTotalPromised(*diff)
-	return errors.Wrap(err, "could not increment grand total")
 }
 
 // Stop stops the message tracker.
@@ -321,5 +335,7 @@ func (ip *InvoicePayer) getDataTransferred() DataTransferred {
 
 // SetSessionID updates invoice payer dependencies to set session ID once session established.
 func (ip *InvoicePayer) SetSessionID(sessionID string) {
+	ip.sessionIDLock.Lock()
+	defer ip.sessionIDLock.Unlock()
 	ip.deps.SessionID = sessionID
 }
