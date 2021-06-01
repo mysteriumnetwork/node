@@ -606,7 +606,7 @@ func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey Publ
 
 	sess.SetMtu(kcpMTUSize)
 
-	return sess, localAddr, err
+	return sess, localAddr, nil
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {
