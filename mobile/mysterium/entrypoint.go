@@ -18,7 +18,6 @@
 package mysterium
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -26,7 +25,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
@@ -492,31 +490,9 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 	return &ConnectResponse{}
 }
 
-// Reconnect checks weather session is alive and reconnects if its dead. Force reconnect if ForceReconnect is set.
+// Reconnect is deprecated, we are doing reconnect now in the connection manager.
+// TODO remove this from mobile app and here too.
 func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
-	reconnect := func() *ConnectResponse {
-		if err := mb.Disconnect(); err != nil {
-			log.Err(err).Msg("Failed to disconnect previous session")
-		}
-
-		return mb.Connect(req)
-	}
-
-	if req.ForceReconnect {
-		log.Info().Msg("Forcing immediate reconnect")
-		return reconnect()
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	if err := mb.connectionManager.CheckChannel(ctx); err != nil {
-		log.Info().Msgf("Forcing reconnect after failed channel: %s", err)
-		return reconnect()
-	}
-
-	log.Info().Msg("Reconnect is not needed - p2p channel is alive")
-
 	return &ConnectResponse{}
 }
 
