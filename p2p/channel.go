@@ -199,6 +199,10 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		return nil, fmt.Errorf("could not create proxy conn: %w", err)
 	}
 
+	if err := router.ProtectUDPConn(proxyConn); err != nil {
+		return nil, fmt.Errorf("failed to protect udp proxy connection: %w", err)
+	}
+
 	// Setup KCP session. It will write to proxy conn only.
 	udpSession, sessAddr, err := listenUDPSession(proxyConn.LocalAddr(), privateKey, peerPubKey)
 	if err != nil {
