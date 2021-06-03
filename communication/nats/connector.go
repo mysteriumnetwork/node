@@ -19,6 +19,7 @@ package nats
 
 import (
 	"context"
+	"net"
 	"net/url"
 
 	nats_lib "github.com/nats-io/nats.go"
@@ -59,6 +60,8 @@ func (b *BrokerConnector) resolveServers(serverURLs []*url.URL) ([]*url.URL, err
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to resolve NATS server "%s"`, serverURL.Hostname())
 		}
+
+		cacheBrokerDNS(serverURL.Host, addrs)
 
 		for _, addr := range addrs {
 			serverURLResolved := *serverURL
@@ -101,4 +104,30 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 	conn.onClose = removeFirewallRule
 
 	return conn, nil
+}
+
+func cacheBrokerDNS(server string, addrs []string) {
+	host, _, err := net.SplitHostPort(server)
+	if err != nil {
+		log.Warn().Msgf("Failed to parse broker address: %v", server)
+		return
+	}
+
+	cacheAddrs := []string{}
+
+	for _, addr := range addrs {
+		if server == addr {
+			continue
+		}
+
+		ip, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			log.Warn().Msgf("Failed to parse broker address: %v", addr)
+			continue
+		}
+
+		cacheAddrs = append(cacheAddrs, ip)
+	}
+
+	requests.CacheDNSRecord(host, cacheAddrs)
 }

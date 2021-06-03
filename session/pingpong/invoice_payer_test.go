@@ -566,11 +566,12 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 				res: big.NewInt(0),
 				bus: mp,
 			},
-			Ks:       ks,
-			EventBus: mp,
-			Identity: identity.FromAddress(acc.Address.Hex()),
-			Peer:     peerID,
-			ChainID:  1,
+			Ks:        ks,
+			EventBus:  mp,
+			Identity:  identity.FromAddress(acc.Address.Hex()),
+			Peer:      peerID,
+			ChainID:   1,
+			SessionID: "someid",
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -596,6 +597,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 			TransactorFee:  new(big.Int),
 			Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 		},
+		SessionID: emt.deps.SessionID,
 	}, ev.value)
 
 	ev = <-mp.publicationChan

@@ -835,8 +835,14 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 
 func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnectionState) {
 	if state.State == connectionstate.StateOnHold {
-		if err := m.autoReconnect(); err != nil {
-			log.Error().Err(err).Msg("Failed to reconnect active session")
+		for err := m.autoReconnect(); err != nil; err = m.autoReconnect() {
+			select {
+			case <-m.currentCtx().Done():
+				log.Info().Err(m.currentCtx().Err()).Msg("Stopping reconnect")
+				return
+			default:
+				log.Error().Err(err).Msg("Failed to reconnect active session, will try again")
+			}
 		}
 	}
 }
