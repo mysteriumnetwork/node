@@ -57,7 +57,7 @@ func NewDialerSwarm(srcIP string, dnsHeadstart time.Duration) *DialerSwarm {
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
 			Control: func(net, address string, c syscall.RawConn) (err error) {
 				err = c.Control(func(f uintptr) {
-					log.Debug().Msgf("Protecting connection to: %s (%s)", address, net)
+					log.Trace().Msgf("Protecting connection to: %s (%s)", address, net)
 
 					fd := int(f)
 					err := router.Protect(fd)
