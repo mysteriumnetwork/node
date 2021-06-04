@@ -38,7 +38,7 @@ func NewNoopPinger(publisher eventbus.Publisher) *NoopPinger {
 }
 
 // PingProviderPeer does nothing.
-func (np *NoopPinger) PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (np *NoopPinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return []*net.UDPConn{}, nil
 }
 

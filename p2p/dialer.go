@@ -276,11 +276,13 @@ func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, c
 	}
 
 	log.Debug().Msg("Skipping provider ping")
-	conn1, err := net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
+
+	ip := defaultInterfaceAddress()
+	conn1, err := net.DialUDP("udp4", &net.UDPAddr{IP: net.ParseIP(ip), Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not create UDP conn for p2p channel: %w", err)
 	}
-	conn2, err := net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
+	conn2, err := net.DialUDP("udp4", &net.UDPAddr{IP: net.ParseIP(ip), Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not create UDP conn for service: %w", err)
 	}
@@ -304,8 +306,9 @@ func (m *dialer) dialPinger(ctx context.Context, providerID identity.Identity, c
 		return nil, nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
 	}
 
+	ip := defaultInterfaceAddress()
 	log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.peerIP(), config.localPorts, config.peerPorts)
-	conns, err := m.consumerPinger.PingProviderPeer(ctx, config.peerIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
+	conns, err := m.consumerPinger.PingProviderPeer(ctx, ip, config.peerIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not ping peer: %w", err)
 	}
