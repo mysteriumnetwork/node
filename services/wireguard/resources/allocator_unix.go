@@ -1,4 +1,4 @@
-//+build !windows
+// +build !windows
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
@@ -26,8 +26,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/core/port"
 )
 
 // MaxConnections sets the limit to the maximum number of wireguard connections.

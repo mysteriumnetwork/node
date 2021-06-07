@@ -1,4 +1,5 @@
-//+build android
+// +build android
+
 /*
  * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
