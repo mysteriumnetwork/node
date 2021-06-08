@@ -1,7 +1,7 @@
 FROM alpine:3.12
 
 # Install packages
-RUN apk add --update --no-cache iptables ipset ca-certificates openvpn bash sudo openresolv
+RUN apk add --no-cache iptables ipset ca-certificates openvpn bash sudo openresolv
 
 COPY bin/helpers/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh
 COPY bin/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
