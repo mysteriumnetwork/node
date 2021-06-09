@@ -50,8 +50,8 @@ var errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
 
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
-	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
-	PingConsumerPeer(ctx context.Context, id string, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingProviderPeer(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumerPeer(ctx context.Context, id string, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	Stop()
 }
 
@@ -103,7 +103,7 @@ func (p *Pinger) Stop() {
 // PingConsumerPeer pings remote peer with a defined configuration
 // and notifies peer which connections will be used.
 // It returns n connections if possible or error.
-func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
 	defer cancel()
 
@@ -112,7 +112,7 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, ip string, loc
 	stop := make(chan struct{})
 	defer close(stop)
 
-	ch, err := p.multiPingN(ctx, ip, localPorts, remotePorts, initialTTL, n)
+	ch, err := p.multiPingN(ctx, "", remoteIP, localPorts, remotePorts, initialTTL, n)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -162,13 +162,13 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, ip string, loc
 // PingProviderPeer pings remote peer with a defined configuration
 // and waits for peer to send ack with connection selected ids.
 // It returns n connections if possible or error.
-func (p *Pinger) PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
 	defer cancel()
 
 	log.Info().Msg("NAT pinging to remote peer")
 
-	ch, err := p.multiPingN(ctx, ip, localPorts, remotePorts, initialTTL, n)
+	ch, err := p.multiPingN(ctx, localIP, remoteIP, localPorts, remotePorts, initialTTL, n)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -341,7 +341,7 @@ type pingResponse struct {
 	id   int
 }
 
-func (p *Pinger) multiPingN(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (<-chan pingResponse, error) {
+func (p *Pinger) multiPingN(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (<-chan pingResponse, error) {
 	if len(localPorts) != len(remotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
@@ -356,7 +356,7 @@ func (p *Pinger) multiPingN(ctx context.Context, ip string, localPorts, remotePo
 
 		go func(i, ttl int) {
 			defer wg.Done()
-			conn, err := p.singlePing(ctx, ip, localPorts[i], remotePorts[i], ttl)
+			conn, err := p.singlePing(ctx, localIP, remoteIP, localPorts[i], remotePorts[i], ttl)
 			ch <- pingResponse{conn: conn, err: err, id: i}
 		}(i, ttl)
 
@@ -374,8 +374,8 @@ func (p *Pinger) multiPingN(ctx context.Context, ip string, localPorts, remotePo
 	return ch, nil
 }
 
-func (p *Pinger) singlePing(ctx context.Context, remoteIP string, localPort, remotePort, ttl int) (*net.UDPConn, error) {
-	conn, err := net.ListenUDP("udp4", &net.UDPAddr{Port: localPort})
+func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, localPort, remotePort, ttl int) (*net.UDPConn, error) {
+	conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP(localIP), Port: localPort})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}

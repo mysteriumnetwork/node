@@ -15,7 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.5.0
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20200620013148-b91950f658ec // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
@@ -48,7 +48,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
-	github.com/mysteriumnetwork/go-dvpn-web v0.1.31
+	github.com/mysteriumnetwork/go-dvpn-web v0.2.32
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e

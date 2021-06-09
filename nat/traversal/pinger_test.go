@@ -24,9 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mysteriumnetwork/node/core/port"
 )
 
 func TestPinger_Multiple_Stop(t *testing.T) {
@@ -58,7 +59,7 @@ func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	}
 	peerConns := make(chan *net.UDPConn, 2)
 	go func() {
-		conns, err := consumer.PingProviderPeer(context.Background(), "127.0.0.1", cPorts, pPorts, 128, 2)
+		conns, err := consumer.PingProviderPeer(context.Background(), "", "127.0.0.1", cPorts, pPorts, 128, 2)
 		require.NoError(t, err)
 		require.Len(t, conns, 2)
 		peerConns <- conns[0]
@@ -100,7 +101,7 @@ func TestPinger_PingPeer_Not_Enough_Connections_Timeout(t *testing.T) {
 
 	consumerPingErr := make(chan error)
 	go func() {
-		_, err := consumer.PingProviderPeer(context.Background(), "127.0.0.1", cPorts, pPorts, 2, 30)
+		_, err := consumer.PingProviderPeer(context.Background(), "", "127.0.0.1", cPorts, pPorts, 2, 30)
 		consumerPingErr <- err
 	}()
 	conns, err := provider.PingConsumerPeer(context.Background(), "id", "127.0.0.1", pPorts, cPorts, 2, 30)
@@ -140,8 +141,7 @@ func newPinger(config *PingConfig) NATPinger {
 	return NewPinger(config, &mockPublisher{})
 }
 
-type mockPublisher struct {
-}
+type mockPublisher struct{}
 
 func (p mockPublisher) Publish(topic string, data interface{}) {
 }

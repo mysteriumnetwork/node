@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"path/filepath"
 	"time"
 
@@ -47,6 +48,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -317,7 +319,12 @@ type GetLocationResponse struct {
 
 // GetLocation return current location including country and IP.
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
-	loc, err := mb.locationResolver.DetectLocation()
+	c := requests.NewHTTPClientWithTransport(http.DefaultTransport.(*http.Transport), 30*time.Second)
+	resolver := location.NewOracleResolver(c, DefaultNodeOptions().LocationDetectorURL)
+	loc, err := resolver.DetectLocation()
+	// TODO this is temporary workaround to show correct location on Android.
+	// This needs to be fixed on the di level to make sure we are using correct resolver in transport and in visual part.
+	// loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
 		return nil, fmt.Errorf("could not get location: %w", err)
 	}
