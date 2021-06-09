@@ -189,21 +189,21 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 }
 
 func proposalRegister(connection nats.Connection, payload string) {
-	err := connection.Publish("*.proposal-register.v2", []byte(payload))
+	err := connection.Publish("*.proposal-register.v3", []byte(payload))
 	if err != nil {
 		panic(err)
 	}
 }
 
 func proposalUnregister(connection nats.Connection, payload string) {
-	err := connection.Publish("*.proposal-unregister.v2", []byte(payload))
+	err := connection.Publish("*.proposal-unregister.v3", []byte(payload))
 	if err != nil {
 		panic(err)
 	}
 }
 
 func proposalPing(connection nats.Connection, payload string) {
-	err := connection.Publish("*.proposal-ping.v2", []byte(payload))
+	err := connection.Publish("*.proposal-ping.v3", []byte(payload))
 	if err != nil {
 		panic(err)
 	}

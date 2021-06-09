@@ -27,7 +27,7 @@ type registerMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const registerEndpoint = communication.MessageEndpoint("proposal-register.v2")
+const registerEndpoint = communication.MessageEndpoint("proposal-register.v3")
 
 // registerProducer
 type registerProducer struct {
