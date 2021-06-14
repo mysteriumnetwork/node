@@ -51,6 +51,10 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) bool {
 	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
 
+	if balance.Cmp(big.NewInt(0)) == 0 {
+		balance = v.consumerBalanceGetter.ForceBalanceUpdate(chainID, consumerID)
+	}
+
 	if perHour := proposal.Price.PerHour; perHour.Cmp(big.NewInt(0)) > 0 {
 		perMin := new(big.Int).Div(perHour, big.NewInt(60))
 		if balance.Cmp(perMin) < 0 {
