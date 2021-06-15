@@ -26,6 +26,7 @@ import (
 	command_cfg "github.com/mysteriumnetwork/node/cmd/commands/config"
 	"github.com/mysteriumnetwork/node/cmd/commands/connection"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
+	"github.com/mysteriumnetwork/node/cmd/commands/keystore"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/reset"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
@@ -53,6 +54,7 @@ var (
 	accountCommand    = account.NewCommand()
 	connectionCommand = connection.NewCommand()
 	configCommand     = command_cfg.NewCommand()
+	keysCommand       = keystore.NewCommand()
 )
 
 func main() {
@@ -99,6 +101,7 @@ func NewCommand() (*cli.App, error) {
 		accountCommand,
 		connectionCommand,
 		configCommand,
+		keysCommand,
 	}
 
 	return app, nil
