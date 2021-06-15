@@ -106,6 +106,7 @@ type MobileNodeOptions struct {
 	RegistrySCAddress              string
 	HermesSCAddress                string
 	ChannelImplementationSCAddress string
+	CacheTTLSeconds                int
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -134,6 +135,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		RegistrySCAddress:              metadata.Testnet2Definition.Chain1.RegistryAddress,
 		HermesSCAddress:                metadata.Testnet2Definition.Chain1.HermesID,
 		ChannelImplementationSCAddress: metadata.Testnet2Definition.Chain1.ChannelImplAddress,
+		CacheTTLSeconds:                5,
 	}
 }
 
@@ -273,6 +275,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.FilterPresetStorage,
+			time.Duration(options.CacheTTLSeconds)*time.Second,
 		),
 		pilvytis:       di.Pilvytis,
 		startTime:      time.Now(),

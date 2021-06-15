@@ -20,6 +20,7 @@ package mysterium
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -51,10 +52,12 @@ func (s *proposalManagerTestSuite) SetupTest() {
 		s.repository,
 		s.mysteriumAPI,
 		nil,
+		60*time.Second,
 	)
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
+	s.proposalsManager.cachedAt = time.Now().Add(1 * time.Hour)
 	s.proposalsManager.cache = []market.ServiceProposal{
 		market.NewProposal("p1", "openvpn", market.NewProposalOpts{
 			Location: &market.Location{
