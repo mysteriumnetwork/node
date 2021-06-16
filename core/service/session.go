@@ -77,7 +77,17 @@ func (s *Session) addCleanup(fn func() error) {
 	s.cleanupLock.Lock()
 	defer s.cleanupLock.Unlock()
 
-	s.cleanup = append(s.cleanup, fn)
+	// If add cleanup is called after the session close, clean up immediately.
+	// Otherwise, add it to be cleaned up later.
+	select {
+	case <-s.done:
+		err := fn()
+		if err != nil {
+			log.Warn().Err(err).Msg("Cleanup error")
+		}
+	default:
+		s.cleanup = append(s.cleanup, fn)
+	}
 }
 
 func (s *Session) toEvent(status event.Status) event.AppEventSession {
