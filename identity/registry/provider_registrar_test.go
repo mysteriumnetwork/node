@@ -138,7 +138,7 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet2(t *testing.T) {
+func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet3(t *testing.T) {
 	mt := mockTransactor{
 		bountyResult: false,
 	}
@@ -146,7 +146,7 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet2(t *testing.T) 
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{
-		IsTestnet2: true,
+		IsTestnet3: true,
 	}
 	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{
 		addrToReturn: newRegistryAddress,

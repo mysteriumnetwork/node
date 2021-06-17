@@ -59,7 +59,7 @@ type Consumer struct {
 	EtherClientRPC      string
 }
 
-// Testnet2Definition defines parameters for testnet2 network (currently default network)
+// Testnet3Definition defines parameters for testnet3 network (currently default network)
 var Testnet3Definition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet3-discovery.mysterium.network/api/v3",
 	AccessPolicyOracleAddress: "https://testnet3-trust.mysterium.network/api/v1/access-policies/",
@@ -89,8 +89,8 @@ var Testnet3Definition = NetworkDefinition{
 		"testnet3-discovery.mysterium.network":  {"167.233.11.60"},
 		"testnet3-trust.mysterium.network":      {"167.233.11.60"},
 		"testnet3-broker.mysterium.network":     {"167.233.11.60"},
-		"testnet2-transactor.mysterium.network": {"167.233.11.60"},
-		"testnet2-pilvytis.mysterium.network":   {"167.233.11.60"},
+		"testnet3-transactor.mysterium.network": {"167.233.11.60"},
+		"testnet3-pilvytis.mysterium.network":   {"167.233.11.60"},
 	},
 	DefaultChainID:  80001,
 	DefaultCurrency: "MYSTT",

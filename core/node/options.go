@@ -99,8 +99,8 @@ func GetOptions() *Options {
 		EtherClientRPCL2:      config.GetString(config.FlagEtherRPCL2),
 		ChainID:               config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
-			"testnet2-location.mysterium.network": {"95.216.204.232"},
-			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
+			"testnet3-location.mysterium.network": {"167.233.11.60"},
+			"testnet3-quality.mysterium.network":  {"167.233.11.60"},
 			"feedback.mysterium.network":          {"116.203.17.150"},
 			"api.ipify.org": {
 				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",

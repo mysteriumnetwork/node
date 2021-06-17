@@ -29,7 +29,7 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
-	// FlagTestnet2 uses testnet2 network.
+	// FlagTestnet3 uses testnet3 network.
 	FlagTestnet3 = cli.BoolFlag{
 		Name:  "testnet3",
 		Usage: "Defines testnet3 configuration",

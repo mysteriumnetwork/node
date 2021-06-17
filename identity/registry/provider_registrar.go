@@ -72,7 +72,7 @@ type queuedEvent struct {
 
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
-	IsTestnet2          bool
+	IsTestnet3          bool
 	MaxRetries          int
 	Stake               *big.Int
 	DelayBetweenRetries time.Duration
@@ -190,7 +190,7 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 	id := identity.FromAddress(qe.event.ProviderID)
 
-	if !pr.cfg.IsTestnet2 {
+	if !pr.cfg.IsTestnet3 {
 		eligible, err := pr.txer.CheckIfRegistrationBountyEligible(id)
 		if err != nil {
 			log.Error().Err(err).Msgf("eligibility for registration check failed for %q", id.Address)
@@ -233,7 +233,7 @@ var newRegistryAddress = common.HexToAddress("0x00100000000001000000000010000000
 var oldRegistryAddress = common.HexToAddress("0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2")
 
 func (pr *ProviderRegistrar) getBeneficiaryFromOldRegistry(id identity.Identity) (common.Address, error) {
-	// This checks for migration from old registry to new on testnet2 related to matic.
+	// This checks for migration from old registry to new on testnet3 related to matic.
 	// In such a case, we need to check if provider was already registered and just migrate them to new registry with the
 	// old beneficiary.
 	registryAddress, err := pr.multiChainAddressKeeper.GetRegistryAddress(pr.chainID())

@@ -224,14 +224,14 @@ func Test_isIP(t *testing.T) {
 		{
 			name: "detects url correctly",
 			args: args{
-				addr: "testnet2-location.mysterium.network:443",
+				addr: "testnet3-location.mysterium.network:443",
 			},
 			want: false,
 		},
 		{
 			name: "detects url with no port correctly",
 			args: args{
-				addr: "testnet2-location.mysterium.network",
+				addr: "testnet3-location.mysterium.network",
 			},
 			want: false,
 		},

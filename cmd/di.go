@@ -582,7 +582,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	return nil
 }
 
-// function decides on network definition combined from testnet2/localnet flags and possible overrides
+// function decides on network definition combined from testnet3/localnet flags and possible overrides
 func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
 	optionsNetwork := options.OptionsNetwork
 	network := metadata.DefaultNetwork
