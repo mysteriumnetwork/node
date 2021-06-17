@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
@@ -292,13 +291,10 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *service.Instance) (contract.ServiceInfoDTO, error) {
-	spew.Dump("before", instance.Proposal)
 	priced, err := se.proposalRepository.EnrichProposalWithPrice(instance.Proposal)
 	if err != nil {
 		return contract.ServiceInfoDTO{}, err
 	}
-	spew.Dump("after", priced)
-	spew.Dump("after after ", contract.NewProposalDTO(priced))
 
 	return contract.ServiceInfoDTO{
 		ID:         string(id),

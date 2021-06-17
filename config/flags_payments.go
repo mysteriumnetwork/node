@@ -29,8 +29,8 @@ var (
 	// FlagPaymentsMaxHermesFee represents the max hermes fee.
 	FlagPaymentsMaxHermesFee = cli.IntFlag{
 		Name:  "payments.hermes.max.fee",
-		Value: 1500,
-		Usage: "The max fee that we'll accept from an hermes. In percentiles. 1500 means 15%",
+		Value: 3000,
+		Usage: "The max fee that we'll accept from an hermes. In percentiles. 3000 means 30%",
 	}
 	// FlagPaymentsBCTimeout represents the BC call timeout.
 	FlagPaymentsBCTimeout = cli.DurationFlag{
