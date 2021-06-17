@@ -91,7 +91,7 @@ type Options struct {
 func GetOptions() *Options {
 	network := OptionsNetwork{
 		Localnet:              config.GetBool(config.FlagLocalnet),
-		Testnet2:              config.GetBool(config.FlagTestnet2),
+		Testnet3:              config.GetBool(config.FlagTestnet3),
 		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
 		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),

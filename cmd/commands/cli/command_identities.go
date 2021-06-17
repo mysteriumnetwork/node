@@ -208,7 +208,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.config.GetBoolByFlag(config.FlagTestnet2) {
+	if c.config.GetBoolByFlag(config.FlagTestnet3) {
 		msg = "Registration successful, try to connect."
 	}
 

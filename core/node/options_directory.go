@@ -43,7 +43,7 @@ type OptionsDirectory struct {
 
 const (
 	// NetworkSubDirTestnet2 represents testnet2 subdir
-	NetworkSubDirTestnet2 = "testnet2"
+	NetworkSubDirTestnet2 = "testnet3"
 
 	// NetworkSubDirLocalnet represents localnet subdir
 	NetworkSubDirLocalnet = "localnet"
@@ -54,7 +54,7 @@ func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
 	networkSubdir := NetworkSubDirTestnet2 // Matches DefaultNetworkDefinition
 	switch {
-	case network.Testnet2:
+	case network.Testnet3:
 		networkSubdir = NetworkSubDirTestnet2
 	case network.Localnet:
 		networkSubdir = NetworkSubDirLocalnet

@@ -60,41 +60,41 @@ type Consumer struct {
 }
 
 // Testnet2Definition defines parameters for testnet2 network (currently default network)
-var Testnet2Definition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://testnet2-ndiscovery.mysterium.network/api/v3",
-	AccessPolicyOracleAddress: "https://testnet2-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://testnet2-broker.mysterium.network"},
-	TransactorIdentity:        "0x45b224f0cd64ed5179502da42ed4e32228485b3b",
-	TransactorAddress:         "https://testnet2-transactor.mysterium.network/api/v1",
+var Testnet3Definition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://testnet3-discovery.mysterium.network/api/v3",
+	AccessPolicyOracleAddress: "https://testnet3-trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddresses:           []string{"nats://testnet3-broker.mysterium.network"},
+	TransactorIdentity:        "0x7d72db0c2db675ea5107caba80acac2154ca362b",
+	TransactorAddress:         "https://testnet3-transactor.mysterium.network/api/v1",
 	Chain1: ChainDefinition{
-		RegistryAddress:    "0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2",
-		ChannelImplAddress: "0xc49B987fB8701a41ae65Cf934a811FeA15bCC6E4",
-		HermesID:           "0xD5d2f5729D4581dfacEBedF46C7014DeFda43585",
+		RegistryAddress:    "0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39",
+		ChannelImplAddress: "0x1aDF7Ef34b9d48DCc8EBC47D989bfdE55933B6ea",
+		HermesID:           "0x7119442C7E627438deb0ec59291e31378F88DD06",
 		ChainID:            5,
 		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
 		EtherClientRPC:     "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	},
 	Chain2: ChainDefinition{
-		RegistryAddress:    "0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2",
-		ChannelImplAddress: "0xc49B987fB8701a41ae65Cf934a811FeA15bCC6E4",
-		HermesID:           "0xD5d2f5729D4581dfacEBedF46C7014DeFda43585",
+		RegistryAddress:    "0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39",
+		ChannelImplAddress: "0xf8982Ba93D3d9182D095B892DE2A7963eF9807ee",
+		HermesID:           "0x7119442C7E627438deb0ec59291e31378F88DD06",
 		ChainID:            80001,
-		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
+		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
 		EtherClientRPC:     "wss://rpc-mumbai.maticvigil.com/ws/v1/7bbf37fc19c1e2092fee698be41eeb73f64b2493",
 	},
 	MMNAddress:      "https://my.mysterium.network/",
 	MMNAPIAddress:   "https://my.mysterium.network/api/v1",
-	PilvytisAddress: "https://testnet2-pilvytis.mysterium.network/api/v1",
+	PilvytisAddress: "https://testnet3-pilvytis.mysterium.network/api/v1",
 	DNSMap: map[string][]string{
-		"testnet2-api.mysterium.network":        {"78.47.55.197"},
-		"testnet2-trust.mysterium.network":      {"95.216.204.232"},
-		"testnet2-broker.mysterium.network":     {"95.216.204.232"},
-		"testnet2-transactor.mysterium.network": {"135.181.82.67"},
-		"testnet2-pilvytis.mysterium.network":   {"195.201.220.36"},
+		"testnet3-discovery.mysterium.network":  {"167.233.11.60"},
+		"testnet3-trust.mysterium.network":      {"167.233.11.60"},
+		"testnet3-broker.mysterium.network":     {"167.233.11.60"},
+		"testnet2-transactor.mysterium.network": {"167.233.11.60"},
+		"testnet2-pilvytis.mysterium.network":   {"167.233.11.60"},
 	},
-	DefaultChainID:  5,
+	DefaultChainID:  80001,
 	DefaultCurrency: "MYSTT",
-	LocationAddress: "https://testnet2-location.mysterium.network/api/v1/location",
+	LocationAddress: "https://testnet3-location.mysterium.network/api/v1/location",
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,
@@ -120,4 +120,4 @@ var LocalnetDefinition = NetworkDefinition{
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given
-var DefaultNetwork = Testnet2Definition
+var DefaultNetwork = Testnet3Definition
