@@ -20,6 +20,7 @@ package mysterium
 import (
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -105,48 +106,63 @@ type proposalRepository interface {
 func newProposalsManager(
 	repository proposalRepository,
 	filterPresetStorage *proposal.FilterPresetStorage,
+	cacheTTL time.Duration,
 ) *proposalsManager {
 	return &proposalsManager{
 		repository:          repository,
 		filterPresetStorage: filterPresetStorage,
+		cacheTTL:            cacheTTL,
 	}
 }
 
 type proposalsManager struct {
 	repository          proposalRepository
 	cache               []proposal.PricedServiceProposal
+	cachedAt            time.Time
+	cacheTTL            time.Duration
 	filterPresetStorage *proposal.FilterPresetStorage
+}
+
+func (m *proposalsManager) isCacheStale() bool {
+	return time.Now().After(m.cachedAt.Add(m.cacheTTL))
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposalsResponse, error) {
 	// Get proposals from cache if exists.
-	if !req.Refresh {
-		cachedProposals := m.getFromCache()
-		if len(cachedProposals) > 0 {
-			return m.mapToProposalsResponse(cachedProposals)
-		}
-	}
-
-	apiProposals, err := m.getFromRepository(req.toFilter())
-	if err != nil {
-		return nil, err
-	}
-
-	if req.PresetID != 0 {
-		preset, err := m.filterPresetStorage.Get(req.PresetID)
+	if req.Refresh || m.isCacheStale() {
+		apiProposals, err := m.getFromRepository(req.toFilter())
 		if err != nil {
 			return nil, err
 		}
-		apiProposals = preset.Filter(apiProposals)
+		m.addToCache(apiProposals)
 	}
 
-	m.addToCache(apiProposals)
+	filteredProposals, err := m.applyFilter(req.PresetID, m.getFromCache())
+	if err != nil {
+		return nil, err
+	}
+	return m.map2Response(filteredProposals)
+}
 
-	return m.mapToProposalsResponse(apiProposals)
+func (m *proposalsManager) applyFilter(presetID int, proposals []proposal.PricedServiceProposal) ([]proposal.PricedServiceProposal, error) {
+	if presetID != 0 {
+		preset, err := m.filterPresetStorage.Get(presetID)
+		if err != nil {
+			return nil, err
+		}
+		return preset.Filter(proposals), nil
+	}
+
+	return proposals, nil
 }
 
 func (m *proposalsManager) getFromCache() []proposal.PricedServiceProposal {
 	return m.cache
+}
+
+func (m *proposalsManager) addToCache(proposals []proposal.PricedServiceProposal) {
+	m.cache = proposals
+	m.cachedAt = time.Now()
 }
 
 func (m *proposalsManager) getFromRepository(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
@@ -166,11 +182,7 @@ func (m *proposalsManager) getFromRepository(filter *proposal.Filter) ([]proposa
 	return res, nil
 }
 
-func (m *proposalsManager) addToCache(proposals []proposal.PricedServiceProposal) {
-	m.cache = proposals
-}
-
-func (m *proposalsManager) mapToProposalsResponse(serviceProposals []proposal.PricedServiceProposal) (*getProposalsResponse, error) {
+func (m *proposalsManager) map2Response(serviceProposals []proposal.PricedServiceProposal) (*getProposalsResponse, error) {
 	var proposals []*proposalDTO
 	for _, p := range serviceProposals {
 		proposals = append(proposals, m.mapProposal(&p))

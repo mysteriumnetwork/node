@@ -49,9 +49,12 @@ func createTunnel(interfaceName string, dns []string) (tunnel tun.Device, _ stri
 		dnsIPs = append(dnsIPs, net.ParseIP(d))
 	}
 
-	err = firewall.EnableFirewall(nativeTun.LUID(), false, dnsIPs)
-	if err != nil {
-		log.Warn().Err(err).Msg("Unable to enable DNS firewall rules")
+	// TODO temporary disable Windows DNS firewall blocking, this creates connection problems.
+	if false {
+		err = firewall.EnableFirewall(nativeTun.LUID(), false, dnsIPs)
+		if err != nil {
+			log.Warn().Err(err).Msg("Unable to enable DNS firewall rules")
+		}
 	}
 
 	wintunVersion, ndisVersion, err := nativeTun.Version()
@@ -76,5 +79,5 @@ func applySocketPermissions(_ string, _ string) error {
 }
 
 func disableFirewall() {
-	firewall.DisableFirewall()
+	// firewall.DisableFirewall()
 }

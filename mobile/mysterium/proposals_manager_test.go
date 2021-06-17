@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -42,10 +43,12 @@ func (s *proposalManagerTestSuite) SetupTest() {
 	s.proposalsManager = newProposalsManager(
 		s.repository,
 		nil,
+		60*time.Second,
 	)
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
+	s.proposalsManager.cachedAt = time.Now().Add(1 * time.Hour)
 	s.proposalsManager.cache = []proposal.PricedServiceProposal{
 		{
 			ServiceProposal: market.NewProposal("p1", "openvpn", market.NewProposalOpts{
