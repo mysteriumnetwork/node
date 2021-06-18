@@ -19,17 +19,20 @@ package connection
 
 import (
 	"fmt"
-	"strconv"
+	"math/big"
 
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
 
 func proposalFormatted(p *contract.ProposalDTO) string {
+	ph := money.New(new(big.Int).SetUint64(p.Price.PerHour))
+	pg := money.New(new(big.Int).SetUint64(p.Price.PerGiB))
 	return fmt.Sprintf("| Identity: %s\t| Type: %s\t| Country: %s\t | Price: %s/hour\t%s/GiB\t|",
 		p.ProviderID,
 		p.Location.IPType,
 		p.Location.Country,
-		strconv.FormatUint(p.Price.PerHour, 10),
-		strconv.FormatUint(p.Price.PerGiB, 10),
+		ph.String(),
+		pg.String(),
 	)
 }
