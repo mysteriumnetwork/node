@@ -332,8 +332,8 @@ func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDT
 func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
 	queryParams.Add("service_type", serviceType)
-	queryParams.Add("location_type", locationType)
-	queryParams.Add("country", locationCountry)
+	queryParams.Add("ip_type", locationType)
+	queryParams.Add("location_country", locationCountry)
 	return client.proposals(queryParams)
 }
 
