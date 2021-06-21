@@ -49,6 +49,11 @@ func (pspr *PricedServiceProposalRepository) Proposal(id market.ProposalID) (*pr
 		return nil, err
 	}
 
+	// base repo can sometimes return nil proposals.
+	if prop == nil {
+		return nil, nil
+	}
+
 	priced, err := pspr.toPricedProposal(*prop)
 	return &priced, err
 }
