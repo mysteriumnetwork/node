@@ -360,6 +360,7 @@ func (client *Client) ProposalsByPrice(priceHourMax, priceGiBMax *big.Int) ([]co
 	values.Add("price_gib_max", fmt.Sprintf("%v", priceGiBMax))
 	values.Add("price_hour_max", fmt.Sprintf("%v", priceHourMax))
 	values.Add("access_policy", "all")
+	values.Add("include_monitoring_failed", "true")
 	return client.proposals(values)
 }
 
