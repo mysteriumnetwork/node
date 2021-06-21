@@ -128,19 +128,21 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		return float32(f)
 	}()
 
+	includeMonitoringFailed, _ := strconv.ParseBool(req.URL.Query().Get("include_monitoring_failed"))
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
-		ProviderID:         req.URL.Query().Get("provider_id"),
-		ServiceType:        req.URL.Query().Get("service_type"),
-		AccessPolicy:       req.URL.Query().Get("access_policy"),
-		AccessPolicySource: req.URL.Query().Get("access_policy_source"),
-		LocationCountry:    req.URL.Query().Get("location_country"),
-		IPType:             req.URL.Query().Get("ip_type"),
-		PriceGiBMax:        priceGiBMax,
-		PriceHourMax:       priceHourMax,
-		CompatibilityMin:   compatibilityMin,
-		CompatibilityMax:   compatibilityMax,
-		QualityMin:         qualityMin,
-		ExcludeUnsupported: true,
+		ProviderID:              req.URL.Query().Get("provider_id"),
+		ServiceType:             req.URL.Query().Get("service_type"),
+		AccessPolicy:            req.URL.Query().Get("access_policy"),
+		AccessPolicySource:      req.URL.Query().Get("access_policy_source"),
+		LocationCountry:         req.URL.Query().Get("location_country"),
+		IPType:                  req.URL.Query().Get("ip_type"),
+		PriceGiBMax:             priceGiBMax,
+		PriceHourMax:            priceHourMax,
+		CompatibilityMin:        compatibilityMin,
+		CompatibilityMax:        compatibilityMax,
+		QualityMin:              qualityMin,
+		ExcludeUnsupported:      true,
+		IncludeMonitoringFailed: includeMonitoringFailed,
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)

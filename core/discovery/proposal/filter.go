@@ -36,6 +36,7 @@ type Filter struct {
 	CompatibilityMin, CompatibilityMax int
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
+	IncludeMonitoringFailed            bool
 }
 
 // Matches return flag if filter matches given proposal
@@ -81,15 +82,16 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 // ToAPIQuery serialises filter to query of Mysterium API
 func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 	query := mysterium.ProposalsQuery{
-		ProviderID:         filter.ProviderID,
-		ServiceType:        filter.ServiceType,
-		LocationCountry:    filter.LocationCountry,
-		IPType:             filter.IPType,
-		CompatibilityMin:   filter.CompatibilityMin,
-		CompatibilityMax:   filter.CompatibilityMax,
-		AccessPolicy:       filter.AccessPolicy,
-		AccessPolicySource: filter.AccessPolicySource,
-		QualityMin:         filter.QualityMin,
+		ProviderID:              filter.ProviderID,
+		ServiceType:             filter.ServiceType,
+		LocationCountry:         filter.LocationCountry,
+		IPType:                  filter.IPType,
+		CompatibilityMin:        filter.CompatibilityMin,
+		CompatibilityMax:        filter.CompatibilityMax,
+		AccessPolicy:            filter.AccessPolicy,
+		AccessPolicySource:      filter.AccessPolicySource,
+		QualityMin:              filter.QualityMin,
+		IncludeMonitoringFailed: filter.IncludeMonitoringFailed,
 	}
 	if priceGibMax := filter.PriceGiBMax; priceGibMax != nil {
 		query.PriceGibMax = priceGibMax.Uint64()
