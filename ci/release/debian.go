@@ -66,6 +66,16 @@ func ReleaseDebianPPASnapshot() error {
 	if err != nil {
 		return err
 	}
+
+	// TODO: Remove after testnet3 is merged in to master
+	if env.Str(env.BuildBranch) == "testnet3" {
+		return releaseDebianPPA(&releaseDebianOpts{
+			repository:  "testnet3",
+			version:     ppaVersion(env.Str(env.BuildVersion)),
+			buildNumber: env.Str(env.BuildNumber),
+		})
+	}
+
 	if !env.Bool(env.SnapshotBuild) {
 		log.Info().Msg("Not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
 		return nil
