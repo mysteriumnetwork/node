@@ -67,12 +67,8 @@ func ReleaseDebianPPASnapshot() error {
 		return err
 	}
 
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
-		return nil
-	}
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:  "node-dev",
+		repository:  "testnet3",
 		version:     ppaVersion(env.Str(env.BuildVersion)),
 		buildNumber: env.Str(env.BuildNumber),
 	})

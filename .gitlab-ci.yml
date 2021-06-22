@@ -160,7 +160,7 @@ release-snapshot:debian-ppa:
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPASnapshot
   only:
-    - master
+    - testnet3-build
 
 release-snapshot:goreport:
   stage: release-snapshot
