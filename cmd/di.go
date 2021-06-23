@@ -275,7 +275,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.FilterPresetStorage = proposal.NewFilterPresetStorage(di.Storage)
 	appconfig.Current.EnableEventPublishing(di.EventBus)
 
 	di.handleNATStatusForPublicIP()
