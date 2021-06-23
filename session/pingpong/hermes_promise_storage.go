@@ -84,6 +84,10 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 	return nil
 }
 
+func (aps *HermesPromiseStorage) Delete(promise HermesPromise) error {
+	return aps.bolt.DeleteKey(aps.getBucketName(promise.Promise.ChainID), promise.ChannelID)
+}
+
 func (aps *HermesPromiseStorage) get(chainID int64, channelID string) (HermesPromise, error) {
 	result := &HermesPromise{}
 	err := aps.bolt.GetValue(aps.getBucketName(chainID), channelID, result)

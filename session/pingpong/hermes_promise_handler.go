@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -149,10 +148,12 @@ func (aph *HermesPromiseHandler) PayAndSettle(r []byte, em crypto.ExchangeMessag
 		}()
 		return er.errChan
 	}
-
+	log.Info().Msg("caller created")
 	er.requestFunc = hermesCaller.PayAndSettle
 
+	log.Info().Msg("queuing")
 	aph.queue <- er
+	log.Info().Msg("queued")
 	return er.errChan
 }
 
@@ -181,26 +182,12 @@ func (aph *HermesPromiseHandler) handleRequests() {
 
 // Subscribe subscribes HermesPromiseHandler to relevant events.
 func (aph *HermesPromiseHandler) Subscribe(bus eventbus.Subscriber) error {
-	err := bus.SubscribeAsync(event.AppTopicNode, aph.handleNodeStopEvents)
+	err := bus.SubscribeAsync(event.AppTopicNode, aph.handleNodeEvents)
 	if err != nil {
 		return fmt.Errorf("could not subscribe to node events: %w", err)
 	}
 
-	err = bus.SubscribeAsync(servicestate.AppTopicServiceStatus, aph.handleServiceEvent)
-	if err != nil {
-		return fmt.Errorf("could not subscribe to service events: %w", err)
-	}
 	return nil
-}
-
-func (aph *HermesPromiseHandler) handleServiceEvent(ev servicestate.AppEventServiceStatus) {
-	if ev.Status == string(servicestate.Running) {
-		aph.startOnce.Do(
-			func() {
-				aph.updateFee()
-				aph.handleRequests()
-			})
-	}
 }
 
 func (aph *HermesPromiseHandler) doStop() {
@@ -209,9 +196,18 @@ func (aph *HermesPromiseHandler) doStop() {
 	})
 }
 
-func (aph *HermesPromiseHandler) handleNodeStopEvents(e event.Payload) {
+func (aph *HermesPromiseHandler) handleNodeEvents(e event.Payload) {
 	if e.Status == event.StatusStopped {
 		aph.doStop()
+		return
+	}
+	if e.Status == event.StatusStarted {
+		aph.startOnce.Do(
+			func() {
+				aph.updateFee()
+				aph.handleRequests()
+			},
+		)
 		return
 	}
 }

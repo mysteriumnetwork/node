@@ -431,6 +431,14 @@ func (mpcsp *mockProviderChannelStatusProvider) GetMystBalance(chainID int64, my
 	return mpcsp.balanceToReturn, nil
 }
 
+func (mpcsp *mockProviderChannelStatusProvider) GetProvidersWithdrawalChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
+	return client.ProviderChannel{}, nil
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) SubscribeToWithdrawalPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
+	return nil, func() {}, nil
+}
+
 var cfg = HermesPromiseSettlerConfig{
 	Threshold:            0.1,
 	MaxWaitForSettlement: time.Millisecond * 10,
