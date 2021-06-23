@@ -2433,6 +2433,19 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "CurrentPriceResponse": {
+      "type": "object",
+      "title": "CurrentPriceResponse represents the price.",
+      "properties": {
+        "price_per_gib": {
+          "$ref": "#/definitions/Int"
+        },
+        "price_per_hour": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "DNSOption": {
       "description": "DNSOption defines DNS server selection strategy for consumer",
       "type": "string",

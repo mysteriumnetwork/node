@@ -79,7 +79,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository).List
+	handlerFunc := NewProposalsEndpoint(repository, nil, nil).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -136,7 +136,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository).List
+	handlerFunc := NewProposalsEndpoint(repository, nil, nil).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -191,7 +191,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository).List
+	handlerFunc := NewProposalsEndpoint(repository, nil, nil).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
