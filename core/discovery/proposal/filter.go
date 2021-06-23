@@ -27,6 +27,7 @@ import (
 
 // Filter defines all flags for proposal filtering in discovery of Mysterium Network
 type Filter struct {
+	PresetID                           int
 	ProviderID                         string
 	ServiceType                        string
 	LocationCountry                    string

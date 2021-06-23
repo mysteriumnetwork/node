@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -73,7 +74,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository).List
+	handlerFunc := NewProposalsEndpoint(repository, &mockFilterPresetRepository{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -135,7 +136,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository).List
+	handlerFunc := NewProposalsEndpoint(repository, &mockFilterPresetRepository{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -177,7 +178,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	)
 }
 
-func TestProposalsEndpointList(t *testing.T) {
+func TestProposalsEndpointFilterByPresetID(t *testing.T) {
 	repository := &mockProposalRepository{
 		proposals: serviceProposals,
 	}
@@ -190,7 +191,16 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository).List
+	presetRepository := &mockFilterPresetRepository{
+		presets: proposal.FilterPresets{Entries: []proposal.FilterPreset{
+			{
+				ID:     0,
+				Name:   "",
+				IPType: "",
+			},
+		}},
+	}
+	handlerFunc := NewProposalsEndpoint(repository, presetRepository).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -260,6 +270,23 @@ func (m *mockProposalRepository) Proposal(_ market.ProposalID) (*market.ServiceP
 func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
 	m.recordedFilter = filter
 	return m.proposals, nil
+}
+
+type mockFilterPresetRepository struct {
+	presets proposal.FilterPresets
+}
+
+func (m *mockFilterPresetRepository) List() (*proposal.FilterPresets, error) {
+	return &m.presets, nil
+}
+
+func (m *mockFilterPresetRepository) Get(id int) (*proposal.FilterPreset, error) {
+	for _, p := range m.presets.Entries {
+		if p.ID == id {
+			return &p, nil
+		}
+	}
+	return nil, errors.New("preset not found")
 }
 
 func setPricingBounds(v url.Values) {
