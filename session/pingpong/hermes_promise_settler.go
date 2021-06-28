@@ -50,6 +50,8 @@ type providerChannelStatusProvider interface {
 	GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error)
 	CalculateHermesFee(chainID int64, hermesAddress common.Address, value *big.Int) (*big.Int, error)
 	GetMystBalance(chainID int64, mystAddress, identity common.Address) (*big.Int, error)
+	GetProvidersWithdrawalChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	SubscribeToWithdrawalPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error)
 }
 
 type paySettler interface {
@@ -67,6 +69,7 @@ type registrationStatusProvider interface {
 
 type promiseStorage interface {
 	Get(chainID int64, channelID string) (HermesPromise, error)
+	Delete(promise HermesPromise) error
 }
 
 type transactor interface {
@@ -302,13 +305,6 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 	log.Info().Msgf("Hermes %q promise state updated for provider %q", apep.HermesID.Hex(), id)
 
 	if s.needsSettling(aps.config.Threshold, channel) {
-		// TODO: when do we settle into stake? Do we ever auto settle into stake now?
-		// if channel.channel.Stake != nil && channel.channel.StakeGoal != nil && channel.channel.Stake.Uint64() < channel.channel.StakeGoal.Uint64() {
-		// 	go func() {
-		// 		err := aps.SettleIntoStake(id, apep.HermesID)
-		// 		log.Error().Err(err).Msgf("could not settle into stake for %q", apep.ProviderID)
-		// 	}()
-		// } else
 		log.Info().Msgf("Starting auto settle for provider %v", id)
 		aps.initiateSettling(channel)
 	}
@@ -485,8 +481,45 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 		return fmt.Errorf("could not generate channel address: %w", err)
 	}
 
+	chid, err := crypto.GenerateProviderChannelIDForPayAndSettle(providerID.Address, hermesID.Hex())
+	if err != nil {
+		return fmt.Errorf("could not get channel id for pay and settle: %w", err)
+	}
+
+	// 0. check if previous withdrawal attempt exists
+	promiseFromStorage, err := aps.promiseStorage.Get(aps.config.L1ChainID, chid)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			log.Info().Msg("no previous promise, will do a new attempt")
+		} else {
+			return err
+		}
+	} else {
+		amountToWithdraw, err := aps.calculateAmountToWithdrawFromPreviousPromise(providerID, promiseFromStorage)
+		if err != nil {
+			return err
+		}
+
+		// if amount to withdraw = 0, the withdrawal has already completed, resume making a new one and delete the existing promise.
+		if amountToWithdraw.Cmp(big.NewInt(0)) > 0 {
+			err = aps.validateWithdrawalAmount(amountToWithdraw)
+			if err != nil {
+				return err
+			}
+
+			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage)
+		}
+		aps.deleteWithdrawnPromise(promiseFromStorage)
+	}
+
 	// 1. calculate amount to withdraw - check balance on consumer channel
 	amountToWithdraw, err := aps.getWithdrawalAmountViaHermes(chainID, hermesID, providerID.ToCommonAddress())
+	if err != nil {
+		return err
+	}
+
+	// TODO: check if amount > fee
+	err = aps.validateWithdrawalAmount(amountToWithdraw)
 	if err != nil {
 		return err
 	}
@@ -505,12 +538,7 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	}
 
 	// 4. fetch the promise from storage
-	chid, err := crypto.GenerateProviderChannelIDForPayAndSettle(providerID.Address, hermesID.Hex())
-	if err != nil {
-		return fmt.Errorf("could not get channel id for pay and settle: %w", err)
-	}
-
-	promiseFromStorage, err := aps.promiseStorage.Get(aps.config.L1ChainID, chid)
+	promiseFromStorage, err = aps.promiseStorage.Get(aps.config.L1ChainID, chid)
 	if err != nil {
 		return err
 	}
@@ -521,29 +549,75 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	}
 	promiseFromStorage.Promise.R = decodedR
 
+	return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage)
+}
+
+func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage HermesPromise) {
+	err := aps.promiseStorage.Delete(promiseFromStorage)
+	if err != nil {
+		log.Err(err).Msg("could not delete withdrawal promise")
+	}
+}
+
+func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise) error {
+	decodedR, err := hex.DecodeString(promiseFromStorage.R)
+	if err != nil {
+		return fmt.Errorf("could not decode R %w", err)
+	}
+	promiseFromStorage.Promise.R = decodedR
+
 	// 5. add the missing beneficiary signature
-	payload := crypto.NewPayAndSettleBeneficiaryPayload(beneficiary, aps.config.L1ChainID, chid, promiseFromStorage.Promise.Amount, client.ToBytes32(msg.Promise.R))
+	payload := crypto.NewPayAndSettleBeneficiaryPayload(beneficiary, aps.config.L1ChainID, chid, promiseFromStorage.Promise.Amount, client.ToBytes32(promiseFromStorage.Promise.R))
 	err = payload.Sign(aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return fmt.Errorf("could not sign pay and settle payload: %w", err)
 	}
 
-	// 6. call transactor to settle the promise.
 	go func() {
+		log.Info().Msg("caling mister transactor")
 		err := aps.payAndSettle(
 			func(promise crypto.Promise) error {
 				return aps.transactor.PayAndSettle(promiseFromStorage.HermesID.Hex(), providerID.Address, promise, payload.Beneficiary.Hex(), hex.EncodeToString(payload.Signature))
 			},
 			providerID,
-			hermesID,
+			promiseFromStorage.HermesID,
 			promiseFromStorage.Promise,
 			beneficiary,
 			amountToWithdraw,
+			promiseFromStorage,
 		)
 		if err != nil {
 			log.Err(err).Msg("could not withdraw")
+			return
 		}
+		log.Info().Msg("withdrawal complete")
 	}()
+	return nil
+}
+
+func (aps *hermesPromiseSettler) calculateAmountToWithdrawFromPreviousPromise(providerID identity.Identity, promiseFromStorage HermesPromise) (*big.Int, error) {
+	ch, err := aps.bc.GetProvidersWithdrawalChannel(promiseFromStorage.Promise.ChainID, promiseFromStorage.HermesID, providerID.ToCommonAddress(), true)
+	if err != nil {
+		return nil, err
+	}
+	if ch.Settled == nil {
+		ch.Settled = big.NewInt(0)
+	}
+
+	diff := big.NewInt(0).Sub(promiseFromStorage.Promise.Amount, ch.Settled)
+	diff = diff.Abs(diff)
+	return diff, nil
+}
+
+func (aps *hermesPromiseSettler) validateWithdrawalAmount(amount *big.Int) error {
+	fees, err := aps.transactor.FetchSettleFees(aps.config.L1ChainID)
+	if err != nil {
+		return err
+	}
+
+	if fees.Fee.Cmp(amount) > 0 {
+		return fmt.Errorf("transactors fee exceeds amount to withdraw. Fee %v, amount to withdraw %v", fees.Fee.String(), amount.String())
+	}
 	return nil
 }
 
@@ -554,6 +628,7 @@ func (aps *hermesPromiseSettler) payAndSettle(
 	promise crypto.Promise,
 	beneficiary common.Address,
 	withdrawalAmount *big.Int,
+	promiseFromStorage HermesPromise,
 ) error {
 	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise)
 	if err != nil {
@@ -586,10 +661,11 @@ func (aps *hermesPromiseSettler) payAndSettle(
 			if !more || info == nil {
 				break
 			}
-			log.Info().Msgf("Settling complete for provider %v", provider)
+			log.Info().Msgf("withdraw complete for provider %v", provider)
+			aps.deleteWithdrawnPromise(promiseFromStorage)
 			return
 		case <-time.After(aps.config.MaxWaitForSettlement):
-			log.Info().Msgf("Settle timeout for %v", provider)
+			log.Info().Msgf("withdraw timeout for %v", provider)
 
 			// send a signal to waiter that the settlement has timed out
 			errCh <- ErrSettleTimeout

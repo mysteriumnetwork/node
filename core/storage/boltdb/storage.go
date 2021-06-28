@@ -65,6 +65,11 @@ func (b *Bolt) Delete(bucket string, data interface{}) error {
 	return b.db.From(bucket).DeleteStruct(data)
 }
 
+// DeleteKey the given struct from the given bucket
+func (b *Bolt) DeleteKey(bucket string, key interface{}) error {
+	return b.db.Delete(bucket, key)
+}
+
 // Update allows to update the struct in the given bucket
 func (b *Bolt) Update(bucket string, object interface{}) error {
 	return b.db.From(bucket).Update(object)

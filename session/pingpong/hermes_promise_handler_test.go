@@ -23,7 +23,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -49,9 +48,10 @@ func TestHermesPromiseHandler_RequestPromise(t *testing.T) {
 	}
 	err := aph.Subscribe(bus)
 	assert.NoError(t, err)
-	bus.Publish(servicestate.AppTopicServiceStatus, servicestate.AppEventServiceStatus{
-		Status: string(servicestate.Running),
+	bus.Publish(event.AppTopicNode, event.Payload{
+		Status: event.StatusStarted,
 	})
+
 	defer bus.Publish(event.AppTopicNode, event.Payload{
 		Status: event.StatusStopped,
 	})
@@ -90,9 +90,10 @@ func TestHermesPromiseHandler_RequestPromise_BubblesErrors(t *testing.T) {
 	}
 	err := aph.Subscribe(bus)
 	assert.NoError(t, err)
-	bus.Publish(servicestate.AppTopicServiceStatus, servicestate.AppEventServiceStatus{
-		Status: string(servicestate.Running),
+	bus.Publish(event.AppTopicNode, event.Payload{
+		Status: event.StatusStarted,
 	})
+
 	defer bus.Publish(event.AppTopicNode, event.Payload{
 		Status: event.StatusStopped,
 	})

@@ -737,6 +737,10 @@ func (maps *mockHermesPromiseStorage) Store(_ HermesPromise) error {
 	return maps.errToReturn
 }
 
+func (maps *mockHermesPromiseStorage) Delete(_ HermesPromise) error {
+	return maps.errToReturn
+}
+
 func (maps *mockHermesPromiseStorage) Get(chainID int64, _ string) (HermesPromise, error) {
 	return maps.toReturn, maps.errToReturn
 }

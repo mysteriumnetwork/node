@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
@@ -51,6 +52,7 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageImportIdentity,
 		"  " + usageSetBeneficiary,
 		"  " + usageSetBeneficiaryStatus,
+		"  " + usageWithdraw,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -85,6 +87,8 @@ func (c *cliApp) identities(argsString string) {
 		c.setBeneficiary(actionArgs)
 	case "beneficiary-status":
 		c.setBeneficiaryStatus(actionArgs)
+	case "withdraw":
+		c.withdraw(actionArgs)
 	default:
 		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -259,6 +263,54 @@ func (c *cliApp) settle(args []string) {
 				return
 			}
 			clio.Info("settlement succeeded")
+			return
+		}
+	}
+}
+
+const usageWithdraw = "withdraw <providerIdentity> <beneficiary>"
+
+func (c *cliApp) withdraw(args []string) {
+	if len(args) != 2 {
+		clio.Info("Usage: " + usageWithdraw)
+		fees, err := c.tequilapi.GetTransactorFees()
+		if err != nil {
+			clio.Warn("could not get transactor fee: ", err)
+		}
+		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
+		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
+		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
+		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
+		return
+	}
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		clio.Warn("could not get hermes id: ", err)
+		return
+	}
+	clio.Info("Waiting for withdrawal to complete")
+	errChan := make(chan error)
+
+	go func() {
+		errChan <- c.tequilapi.Withdraw(identity.FromAddress(args[0]), common.HexToAddress(hermesID), common.HexToAddress(args[1]))
+	}()
+
+	timeout := time.After(time.Minute * 2)
+	for {
+		select {
+		case <-timeout:
+			fmt.Println()
+			clio.Warn("withdrawal timed out")
+			return
+		case <-time.After(time.Millisecond * 500):
+			fmt.Print(".")
+		case err := <-errChan:
+			fmt.Println()
+			if err != nil {
+				clio.Warn("withdrawal failed: ", err.Error())
+				return
+			}
+			clio.Info("withdrawal succeeded")
 			return
 		}
 	}
