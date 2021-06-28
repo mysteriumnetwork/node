@@ -25,6 +25,7 @@ import (
 )
 
 type consumerBalanceGetter interface {
+	NeedsForceSync(chainID int64, id identity.Identity) bool
 	GetBalance(chainID int64, id identity.Identity) *big.Int
 	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
@@ -51,7 +52,7 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, price market.Price) bool {
 	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
 
-	if balance.Cmp(big.NewInt(0)) == 0 {
+	if v.consumerBalanceGetter.NeedsForceSync(chainID, consumerID) {
 		balance = v.consumerBalanceGetter.ForceBalanceUpdate(chainID, consumerID)
 	}
 

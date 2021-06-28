@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/apidiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/dhtdiscovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/pkg/errors"
@@ -32,6 +33,7 @@ import (
 )
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
+	di.FilterPresetStorage = proposal.NewFilterPresetStorage(di.Storage)
 	proposalRepository := discovery.NewRepository()
 	proposalRegistry := discovery.NewRegistry()
 	discoveryWorker := discovery.NewWorker()
@@ -76,7 +78,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	}
 
 	log.Info().Msgf("pricer %v", di.PricingHelper)
-	di.ProposalRepository = discovery.NewPricedServiceProposalRepository(proposalRepository, di.PricingHelper)
+	di.ProposalRepository = discovery.NewPricedServiceProposalRepository(proposalRepository, di.PricingHelper, di.FilterPresetStorage)
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, proposalRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
 	}

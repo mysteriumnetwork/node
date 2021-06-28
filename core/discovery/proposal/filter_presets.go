@@ -19,6 +19,7 @@ package proposal
 
 import (
 	"fmt"
+	"math/big"
 	"sort"
 	"sync"
 
@@ -38,6 +39,12 @@ const (
 	bucketName = "proposal-filter-presets"
 	startingID = 100
 )
+
+// FilterPresetRepository provides proposal filter presets by which they can be filtered.
+type FilterPresetRepository interface {
+	List() (*FilterPresets, error)
+	Get(id int) (*FilterPreset, error)
+}
 
 // FilterPresetStorage filter preset storage
 type FilterPresetStorage struct {
@@ -158,6 +165,7 @@ var defaultPresets = []FilterPreset{
 
 			sort.SliceStable(filtered, func(i, j int) bool {
 				qx, qy := filtered[i].Quality, filtered[j].Quality
+
 				if qx.Bandwidth == qy.Bandwidth {
 					return qx.Quality > qy.Quality
 				}
@@ -171,21 +179,34 @@ var defaultPresets = []FilterPreset{
 		ID:   2,
 		Name: "Browsing",
 		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
+			totalPerHour, totalPerGiB := new(big.Int), new(big.Int)
+			avgPerHour, avgPerGiB := new(big.Int), new(big.Int)
 			var totalQuality, avgQuality float64
 
 			for _, p := range proposals {
+				totalPerHour = new(big.Int).Add(totalPerHour, p.Price.PricePerHour)
+				totalPerGiB = new(big.Int).Add(totalPerGiB, p.Price.PricePerGiB)
 				totalQuality += p.Quality.Quality
 			}
+			avgPerHour = new(big.Int).Sub(totalPerHour, avgPerHour)
+			avgPerGiB = new(big.Int).Sub(totalPerGiB, avgPerGiB)
 			avgQuality = totalQuality / float64(len(proposals))
 
 			var filtered []PricedServiceProposal
 			for _, p := range proposals {
-				if p.Quality.Quality > avgQuality {
+				if p.Price.PricePerGiB.Cmp(avgPerGiB) <= 0 && p.Price.PricePerHour.Cmp(avgPerHour) <= 0 && p.Quality.Quality > avgQuality {
 					filtered = append(filtered, p)
 				}
 			}
 			sort.SliceStable(filtered, func(i, j int) bool {
 				qx, qy := filtered[i].Quality, filtered[j].Quality
+				px, py := filtered[i].Price, filtered[j].Price
+				if qx.Quality == qy.Quality {
+					if px.PricePerGiB.Cmp(py.PricePerGiB) == 0 {
+						return px.PricePerHour.Cmp(py.PricePerHour) == -1
+					}
+					return px.PricePerGiB.Cmp(py.PricePerGiB) == -1
+				}
 				return qx.Quality > qy.Quality
 			})
 
@@ -197,12 +218,30 @@ var defaultPresets = []FilterPreset{
 		Name:   "Download",
 		IPType: Hosting,
 		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
+			totalPerHour, totalPerGiB := new(big.Int), new(big.Int)
+			avgPerHour, avgPerGiB := new(big.Int), new(big.Int)
+
+			for _, p := range proposals {
+				totalPerHour = new(big.Int).Add(totalPerHour, p.Price.PricePerHour)
+				totalPerGiB = new(big.Int).Add(totalPerGiB, p.Price.PricePerGiB)
+			}
+			avgPerHour = new(big.Int).Sub(totalPerHour, avgPerHour)
+			avgPerGiB = new(big.Int).Sub(totalPerGiB, avgPerGiB)
+
 			var filtered []PricedServiceProposal
 			for _, p := range proposals {
-				if p.Location.IPType == "hosting" {
+				if p.Price.PricePerHour.Cmp(avgPerGiB) <= 0 && p.Price.PricePerHour.Cmp(avgPerHour) <= 0 && p.Location.IPType == "hosting" {
 					filtered = append(filtered, p)
 				}
 			}
+			sort.SliceStable(filtered, func(i, j int) bool {
+				px, py := filtered[i].Price, filtered[j].Price
+				if px.PricePerGiB.Cmp(py.PricePerGiB) == 0 {
+					return px.PricePerHour.Cmp(py.PricePerHour) == -1
+				}
+				return px.PricePerGiB.Cmp(py.PricePerGiB) == -1
+			})
+
 			return filtered
 		},
 	},

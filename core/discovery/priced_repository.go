@@ -25,8 +25,9 @@ import (
 
 // PricedServiceProposalRepository enriches proposals with price data as pricing data is not available on raw proposals.
 type PricedServiceProposalRepository struct {
-	baseRepo proposal.Repository
-	pip      PriceInfoProvider
+	baseRepo      proposal.Repository
+	pip           PriceInfoProvider
+	filterPresets proposal.FilterPresetRepository
 }
 
 // PriceInfoProvider allows to fetch the current pricing for services.
@@ -35,10 +36,11 @@ type PriceInfoProvider interface {
 }
 
 // NewPricedServiceProposalRepository returns a new instance of PricedServiceProposalRepository.
-func NewPricedServiceProposalRepository(baseRepo proposal.Repository, pip PriceInfoProvider) *PricedServiceProposalRepository {
+func NewPricedServiceProposalRepository(baseRepo proposal.Repository, pip PriceInfoProvider, filterPresets proposal.FilterPresetRepository) *PricedServiceProposalRepository {
 	return &PricedServiceProposalRepository{
-		baseRepo: baseRepo,
-		pip:      pip,
+		baseRepo:      baseRepo,
+		pip:           pip,
+		filterPresets: filterPresets,
 	}
 }
 
@@ -61,7 +63,20 @@ func (pspr *PricedServiceProposalRepository) Proposal(id market.ProposalID) (*pr
 // Proposals fetches proposals from base repository and enriches them with pricing data.
 func (pspr *PricedServiceProposalRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
 	proposals, err := pspr.baseRepo.Proposals(filter)
-	return pspr.toPricedProposals(proposals), err
+	if err != nil {
+		return nil, err
+	}
+	priced := pspr.toPricedProposals(proposals)
+
+	if filter != nil && filter.PresetID != 0 {
+		preset, err := pspr.filterPresets.Get(filter.PresetID)
+		if err != nil {
+			return nil, err
+		}
+		priced = preset.Filter(priced)
+	}
+
+	return priced, nil
 }
 
 // EnrichProposalWithPrice adds pricing info to service proposal.

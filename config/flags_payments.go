@@ -75,6 +75,13 @@ var (
 		Usage:  "sets the hermes status recheck interval. Setting this to a lower value will decrease potential loss in case of Hermes getting locked.",
 		Value:  time.Hour * 2,
 	}
+	// FlagOffchainBalanceExpiration sets how often we re-check offchain balance on hermes when balance is depleting
+	FlagOffchainBalanceExpiration = cli.DurationFlag{
+		Hidden: true,
+		Name:   "payments.consumer.offchain-expiration",
+		Usage:  "after syncing offchain balance, how long should node wait for next check to occur",
+		Value:  time.Minute * 55,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -89,6 +96,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
+		&FlagOffchainBalanceExpiration,
 	)
 }
 
@@ -102,4 +110,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
+	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
 }

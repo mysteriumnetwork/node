@@ -28,6 +28,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -35,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
+	"github.com/mysteriumnetwork/payments/units"
 	"github.com/rs/zerolog/log"
 )
 
@@ -116,6 +118,26 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, cbt.handleUnlockEvent)
+}
+
+// NeedsForceSync returns true if balance needs to be force synced.
+func (cbt *ConsumerBalanceTracker) NeedsForceSync(chainID int64, id identity.Identity) bool {
+	v, ok := cbt.getBalance(chainID, id)
+	if !ok {
+		return true
+	}
+
+	// Offchain balances expire after configured amount of time and need to be resynced.
+	if v.OffchainNeedsSync() {
+		return true
+	}
+
+	// Balance doesn't always go to 0 but connections can still fail.
+	if v.BCBalance.Cmp(units.SingleGweiInWei()) < 0 {
+		return true
+	}
+
+	return false
 }
 
 // GetBalance gets the current balance for given identity
@@ -253,12 +275,16 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 					BCBalance:          new(big.Int).Add(previous.BCBalance, e.Value),
 					BCSettled:          previous.BCSettled,
 					GrandTotalPromised: previous.GrandTotalPromised,
+					IsOffchain:         previous.IsOffchain,
+					LastOffchainSync:   previous.LastOffchainSync,
 				})
 			} else {
 				cbt.setBalance(chainID, id, ConsumerBalance{
 					BCBalance:          new(big.Int).Sub(previous.BCBalance, e.Value),
 					BCSettled:          previous.BCSettled,
 					GrandTotalPromised: previous.GrandTotalPromised,
+					IsOffchain:         previous.IsOffchain,
+					LastOffchainSync:   previous.LastOffchainSync,
 				})
 			}
 
@@ -315,6 +341,8 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 			BCBalance:          consumer.Balance,
 			BCSettled:          consumer.Settled,
 			GrandTotalPromised: promised,
+			IsOffchain:         true,
+			LastOffchainSync:   time.Now().UTC(),
 		})
 
 		currentBalance, _ := cbt.getBalance(chainID, id)
@@ -557,13 +585,14 @@ func (cbt *ConsumerBalanceTracker) setBalance(chainID int64, id identity.Identit
 
 func (cbt *ConsumerBalanceTracker) updateGrandTotal(chainID int64, id identity.Identity, current *big.Int) {
 	b, ok := cbt.getBalance(chainID, id)
-	before := b.BCBalance
-	if ok {
-		b.GrandTotalPromised = current
-		cbt.setBalance(chainID, id, b)
-	} else {
+	if !ok || b.OffchainNeedsSync() {
 		cbt.ForceBalanceUpdate(chainID, id)
+		return
 	}
+
+	before := b.BCBalance
+	b.GrandTotalPromised = current
+	cbt.setBalance(chainID, id, b)
 
 	after, _ := cbt.getBalance(chainID, id)
 	go cbt.publishChangeEvent(id, before, after.GetBalance())
@@ -638,6 +667,27 @@ type ConsumerBalance struct {
 	BCBalance          *big.Int
 	BCSettled          *big.Int
 	GrandTotalPromised *big.Int
+
+	// IsOffchain is an optional indicator which marks an offchain balanace.
+	// Offchain balances receive no updates on the blockchain and their
+	// actual remaining balance should be retreived from hermes.
+	IsOffchain       bool
+	LastOffchainSync time.Time
+}
+
+// OffchainNeedsSync returns true if balance is offchain and should be synced.
+func (cb ConsumerBalance) OffchainNeedsSync() bool {
+	if !cb.IsOffchain {
+		return false
+	}
+
+	if cb.LastOffchainSync.IsZero() {
+		return true
+	}
+
+	expiresAfter := config.GetDuration(config.FlagOffchainBalanceExpiration)
+	now := time.Now().UTC()
+	return cb.LastOffchainSync.Add(expiresAfter).Before(now)
 }
 
 // GetBalance returns the current balance

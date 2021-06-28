@@ -44,14 +44,16 @@ type proposalsEndpoint struct {
 	proposalRepository proposalRepository
 	pricer             priceAPI
 	locationResolver   location.Resolver
+	filterPresets      proposal.FilterPresetRepository
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository) *proposalsEndpoint {
 	return &proposalsEndpoint{
 		proposalRepository: proposalRepository,
 		pricer:             pricer,
 		locationResolver:   locationResolver,
+		filterPresets:      filterPresetRepository,
 	}
 }
 
@@ -106,6 +108,7 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
 	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
 	qualityMin := func() float32 {
@@ -116,17 +119,20 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		return float32(f)
 	}()
 
+	includeMonitoringFailed, _ := strconv.ParseBool(req.URL.Query().Get("include_monitoring_failed"))
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
-		ProviderID:         req.URL.Query().Get("provider_id"),
-		ServiceType:        req.URL.Query().Get("service_type"),
-		AccessPolicy:       req.URL.Query().Get("access_policy"),
-		AccessPolicySource: req.URL.Query().Get("access_policy_source"),
-		LocationCountry:    req.URL.Query().Get("location_country"),
-		IPType:             req.URL.Query().Get("ip_type"),
-		CompatibilityMin:   compatibilityMin,
-		CompatibilityMax:   compatibilityMax,
-		QualityMin:         qualityMin,
-		ExcludeUnsupported: true,
+		PresetID:                presetID,
+		ProviderID:              req.URL.Query().Get("provider_id"),
+		ServiceType:             req.URL.Query().Get("service_type"),
+		AccessPolicy:            req.URL.Query().Get("access_policy"),
+		AccessPolicySource:      req.URL.Query().Get("access_policy_source"),
+		LocationCountry:         req.URL.Query().Get("location_country"),
+		IPType:                  req.URL.Query().Get("ip_type"),
+		CompatibilityMin:        compatibilityMin,
+		CompatibilityMax:        compatibilityMax,
+		QualityMin:              qualityMin,
+		ExcludeUnsupported:      true,
+		IncludeMonitoringFailed: includeMonitoringFailed,
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -173,9 +179,36 @@ func (pe *proposalsEndpoint) CurrentPrice(resp http.ResponseWriter, req *http.Re
 	}, resp)
 }
 
+// swagger:operation GET /proposals/filter-presets Proposal proposalFilterPresets
+// ---
+// summary: Returns proposal filter presets
+// description: Returns proposal filter presets
+// responses:
+//   200:
+//     description: List of proposal filter presets
+//     schema:
+//       "$ref": "#/definitions/ListProposalFilterPresetsResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (pe *proposalsEndpoint) FilterPresets(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	presets, err := pe.filterPresets.List()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	presetsRes := contract.ListProposalFilterPresetsResponse{Items: []contract.FilterPreset{}}
+	for _, p := range presets.Entries {
+		presetsRes.Items = append(presetsRes.Items, contract.NewFilterPreset(p))
+	}
+	utils.WriteAsJSON(presetsRes, resp)
+}
+
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver) {
-	pe := NewProposalsEndpoint(proposalRepository, pricer, locationResolver)
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository) {
+	pe := NewProposalsEndpoint(proposalRepository, pricer, locationResolver, filterPresetRepository)
 	router.GET("/proposals", pe.List)
+	router.GET("/proposals/filter-presets", pe.FilterPresets)
 	router.GET("/prices/current", pe.CurrentPrice)
 }

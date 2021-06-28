@@ -23,6 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -30,11 +34,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
 )
 
 // NewCommand function creates service command
@@ -108,7 +110,9 @@ type serviceCommand struct {
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	arg := ctx.Args().Get(0)
-	serviceTypes := services.Types()
+	// If no service type specified we are starting wireguard only.
+	// Other services could be started only explicitly.
+	serviceTypes := []string{wireguard.ServiceType}
 	if arg != "" {
 		serviceTypes = strings.Split(arg, ",")
 	}

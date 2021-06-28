@@ -106,6 +106,27 @@ func (p ProposalDTO) String() string {
 	return fmt.Sprintf("Provider: %s, ServiceType: %s, Country: %s", p.ProviderID, p.ServiceType, p.Location.Country)
 }
 
+// ListProposalFilterPresetsResponse holds a list of proposal filter presets.
+// swagger:model ListProposalFilterPresetsResponse
+type ListProposalFilterPresetsResponse struct {
+	Items []FilterPreset `json:"items"`
+}
+
+// FilterPreset is a pre-defined proposal filter.
+// swagger:model FilterPreset
+type FilterPreset struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// NewFilterPreset maps to the FilterPreset.
+func NewFilterPreset(preset proposal.FilterPreset) FilterPreset {
+	return FilterPreset{
+		ID:   preset.ID,
+		Name: preset.Name,
+	}
+}
+
 // ServiceLocationDTO holds service location metadata.
 // swagger:model ServiceLocationDTO
 type ServiceLocationDTO struct {

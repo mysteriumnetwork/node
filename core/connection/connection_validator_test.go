@@ -143,8 +143,13 @@ func (muc *mockUnlockChecker) IsUnlocked(id string) bool {
 }
 
 type mockConsumerBalanceGetter struct {
+	needSync    bool
 	toReturn    *big.Int
 	forceReturn *big.Int
+}
+
+func (mcbg *mockConsumerBalanceGetter) NeedsForceSync(chainID int64, id identity.Identity) bool {
+	return mcbg.needSync
 }
 
 func (mcbg *mockConsumerBalanceGetter) GetBalance(chainID int64, id identity.Identity) *big.Int {

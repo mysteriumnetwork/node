@@ -42,6 +42,16 @@ var mockProposal = market.ServiceProposal{
 	},
 }
 
+var presetRepository = &mockFilterPresetRepository{
+	presets: proposal.FilterPresets{Entries: []proposal.FilterPreset{
+		{
+			ID:     0,
+			Name:   "",
+			IPType: "",
+		},
+	}},
+}
+
 func TestGetProposal(t *testing.T) {
 	t.Run("fetches proposal correctly", func(t *testing.T) {
 		mockPrice := market.Price{
@@ -57,7 +67,7 @@ func TestGetProposal(t *testing.T) {
 			errToReturn:      nil,
 		}
 
-		repo := NewPricedServiceProposalRepository(mr, mp)
+		repo := NewPricedServiceProposalRepository(mr, mp, presetRepository)
 
 		result, err := repo.Proposal(market.ProposalID{})
 		assert.NoError(t, err)
@@ -71,7 +81,7 @@ func TestGetProposal(t *testing.T) {
 			errToReturn: mockError,
 		}
 
-		repo := NewPricedServiceProposalRepository(mr, &mockPriceInfoProvider{})
+		repo := NewPricedServiceProposalRepository(mr, &mockPriceInfoProvider{}, presetRepository)
 		_, err := repo.Proposal(market.ProposalID{})
 		assert.Error(t, err)
 		assert.Equal(t, mockError, err)
@@ -83,7 +93,7 @@ func TestGetProposal(t *testing.T) {
 		}
 		repo := NewPricedServiceProposalRepository(&mockRepository{
 			proposalToReturn: &mockProposal,
-		}, mp)
+		}, mp, nil)
 
 		_, err := repo.Proposal(market.ProposalID{})
 		assert.Error(t, err)
@@ -106,7 +116,7 @@ func TestGetProposals(t *testing.T) {
 			errToReturn:       nil,
 		}
 
-		repo := NewPricedServiceProposalRepository(mr, mp)
+		repo := NewPricedServiceProposalRepository(mr, mp, presetRepository)
 
 		result, err := repo.Proposals(nil)
 		assert.NoError(t, err)
@@ -120,7 +130,7 @@ func TestGetProposals(t *testing.T) {
 			errToReturn: mockError,
 		}
 
-		repo := NewPricedServiceProposalRepository(mr, &mockPriceInfoProvider{})
+		repo := NewPricedServiceProposalRepository(mr, &mockPriceInfoProvider{}, presetRepository)
 		_, err := repo.Proposals(nil)
 		assert.Error(t, err)
 		assert.Equal(t, mockError, err)
@@ -132,7 +142,7 @@ func TestGetProposals(t *testing.T) {
 		}
 		repo := NewPricedServiceProposalRepository(&mockRepository{
 			proposalsToReturn: []market.ServiceProposal{mockProposal},
-		}, mp)
+		}, mp, presetRepository)
 
 		res, err := repo.Proposals(nil)
 		assert.NoError(t, err)
@@ -161,4 +171,21 @@ type mockPriceInfoProvider struct {
 
 func (mpip *mockPriceInfoProvider) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
 	return mpip.priceToReturn, mpip.errorToReturn
+}
+
+type mockFilterPresetRepository struct {
+	presets proposal.FilterPresets
+}
+
+func (m *mockFilterPresetRepository) List() (*proposal.FilterPresets, error) {
+	return &m.presets, nil
+}
+
+func (m *mockFilterPresetRepository) Get(id int) (*proposal.FilterPreset, error) {
+	for _, p := range m.presets.Entries {
+		if p.ID == id {
+			return &p, nil
+		}
+	}
+	return nil, errors.New("preset not found")
 }
