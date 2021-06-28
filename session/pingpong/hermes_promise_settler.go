@@ -508,9 +508,8 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 			}
 
 			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage)
-		} else {
-			aps.deleteWithdrawnPromise(promiseFromStorage)
 		}
+		aps.deleteWithdrawnPromise(promiseFromStorage)
 	}
 
 	// 1. calculate amount to withdraw - check balance on consumer channel

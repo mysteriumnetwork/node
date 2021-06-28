@@ -84,6 +84,7 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 	return nil
 }
 
+// Delete deletes the given hermes promise.
 func (aps *HermesPromiseStorage) Delete(promise HermesPromise) error {
 	return aps.bolt.DeleteKey(aps.getBucketName(promise.Promise.ChainID), promise.ChannelID)
 }
