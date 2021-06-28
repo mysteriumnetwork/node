@@ -272,7 +272,7 @@ const usageWithdraw = "withdraw <providerIdentity> <beneficiary>"
 
 func (c *cliApp) withdraw(args []string) {
 	if len(args) != 2 {
-		clio.Info("Usage: " + usageSettle)
+		clio.Info("Usage: " + usageWithdraw)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
 			clio.Warn("could not get transactor fee: ", err)

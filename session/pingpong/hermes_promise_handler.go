@@ -247,6 +247,10 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	promise, err := er.requestFunc(request)
 	err = aph.handleHermesError(err, providerID, er.em.ChainID, hermesID)
 	if err != nil {
+		if errors.Is(err, errRrecovered) {
+			log.Info().Msgf("r recovered")
+			return
+		}
 		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 		return
 	}
@@ -285,6 +289,10 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	err = aph.revealR(ap)
 	err = aph.handleHermesError(err, providerID, ap.Promise.ChainID, hermesID)
 	if err != nil {
+		if errors.Is(err, errRrecovered) {
+			log.Info().Msgf("r recovered")
+			return
+		}
 		er.errChan <- fmt.Errorf("hermes reveal r error: %w", err)
 		return
 	}
@@ -316,6 +324,10 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 	err = hermesCaller.RevealR(hermesPromise.R, hermesPromise.Identity.Address, hermesPromise.AgreementID)
 	handledErr := aph.handleHermesError(err, hermesPromise.Identity, hermesPromise.Promise.ChainID, hermesPromise.HermesID)
 	if handledErr != nil {
+		if errors.Is(err, errRrecovered) {
+			log.Info().Msgf("r recovered")
+			return nil
+		}
 		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
@@ -327,6 +339,8 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 
 	return nil
 }
+
+var errRrecovered = errors.New("R recovered")
 
 func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identity.Identity, chainID int64, hermesID common.Address) error {
 	if err == nil {
@@ -344,7 +358,7 @@ func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identit
 		if recoveryErr != nil {
 			return recoveryErr
 		}
-		return nil
+		return errRrecovered
 	case stdErr.Is(err, ErrHermesNoPreviousPromise):
 		log.Info().Msg("no previous promise on hermes, will mark R as revealed")
 		return nil
