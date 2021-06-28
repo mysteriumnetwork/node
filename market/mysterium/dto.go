@@ -32,8 +32,8 @@ type ProposalsQuery struct {
 	CompatibilityMin, CompatibilityMax int
 	AccessPolicy, AccessPolicySource   string
 
-	IPType     string
-	QualityMin float32
+	IPType                  string
+	QualityMin              float32
 	IncludeMonitoringFailed bool
 }
 
