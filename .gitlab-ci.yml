@@ -155,6 +155,12 @@ release-snapshot:docker:
   tags: [go]
   script: go run mage.go -v ReleaseDockerSnapshot
 
+# TODO: Remove after testnet3 is merged in to master
+release-snapshot:docker-testnet3:
+  stage: release-snapshot
+  tags: [go]
+  script: go run mage.go -v ReleaseDockerTestnet3
+
 release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
