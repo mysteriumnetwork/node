@@ -608,44 +608,6 @@ func (client *Client) DecreaseStake(ID identity.Identity, amount *big.Int) error
 	return nil
 }
 
-// SettleWithBeneficiaryStatus set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiaryStatus(address string) (res contract.BeneficiaryTxStatus, err error) {
-	response, err := client.http.Get("identities/"+address+"/beneficiary-status", nil)
-	if err != nil {
-		return contract.BeneficiaryTxStatus{}, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return contract.BeneficiaryTxStatus{}, fmt.Errorf("expected 200 got %v", response.StatusCode)
-	}
-
-	err = parseResponseJSON(response, &res)
-	return res, err
-}
-
-// SettleWithBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
-	payload := contract.SettleWithBeneficiaryRequest{
-		SettleRequest: contract.SettleRequest{
-			ProviderID: address,
-			HermesID:   hermesID,
-		},
-		Beneficiary: beneficiary,
-	}
-	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
-	}
-
-	return nil
-}
-
 // Beneficiary gets beneficiary address for the provided identity.
 func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponse, err error) {
 	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
