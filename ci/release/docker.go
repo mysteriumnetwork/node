@@ -150,7 +150,8 @@ func ReleaseDockerTestnet3() error {
 	}
 
 	if env.Str(env.BuildBranch) != "testnet3" {
-		return fmt.Errorf("not a testnet3 branch")
+		log.Info().Msg("Not a testnet3 branch build, skipping action...")
+		return nil
 	}
 
 	releasables := []dockerReleasable{
