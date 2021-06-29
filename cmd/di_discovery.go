@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
@@ -77,7 +76,6 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		return errors.Wrap(err, "failed to start discovery")
 	}
 
-	log.Info().Msgf("pricer %v", di.PricingHelper)
 	di.ProposalRepository = discovery.NewPricedServiceProposalRepository(proposalRepository, di.PricingHelper, di.FilterPresetStorage)
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, proposalRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
