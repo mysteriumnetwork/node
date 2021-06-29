@@ -40,6 +40,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
+			// Broker is the way to announce node presence currently, so enabled by default no matter the users preferences.
 			proposalRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
 

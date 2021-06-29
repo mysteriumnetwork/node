@@ -549,7 +549,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) contract.ProposalDTO {
 	var proposals []contract.ProposalDTO
 	assert.Eventually(t, func() bool {
-		p, stateErr := tequilapi.ProposalsByType(serviceType)
+		p, stateErr := tequilapi.ProposalsByTypeWithWhitelisting(serviceType)
 		if stateErr != nil {
 			log.Err(stateErr)
 			return false
