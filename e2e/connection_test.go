@@ -35,7 +35,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -193,18 +192,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.Equal(t, new(big.Int), providerStatus.Balance)
 
 		// settle hermes 1
-		err = tequilapiProvider.SettleWithBeneficiary(providerID, providerChannelAddress, hermesID)
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
 		assert.NoError(t, err)
-		assert.Eventually(t, func() bool {
-			res, err := tequilapiProvider.SettleWithBeneficiaryStatus(providerID)
-			assert.NoError(t, err)
-			return res.State == beneficiary.Completed
-		}, time.Second*30, time.Second/2)
-		assert.Eventually(t, func() bool {
-			res, err := tequilapiProvider.Beneficiary(providerID)
-			assert.NoError(t, err)
-			return res.Beneficiary == providerChannelAddress
-		}, time.Second*30, time.Second/2)
 
 		// settle hermes 2
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermes2ID), true)
@@ -350,7 +339,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), nil)
+			err = c.tequila().RegisterIdentity(id.Address, new(big.Int), nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -376,7 +365,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, nil)
+			err = c.tequila().RegisterIdentity(id.Address, providerStake, nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -492,7 +481,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, "", providerStake, nil)
+	err = tequilapi.RegisterIdentity(id, providerStake, nil)
 	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
 
 	assert.Eventually(t, func() bool {
@@ -527,7 +516,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), nil)
+	err = tequilapi.RegisterIdentity(id, big.NewInt(0), nil)
 	assert.NoError(t, err)
 
 	// now we check identity again

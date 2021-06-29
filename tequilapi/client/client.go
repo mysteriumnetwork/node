@@ -201,10 +201,9 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake *big.Int, token *string) error {
+func (client *Client) RegisterIdentity(address string, stake *big.Int, token *string) error {
 	payload := contract.IdentityRegisterRequest{
 		Stake:         stake,
-		Beneficiary:   beneficiary,
 		ReferralToken: token,
 	}
 
@@ -605,44 +604,6 @@ func (client *Client) DecreaseStake(ID identity.Identity, amount *big.Int) error
 	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
 		return errors.Wrap(err, "could not decrease stake")
 	}
-	return nil
-}
-
-// SettleWithBeneficiaryStatus set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiaryStatus(address string) (res contract.BeneficiaryTxStatus, err error) {
-	response, err := client.http.Get("identities/"+address+"/beneficiary-status", nil)
-	if err != nil {
-		return contract.BeneficiaryTxStatus{}, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return contract.BeneficiaryTxStatus{}, fmt.Errorf("expected 200 got %v", response.StatusCode)
-	}
-
-	err = parseResponseJSON(response, &res)
-	return res, err
-}
-
-// SettleWithBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
-	payload := contract.SettleWithBeneficiaryRequest{
-		SettleRequest: contract.SettleRequest{
-			ProviderID: address,
-			HermesID:   hermesID,
-		},
-		Beneficiary: beneficiary,
-	}
-	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
-	}
-
 	return nil
 }
 
