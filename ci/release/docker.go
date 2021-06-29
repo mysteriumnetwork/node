@@ -149,11 +149,6 @@ func ReleaseDockerTestnet3() error {
 		return err
 	}
 
-	if env.Str(env.BuildBranch) != "testnet3" {
-		log.Info().Msg("Not a testnet3 branch build, skipping action...")
-		return nil
-	}
-
 	releasables := []dockerReleasable{
 		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{"testnet3"}},
 	}

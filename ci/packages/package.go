@@ -211,11 +211,7 @@ func PackageDockerAlpine() error {
 	}
 
 	// TODO: Remove after testnet3 is merged in to master
-	if env.Str(env.BuildBranch) == "testnet3" {
-		return storage.UploadDockerImages()
-	}
-
-	return env.IfRelease(storage.UploadDockerImages)
+	return storage.UploadDockerImages()
 }
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
