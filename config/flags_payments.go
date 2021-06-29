@@ -92,7 +92,7 @@ var (
 		Hidden: true,
 		Name:   "payments.consumer.offchain-expiration",
 		Usage:  "after syncing offchain balance, how long should node wait for next check to occur",
-		Value:  time.Minute * 55,
+		Value:  time.Minute * 30,
 	}
 )
 
