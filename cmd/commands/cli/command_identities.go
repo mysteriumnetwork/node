@@ -171,10 +171,10 @@ func (c *cliApp) unlockIdentity(actionArgs []string) {
 	clio.Success(fmt.Sprintf("Identity %s unlocked.", address))
 }
 
-const usageRegisterIdentity = "register <identity> [stake] [beneficiary] [referralcode]"
+const usageRegisterIdentity = "register <identity> [stake] [referralcode]"
 
 func (c *cliApp) registerIdentity(actionArgs []string) {
-	if len(actionArgs) < 1 || len(actionArgs) > 4 {
+	if len(actionArgs) < 1 || len(actionArgs) > 3 {
 		clio.Info("Usage: " + usageRegisterIdentity)
 		return
 	}
@@ -188,17 +188,13 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		}
 		stake = s
 	}
-	var beneficiary string
-	if len(actionArgs) >= 3 {
-		beneficiary = actionArgs[2]
-	}
 
 	var token *string
-	if len(actionArgs) >= 4 {
-		token = &actionArgs[3]
+	if len(actionArgs) >= 3 {
+		token = &actionArgs[2]
 	}
 
-	err := c.tequilapi.RegisterIdentity(address, beneficiary, stake, token)
+	err := c.tequilapi.RegisterIdentity(address, stake, token)
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not register identity"))
 		return

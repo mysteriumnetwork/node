@@ -54,7 +54,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		"/identities/{id}/register",
+		"/identities/0x0000000000000000000000000000000000000000/register",
 		bytes.NewBufferString(identityRegData),
 	)
 	assert.Nil(t, err)

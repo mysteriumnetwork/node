@@ -262,7 +262,7 @@ func (c *command) parseToken(ctx *cli.Context) *string {
 }
 
 func (c *command) registerIdentity(identity string, token *string) {
-	err := c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), token)
+	err := c.tequilapi.RegisterIdentity(identity, new(big.Int).SetInt64(0), token)
 	if err != nil {
 		clio.Error("Failed to register the identity")
 		return

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -123,8 +122,6 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 type IdentityRegisterRequest struct {
 	// Stake is used by Provider, default 0
 	Stake *big.Int `json:"stake,omitempty"`
-	// Cache out address for Provider
-	Beneficiary string `json:"beneficiary,omitempty"`
 	// Token: referral token, if the user has one
 	ReferralToken *string `json:"referral_token,omitempty"`
 }
@@ -132,10 +129,6 @@ type IdentityRegisterRequest struct {
 // Validate validates fields in request
 func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
-
-	if irr.Beneficiary != "" && !common.IsHexAddress(irr.Beneficiary) {
-		errors.ForField("beneficiary").Invalid(irr.Beneficiary + " - is not a valid ethereum wallet address")
-	}
 
 	if irr.ReferralToken == nil {
 		if irr.Stake == nil {
