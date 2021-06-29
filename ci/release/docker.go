@@ -26,11 +26,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const dockerImagesDir = "build/docker-images"
@@ -127,6 +128,33 @@ func ReleaseDockerSnapshot() error {
 		{partialLocalName: "myst:ubuntu", repository: "mysteriumnetwork/myst-snapshots", tags: []string{
 			env.Str(env.BuildVersion) + "-ubuntu",
 		}},
+	}
+	return releaseDockerHub(&releaseDockerHubOpts{
+		username:    env.Str(env.DockerHubUsername),
+		password:    env.Str(env.DockerHubPassword),
+		releasables: releasables,
+	})
+}
+
+// ReleaseDockerTestnet3 uploads docker snapshot images to myst testnet3 repository in docker hub
+// TODO: Remove after testnet3 is merged in to master
+func ReleaseDockerTestnet3() error {
+	logconfig.Bootstrap()
+
+	err := env.EnsureEnvVars(
+		env.DockerHubPassword,
+		env.DockerHubUsername,
+	)
+	if err != nil {
+		return err
+	}
+
+	if env.Str(env.BuildBranch) != "testnet3" {
+		return fmt.Errorf("not a testnet3 branch")
+	}
+
+	releasables := []dockerReleasable{
+		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{"testnet3"}},
 	}
 	return releaseDockerHub(&releaseDockerHubOpts{
 		username:    env.Str(env.DockerHubUsername),

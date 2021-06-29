@@ -27,13 +27,14 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/rs/zerolog/log"
 )
 
 // PackageLinuxAmd64 builds and stores linux amd64 package
@@ -200,12 +201,20 @@ func PackageAndroid() error {
 // PackageDockerAlpine builds and stores docker alpine image
 func PackageDockerAlpine() error {
 	logconfig.Bootstrap()
+
 	if err := sh.RunV("bin/package_docker"); err != nil {
 		return err
 	}
+
 	if err := saveDockerImage("myst:alpine", "build/docker-images/myst_alpine.tgz"); err != nil {
 		return err
 	}
+
+	// TODO: Remove after testnet3 is merged in to master
+	if env.Str(env.BuildBranch) == "testnet3" {
+		return storage.UploadDockerImages()
+	}
+
 	return env.IfRelease(storage.UploadDockerImages)
 }
 
