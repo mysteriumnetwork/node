@@ -328,6 +328,14 @@ func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDT
 	return client.proposals(queryParams)
 }
 
+// ProposalsByTypeWithWhitelisting fetches proposals by given type with all whitelisting options.
+func (client *Client) ProposalsByTypeWithWhitelisting(serviceType string) ([]contract.ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("service_type", serviceType)
+	queryParams.Add("access_policy", "all")
+	return client.proposals(queryParams)
+}
+
 // ProposalsByLocationAndService fetches proposals by given service and node location types.
 func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
