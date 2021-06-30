@@ -28,6 +28,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -181,6 +182,8 @@ type Dependencies struct {
 	PilvytisAPI     *pilvytis.API
 	Pilvytis        *pilvytis.Service
 	ResidentCountry *identity.ResidentCountry
+
+	PayoutAddressStorage *payout.AddressStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -532,6 +535,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 	di.bootstrapBeneficiarySaver(nodeOptions)
+
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
