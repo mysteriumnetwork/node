@@ -23,9 +23,11 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/asdine/storm/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -68,6 +70,7 @@ type identitiesAPI struct {
 	bc                providerChannel
 	transactor        Transactor
 	bprovider         beneficiaryProvider
+	addressStorage    *payout.AddressStorage
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -83,8 +86,8 @@ type identitiesAPI struct {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	ids := endpoint.idm.GetIdentities()
+func (ia *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	ids := ia.idm.GetIdentities()
 	idsDTO := contract.NewIdentityListResponse(ids)
 	utils.WriteAsJSON(idsDTO, resp)
 }
@@ -116,7 +119,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	var req contract.IdentityCurrentRequest
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
@@ -135,7 +138,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
-	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase, chainID)
+	id, err := ia.selector.UseOrCreate(idAddress, *req.Passphrase, chainID)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -173,7 +176,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+func (ia *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
 	var req contract.IdentityCreateRequest
 	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
@@ -186,7 +189,7 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Re
 		return
 	}
 
-	id, err := endpoint.idm.CreateNewIdentity(*req.Passphrase)
+	id, err := ia.idm.CreateNewIdentity(*req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -226,9 +229,9 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	id, err := endpoint.idm.GetIdentity(address)
+	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusNotFound)
 		return
@@ -247,7 +250,7 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
-	err = endpoint.idm.Unlock(chainID, id.Address, *req.Passphrase)
+	err = ia.idm.Unlock(chainID, id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
@@ -274,22 +277,22 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	id, err := endpoint.idm.GetIdentity(address)
+	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusNotFound)
 		return
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
-	regStatus, err := endpoint.registry.GetRegistrationStatus(chainID, id)
+	regStatus, err := ia.registry.GetRegistrationStatus(chainID, id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
 
-	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(chainID, id)
+	channelAddress, err := ia.channelCalculator.GetChannelAddress(chainID, id)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
 		return
@@ -297,13 +300,13 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 
 	var stake = new(big.Int)
 	if regStatus == registry.Registered {
-		hermesID, err := endpoint.channelCalculator.GetActiveHermes(chainID)
+		hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
 			return
 		}
 
-		data, err := endpoint.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
+		data, err := ia.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return
@@ -311,8 +314,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		stake = data.Stake
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(chainID, id)
-	settlement := endpoint.earningsProvider.GetEarnings(chainID, id)
+	balance := ia.balanceProvider.ForceBalanceUpdate(chainID, id)
+	settlement := ia.earningsProvider.GetEarnings(chainID, id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
@@ -344,15 +347,15 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	id, err := endpoint.idm.GetIdentity(address)
+	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusNotFound)
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
+	regStatus, err := ia.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -384,9 +387,9 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bprovider.GetBeneficiary(common.HexToAddress(address))
+	data, err := ia.bprovider.GetBeneficiary(common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
@@ -415,9 +418,9 @@ func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Req
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
-	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(id))
+	tkn, err := ia.transactor.GetReferralToken(common.HexToAddress(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -444,9 +447,9 @@ func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, reques
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
-	err := endpoint.transactor.ReferralTokenAvailable(common.HexToAddress(id))
+	err := ia.transactor.ReferralTokenAvailable(common.HexToAddress(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -476,21 +479,21 @@ func (endpoint *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Import(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Import(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	var req contract.IdentityImportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	id, err := endpoint.mover.Import(req.Data, req.CurrentPassphrase, req.NewPassphrase)
+	id, err := ia.mover.Import(req.Data, req.CurrentPassphrase, req.NewPassphrase)
 	if err != nil {
 		utils.SendError(w, fmt.Errorf("failed to import identity: %w", err), http.StatusBadRequest)
 		return
 	}
 
 	if req.SetDefault {
-		if err := endpoint.selector.SetDefault(id.Address); err != nil {
+		if err := ia.selector.SetDefault(id.Address); err != nil {
 			utils.SendError(w, fmt.Errorf("failed to set default identity: %w", err), http.StatusBadRequest)
 			return
 		}
@@ -498,6 +501,88 @@ func (endpoint *identitiesAPI) Import(w http.ResponseWriter, r *http.Request, pa
 
 	idDTO := contract.NewIdentityDTO(id)
 	utils.WriteAsJSON(idDTO, w)
+}
+
+// swagger:operation GET /identities/:id/payout-address
+// ---
+// summary: Get payout address
+// description: Get payout address stored locally
+// parameters:
+// - in: path
+//   name: id
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Unlocked identity returned
+//     schema:
+//       "$ref": "#/definitions/PayoutAddressRequest"
+//   400:
+//     description: Bad Request error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   404:
+//     description: Not Found
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (ia *identitiesAPI) GetPayoutAddress(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	addr, err := ia.addressStorage.Address(id)
+	if err != nil {
+		if errors.Is(err, storm.ErrNotFound) {
+			utils.SendError(w, err, http.StatusNotFound)
+			return
+		}
+		utils.SendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.PayoutAddressRequest{Address: addr}, w)
+}
+
+// swagger:operation PUT /identities/:id/payout-address
+// ---
+// summary: Save payout address
+// description: Stores payout address locally
+// parameters:
+// - in: path
+//   name: id
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// - in: body
+//   name: body
+//   description: Payout address request.
+//   schema:
+//     $ref: "#/definitions/PayoutAddressRequest"
+// responses:
+//   200:
+//     description: Unlocked identity returned
+//     schema:
+//       "$ref": "#/definitions/PayoutAddressRequest"
+//   400:
+//     description: Bad Request error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (ia *identitiesAPI) SavePayoutAddress(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+
+	var par contract.PayoutAddressRequest
+	if err := json.NewDecoder(r.Body).Decode(&par); err != nil {
+		utils.SendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err := ia.addressStorage.Save(id, par.Address)
+	if err != nil {
+		utils.SendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	utils.WriteAsJSON(par, w)
 }
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
@@ -513,8 +598,9 @@ func AddRoutesForIdentities(
 	transactor Transactor,
 	bprovider beneficiaryProvider,
 	mover identityMover,
+	addressStorage *payout.AddressStorage,
 ) {
-	idmEnd := &identitiesAPI{
+	idAPI := &identitiesAPI{
 		mover:             mover,
 		idm:               idm,
 		selector:          selector,
@@ -525,25 +611,28 @@ func AddRoutesForIdentities(
 		bc:                bc,
 		transactor:        transactor,
 		bprovider:         bprovider,
+		addressStorage:    addressStorage,
 	}
-	router.GET("/identities", idmEnd.List)
-	router.POST("/identities", idmEnd.Create)
+	router.GET("/identities", idAPI.List)
+	router.POST("/identities", idAPI.Create)
 	router.PUT("/identities/:id", func(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 		// TODO: remove this hack when we replace our router
 		switch params.ByName("id") {
 		case "current":
-			idmEnd.Current(resp, request, params)
+			idAPI.Current(resp, request, params)
 		default:
 			http.NotFound(resp, request)
 		}
 	})
-	router.GET("/identities/:id", idmEnd.Get)
-	router.GET("/identities/:id/status", idmEnd.Get)
-	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
-	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
-	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
-	router.GET("/identities/:id/referral", idmEnd.GetReferralToken)
-	router.GET("/identities/:id/referral-available", idmEnd.ReferralTokenAvailable)
+	router.GET("/identities/:id", idAPI.Get)
+	router.GET("/identities/:id/status", idAPI.Get)
+	router.PUT("/identities/:id/unlock", idAPI.Unlock)
+	router.GET("/identities/:id/registration", idAPI.RegistrationStatus)
+	router.GET("/identities/:id/beneficiary", idAPI.Beneficiary)
+	router.GET("/identities/:id/referral", idAPI.GetReferralToken)
+	router.GET("/identities/:id/referral-available", idAPI.ReferralTokenAvailable)
+	router.GET("/identities/:id/payout-address", idAPI.GetPayoutAddress)
+	router.PUT("/identities/:id/payout-address", idAPI.SavePayoutAddress)
 
-	router.POST("/identities-import", idmEnd.Import)
+	router.POST("/identities-import", idAPI.Import)
 }
