@@ -77,6 +77,10 @@ func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPor
 				}
 			}
 
+			if natType == "fail" {
+				delete(m, p)
+			}
+
 			if eventBus != nil {
 				eventBus.Publish(AppTopicSTUN, STUNDetectionStatus{
 					Identity: identity.Address,
