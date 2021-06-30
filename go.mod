@@ -52,7 +52,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
-	github.com/mysteriumnetwork/go-dvpn-web v0.3.1
+	github.com/mysteriumnetwork/go-dvpn-web v0.4.0-testnet3rc0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
@@ -84,7 +84,6 @@ require (
 	go.mongodb.org/mongo-driver v1.5.3
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
