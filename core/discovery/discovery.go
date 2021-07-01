@@ -186,9 +186,13 @@ func (d *Discovery) registerProposal() {
 	err := d.proposalRegistry.RegisterProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to register proposal, retrying after 1 min")
-		time.Sleep(1 * time.Minute)
-		d.changeStatus(RegisterProposal)
-		return
+		select {
+		case <-d.stop:
+			return
+		case <-time.After(1 * time.Minute):
+			d.changeStatus(RegisterProposal)
+			return
+		}
 	}
 	d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
 	d.changeStatus(PingProposal)
