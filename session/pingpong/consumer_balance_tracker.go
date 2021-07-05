@@ -297,10 +297,10 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Identity) (*big.Int, error) {
 	var boff backoff.BackOff
 	eback := backoff.NewExponentialBackOff()
-	eback.MaxElapsedTime = time.Second * 10
+	eback.MaxElapsedTime = time.Second * 30
 	eback.InitialInterval = time.Second * 1
 
-	boff = backoff.WithMaxRetries(eback, 5)
+	boff = backoff.WithMaxRetries(eback, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -356,12 +356,15 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance
 func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
-	fallback := cbt.GetBalance(chainID, id)
+	fallback, ok := cbt.getBalance(chainID, id)
+	if !ok {
+		fallback.BCBalance = big.NewInt(0)
+	}
 
 	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not calculate channel address")
-		return fallback
+		return fallback.BCBalance
 	}
 
 	myst, err := cbt.addressProvider.GetMystAddress(chainID)
@@ -373,7 +376,11 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	balance, err := cbt.alignWithHermes(chainID, id)
 	if err != nil {
 		if !errors.Is(err, errBalanceNotOffchain) {
-			log.Err(err).Msg("syncing balance with hermes failed, will try consumer channel")
+			log.Error().Err(err).Msg("align with hermes failed with a critical error, offchain balance out of sync")
+		}
+		if !errors.Is(err, errBalanceNotOffchain) && fallback.IsOffchain {
+			log.Warn().Msg("offchain sync failed but found a cache entry, will return that")
+			return fallback.BCBalance
 		}
 	} else {
 		return balance
@@ -411,7 +418,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
-		return fallback
+		return fallback.BCBalance
 	}
 
 	var before = new(big.Int)

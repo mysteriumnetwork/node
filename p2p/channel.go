@@ -106,6 +106,13 @@ func (p *peer) addr() *net.UDPAddr {
 	return p.remoteAddr
 }
 
+func (p *peer) updateAddr(addr *net.UDPAddr) {
+	p.Lock()
+	defer p.Unlock()
+
+	p.remoteAddr = addr
+}
+
 // transport wraps network primitives for sending and receiving packets.
 type transport struct {
 	// textReader is used to read p2p text protocol data.
@@ -244,6 +251,7 @@ func (c *channel) launchReadSendLoops() {
 // If remote peer addr changes it will be updated and next send will use new addr.
 func (c *channel) remoteReadLoop() {
 	buf := make([]byte, mtuLimit)
+	latestPeerAddr := c.peer.addr()
 
 	go c.checkIfChannelAlive()
 
@@ -254,11 +262,12 @@ func (c *channel) remoteReadLoop() {
 		default:
 		}
 
-		n, _, err := c.tr.remoteConn.ReadFrom(buf)
+		n, addr, err := c.tr.remoteConn.ReadFrom(buf)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Read from remote conn failed")
 			}
+
 			return
 		}
 
@@ -266,11 +275,21 @@ func (c *channel) remoteReadLoop() {
 			close(c.remoteAlive)
 		})
 
+		// Check if peer port changed.
+		if addr, ok := addr.(*net.UDPAddr); ok {
+			if addr.IP.Equal(latestPeerAddr.IP) && addr.Port != latestPeerAddr.Port {
+				log.Debug().Msgf("Peer port changed from %v to %v", latestPeerAddr, addr)
+				c.peer.updateAddr(addr)
+				latestPeerAddr = addr
+			}
+		}
+
 		_, err = c.tr.proxyConn.WriteToUDP(buf[:n], c.localSessionAddr)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Write to local udp session failed")
 			}
+
 			return
 		}
 	}
