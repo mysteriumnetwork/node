@@ -2731,11 +2731,6 @@
       "description": "IdentityRegisterRequest represents the identity registration user input parameters",
       "type": "object",
       "properties": {
-        "beneficiary": {
-          "description": "Cache out address for Provider",
-          "type": "string",
-          "x-go-name": "Beneficiary"
-        },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
           "type": "string",
