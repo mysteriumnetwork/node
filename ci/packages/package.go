@@ -211,7 +211,7 @@ func PackageDockerAlpine() error {
 	}
 
 	// TODO: Remove after testnet3 is merged in to master
-	if env.Str(env.BuildBranch) == "testnet3" {
+	if env.Str(env.BuildBranch) == "testnet3-build" {
 		return storage.UploadDockerImages()
 	}
 
