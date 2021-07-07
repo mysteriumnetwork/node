@@ -82,8 +82,8 @@ var Testnet3Definition = NetworkDefinition{
 		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
 		EtherClientRPC:     "wss://zealous-almeida:ajar-image-anyone-sprint-clique-breeze@ws-nd-913-626-738.p2pify.com",
 	},
-	MMNAddress:      "https://my.mysterium.network/",
-	MMNAPIAddress:   "https://my.mysterium.network/api/v1",
+	MMNAddress:      "https://mmn3.mysterium.network/",
+	MMNAPIAddress:   "https://mmn3.mysterium.network/api/v1",
 	PilvytisAddress: "https://testnet3-pilvytis.mysterium.network/api/v1",
 	DNSMap: map[string][]string{
 		"testnet3-discovery.mysterium.network":  {"167.233.11.60"},
