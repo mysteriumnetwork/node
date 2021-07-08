@@ -18,6 +18,8 @@
 package beneficiary
 
 import (
+	"errors"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -28,6 +30,10 @@ type Saver interface {
 	SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error
 	GetChangeStatus(id identity.Identity) (*ChangeStatus, error)
 	CleanupAndGetChangeStatus(id identity.Identity, currentBeneficiary string) (*ChangeStatus, error)
+
+	// SaveBeneficiary only saves the beneficiary but does not settle.
+	// On chains where settling is required it returns an error.
+	SaveBeneficiary(id identity.Identity, beneficiary common.Address) error
 }
 
 type storage interface {
@@ -92,6 +98,10 @@ func (b *l1Saver) SettleAndSaveBeneficiary(id identity.Identity, beneficiary com
 	return err
 }
 
+func (b *l1Saver) SaveBeneficiary(id identity.Identity, beneficiary common.Address) error {
+	return errors.New("can only save and settle")
+}
+
 // l2Saver handles saving beneficiary in L2 chains.
 type l2Saver struct {
 	set settler
@@ -135,4 +145,9 @@ func (b *l2Saver) SettleAndSaveBeneficiary(id identity.Identity, beneficiary com
 	}
 
 	return b.st.SetValue(storageBucket, storageKey(b.chainID, id.Address), beneficiary.Hex())
+}
+
+// Saves a new beneficiary but does not settle.
+func (b *l2Saver) SaveBeneficiary(id identity.Identity, beneficiary common.Address) error {
+	return b.st.SetValue(storageBucket, storageKey(b.chainID, id.Address), beneficiary)
 }
