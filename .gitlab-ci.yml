@@ -181,6 +181,7 @@ release-snapshot:android-sdk:
   script: go run mage.go -v ReleaseAndroidSDKSnapshot
   only:
     - master
+    - testnet3-build
 
 release-tag:release:
   stage: release-tag
