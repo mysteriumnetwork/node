@@ -488,6 +488,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapBeneficiarySaver(nodeOptions)
 	di.bootstrapBeneficiaryProvider(nodeOptions)
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
@@ -535,8 +536,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
-
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(

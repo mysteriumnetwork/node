@@ -49,7 +49,7 @@ type multiChainAddressKeeper interface {
 }
 
 type bsaver interface {
-	SaveBeneficiary(id identity.Identity, beneficiary common.Address) error
+	Save(id string, beneficiary string) error
 }
 
 type bc interface {
@@ -253,7 +253,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 
 	// If chain is l2 we should save the new beneficiary to db.
 	if pr.chainID() == pr.l2chainID() {
-		if err := pr.saver.SaveBeneficiary(id, benef); err != nil {
+		if err := pr.saver.Save(id.Address, benef.Hex()); err != nil {
 			log.Error().Err(err).Msg("Failed to save beneficiary to the database")
 		}
 	}
