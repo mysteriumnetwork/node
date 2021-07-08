@@ -486,6 +486,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
+	di.bootstrapBeneficiarySaver(nodeOptions)
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
@@ -494,8 +497,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.EventBus,
 		di.BCHelper,
 	)
-
-	di.bootstrapBeneficiaryProvider(nodeOptions)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
@@ -534,7 +535,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
-	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 
