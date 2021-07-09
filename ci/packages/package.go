@@ -148,11 +148,6 @@ func PackageIOS() error {
 
 // PackageAndroid builds and stores Android package
 func PackageAndroid() error {
-	job.Precondition(func() bool {
-		pr, _ := env.IsPR()
-		fullBuild, _ := env.IsFullBuild()
-		return !pr || fullBuild
-	})
 	logconfig.Bootstrap()
 
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
