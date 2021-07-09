@@ -32,7 +32,7 @@ func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
 
 	done := make(chan struct{})
 
@@ -49,7 +49,7 @@ func Test_ProviderRegistrar_needsHandling(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
 
 	mockEvent := queuedEvent{
 		event:   servicestate.AppEventServiceStatus{},
@@ -78,7 +78,7 @@ func Test_ProviderRegistrar_RegistersProvider(t *testing.T) {
 		addrToReturn: newRegistryAddress,
 	}, &mockBlockchain{
 		beneficiaryToReturn: common.HexToAddress("0x3b2e61d42aa1ba340f8a60128fadb273894df145"),
-	}, cfg)
+	}, cfg, &mockPayoutStorage{})
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -112,7 +112,7 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -152,7 +152,7 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet3(t *testing.T) 
 		addrToReturn: newRegistryAddress,
 	}, &mockBlockchain{
 		beneficiaryToReturn: common.HexToAddress("0x3b2e61d42aa1ba340f8a60128fadb273894df145"),
-	}, cfg)
+	}, cfg, &mockPayoutStorage{})
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -186,7 +186,7 @@ func Test_ProviderRegistrar_FailsAfterRetries(t *testing.T) {
 	cfg := ProviderRegistrarConfig{
 		MaxRetries: 5,
 	}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -241,6 +241,10 @@ func (mak *mockAddressKeeper) GetRegistryAddress(chainID int64) (common.Address,
 	return mak.addrToReturn, mak.errToReturn
 }
 
+func (mak *mockAddressKeeper) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
+	return common.Address{}, nil
+}
+
 type mockBlockchain struct {
 	beneficiaryToReturn common.Address
 	errToReturn         error
@@ -248,4 +252,11 @@ type mockBlockchain struct {
 
 func (mb *mockBlockchain) GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error) {
 	return mb.beneficiaryToReturn, mb.errToReturn
+}
+
+type mockPayoutStorage struct {
+}
+
+func (mb *mockPayoutStorage) Save(identity, address string) error {
+	return nil
 }
