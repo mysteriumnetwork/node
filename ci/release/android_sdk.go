@@ -49,10 +49,10 @@ func ReleaseAndroidSDKSnapshot() error {
 	if err != nil {
 		return err
 	}
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseAndroidSDKSnapshot action...")
-		return nil
-	}
+// 	if !env.Bool(env.SnapshotBuild) {
+// 		log.Info().Msg("Not a snapshot build, skipping ReleaseAndroidSDKSnapshot action...")
+// 		return nil
+// 	}
 	err = env.EnsureEnvVars(MavenToken)
 	if err != nil {
 		return err
