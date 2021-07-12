@@ -190,7 +190,7 @@ func PackageAndroid() error {
 		return err
 	}
 
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts();
 }
 
 // PackageDockerAlpine builds and stores docker alpine image
