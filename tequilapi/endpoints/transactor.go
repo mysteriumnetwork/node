@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -70,7 +71,7 @@ type transactorEndpoint struct {
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
 	addressProvider           addressProvider
-	bprovider                 beneficiaryProvider
+	addressStorage            *payout.AddressStorage
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
