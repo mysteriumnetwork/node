@@ -255,11 +255,6 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
-	if errorMap := req.Validate(); errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
-		return
-	}
-
 	registrationStatus, err := te.identityRegistry.GetRegistrationStatus(chainID, id)
 	if err != nil {
 		log.Err(err).Stack().Msgf("could not check registration status for ID: %s, %+v", id.Address, req)
@@ -284,7 +279,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		regFee = rf.Fee
 	}
 
-	err = te.transactor.RegisterIdentity(id.Address, req.Stake, regFee, "", chainID, req.ReferralToken)
+	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, "", chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
