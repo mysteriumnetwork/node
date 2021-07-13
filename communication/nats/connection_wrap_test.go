@@ -73,12 +73,6 @@ func TestConnectionWrap_NewConnection(t *testing.T) {
 	assert.Equal(t, []string{"nats://127.0.0.1:4222", "nats://example.com:4222"}, connection.Servers())
 }
 
-func TestConnectionWrap_Close_AfterFailedOpen(t *testing.T) {
-	connection, _ := newConnection(nil, "nats://far-server:1234")
-	assert.Equal(t, "failed to connect to NATS servers [nats://far-server:1234]: nats: no servers available for connection", connection.Open().Error())
-	connection.Close()
-}
-
 func TestConnectionWrap_Servers(t *testing.T) {
 	connection, _ := newConnection(nil, "nats://far-server:1234")
 	assert.Equal(t, []string{"nats://far-server:1234"}, connection.Servers())
