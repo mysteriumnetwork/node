@@ -2735,9 +2735,6 @@
           "description": "Token: referral token, if the user has one",
           "type": "string",
           "x-go-name": "ReferralToken"
-        },
-        "stake": {
-          "$ref": "#/definitions/Int"
         }
       },
       "x-go-name": "IdentityRegisterRequest",
