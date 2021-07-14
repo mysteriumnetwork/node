@@ -183,6 +183,11 @@ release-snapshot:android-sdk:
     - master
     - testnet3-build
 
+release-nightly:node:
+  stage: release-snapshot
+  tags: [go]
+  script: go run mage.go -v ReleaseGithubNightly
+
 release-tag:release:
   stage: release-tag
   tags: [go]
