@@ -199,6 +199,10 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		return nil, fmt.Errorf("could not create proxy conn: %w", err)
 	}
 
+	if err := router.ProtectUDPConn(proxyConn); err != nil {
+		return nil, fmt.Errorf("failed to protect udp proxy connection: %w", err)
+	}
+
 	// Setup KCP session. It will write to proxy conn only.
 	udpSession, sessAddr, err := listenUDPSession(proxyConn.LocalAddr(), privateKey, peerPubKey)
 	if err != nil {
@@ -263,6 +267,7 @@ func (c *channel) remoteReadLoop() {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Read from remote conn failed")
 			}
+
 			return
 		}
 
@@ -270,10 +275,10 @@ func (c *channel) remoteReadLoop() {
 			close(c.remoteAlive)
 		})
 
-		// Check if peer address changed.
+		// Check if peer port changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
-			if !addr.IP.Equal(latestPeerAddr.IP) || addr.Port != latestPeerAddr.Port {
-				log.Debug().Msgf("Peer address changed from %v to %v", latestPeerAddr, addr)
+			if addr.IP.Equal(latestPeerAddr.IP) && addr.Port != latestPeerAddr.Port {
+				log.Debug().Msgf("Peer port changed from %v to %v", latestPeerAddr, addr)
 				c.peer.updateAddr(addr)
 				latestPeerAddr = addr
 			}
@@ -284,6 +289,7 @@ func (c *channel) remoteReadLoop() {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Write to local udp session failed")
 			}
+
 			return
 		}
 	}

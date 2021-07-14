@@ -1,7 +1,7 @@
-// +build !windows
+// +build !android
 
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package firewall
+package p2p
 
-// AddInboundRule adds new inbound rule to the platform specific firewall.
-func AddInboundRule(proto string, port int) error {
-	// TODO adding firewall rules should be implemented for every platform.
-	return nil
-}
-
-// RemoveInboundRule removes inbound rule from the platform specific firewall.
-func RemoveInboundRule(proto string, port int) error {
-	// TODO adding firewall rules should be implemented for every platform.
-	return nil
+func defaultInterfaceAddress() string {
+	return ""
 }

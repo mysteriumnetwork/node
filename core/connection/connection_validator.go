@@ -25,6 +25,7 @@ import (
 )
 
 type consumerBalanceGetter interface {
+	NeedsForceSync(chainID int64, id identity.Identity) bool
 	GetBalance(chainID int64, id identity.Identity) *big.Int
 	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
@@ -50,6 +51,10 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 // validateBalance checks if consumer has enough money for given proposal.
 func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) bool {
 	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
+
+	if v.consumerBalanceGetter.NeedsForceSync(chainID, consumerID) {
+		balance = v.consumerBalanceGetter.ForceBalanceUpdate(chainID, consumerID)
+	}
 
 	if perHour := proposal.Price.PerHour; perHour.Cmp(big.NewInt(0)) > 0 {
 		perMin := new(big.Int).Div(perHour, big.NewInt(60))

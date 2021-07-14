@@ -43,7 +43,7 @@ type brokerConnector interface {
 }
 
 type natConsumerPinger interface {
-	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingProviderPeer(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 }
 
 type natProviderPinger interface {

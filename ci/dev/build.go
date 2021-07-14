@@ -18,6 +18,7 @@
 package dev
 
 import (
+	"fmt"
 	"runtime"
 	"strings"
 
@@ -34,6 +35,15 @@ func Daemon() error {
 	if runtime.GOOS == "darwin" {
 		cmd = "sudo " + cmd
 	}
+	cmdParts := strings.Split(cmd, " ")
+	return sh.RunV(cmdParts[0], cmdParts[1:]...)
+}
+
+// Consumer builds and runs myst daemon in usermode for consumer (without sudo) - same way as it is run in the desktop client.
+func Consumer() error {
+	mg.Deps(packages.Build)
+	port := 44050 // Port is the same as used by the desktop app.
+	cmd := fmt.Sprintf("build/myst/myst --usermode --consumer --tequilapi.port=%d --ui.enable=false --discovery.type=api daemon", port)
 	cmdParts := strings.Split(cmd, " ")
 	return sh.RunV(cmdParts[0], cmdParts[1:]...)
 }

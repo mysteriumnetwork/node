@@ -42,6 +42,12 @@ const (
 	startingID = 100
 )
 
+// FilterPresetRepository provides proposal filter presets by which they can be filtered.
+type FilterPresetRepository interface {
+	List() (*FilterPresets, error)
+	Get(id int) (*FilterPreset, error)
+}
+
 // FilterPresetStorage filter preset storage
 type FilterPresetStorage struct {
 	lock    sync.Mutex

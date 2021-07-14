@@ -332,8 +332,8 @@ func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDT
 func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
 	queryParams.Add("service_type", serviceType)
-	queryParams.Add("location_type", locationType)
-	queryParams.Add("country", locationCountry)
+	queryParams.Add("ip_type", locationType)
+	queryParams.Add("location_country", locationCountry)
 	return client.proposals(queryParams)
 }
 
@@ -360,6 +360,7 @@ func (client *Client) ProposalsByPrice(priceHourMax, priceGiBMax *big.Int) ([]co
 	values.Add("price_gib_max", fmt.Sprintf("%v", priceGiBMax))
 	values.Add("price_hour_max", fmt.Sprintf("%v", priceHourMax))
 	values.Add("access_policy", "all")
+	values.Add("include_monitoring_failed", "true")
 	return client.proposals(values)
 }
 

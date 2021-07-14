@@ -25,13 +25,15 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/apidiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/dhtdiscovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/pkg/errors"
 )
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
-	proposalRepository := discovery.NewRepository()
+	di.FilterPresetStorage = proposal.NewFilterPresetStorage(di.Storage)
+	proposalRepository := discovery.NewRepository(di.FilterPresetStorage)
 	proposalRegistry := discovery.NewRegistry()
 	discoveryWorker := discovery.NewWorker()
 

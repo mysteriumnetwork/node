@@ -18,15 +18,14 @@
 package mysterium
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"path/filepath"
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
@@ -49,6 +48,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -106,6 +106,7 @@ type MobileNodeOptions struct {
 	RegistrySCAddress              string
 	HermesSCAddress                string
 	ChannelImplementationSCAddress string
+	CacheTTLSeconds                int
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -134,6 +135,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		RegistrySCAddress:              metadata.Testnet2Definition.Chain1.RegistryAddress,
 		HermesSCAddress:                metadata.Testnet2Definition.Chain1.HermesID,
 		ChannelImplementationSCAddress: metadata.Testnet2Definition.Chain1.ChannelImplAddress,
+		CacheTTLSeconds:                5,
 	}
 }
 
@@ -156,6 +158,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPriceGiBMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceGiBMax)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPriceHourMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceHourMax)
+	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 
 	network := node.OptionsNetwork{
 		Testnet2:              options.Testnet2,
@@ -207,7 +210,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Address: options.QualityOracleURL,
 		},
 		Discovery: node.OptionsDiscovery{
-			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker, node.DiscoveryTypeDHT},
+			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI},
 			Address:      network.MysteriumAPIAddress,
 			FetchEnabled: false,
 			DHT: node.OptionsDHT{
@@ -273,6 +276,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.FilterPresetStorage,
+			time.Duration(options.CacheTTLSeconds)*time.Second,
 		),
 		pilvytis:       di.Pilvytis,
 		startTime:      time.Now(),
@@ -316,7 +320,12 @@ type GetLocationResponse struct {
 
 // GetLocation return current location including country and IP.
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
-	loc, err := mb.locationResolver.DetectLocation()
+	c := requests.NewHTTPClientWithTransport(http.DefaultTransport.(*http.Transport), 30*time.Second)
+	resolver := location.NewOracleResolver(c, DefaultNodeOptions().LocationDetectorURL)
+	loc, err := resolver.DetectLocation()
+	// TODO this is temporary workaround to show correct location on Android.
+	// This needs to be fixed on the di level to make sure we are using correct resolver in transport and in visual part.
+	// loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
 		return nil, fmt.Errorf("could not get location: %w", err)
 	}
@@ -492,31 +501,9 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 	return &ConnectResponse{}
 }
 
-// Reconnect checks weather session is alive and reconnects if its dead. Force reconnect if ForceReconnect is set.
+// Reconnect is deprecated, we are doing reconnect now in the connection manager.
+// TODO remove this from mobile app and here too.
 func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
-	reconnect := func() *ConnectResponse {
-		if err := mb.Disconnect(); err != nil {
-			log.Err(err).Msg("Failed to disconnect previous session")
-		}
-
-		return mb.Connect(req)
-	}
-
-	if req.ForceReconnect {
-		log.Info().Msg("Forcing immediate reconnect")
-		return reconnect()
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	if err := mb.connectionManager.CheckChannel(ctx); err != nil {
-		log.Info().Msgf("Forcing reconnect after failed channel: %s", err)
-		return reconnect()
-	}
-
-	log.Info().Msg("Reconnect is not needed - p2p channel is alive")
-
 	return &ConnectResponse{}
 }
 

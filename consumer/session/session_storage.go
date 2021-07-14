@@ -180,9 +180,8 @@ func (repo *Storage) consumeServiceSessionStatisticsEvent(e session_event.AppEve
 	defer repo.mu.Unlock()
 
 	sessionID := session_node.ID(e.ID)
-	row, ok := repo.sessionsActive[sessionID]
+	row, ok := repo.activeSession(sessionID)
 	if !ok {
-		log.Warn().Msg("Received a unknown session update")
 		return
 	}
 
@@ -196,14 +195,32 @@ func (repo *Storage) consumeServiceSessionEarningsEvent(e session_event.AppEvent
 	defer repo.mu.Unlock()
 
 	sessionID := session_node.ID(e.SessionID)
-	row, ok := repo.sessionsActive[sessionID]
+	row, ok := repo.activeSession(sessionID)
 	if !ok {
-		log.Warn().Msg("Received a unknown session update")
 		return
 	}
 
+	if big.NewInt(0).Cmp(e.Total) == 0 {
+		log.Debug().Fields(map[string]interface{}{
+			"sessionID":    sessionID,
+			"consumerID":   row.ConsumerID,
+			"providerID":   row.ProviderID,
+			"dataReceived": row.DataReceived,
+			"dataSent":     row.DataSent,
+			"duration":     row.GetDuration(),
+		}).Msgf("Zero earning event")
+	}
 	row.Tokens = e.Total
 	repo.sessionsActive[sessionID] = row
+}
+
+func (repo *Storage) activeSession(sessionID session_node.ID) (History, bool) {
+	history, ok := repo.sessionsActive[sessionID]
+	if !ok {
+		log.Warn().Msgf("Received a unknown session update, sessionID: %s", sessionID)
+		return History{}, false
+	}
+	return history, true
 }
 
 // consumeConnectionSessionEvent consumes the session state change events
@@ -238,9 +255,8 @@ func (repo *Storage) consumeConnectionStatisticsEvent(e connectionstate.AppEvent
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	row, ok := repo.sessionsActive[e.SessionInfo.SessionID]
+	row, ok := repo.activeSession(e.SessionInfo.SessionID)
 	if !ok {
-		log.Warn().Msg("Received a unknown session update")
 		return
 	}
 
@@ -254,9 +270,8 @@ func (repo *Storage) consumeConnectionSpendingEvent(e pingpong_event.AppEventInv
 	defer repo.mu.Unlock()
 
 	sessionID := session_node.ID(e.SessionID)
-	row, ok := repo.sessionsActive[sessionID]
+	row, ok := repo.activeSession(sessionID)
 	if !ok {
-		log.Warn().Msg("Received a unknown session update")
 		return
 	}
 	row.Updated = repo.timeGetter().UTC()

@@ -57,7 +57,7 @@ func NewDialerSwarm(srcIP string, dnsHeadstart time.Duration) *DialerSwarm {
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
 			Control: func(net, address string, c syscall.RawConn) (err error) {
 				err = c.Control(func(f uintptr) {
-					log.Debug().Msgf("Protecting connection to: %s (%s)", address, net)
+					log.Trace().Msgf("Protecting connection to: %s (%s)", address, net)
 
 					fd := int(f)
 					err := router.Protect(fd)
@@ -280,7 +280,10 @@ func (wd *dialerWithDNSCache) DialContext(ctx context.Context, network, addr str
 				return
 			}
 
-			addrs, err := net.LookupHost(addrHost)
+			lookupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			addrs, err := net.DefaultResolver.LookupHost(lookupCtx, addrHost)
 			if err != nil {
 				log.Warn().Msgf("Failed to lookup host: %s", addrHost)
 				return
