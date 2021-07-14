@@ -488,7 +488,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapBeneficiarySaver(nodeOptions)
 	di.bootstrapBeneficiaryProvider(nodeOptions)
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage, di.MMN)
 
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
