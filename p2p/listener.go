@@ -175,11 +175,18 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			traceDial := config.tracer.StartStage("Provider P2P dial (pinger)")
 			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v initial ttl: %v",
 				config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL)
+
 			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), providerID.Address, config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
 			}
+
+			if len(conns) != requiredConnCount {
+				log.Err(err).Msg("Could not get required number of connections")
+				return
+			}
+
 			conn1 = conns[0]
 			conn2 = conns[1]
 			config.tracer.EndStage(traceDial)
