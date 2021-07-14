@@ -80,7 +80,6 @@ type queuedEvent struct {
 type ProviderRegistrarConfig struct {
 	IsTestnet3          bool
 	MaxRetries          int
-	Stake               *big.Int
 	DelayBetweenRetries time.Duration
 }
 
@@ -245,7 +244,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 		}
 	}
 
-	err := pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, nil, settleBeneficiary.Hex(), pr.chainID(), nil)
+	err := pr.txer.RegisterIdentity(qe.event.ProviderID, big.NewInt(0), nil, settleBeneficiary.Hex(), pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")

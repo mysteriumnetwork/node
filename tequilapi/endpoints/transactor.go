@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -70,7 +71,7 @@ type transactorEndpoint struct {
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
 	addressProvider           addressProvider
-	bprovider                 beneficiaryProvider
+	addressStorage            *payout.AddressStorage
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
@@ -255,11 +256,6 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
-	if errorMap := req.Validate(); errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
-		return
-	}
-
 	registrationStatus, err := te.identityRegistry.GetRegistrationStatus(chainID, id)
 	if err != nil {
 		log.Err(err).Stack().Msgf("could not check registration status for ID: %s, %+v", id.Address, req)
@@ -284,7 +280,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		regFee = rf.Fee
 	}
 
-	err = te.transactor.RegisterIdentity(id.Address, req.Stake, regFee, "", chainID, req.ReferralToken)
+	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, "", chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)

@@ -20,7 +20,6 @@ package mysterium
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -234,7 +233,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			TransactorEndpointAddress:       options.TransactorEndpointAddress,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
-			ProviderRegistrationStake:       big.NewInt(6200000000),
 		},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:    1500,

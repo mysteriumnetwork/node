@@ -18,8 +18,13 @@
 package payout
 
 import (
+	"time"
+
+	"github.com/asdine/storm/v3"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -27,21 +32,33 @@ const (
 )
 
 // ErrInvalidAddress represents invalid address error
-var ErrInvalidAddress = errors.New("Invalid address")
+var (
+	ErrInvalidAddress = errors.New("invalid address")
+	ErrNotFound       = errors.New("beneficiary not found")
+)
 
 type storage interface {
-	GetValue(bucket string, key interface{}, to interface{}) error
-	SetValue(bucket string, key interface{}, to interface{}) error
+	Store(bucket string, data interface{}) error
+	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
+}
+
+type mmnClient interface {
+	UpdateBeneficiary(data *mmn.UpdateBeneficiaryRequest) error
+	GetBeneficiary(identityStr string) (string, error)
 }
 
 // AddressStorage handles storing of payout address
 type AddressStorage struct {
 	storage storage
+	mmnc    mmnClient
 }
 
 // NewAddressStorage constructor
-func NewAddressStorage(storage storage) *AddressStorage {
-	return &AddressStorage{storage: storage}
+func NewAddressStorage(storage storage, mmnc mmnClient) *AddressStorage {
+	return &AddressStorage{
+		storage: storage,
+		mmnc:    mmnc,
+	}
 }
 
 // Save save payout address for identity
@@ -49,11 +66,57 @@ func (as *AddressStorage) Save(identity, address string) error {
 	if !common.IsHexAddress(address) {
 		return ErrInvalidAddress
 	}
-	return as.storage.SetValue(bucket, identity, address)
+	err := as.mmnc.UpdateBeneficiary(&mmn.UpdateBeneficiaryRequest{
+		Beneficiary: address,
+		Identity:    identity,
+	})
+	if err != nil {
+		return err
+	}
+
+	store := &storedBeneficiary{
+		ID:          identity,
+		Beneficiary: address,
+		LastUpdated: time.Now().UTC(),
+	}
+	return as.storage.Store(bucket, store)
 }
 
 // Address retrieve payout address for identity
 func (as *AddressStorage) Address(identity string) (string, error) {
-	var addr string
-	return addr, as.storage.GetValue(bucket, identity, &addr)
+	result := &storedBeneficiary{}
+	err := as.storage.GetOneByField(bucket, "ID", identity, result)
+	if err != nil && err != storm.ErrNotFound {
+		return "", err
+	}
+
+	if err == storm.ErrNotFound || result.isExpired() {
+		addr, err := as.mmnc.GetBeneficiary(identity)
+		if err != nil {
+			return "", err
+		}
+		if addr == "" {
+			return "", ErrNotFound
+		}
+		if err := as.Save(identity, addr); err != nil {
+			log.Warn().Err(err).Msg("could not save benefiicary after not finding it in local cache, will try next time")
+		}
+
+		return addr, nil
+	}
+	return result.Beneficiary, nil
+}
+
+type storedBeneficiary struct {
+	ID          string `storm:"id"`
+	Beneficiary string
+	LastUpdated time.Time
+}
+
+func (s *storedBeneficiary) isExpired() bool {
+	if s.LastUpdated.IsZero() {
+		return true
+	}
+	now := time.Now().UTC().AddDate(0, 0, 1)
+	return s.LastUpdated.After(now)
 }

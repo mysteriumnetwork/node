@@ -201,9 +201,8 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address string, stake *big.Int, token *string) error {
+func (client *Client) RegisterIdentity(address string, token *string) error {
 	payload := contract.IdentityRegisterRequest{
-		Stake:         stake,
 		ReferralToken: token,
 	}
 

@@ -147,7 +147,6 @@ func GetOptions() *Options {
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
-			ProviderRegistrationStake:       config.GetBigInt(config.FlagTransactorProviderRegistrationStake),
 		},
 		Payments: OptionsPayments{
 			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),

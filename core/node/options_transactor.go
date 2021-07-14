@@ -18,7 +18,6 @@
 package node
 
 import (
-	"math/big"
 	"time"
 )
 
@@ -28,5 +27,4 @@ type OptionsTransactor struct {
 	TransactorEndpointAddress       string
 	ProviderMaxRegistrationAttempts int
 	ProviderRegistrationRetryDelay  time.Duration
-	ProviderRegistrationStake       *big.Int
 }

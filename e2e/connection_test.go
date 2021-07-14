@@ -66,7 +66,6 @@ var (
 )
 
 var (
-	providerStake, _            = big.NewInt(0).SetString("50000000000000000000", 10)
 	providerChannelAddress      = "0xa57b6Eb01f6883f59B41d525b603A1012B5879f9"
 	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
 	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
@@ -189,7 +188,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
-		assert.Equal(t, new(big.Int), providerStatus.Balance)
+		assert.Equal(t, balanceAfterRegistration, providerStatus.Balance)
 
 		// settle hermes 1
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
@@ -262,29 +261,6 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		}, time.Second*20, time.Millisecond*100)
 	})
 
-	t.Run("Provider decreases stake", func(t *testing.T) {
-		providerStatus, err := tequilapiProvider.Identity(providerID)
-		assert.NoError(t, err)
-		assert.Equal(t, providerStake, providerStatus.Stake)
-		initialStake := providerStatus.Stake
-
-		fees, err := tequilapiProvider.GetTransactorFees()
-		assert.NoError(t, err)
-
-		decrease := new(big.Int).Mul(fees.DecreaseStake, big.NewInt(3))
-		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), decrease)
-		assert.NoError(t, err)
-
-		expected := new(big.Int).Sub(initialStake, decrease)
-		var lastStatus *big.Int
-		assert.Eventually(t, func() bool {
-			providerStatus, err := tequilapiProvider.Identity(providerID)
-			assert.NoError(t, err)
-			lastStatus = providerStatus.Stake
-			return expected.Cmp(providerStatus.Stake) == 0
-		}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Incorrect stake. Expected %v, got %v", expected, lastStatus))
-	})
-
 	t.Run("Provider stops services", func(t *testing.T) {
 		services, err := tequilapiProvider.Services()
 		assert.NoError(t, err)
@@ -339,7 +315,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, new(big.Int), nil)
+			err = c.tequila().RegisterIdentity(id.Address, nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -365,7 +341,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, providerStake, nil)
+			err = c.tequila().RegisterIdentity(id.Address, nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -481,7 +457,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, providerStake, nil)
+	err = tequilapi.RegisterIdentity(id, nil)
 	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
 
 	assert.Eventually(t, func() bool {
@@ -494,8 +470,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, providerChannelAddress, idStatus.ChannelAddress)
-	assert.Equal(t, new(big.Int), idStatus.Balance)
-	assert.Equal(t, providerStake, idStatus.Stake)
+	assert.Equal(t, balanceAfterRegistration, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
@@ -516,7 +491,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, big.NewInt(0), nil)
+	err = tequilapi.RegisterIdentity(id, nil)
 	assert.NoError(t, err)
 
 	// now we check identity again
@@ -667,7 +642,7 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.True(t, providerStatus.Balance.Cmp(new(big.Int)) == 0)
+	assert.Equal(t, providerStatus.Balance, balanceAfterRegistration)
 
 	// For reasoning behind these, see the comment in recheckBalancesWithHermes
 	actualEarnings := getDiffFloat(earningsExpected, providerStatus.Earnings)
