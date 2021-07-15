@@ -67,7 +67,7 @@ func PackageLinuxRaspberryImage() error {
 	if err := buildMystRaspbianImage(); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 func buildMystRaspbianImage() error {

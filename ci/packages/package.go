@@ -43,7 +43,7 @@ func PackageLinuxAmd64() error {
 	if err := packageStandalone("build/myst/myst_linux_amd64", "linux", "amd64"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageLinuxArm builds and stores linux arm package
@@ -52,7 +52,7 @@ func PackageLinuxArm() error {
 	if err := packageStandalone("build/myst/myst_linux_arm", "linux", "arm"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageLinuxDebianAmd64 builds and stores debian amd64 package
@@ -71,7 +71,7 @@ func PackageLinuxDebianAmd64() error {
 	if err := packageDebian("build/myst/myst", "amd64"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageLinuxDebianArm builds and stores debian arm package
@@ -90,7 +90,7 @@ func PackageLinuxDebianArm() error {
 	if err := packageDebian("build/myst/myst", "armhf"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageLinuxDebianArm64 builds and stores debian arm64 package
@@ -109,7 +109,7 @@ func PackageLinuxDebianArm64() error {
 	if err := packageDebian("build/myst/myst", "arm64"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageMacOSAmd64 builds and stores macOS amd64 package
@@ -118,7 +118,7 @@ func PackageMacOSAmd64() error {
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageWindowsAmd64 builds and stores Windows amd64 package
@@ -127,7 +127,8 @@ func PackageWindowsAmd64() error {
 	if err := packageStandalone("build/myst/myst_windows_amd64.exe", "windows", "amd64"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+
+	return storage.UploadArtifacts()
 }
 
 // PackageIOS builds and stores iOS package
@@ -143,7 +144,7 @@ func PackageIOS() error {
 	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 // PackageAndroid builds and stores Android package
