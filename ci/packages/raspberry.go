@@ -27,14 +27,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/mholt/archiver"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/ci/util/device"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -51,7 +52,7 @@ func PackageLinuxRaspberryImage() error {
 	job.Precondition(func() bool {
 		pr, _ := env.IsPR()
 		fullBuild, _ := env.IsFullBuild()
-		return !pr || fullBuild
+		return !pr || fullBuild || env.Bool("NIGHTLY_BUILD")
 	})
 	logconfig.Bootstrap()
 
