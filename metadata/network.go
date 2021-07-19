@@ -80,7 +80,7 @@ var Testnet3Definition = NetworkDefinition{
 		HermesID:           "0x7119442C7E627438deb0ec59291e31378F88DD06",
 		ChainID:            80001,
 		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
-		EtherClientRPC:     "wss://zealous-almeida:ajar-image-anyone-sprint-clique-breeze@ws-nd-913-626-738.p2pify.com",
+		EtherClientRPC:     "https://rpc-mumbai.maticvigil.com/v1/bbcd3ff12e1afcce954866c7a51a129c0cfccb5f",
 	},
 	MMNAddress:      "https://mmn3.mysterium.network/",
 	MMNAPIAddress:   "https://mmn3.mysterium.network/api/v1",
