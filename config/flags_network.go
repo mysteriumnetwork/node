@@ -95,6 +95,12 @@ var (
 		Usage: "Comma separated list of STUN server to be used to detect NAT type",
 		Value: cli.NewStringSlice("stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"),
 	}
+	// FlagLocalServiceDiscovery enables SSDP and Bonjour local service discovery.
+	FlagLocalServiceDiscovery = cli.BoolFlag{
+		Name:  "local-service-discovery",
+		Usage: "Enables SSDP and Bonjour local service discovery",
+		Value: true,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -113,6 +119,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
 		&FlagSTUNservers,
+		&FlagLocalServiceDiscovery,
 	)
 }
 
@@ -130,4 +137,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseInt64Flag(ctx, FlagChainID)
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
+	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
 }
