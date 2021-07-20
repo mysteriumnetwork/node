@@ -20,6 +20,7 @@ package pingpong
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -303,10 +304,10 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Identity) (*big.Int, error) {
 	var boff backoff.BackOff
 	eback := backoff.NewExponentialBackOff()
-	eback.MaxElapsedTime = time.Second * 30
+	eback.MaxElapsedTime = time.Second * 15
 	eback.InitialInterval = time.Second * 1
 
-	boff = backoff.WithMaxRetries(eback, 10)
+	boff = backoff.WithMaxRetries(eback, 5)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -323,6 +324,13 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 	alignBalance := func() error {
 		consumer, err := cbt.consumerInfoGetter.GetConsumerData(chainID, id.Address)
 		if err != nil {
+			var syntax *json.SyntaxError
+			if errors.As(err, &syntax) {
+				cancel()
+				log.Err(err).Msg("hermes response is malformed JSON can't check if offchain")
+				return err
+			}
+
 			if errors.Is(err, ErrHermesNotFound) {
 				// Hermes doesn't know about this identity meaning it's not offchain. Cancel.
 				cancel()
