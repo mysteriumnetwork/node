@@ -27,7 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-func (c *cliApp) stake(argsString string) {
+func (c *cliApp) stake(argsString string) (err error) {
 	var usage = strings.Join([]string{
 		"Usage: stake <action> [args]",
 		"Available actions:",
@@ -37,7 +37,7 @@ func (c *cliApp) stake(argsString string) {
 
 	if len(argsString) == 0 {
 		clio.Info(usage)
-		return
+		return errWrongArgumentCount
 	}
 
 	args := strings.Fields(argsString)
@@ -46,47 +46,45 @@ func (c *cliApp) stake(argsString string) {
 
 	switch action {
 	case "increase":
-		c.increaseStake(actionArgs)
+		return c.increaseStake(actionArgs)
 	case "decrease":
-		c.decreaseStake(actionArgs)
+		return c.decreaseStake(actionArgs)
 	default:
-		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
+		return errUnknownSubCommand(argsString)
 	}
 }
 
 const usageIncreaseStake = "increase <identity>"
 const usageDecreaseStake = "decrease <identity> <amount>"
 
-func (c *cliApp) decreaseStake(args []string) {
+func (c *cliApp) decreaseStake(args []string) (err error) {
 	if len(args) != 2 {
 		clio.Info("Usage: " + usageDecreaseStake)
-		return
+		return errWrongArgumentCount
 	}
 
 	res, ok := new(big.Int).SetString(args[1], 10)
 	if !ok {
-		clio.Warn("could not parse amount")
-		return
+		return fmt.Errorf("could not parse amount: %v", args[1])
 	}
 
-	err := c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), res)
+	err = c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), res)
 	if err != nil {
-		clio.Warn("could not decrease stake: ", err)
-		return
+		return fmt.Errorf("could not decrease stake: %w", err)
 	}
+	return nil
 }
 
-func (c *cliApp) increaseStake(args []string) {
+func (c *cliApp) increaseStake(args []string) (err error) {
 	if len(args) != 1 {
 		clio.Info("Usage: " + usageIncreaseStake)
-		return
+		return errWrongArgumentCount
 	}
 
 	hermesID, err := c.config.GetHermesID()
 	if err != nil {
-		clio.Warn("could not get hermesID", hermesID)
-		return
+		return fmt.Errorf("could not get Hermes ID: %w", err)
 	}
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
@@ -100,18 +98,16 @@ func (c *cliApp) increaseStake(args []string) {
 		select {
 		case <-timeout:
 			fmt.Println()
-			clio.Warn("Settlement timed out")
-			return
+			return errTimeout
 		case <-time.After(time.Millisecond * 500):
 			fmt.Print(".")
 		case err := <-errChan:
 			fmt.Println()
 			if err != nil {
-				clio.Warn("settlement failed: ", err.Error())
-				return
+				return fmt.Errorf("settlement failed: %w", err)
 			}
 			clio.Info("settlement succeeded")
-			return
+			return nil
 		}
 	}
 }
