@@ -136,10 +136,10 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		Chain1ID:                       metadata.Testnet3Definition.Chain1.ChainID,
 		Chain2ID:                       metadata.Testnet3Definition.Chain2.ChainID,
 		PilvytisAddress:                metadata.Testnet3Definition.PilvytisAddress,
-		MystSCAddress:                  metadata.Testnet3Definition.Chain1.MystAddress,
-		RegistrySCAddress:              metadata.Testnet3Definition.Chain1.RegistryAddress,
-		HermesSCAddress:                metadata.Testnet3Definition.Chain1.HermesID,
-		ChannelImplementationSCAddress: metadata.Testnet3Definition.Chain1.ChannelImplAddress,
+		MystSCAddress:                  metadata.Testnet3Definition.Chain2.MystAddress,
+		RegistrySCAddress:              metadata.Testnet3Definition.Chain2.RegistryAddress,
+		HermesSCAddress:                metadata.Testnet3Definition.Chain2.HermesID,
+		ChannelImplementationSCAddress: metadata.Testnet3Definition.Chain2.ChannelImplAddress,
 		CacheTTLSeconds:                5,
 	}
 }
