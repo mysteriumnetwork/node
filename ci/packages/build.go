@@ -76,10 +76,10 @@ func buildBinary(source, target string) error {
 	if !ok {
 		targetArch = runtime.GOARCH
 	}
-	return buildBinaryFor(source, target, targetOS, targetArch)
+	return buildBinaryFor(source, target, targetOS, targetArch, false)
 }
 
-func buildBinaryFor(source, target, targetOS, targetArch string) error {
+func buildBinaryFor(source, target, targetOS, targetArch string, buildStatic bool) error {
 	log.Info().Msgf("Building %s -> %s %s/%s", source, target, targetOS, targetArch)
 
 	buildDir, err := filepath.Abs(path.Join("build", target))
@@ -93,7 +93,13 @@ func buildBinaryFor(source, target, targetOS, targetArch string) error {
 	}
 
 	ldFlags := linkerFlags()
+	if buildStatic {
+		ldFlags = append(ldFlags, "-extldflags", `"-static"`)
+	}
 	flags = append(flags, fmt.Sprintf(`-ldflags=-w -s %s`, strings.Join(ldFlags, " ")))
+	if buildStatic {
+		flags = append(flags, "-a", "-tags", "netgo")
+	}
 
 	if targetOS == "windows" {
 		target += ".exe"
@@ -103,6 +109,9 @@ func buildBinaryFor(source, target, targetOS, targetArch string) error {
 	envi := map[string]string{
 		"GOOS":   targetOS,
 		"GOARCH": targetArch,
+	}
+	if buildStatic {
+		envi["CGO_ENABLED"] = "0"
 	}
 	return sh.RunWith(envi, "go", flags...)
 }
