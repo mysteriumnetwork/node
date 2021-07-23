@@ -308,15 +308,17 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 	portPool := di.PortPool
 	natPinger := di.NATPinger
-	identityVerifier := identity.NewVerifierSigned()
+	verifierFactory := func (id identity.Identity) identity.Verifier {
+		return identity.NewVerifierIdentity(id)
+	}
 	if p2pPorts.IsSpecified() {
 		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
 		portPool = port.NewFixedRangePool(*p2pPorts)
 		natPinger = traversal.NewNoopPinger(di.EventBus)
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.EventBus)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, natPinger, portPool, di.EventBus)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
