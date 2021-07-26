@@ -308,7 +308,7 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 	portPool := di.PortPool
 	natPinger := di.NATPinger
-	verifierFactory := func (id identity.Identity) identity.Verifier {
+	verifierFactory := func(id identity.Identity) identity.Verifier {
 		return identity.NewVerifierIdentity(id)
 	}
 	if p2pPorts.IsSpecified() {
