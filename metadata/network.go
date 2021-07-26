@@ -82,8 +82,8 @@ var Testnet3Definition = NetworkDefinition{
 		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
 		EtherClientRPC:     "wss://rpc-mumbai.maticvigil.com/ws/v1/8b19c8a6bfbeaee32af34d8df479b1c9558571a5",
 	},
-	MMNAddress:      "https://mmn3.mysterium.network/",
-	MMNAPIAddress:   "https://mmn3.mysterium.network/api/v1",
+	MMNAddress:      "https://my.mysterium.network/",
+	MMNAPIAddress:   "https://my.mysterium.network/api/v1",
 	PilvytisAddress: "https://testnet3-pilvytis.mysterium.network/api/v1",
 	DNSMap: map[string][]string{
 		"testnet3-discovery.mysterium.network":  {"167.233.11.60"},
