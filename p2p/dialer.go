@@ -50,27 +50,27 @@ type Dialer interface {
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
-func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier, eventBus eventbus.EventBus) Dialer {
+func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifierFactory identity.VerifierFactory, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier, eventBus eventbus.EventBus) Dialer {
 	return &dialer{
-		broker:         broker,
-		ipResolver:     ipResolver,
-		signer:         signer,
-		verifier:       verifier,
-		portPool:       portPool,
-		consumerPinger: consumerPinger,
-		eventBus:       eventBus,
+		broker:          broker,
+		ipResolver:      ipResolver,
+		signer:          signer,
+		verifierFactory: verifierFactory,
+		portPool:        portPool,
+		consumerPinger:  consumerPinger,
+		eventBus:        eventBus,
 	}
 }
 
 // dialer implements Dialer interface.
 type dialer struct {
-	portPool       port.ServicePortSupplier
-	broker         brokerConnector
-	consumerPinger natConsumerPinger
-	signer         identity.SignerFactory
-	verifier       identity.Verifier
-	ipResolver     ip.Resolver
-	eventBus       eventbus.EventBus
+	portPool        port.ServicePortSupplier
+	broker          brokerConnector
+	consumerPinger  natConsumerPinger
+	signer          identity.SignerFactory
+	verifierFactory identity.VerifierFactory
+	ipResolver      ip.Resolver
+	eventBus        eventbus.EventBus
 }
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
@@ -188,7 +188,7 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	}
 
 	// Parse provider response with public key and encrypted and signed connection config.
-	exchangeMsgReplySignedMsg, err := unpackSignedMsg(m.verifier, exchangeMsgBrokerReply)
+	exchangeMsgReplySignedMsg, err := unpackSignedMsg(m.verifierFactory(providerID), exchangeMsgBrokerReply)
 	if err != nil {
 		return nil, fmt.Errorf("could not unpack peer signed message: %w", err)
 	}
