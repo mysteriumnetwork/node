@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -28,10 +29,9 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
 )
 
-func (c *cliApp) order(argsString string) {
+func (c *cliApp) order(argsString string) (err error) {
 	var usage = strings.Join([]string{
 		"Usage: order <action> [args]",
 		"Available actions:",
@@ -43,7 +43,7 @@ func (c *cliApp) order(argsString string) {
 
 	if len(argsString) == 0 {
 		clio.Info(usage)
-		return
+		return errWrongArgumentCount
 	}
 
 	args := strings.Fields(argsString)
@@ -52,22 +52,22 @@ func (c *cliApp) order(argsString string) {
 
 	switch action {
 	case "create":
-		c.orderCreate(actionArgs)
+		return c.orderCreate(actionArgs)
 	case "get":
-		c.orderGet(actionArgs)
+		return c.orderGet(actionArgs)
 	case "get-all":
-		c.orderGetAll(actionArgs)
+		return c.orderGetAll(actionArgs)
 	case "currencies":
-		c.currencies(actionArgs)
+		return c.currencies(actionArgs)
 	default:
-		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
+		return errUnknownSubCommand(argsString)
 	}
 }
 
 const usageOrderCurrencies = "currencies"
 
-func (c *cliApp) currencies(args []string) {
+func (c *cliApp) currencies(args []string) (err error) {
 	if len(args) > 0 {
 		clio.Info("Usage: " + usageOrderCurrencies)
 		return
@@ -75,29 +75,27 @@ func (c *cliApp) currencies(args []string) {
 
 	resp, err := c.tequilapi.OrderCurrencies()
 	if err != nil {
-		clio.Warn(errors.Wrap(err, "could not get currencies"))
-		return
+		return fmt.Errorf("could not get currencies: %w", err)
 	}
 
 	clio.Info(fmt.Sprintf("Supported currencies: %s", strings.Join(resp, ", ")))
+	return nil
 }
 
 const usageOrderCreate = "create <identity> <amount> <pay currency> [use lightning network]"
 
-func (c *cliApp) orderCreate(args []string) {
+func (c *cliApp) orderCreate(args []string) (err error) {
 	if len(args) > 4 || len(args) < 3 {
 		clio.Info("Usage: " + usageOrderCreate)
-		return
+		return errWrongArgumentCount
 	}
 
 	f, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
-		clio.Warn("could not parse amount")
-		return
+		return fmt.Errorf("could not parse amount: %w", err)
 	}
 	if f <= 0 {
-		clio.Warn(fmt.Sprintf("Top up amount is required and must be greater than 0"))
-		return
+		return errors.New("top up amount is required and must be greater than 0")
 	}
 
 	options, err := c.tequilapi.PaymentOptions()
@@ -106,19 +104,17 @@ func (c *cliApp) orderCreate(args []string) {
 	}
 
 	if options.Minimum != 0 && f <= options.Minimum {
-		msg := fmt.Sprintf(
-			"Top up amount must be greater than %v%s",
+		return fmt.Errorf(
+			"top up amount must be greater than %v%s",
 			options.Minimum,
 			config.GetString(config.FlagDefaultCurrency))
-		clio.Warn(msg)
-		return
 	}
 
 	ln := false
 	if len(args) == 4 {
 		b, err := strconv.ParseBool(args[3])
 		if err != nil {
-			clio.Warn("[use lightning network]: only true/false allowed")
+			return fmt.Errorf("[use lightning network]: only true/false allowed: %w", err)
 		}
 		ln = b
 	}
@@ -129,15 +125,15 @@ func (c *cliApp) orderCreate(args []string) {
 		LightningNetwork: ln,
 	})
 	if err != nil {
-		clio.Warn(errors.Wrap(err, "could not create an order"))
-		return
+		return fmt.Errorf("could not create an order: %w", err)
 	}
 	printOrder(resp, c.config)
+	return nil
 }
 
 const usageOrderGet = "get <identity> <orderID>"
 
-func (c *cliApp) orderGet(args []string) {
+func (c *cliApp) orderGet(args []string) (err error) {
 	if len(args) != 2 {
 		clio.Info("Usage: " + usageOrderGet)
 		return
@@ -145,34 +141,32 @@ func (c *cliApp) orderGet(args []string) {
 
 	u, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		clio.Warn("could not parse orderID")
-		return
+		return fmt.Errorf("could not parse orderID: %w", err)
 	}
 	resp, err := c.tequilapi.OrderGet(identity.FromAddress(args[0]), u)
 	if err != nil {
-		clio.Warn(errors.Wrap(err, "could not get an order"))
-		return
+		return fmt.Errorf("could not get an order: %w", err)
 	}
 	printOrder(resp, c.config)
+	return nil
 }
 
 const usageOrderGetAll = "get-all <identity>"
 
-func (c *cliApp) orderGetAll(args []string) {
+func (c *cliApp) orderGetAll(args []string) (err error) {
 	if len(args) != 1 {
 		clio.Info("Usage: " + usageOrderGetAll)
-		return
+		return errWrongArgumentCount
 	}
 
 	resp, err := c.tequilapi.OrderGetAll(identity.FromAddress(args[0]))
 	if err != nil {
-		clio.Warn(errors.Wrap(err, "could not get an orders"))
-		return
+		return fmt.Errorf("could not get orders: %w", err)
 	}
 
 	if len(resp) == 0 {
 		clio.Info("No orders found")
-		return
+		return nil
 	}
 
 	for _, r := range resp {
@@ -181,6 +175,7 @@ func (c *cliApp) orderGetAll(args []string) {
 	clio.Info(
 		fmt.Sprintf("To explore additional order information use: '%s'", usageOrderGet),
 	)
+	return nil
 }
 
 func printOrder(o contract.OrderResponse, rc *remote.Config) {
