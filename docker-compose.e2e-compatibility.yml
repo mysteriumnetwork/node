@@ -317,6 +317,7 @@ services:
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
       --stun-servers=""
+      --local-service-discovery=true
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)

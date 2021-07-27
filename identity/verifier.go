@@ -17,6 +17,9 @@
 
 package identity
 
+// VerifierFactory callback returning Verifier
+type VerifierFactory func(id Identity) Verifier
+
 // Verifier checks message's sanity
 type Verifier interface {
 	Verify(message []byte, signature Signature) bool

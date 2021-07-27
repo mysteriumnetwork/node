@@ -2489,6 +2489,43 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "EntertainmentEstimateResponse": {
+      "type": "object",
+      "title": "EntertainmentEstimateResponse represents estimated entertainment.",
+      "properties": {
+        "browsing_minutes": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "BrowsingMinutes"
+        },
+        "music_minutes": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "MusicMinutes"
+        },
+        "price_gib": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "PriceGiB"
+        },
+        "price_min": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "PriceMin"
+        },
+        "traffic_mb": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "TrafficMB"
+        },
+        "video_minutes": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "VideoMinutes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "Error": {
       "description": "Error represents a single error in an ErrorResponse",
       "type": "object",

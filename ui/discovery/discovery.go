@@ -17,7 +17,12 @@
 
 package discovery
 
-import "github.com/mysteriumnetwork/node/requests"
+import (
+	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/requests"
+)
 
 // LANDiscovery provides local network discovery service for Mysterium Node UI.
 type LANDiscovery interface {
@@ -31,7 +36,10 @@ type multiDiscovery struct {
 }
 
 // NewLANDiscoveryService creates SSDP and Bonjour services for LAN discovery.
-func NewLANDiscoveryService(uiPort int, httpClient *requests.HTTPClient) *multiDiscovery {
+func NewLANDiscoveryService(uiPort int, httpClient *requests.HTTPClient) LANDiscovery {
+	if !config.GetBool(config.FlagLocalServiceDiscovery) {
+		return &noopLANDiscovery{}
+	}
 	return &multiDiscovery{
 		ssdp:    newSSDPServer(uiPort, httpClient),
 		bonjour: newBonjourServer(uiPort),
@@ -50,4 +58,16 @@ func (md *multiDiscovery) Stop() error {
 	// bonjour Stop does not return any error, nothing to check
 	_ = md.bonjour.Stop()
 	return md.ssdp.Stop()
+}
+
+type noopLANDiscovery struct{}
+
+func (nd *noopLANDiscovery) Start() error {
+	log.Info().Msgf("LAN discovery disabled. Starting noop local service discovery.")
+	return nil
+}
+
+func (nd *noopLANDiscovery) Stop() error {
+	log.Info().Msgf("LAN discovery disabled. Stopping noop local service discovery.")
+	return nil
 }
