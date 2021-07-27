@@ -303,7 +303,7 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 	}
 }
 
-func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPAddr, error) {
+func (p *Pinger) pingReceiver(ctx context.Context, remoteIP string, conn *net.UDPConn) (*net.UDPAddr, error) {
 	buf := make([]byte, bufferLen)
 
 	for {
@@ -325,7 +325,9 @@ func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPA
 			}
 
 			log.Info().Msgf("Remote peer data received: %s, len: %d, from: %s", string(buf[:n]), n, raddr)
-			return raddr, nil
+			if raddr.IP.String() == remoteIP {
+				return raddr, nil
+			}
 		}
 	}
 }
@@ -400,7 +402,7 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 	}()
 
 	laddr := conn.LocalAddr().(*net.UDPAddr)
-	raddr, err := p.pingReceiver(ctx, conn)
+	raddr, err := p.pingReceiver(ctx, remoteIP, conn)
 	pingReceived <- struct{}{}
 	if err != nil {
 		conn.Close()
