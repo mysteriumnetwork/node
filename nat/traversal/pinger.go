@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +45,7 @@ const (
 	maxTTL   = 128
 	msgOK    = "OK"
 	msgOKACK = "OK_ACK"
+	msgPing  = "continuously pinging to "
 )
 
 var errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
@@ -295,7 +297,7 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 		case <-time.After(p.pingConfig.Interval):
 			log.Trace().Msgf("Pinging %s from %s... with ttl %d", remoteAddr, conn.LocalAddr(), ttl)
 
-			_, err := conn.WriteToUDP([]byte("continuously pinging to "+remoteAddr.String()), remoteAddr)
+			_, err := conn.WriteToUDP([]byte(msgPing+remoteAddr.String()), remoteAddr)
 			if err != nil {
 				return fmt.Errorf("pinging request failed: %w", err)
 			}
@@ -324,10 +326,19 @@ func (p *Pinger) pingReceiver(ctx context.Context, remoteIP string, conn *net.UD
 				continue
 			}
 
-			log.Info().Msgf("Remote peer data received: %s, len: %d, from: %s", string(buf[:n]), n, raddr)
-			if raddr.IP.String() == remoteIP {
+			if raddr.IP.String() != remoteIP {
+				log.Debug().Err(err).Msgf("Wrong remote peer IP: expected %s, got %s - attempting to continue", remoteIP, raddr.IP.String())
+				continue
+			}
+
+			msg := string(buf[:n])
+			log.Debug().Msgf("Remote peer data received: %s, len: %d, from: %s", msg, n, raddr)
+
+			if msg == msgOK || strings.HasPrefix(msg, msgPing) {
 				return raddr, nil
 			}
+
+			log.Debug().Err(err).Msgf("Unexpected message: %s - attempting to continue", msg)
 		}
 	}
 }
