@@ -305,7 +305,7 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 	}
 }
 
-func (p *Pinger) pingReceiver(ctx context.Context, remoteIP string, conn *net.UDPConn) (*net.UDPAddr, error) {
+func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPAddr, error) {
 	buf := make([]byte, bufferLen)
 
 	for {
@@ -323,11 +323,6 @@ func (p *Pinger) pingReceiver(ctx context.Context, remoteIP string, conn *net.UD
 
 			if err != nil || n == 0 {
 				log.Debug().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", raddr)
-				continue
-			}
-
-			if raddr.IP.String() != remoteIP {
-				log.Debug().Err(err).Msgf("Wrong remote peer IP: expected %s, got %s - attempting to continue", remoteIP, raddr.IP.String())
 				continue
 			}
 
@@ -413,7 +408,7 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 	}()
 
 	laddr := conn.LocalAddr().(*net.UDPAddr)
-	raddr, err := p.pingReceiver(ctx, remoteIP, conn)
+	raddr, err := p.pingReceiver(ctx, conn)
 	pingReceived <- struct{}{}
 	if err != nil {
 		conn.Close()
