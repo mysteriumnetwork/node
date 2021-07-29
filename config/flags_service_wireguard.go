@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	// TODO: remove the deprecated flag once all users stop to use it.
 	// FlagWireguardListenPorts range of listen ports.
+	// TODO: remove the deprecated flag once all users stop to use it.
 	FlagWireguardListenPorts = cli.StringFlag{
 		Name:  "wireguard.listen.ports",
 		Usage: "Deprecated flag, use --udp.ports to set range of listen ports",

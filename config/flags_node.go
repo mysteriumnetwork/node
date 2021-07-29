@@ -226,8 +226,8 @@ var (
 			"3rd party vendors may use their own identifier here.",
 	}
 
-	// TODO: remove the deprecated flag once all users stop to use it.
 	// FlagP2PListenPorts sets manual ports for p2p connections.
+	// TODO: remove the deprecated flag once all users stop to use it.
 	FlagP2PListenPorts = cli.StringFlag{
 		Name:  "p2p.listen.ports",
 		Usage: "Deprecated flag, use --udp.ports to set range of listen ports",
