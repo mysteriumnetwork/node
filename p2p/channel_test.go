@@ -347,7 +347,7 @@ func createTestChannels() (Channel, Channel, error) {
 }
 
 func acquirePorts(n int) ([]int, error) {
-	portPool := port.NewFixedRangePool(port.Range{10000, 60000})
+	portPool := port.NewFixedRangePool(port.Range{Start: 10000, End: 60000})
 	ports, err := portPool.AcquireMultiple(n)
 	if err != nil {
 		return nil, err
