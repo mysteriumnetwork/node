@@ -25,10 +25,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/pb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/pb"
 )
 
 func TestChannelFullCommunicationFlow(t *testing.T) {
@@ -346,7 +347,7 @@ func createTestChannels() (Channel, Channel, error) {
 }
 
 func acquirePorts(n int) ([]int, error) {
-	portPool := port.NewPool()
+	portPool := port.NewFixedRangePool(port.Range{10000, 60000})
 	ports, err := portPool.AcquireMultiple(n)
 	if err != nil {
 		return nil, err

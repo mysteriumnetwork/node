@@ -26,7 +26,7 @@ import (
 )
 
 func TestAcquiredPortsAreUsable(t *testing.T) {
-	pool := NewPool()
+	pool := NewFixedRangePool(Range{10000, 60000})
 
 	port, _ := pool.Acquire()
 	err := listenUDP(port.Num())

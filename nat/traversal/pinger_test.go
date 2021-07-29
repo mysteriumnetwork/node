@@ -51,7 +51,7 @@ func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	provider := newPinger(pingConfig)
 	consumer := newPinger(pingConfig)
 	var pPorts, cPorts []int
-	ports, err := port.NewPool().AcquireMultiple(20)
+	ports, err := port.NewFixedRangePool(port.Range{10000, 60000}).AcquireMultiple(20)
 	assert.NoError(t, err)
 	for i := 0; i < 10; i++ {
 		pPorts = append(pPorts, ports[i].Num())
@@ -91,7 +91,7 @@ func TestPinger_PingPeer_Not_Enough_Connections_Timeout(t *testing.T) {
 	consumer := newPinger(pingConfig)
 
 	var pPorts, cPorts []int
-	ports, err := port.NewPool().AcquireMultiple(10)
+	ports, err := port.NewFixedRangePool(port.Range{10000, 60000}).AcquireMultiple(10)
 	assert.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
@@ -117,7 +117,7 @@ func TestPinger_PingConsumerPeer_Timeout(t *testing.T) {
 		Interval: 1 * time.Millisecond,
 		Timeout:  5 * time.Millisecond,
 	})
-	ports, err := port.NewPool().AcquireMultiple(10)
+	ports, err := port.NewFixedRangePool(port.Range{10000, 60000}).AcquireMultiple(10)
 	assert.NoError(t, err)
 
 	providerPort := ports[0].Num()

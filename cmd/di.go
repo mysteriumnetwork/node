@@ -244,7 +244,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.PortPool = port.NewPool()
+	portRange, err := getUDPListenPorts()
+	if err != nil {
+		return err
+	}
+
+	di.PortPool = port.NewFixedRangePool(portRange)
 	if config.GetBool(config.FlagPortMapping) {
 		portmapConfig := mapping.DefaultConfig()
 		di.PortMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
@@ -252,7 +257,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
 	}
 
-	di.bootstrapP2P(nodeOptions.P2PPorts)
+	di.bootstrapP2P()
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	if err := di.bootstrapServices(nodeOptions); err != nil {
@@ -305,19 +310,13 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	di.AddressProvider = pingpong.NewAddressProvider(keeper, common.HexToAddress(nodeOptions.Transactor.Identity))
 }
 
-func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
-	portPool := di.PortPool
-	natPinger := di.NATPinger
+func (di *Dependencies) bootstrapP2P() {
 	verifierFactory := func(id identity.Identity) identity.Verifier {
 		return identity.NewVerifierIdentity(id)
 	}
-	if p2pPorts.IsSpecified() {
-		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
-		portPool = port.NewFixedRangePool(*p2pPorts)
-	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, natPinger, portPool, di.EventBus)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper, di.EventBus)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, di.NATPinger, di.PortPool, di.EventBus)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -962,4 +961,13 @@ func (di *Dependencies) AllowURLAccess(servers ...string) error {
 	}
 
 	return nil
+}
+
+func getUDPListenPorts() (port.Range, error) {
+	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
+		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
+	}
+	return *udpPortRange, nil
 }

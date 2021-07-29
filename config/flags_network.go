@@ -106,7 +106,7 @@ var (
 	FlagUDPListenPorts = cli.StringFlag{
 		Name:  "udp.ports",
 		Usage: "Range of UDP listen ports used for connections",
-		Value: "40000:50000",
+		Value: "10000:60000",
 	}
 )
 

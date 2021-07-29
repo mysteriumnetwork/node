@@ -36,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -247,7 +246,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			},
 		},
 		Consumer:        true,
-		P2PPorts:        port.UnspecifiedRange(),
 		PilvytisAddress: options.PilvytisAddress,
 	}
 

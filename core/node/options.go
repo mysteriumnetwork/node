@@ -25,11 +25,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 // Openvpn interface is abstraction over real openvpn options to unblock mobile development
@@ -83,7 +81,6 @@ type Options struct {
 	Consumer bool
 
 	SwarmDialerDNSHeadstart time.Duration
-	P2PPorts                *port.Range
 	PilvytisAddress         string
 }
 
@@ -182,7 +179,6 @@ func GetOptions() *Options {
 		Firewall: OptionsFirewall{
 			BlockAlways: config.GetBool(config.FlagFirewallKillSwitch),
 		},
-		P2PPorts:        getP2PListenPorts(),
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
 	}
@@ -236,18 +232,4 @@ func GetDHTOptions() *OptionsDHT {
 // OptionsKeystore stores the keystore configuration
 type OptionsKeystore struct {
 	UseLightweight bool
-}
-
-func getP2PListenPorts() *port.Range {
-	p2pPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to parse p2p listen port range, using default value")
-		p2pPortRange = port.UnspecifiedRange()
-	}
-	if p2pPortRange.Capacity() > resources.MaxConnections {
-		log.Warn().Msgf("Specified p2p port range exceeds maximum number of connections allowed for the platform (%d), "+
-			"using default value", resources.MaxConnections)
-		p2pPortRange = port.UnspecifiedRange()
-	}
-	return p2pPortRange
 }
