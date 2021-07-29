@@ -47,3 +47,47 @@ func TestMain(t *testing.T) {
 		}
 	}
 }
+
+func TestEmpty(t *testing.T) {
+	// Should at least not panic due to some nil-values
+	NewActionStack().Run()
+}
+
+func TestRunPanicsAfterRun(t *testing.T) {
+	var failedSuccessfully bool
+	as := NewActionStack()
+	as.Push(func() {})
+	as.Run()
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				failedSuccessfully = true
+			}
+		}()
+		as.Run()
+	}()
+
+	if !failedSuccessfully {
+		t.Fail()
+	}
+}
+
+func TestAddPanicsAfterRun(t *testing.T) {
+	var failedSuccessfully bool
+	as := NewActionStack()
+	as.Run()
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				failedSuccessfully = true
+			}
+		}()
+		as.Push(func() {})
+	}()
+
+	if !failedSuccessfully {
+		t.Fail()
+	}
+}
