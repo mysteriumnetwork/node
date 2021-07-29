@@ -89,7 +89,7 @@ type MobileNode struct {
 type MobileNodeOptions struct {
 	Testnet2                       bool
 	Localnet                       bool
-	ExperimentNATPunching          bool
+	NATHolePunching                bool
 	KeepConnectedOnFail            bool
 	MysteriumAPIAddress            string
 	BrokerAddresses                []string
@@ -119,7 +119,7 @@ type ConsumerPaymentConfig struct {
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
 		Testnet2:                       true,
-		ExperimentNATPunching:          true,
+		NATHolePunching:                true,
 		KeepConnectedOnFail:            true,
 		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
@@ -161,13 +161,13 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 
 	network := node.OptionsNetwork{
-		Testnet2:              options.Testnet2,
-		Localnet:              options.Localnet,
-		ExperimentNATPunching: options.ExperimentNATPunching,
-		MysteriumAPIAddress:   options.MysteriumAPIAddress,
-		BrokerAddresses:       options.BrokerAddresses,
-		EtherClientRPC:        options.EtherClientRPC,
-		ChainID:               options.ChainID,
+		Testnet2:            options.Testnet2,
+		Localnet:            options.Localnet,
+		NATHolePunching:     options.NATHolePunching,
+		MysteriumAPIAddress: options.MysteriumAPIAddress,
+		BrokerAddresses:     options.BrokerAddresses,
+		EtherClientRPC:      options.EtherClientRPC,
+		ChainID:             options.ChainID,
 		DNSMap: map[string][]string{
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},

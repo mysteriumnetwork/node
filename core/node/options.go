@@ -90,13 +90,13 @@ type Options struct {
 // GetOptions retrieves node options from the app configuration.
 func GetOptions() *Options {
 	network := OptionsNetwork{
-		Localnet:              config.GetBool(config.FlagLocalnet),
-		Testnet2:              config.GetBool(config.FlagTestnet2),
-		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
-		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
-		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
-		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
-		ChainID:               config.GetInt64(config.FlagChainID),
+		Localnet:            config.GetBool(config.FlagLocalnet),
+		Testnet2:            config.GetBool(config.FlagTestnet2),
+		NATHolePunching:     config.GetBool(config.FlagNATHolePunching),
+		MysteriumAPIAddress: config.GetString(config.FlagAPIAddress),
+		BrokerAddresses:     config.GetStringSlice(config.FlagBrokerAddress),
+		EtherClientRPC:      config.GetString(config.FlagEtherRPC),
+		ChainID:             config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},

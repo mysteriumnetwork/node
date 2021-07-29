@@ -59,11 +59,12 @@ var (
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
-	// FlagNATPunching enables NAT hole punching.
-	FlagNATPunching = cli.BoolFlag{
-		Name:  "experiment-natpunching",
-		Usage: "Enables NAT hole punching",
-		Value: true,
+	// FlagNATHolePunching enables NAT hole punching.
+	FlagNATHolePunching = cli.BoolFlag{
+		Name:    "nat-hole-punching",
+		Aliases: []string{"experiment-natpunching"}, // TODO: remove the deprecated alias once all users stop to use it.
+		Usage:   "Enables NAT hole punching",
+		Value:   true,
 	}
 	// FlagPortMapping enables NAT port mapping.
 	FlagPortMapping = cli.BoolFlag{
@@ -109,7 +110,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		&FlagLocalnet,
 		&FlagPortMapping,
-		&FlagNATPunching,
+		&FlagNATHolePunching,
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
@@ -131,7 +132,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
-	Current.ParseBoolFlag(ctx, FlagNATPunching)
+	Current.ParseBoolFlag(ctx, FlagNATHolePunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)

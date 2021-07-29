@@ -335,7 +335,7 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	var lastStageName string
-	if options.ExperimentNATPunching {
+	if options.NATHolePunching {
 		lastStageName = traversal.StageName
 	} else {
 		lastStageName = mapping.StageName
@@ -820,8 +820,8 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 		return err
 	}
 
-	if options.ExperimentNATPunching {
-		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
+	if options.NATHolePunching {
+		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
 			traversal.DefaultPingConfig(),
 			di.EventBus,
