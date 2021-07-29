@@ -21,11 +21,12 @@ import (
 	"encoding/json"
 	"net"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-	"github.com/rs/zerolog/log"
 )
 
 // Options describes options which are required to start Wireguard service.
@@ -51,7 +52,7 @@ func GetOptions() Options {
 		ipnet = &DefaultOptions.Subnet
 	}
 
-	portRange, err := port.ParseRange(config.GetString(config.FlagWireguardListenPorts))
+	portRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse listen port range, using default value")
 		portRange = port.UnspecifiedRange()
@@ -69,7 +70,7 @@ func GetOptions() Options {
 
 // ParseJSONOptions function fills in Wireguard options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	var requestOptions = GetOptions()
+	requestOptions := GetOptions()
 	if request == nil {
 		return requestOptions, nil
 	}

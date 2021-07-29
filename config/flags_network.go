@@ -102,6 +102,12 @@ var (
 		Usage: "Enables SSDP and Bonjour local service discovery",
 		Value: true,
 	}
+	// FlagUDPListenPorts sets allowed UDP port range for listening.
+	FlagUDPListenPorts = cli.StringFlag{
+		Name:  "udp.ports",
+		Usage: "Range of UDP listen ports used for connections",
+		Value: "40000:50000",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -121,6 +127,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagKeepConnectedOnFail,
 		&FlagSTUNservers,
 		&FlagLocalServiceDiscovery,
+		&FlagUDPListenPorts,
 	)
 }
 
@@ -139,4 +146,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
 	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
+	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
 }

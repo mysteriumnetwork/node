@@ -239,7 +239,7 @@ type OptionsKeystore struct {
 }
 
 func getP2PListenPorts() *port.Range {
-	p2pPortRange, err := port.ParseRange(config.GetString(config.FlagP2PListenPorts))
+	p2pPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse p2p listen port range, using default value")
 		p2pPortRange = port.UnspecifiedRange()
