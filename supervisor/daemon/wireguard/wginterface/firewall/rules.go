@@ -127,7 +127,38 @@ func permitTunInterface(session uintptr, baseObjects *baseObjects, weight uint8,
 	return nil
 }
 
-func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight uint8) error {
+func permitMystWireGuardService(session uintptr, baseObjects *baseObjects, weight uint8) error {
+	appID, err := getMystAppID()
+	if err != nil {
+		return wrapErr(err)
+	}
+	defer fwpmFreeMemory0(unsafe.Pointer(&appID))
+
+	condition := wtFwpmFilterCondition0{
+		fieldKey:  cFWPM_CONDITION_ALE_APP_ID,
+		matchType: cFWP_MATCH_EQUAL,
+		conditionValue: wtFwpConditionValue0{
+			_type: cFWP_BYTE_BLOB_TYPE,
+			value: uintptr(unsafe.Pointer(appID)),
+		},
+	}
+
+	filter := &wtFwpmFilter0{
+		providerKey:         &baseObjects.provider,
+		subLayerKey:         baseObjects.filters,
+		weight:              filterWeight(weight),
+		flags:               cFWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT,
+		numFilterConditions: 1,
+		filterCondition:     (*wtFwpmFilterCondition0)(unsafe.Pointer(&condition)),
+		action: wtFwpmAction0{
+			_type: cFWP_ACTION_PERMIT,
+		},
+	}
+
+	return permitWireGuardServiceCommon(filter, session, baseObjects, weight)
+}
+
+func permitSupervisorWireGuardService(session uintptr, baseObjects *baseObjects, weight uint8) error {
 	var conditions [2]wtFwpmFilterCondition0
 
 	//
@@ -169,7 +200,7 @@ func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight ui
 	//
 	// Assemble the filter.
 	//
-	filter := wtFwpmFilter0{
+	filter := &wtFwpmFilter0{
 		providerKey:         &baseObjects.provider,
 		subLayerKey:         baseObjects.filters,
 		weight:              filterWeight(weight),
@@ -181,6 +212,10 @@ func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight ui
 		},
 	}
 
+	return permitWireGuardServiceCommon(filter, session, baseObjects, weight)
+}
+
+func permitWireGuardServiceCommon(filter *wtFwpmFilter0, session uintptr, baseObjects *baseObjects, weight uint8) error {
 	filterID := uint64(0)
 
 	//
@@ -195,7 +230,7 @@ func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight ui
 		filter.displayData = *displayData
 		filter.layerKey = cFWPM_LAYER_ALE_AUTH_CONNECT_V4
 
-		err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+		err = fwpmFilterAdd0(session, filter, 0, &filterID)
 		if err != nil {
 			return wrapErr(err)
 		}
@@ -213,7 +248,7 @@ func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight ui
 		filter.displayData = *displayData
 		filter.layerKey = cFWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4
 
-		err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+		err = fwpmFilterAdd0(session, filter, 0, &filterID)
 		if err != nil {
 			return wrapErr(err)
 		}
@@ -231,7 +266,7 @@ func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight ui
 		filter.displayData = *displayData
 		filter.layerKey = cFWPM_LAYER_ALE_AUTH_CONNECT_V6
 
-		err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+		err = fwpmFilterAdd0(session, filter, 0, &filterID)
 		if err != nil {
 			return wrapErr(err)
 		}
@@ -249,7 +284,7 @@ func permitWireGuardService(session uintptr, baseObjects *baseObjects, weight ui
 		filter.displayData = *displayData
 		filter.layerKey = cFWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6
 
-		err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+		err = fwpmFilterAdd0(session, filter, 0, &filterID)
 		if err != nil {
 			return wrapErr(err)
 		}
