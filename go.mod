@@ -22,7 +22,7 @@ require (
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gin-contrib/cors v1.3.0
-	github.com/gin-gonic/gin v1.4.0
+	github.com/gin-gonic/gin v1.7.2
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/gofrs/uuid v3.3.0+incompatible
@@ -34,7 +34,6 @@ require (
 	github.com/jinzhu/now v1.1.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
-	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/klauspost/pgzip v1.2.4 // indirect
 	github.com/koron/go-ssdp v0.0.2
 	github.com/kr/pretty v0.2.0 // indirect
@@ -53,8 +52,8 @@ require (
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
 	github.com/mysteriumnetwork/metrics v0.0.15
 	github.com/mysteriumnetwork/payments v0.0.14-0.20210617091519-e34d827513e9
-	github.com/nats-io/nats-server/v2 v2.1.7
-	github.com/nats-io/nats.go v1.10.0
+	github.com/nats-io/nats-server/v2 v2.3.2
+	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/oschwald/geoip2-golang v1.1.0
@@ -70,18 +69,16 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20191114114615-9d48af884d5b // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/takama/daemon v1.0.0
-	github.com/ulikunitz/xz v0.5.7 // indirect
+	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/vcraescu/go-paginator v0.0.0-20200304054438-86d84f27c0b3
-	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
-	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xtaci/kcp-go/v5 v5.5.8
 	go.etcd.io/bbolt v1.3.4
-	go.mongodb.org/mongo-driver v1.1.1
-	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/net v0.0.0-20210220033124-5f55cee0dc0d
+	go.mongodb.org/mongo-driver v1.7.0
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20210223212115-eede4237b368
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 	golang.org/x/tools v0.0.0-20201013053347-2db1cd791039 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
