@@ -20,11 +20,13 @@ package cmd
 import (
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -41,9 +43,6 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
-	"github.com/rs/zerolog/log"
-
-	"github.com/pkg/errors"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -76,15 +75,6 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			wgOptions := serviceOptions.(wireguard_service.Options)
 
-			// TODO: Use global port pool once migrated to p2p.
-			var portPool port.ServicePortSupplier
-			if wgOptions.Ports.IsSpecified() {
-				log.Info().Msgf("Fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
-				portPool = port.NewFixedRangePool(*wgOptions.Ports)
-			} else {
-				portPool = port.NewPool()
-			}
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
@@ -92,7 +82,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				di.NATTracker,
 				di.EventBus,
 				wgOptions,
-				portPool,
+				di.PortPool,
 				di.ServiceFirewall,
 			)
 			return svc, nil
@@ -113,14 +103,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
-		// TODO: Use global port pool once migrated to p2p.
-		var portPool port.ServicePortSupplier
-		if transportOptions.Port != 0 {
-			portPool = port.NewPoolFixed(port.Port(transportOptions.Port))
-		} else {
-			portPool = port.NewPool()
-		}
-
 		manager := openvpn_service.NewManager(
 			nodeOptions,
 			transportOptions,
@@ -129,7 +111,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.ServiceSessions,
 			di.NATService,
 			di.NATTracker,
-			portPool,
+			di.PortPool,
 			di.EventBus,
 			di.ServiceFirewall,
 		)

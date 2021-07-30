@@ -23,10 +23,10 @@ import (
 	"net"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
@@ -48,12 +48,11 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
 	configureDefaults()
-	request := json.RawMessage(`{"ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
+	request := json.RawMessage(`{"subnet":"10.10.0.0/16"}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
 	assert.Equal(t, Options{
-		Ports: &port.Range{Start: 52820, End: 53075},
 		Subnet: net.IPNet{
 			IP:   net.ParseIP("10.10.0.0").To4(),
 			Mask: net.IPv4Mask(255, 255, 0, 0),

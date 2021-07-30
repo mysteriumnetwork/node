@@ -30,15 +30,10 @@ type Range struct {
 	Start, End int
 }
 
-// UnspecifiedRange creates an unspecified range
-func UnspecifiedRange() *Range {
-	return &Range{0, 0}
-}
-
 // ParseRange parses port range expression, e.g. "1000:1200" into Range struct
 func ParseRange(rangeExpr string) (*Range, error) {
 	if rangeExpr == "" {
-		return UnspecifiedRange(), nil
+		return nil, nil
 	}
 	bounds := strings.Split(rangeExpr, ":")
 	if len(bounds) != 2 {
@@ -56,11 +51,6 @@ func ParseRange(rangeExpr string) (*Range, error) {
 		return nil, errors.New("start port cannot be greater than end port: " + rangeExpr)
 	}
 	return &Range{start, end}, nil
-}
-
-// IsSpecified returns true if the range is specific, i.e. has start and end bounds
-func (r *Range) IsSpecified() bool {
-	return r.Start != 0 && r.End != 0
 }
 
 // Capacity returns range capacity

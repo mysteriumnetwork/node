@@ -25,11 +25,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 // Openvpn interface is abstraction over real openvpn options to unblock mobile development
@@ -83,20 +81,19 @@ type Options struct {
 	Consumer bool
 
 	SwarmDialerDNSHeadstart time.Duration
-	P2PPorts                *port.Range
 	PilvytisAddress         string
 }
 
 // GetOptions retrieves node options from the app configuration.
 func GetOptions() *Options {
 	network := OptionsNetwork{
-		Localnet:              config.GetBool(config.FlagLocalnet),
-		Testnet2:              config.GetBool(config.FlagTestnet2),
-		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
-		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
-		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
-		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
-		ChainID:               config.GetInt64(config.FlagChainID),
+		Localnet:            config.GetBool(config.FlagLocalnet),
+		Testnet2:            config.GetBool(config.FlagTestnet2),
+		NATHolePunching:     config.GetBool(config.FlagNATHolePunching),
+		MysteriumAPIAddress: config.GetString(config.FlagAPIAddress),
+		BrokerAddresses:     config.GetStringSlice(config.FlagBrokerAddress),
+		EtherClientRPC:      config.GetString(config.FlagEtherRPC),
+		ChainID:             config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
@@ -182,7 +179,6 @@ func GetOptions() *Options {
 		Firewall: OptionsFirewall{
 			BlockAlways: config.GetBool(config.FlagFirewallKillSwitch),
 		},
-		P2PPorts:        getP2PListenPorts(),
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
 	}
@@ -236,18 +232,4 @@ func GetDHTOptions() *OptionsDHT {
 // OptionsKeystore stores the keystore configuration
 type OptionsKeystore struct {
 	UseLightweight bool
-}
-
-func getP2PListenPorts() *port.Range {
-	p2pPortRange, err := port.ParseRange(config.GetString(config.FlagP2PListenPorts))
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to parse p2p listen port range, using default value")
-		p2pPortRange = port.UnspecifiedRange()
-	}
-	if p2pPortRange.Capacity() > resources.MaxConnections {
-		log.Warn().Msgf("Specified p2p port range exceeds maximum number of connections allowed for the platform (%d), "+
-			"using default value", resources.MaxConnections)
-		p2pPortRange = port.UnspecifiedRange()
-	}
-	return p2pPortRange
 }

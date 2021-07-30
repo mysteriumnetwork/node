@@ -89,7 +89,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			brokerConn := nats.StartConnectionMock()
 			defer brokerConn.Close()
 			mockBroker := &mockBroker{conn: brokerConn}
-			portPool := port.NewPool()
+			portPool := port.NewFixedRangePool(port.Range{Start: 10000, End: 60000})
 
 			// Provider starts listening.
 			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper, eventbus.New())

@@ -59,11 +59,12 @@ var (
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
-	// FlagNATPunching enables NAT hole punching.
-	FlagNATPunching = cli.BoolFlag{
-		Name:  "experiment-natpunching",
-		Usage: "Enables NAT hole punching",
-		Value: true,
+	// FlagNATHolePunching enables NAT hole punching.
+	FlagNATHolePunching = cli.BoolFlag{
+		Name:    "nat-hole-punching",
+		Aliases: []string{"experiment-natpunching"}, // TODO: remove the deprecated alias once all users stop to use it.
+		Usage:   "Enables NAT hole punching",
+		Value:   true,
 	}
 	// FlagPortMapping enables NAT port mapping.
 	FlagPortMapping = cli.BoolFlag{
@@ -101,6 +102,12 @@ var (
 		Usage: "Enables SSDP and Bonjour local service discovery",
 		Value: true,
 	}
+	// FlagUDPListenPorts sets allowed UDP port range for listening.
+	FlagUDPListenPorts = cli.StringFlag{
+		Name:  "udp.ports",
+		Usage: "Range of UDP listen ports used for connections",
+		Value: "10000:60000",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -109,7 +116,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		&FlagLocalnet,
 		&FlagPortMapping,
-		&FlagNATPunching,
+		&FlagNATHolePunching,
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
@@ -120,6 +127,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagKeepConnectedOnFail,
 		&FlagSTUNservers,
 		&FlagLocalServiceDiscovery,
+		&FlagUDPListenPorts,
 	)
 }
 
@@ -131,11 +139,12 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
-	Current.ParseBoolFlag(ctx, FlagNATPunching)
+	Current.ParseBoolFlag(ctx, FlagNATHolePunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
 	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
+	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
 }
