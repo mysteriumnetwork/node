@@ -28,6 +28,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"github.com/mysteriumnetwork/node/utils/actionstack"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
@@ -45,13 +46,24 @@ func NewWireguardClient() (*client, error) {
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
+	rollback := actionstack.NewActionStack()
 	if c.tun, err = CreateTUN(config.IfaceName, config.Subnet); err != nil {
 		return errors.Wrap(err, "failed to create TUN device")
 	}
 
-	c.devAPI = device.NewDevice(c.tun, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+	devAPI := device.NewDevice(c.tun, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+	c.devAPI = devAPI
+	rollback.Push(func() {
+		devAPI.Close()
+		c.devAPI = nil
+	})
 
-	return c.configureDevice(config)
+	if err := c.configureDevice(config); err != nil {
+		rollback.Run()
+		return err
+	}
+
+	return nil
 }
 
 func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) (err error) {
