@@ -10,11 +10,16 @@ package firewall
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+)
+
+const (
+	MYST_EXECUTABLE = "myst.exe"
 )
 
 func runTransaction(session uintptr, operation wfpObjectInstaller) error {
@@ -134,6 +139,27 @@ func getCurrentProcessAppID() (*wtFwpByteBlob, error) {
 	if err != nil {
 		return nil, wrapErr(err)
 	}
+
+	curFilePtr, err := windows.UTF16PtrFromString(currentFile)
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+
+	var appID *wtFwpByteBlob
+	err = fwpmGetAppIdFromFileName0(curFilePtr, unsafe.Pointer(&appID))
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+	return appID, nil
+}
+
+func getMystAppID() (*wtFwpByteBlob, error) {
+	currentFile, err := os.Executable()
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+
+	currentFile = filepath.Join(filepath.Dir(currentFile), MYST_EXECUTABLE)
 
 	curFilePtr, err := windows.UTF16PtrFromString(currentFile)
 	if err != nil {
