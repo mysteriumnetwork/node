@@ -54,22 +54,23 @@ var (
 		Value: cli.NewStringSlice(metadata.DefaultNetwork.BrokerAddresses...),
 	}
 	// FlagEtherRPCL1 URL or IPC socket to connect to Ethereum node.
-	FlagEtherRPCL1 = cli.StringFlag{
+	FlagEtherRPCL1 = cli.StringSliceFlag{
 		Name:  "ether.client.rpcl1",
 		Usage: "L1 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
-		Value: metadata.DefaultNetwork.Chain1.EtherClientRPC,
+		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain1.EtherClientRPC...),
 	}
 	// FlagEtherRPCL2 URL or IPC socket to connect to Ethereum node.
-	FlagEtherRPCL2 = cli.StringFlag{
+	FlagEtherRPCL2 = cli.StringSliceFlag{
 		Name:  "ether.client.rpcl2",
 		Usage: "L2 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
-		Value: metadata.DefaultNetwork.Chain2.EtherClientRPC,
+		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain2.EtherClientRPC...),
 	}
-	// FlagNATPunching enables NAT hole punching.
-	FlagNATPunching = cli.BoolFlag{
-		Name:  "experiment-natpunching",
-		Usage: "Enables NAT hole punching",
-		Value: true,
+	// FlagNATHolePunching enables NAT hole punching.
+	FlagNATHolePunching = cli.BoolFlag{
+		Name:    "nat-hole-punching",
+		Aliases: []string{"experiment-natpunching"}, // TODO: remove the deprecated alias once all users stop to use it.
+		Usage:   "Enables NAT hole punching",
+		Value:   true,
 	}
 	// FlagPortMapping enables NAT port mapping.
 	FlagPortMapping = cli.BoolFlag{
@@ -101,6 +102,18 @@ var (
 		Usage: "Comma separated list of STUN server to be used to detect NAT type",
 		Value: cli.NewStringSlice("stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"),
 	}
+	// FlagLocalServiceDiscovery enables SSDP and Bonjour local service discovery.
+	FlagLocalServiceDiscovery = cli.BoolFlag{
+		Name:  "local-service-discovery",
+		Usage: "Enables SSDP and Bonjour local service discovery",
+		Value: true,
+	}
+	// FlagUDPListenPorts sets allowed UDP port range for listening.
+	FlagUDPListenPorts = cli.StringFlag{
+		Name:  "udp.ports",
+		Usage: "Range of UDP listen ports used for connections",
+		Value: "10000:60000",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -109,7 +122,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		&FlagLocalnet,
 		&FlagPortMapping,
-		&FlagNATPunching,
+		&FlagNATHolePunching,
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPCL1,
@@ -120,6 +133,8 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
 		&FlagSTUNservers,
+		&FlagLocalServiceDiscovery,
+		&FlagUDPListenPorts,
 	)
 }
 
@@ -129,13 +144,15 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagTestnet3)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
-	Current.ParseStringFlag(ctx, FlagEtherRPCL1)
-	Current.ParseStringFlag(ctx, FlagEtherRPCL2)
+	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL1)
+	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL2)
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
-	Current.ParseBoolFlag(ctx, FlagNATPunching)
+	Current.ParseBoolFlag(ctx, FlagNATHolePunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
+	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
+	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
 }

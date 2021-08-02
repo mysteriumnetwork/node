@@ -1,0 +1,79 @@
+/*
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package endpoints
+
+import (
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/consumer/entertainment"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
+)
+
+type entertainmentEndpoint struct {
+	estimator estimator
+}
+
+type estimator interface {
+	EstimatedEntertainment(myst float64) entertainment.Estimates
+}
+
+// swagger:operation GET /exchange/myst/{currency} Exchange ExchangeMyst
+// ---
+// summary: Estimate entertainment durations/data cap for the MYST amount specified.
+// description: Estimate entertainment durations/data cap for the MYST amount specified.
+// parameters:
+// - name: amount
+//   in: query
+//   description: Amount of MYST to give entertainment estimates for.
+//   type: integer
+//   required: true
+// responses:
+//   200:
+//     description: Entertainment estimates
+//     schema:
+//       "$ref": "#/definitions/EntertainmentEstimateResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (e *entertainmentEndpoint) Estimate(httpRes http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+	req := contract.EntertainmentEstimateRequest{}
+	if errs := req.Bind(httpReq); errs.HasErrors() {
+		utils.SendValidationErrorMessage(httpRes, errs)
+		return
+	}
+
+	estimates := e.estimator.EstimatedEntertainment(req.Amount)
+	res := contract.EntertainmentEstimateResponse{
+		VideoMinutes:    estimates.VideoMinutes,
+		MusicMinutes:    estimates.MusicMinutes,
+		BrowsingMinutes: estimates.BrowsingMinutes,
+		TrafficMB:       estimates.TrafficMB,
+		PriceGiB:        estimates.PricePerGiB,
+		PriceMin:        estimates.PricePerMin,
+	}
+	utils.WriteAsJSON(res, httpRes)
+}
+
+// AddEntertainmentRoutes registers routes for entertainment.
+func AddEntertainmentRoutes(router *httprouter.Router, estimator estimator) {
+	endpoint := &entertainmentEndpoint{estimator: estimator}
+	router.GET("/entertainment", endpoint.Estimate)
+}

@@ -22,6 +22,7 @@ package cmd
 import (
 	"net"
 
+	"github.com/mysteriumnetwork/node/consumer/entertainment"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 
@@ -58,6 +59,10 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.PilvytisAPI)
 	tequilapi_endpoints.AddRoutesForPilvytis(router, di.PilvytisAPI)
 	tequilapi_endpoints.AddRoutesForTerms(router)
+	tequilapi_endpoints.AddEntertainmentRoutes(router, entertainment.NewEstimator(
+		config.FlagPaymentPriceGiB.Value,
+		config.FlagPaymentPriceHour.Value,
+	))
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}

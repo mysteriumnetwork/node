@@ -81,6 +81,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
+	"github.com/mysteriumnetwork/node/utils/bcutil"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
@@ -102,8 +103,10 @@ type Dependencies struct {
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
 	PricingHelper     *pingpong.Pricer
-	EtherClientL1     *paymentClient.ReconnectableEthClient
-	EtherClientL2     *paymentClient.ReconnectableEthClient
+	EtherClientL1     *paymentClient.EthMultiClient
+	EtherClientL2     *paymentClient.EthMultiClient
+
+	EtherClients []*paymentClient.ReconnectableEthClient
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -249,7 +252,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.PortPool = port.NewPool()
+	portRange, err := getUDPListenPorts()
+	if err != nil {
+		return err
+	}
+
+	di.PortPool = port.NewFixedRangePool(portRange)
 	if config.GetBool(config.FlagPortMapping) {
 		portmapConfig := mapping.DefaultConfig()
 		di.PortMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
@@ -257,7 +265,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
 	}
 
-	di.bootstrapP2P(nodeOptions.P2PPorts)
+	di.bootstrapP2P()
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	if err := di.bootstrapServices(nodeOptions); err != nil {
@@ -292,13 +300,13 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	ch1 := nodeOptions.Chains.Chain1
 	ch2 := nodeOptions.Chains.Chain2
 	addresses := map[int64]client.SmartContractAddresses{
-		ch1.ChainID: client.SmartContractAddresses{
+		ch1.ChainID: {
 			Registry:              common.HexToAddress(ch1.RegistryAddress),
 			Myst:                  common.HexToAddress(ch1.MystAddress),
 			Hermes:                common.HexToAddress(ch1.HermesID),
 			ChannelImplementation: common.HexToAddress(ch1.ChannelImplAddress),
 		},
-		ch2.ChainID: client.SmartContractAddresses{
+		ch2.ChainID: {
 			Registry:              common.HexToAddress(ch2.RegistryAddress),
 			Myst:                  common.HexToAddress(ch2.MystAddress),
 			Hermes:                common.HexToAddress(ch2.HermesID),
@@ -310,18 +318,13 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	di.AddressProvider = pingpong.NewAddressProvider(keeper, common.HexToAddress(nodeOptions.Transactor.Identity))
 }
 
-func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
-	portPool := di.PortPool
-	natPinger := di.NATPinger
-	identityVerifier := identity.NewVerifierSigned()
-	if p2pPorts.IsSpecified() {
-		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
-		portPool = port.NewFixedRangePool(*p2pPorts)
-		natPinger = traversal.NewNoopPinger(di.EventBus)
+func (di *Dependencies) bootstrapP2P() {
+	verifierFactory := func(id identity.Identity) identity.Verifier {
+		return identity.NewVerifierIdentity(id)
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.EventBus)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper, di.EventBus)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, di.NATPinger, di.PortPool, di.EventBus)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -338,7 +341,7 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	var lastStageName string
-	if options.ExperimentNATPunching {
+	if options.NATHolePunching {
 		lastStageName = traversal.StageName
 	} else {
 		lastStageName = mapping.StageName
@@ -415,6 +418,15 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+
+	if di.EtherClientL1 != nil {
+		di.EtherClientL1.Close()
+	}
+
+	if di.EtherClientL2 != nil {
+		di.EtherClientL2.Close()
+	}
+
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
 	}
@@ -606,10 +618,10 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.BrokerAddresses = optionsNetwork.BrokerAddresses
 	}
 
-	if optionsNetwork.EtherClientRPCL1 != metadata.DefaultNetwork.Chain1.EtherClientRPC {
+	if fmt.Sprint(optionsNetwork.EtherClientRPCL1) != fmt.Sprint(metadata.DefaultNetwork.Chain1.EtherClientRPC) {
 		network.Chain1.EtherClientRPC = optionsNetwork.EtherClientRPCL1
 	}
-	if optionsNetwork.EtherClientRPCL2 != metadata.DefaultNetwork.Chain2.EtherClientRPC {
+	if fmt.Sprint(optionsNetwork.EtherClientRPCL2) != fmt.Sprint(metadata.DefaultNetwork.Chain2.EtherClientRPC) {
 		network.Chain2.EtherClientRPC = optionsNetwork.EtherClientRPCL2
 	}
 
@@ -649,13 +661,47 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	log.Info().Msg("Using L1 Eth endpoint: " + network.Chain1.EtherClientRPC)
-	log.Info().Msg("Using L2 Eth endpoint: " + network.Chain2.EtherClientRPC)
-	di.EtherClientL1, err = paymentClient.NewReconnectableEthClient(network.Chain1.EtherClientRPC)
+	log.Info().Msgf("Using L1 Eth endpoints: %v", network.Chain1.EtherClientRPC)
+	log.Info().Msgf("Using L2 Eth endpoints: %v", network.Chain2.EtherClientRPC)
+
+	di.EtherClients = make([]*paymentClient.ReconnectableEthClient, 0)
+	bcClientsL1 := make([]paymentClient.AddressableEthClientGetter, 0)
+	for _, rpc := range network.Chain1.EtherClientRPC {
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		if err != nil {
+			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
+			continue
+		}
+		di.EtherClients = append(di.EtherClients, client)
+		bcClientsL1 = append(bcClientsL1, client)
+	}
+
+	if len(bcClientsL1) == 0 {
+		return errors.New("no l1 rpc endpoints loaded, can't continue")
+	}
+
+	bcClientsL2 := make([]paymentClient.AddressableEthClientGetter, 0)
+	for _, rpc := range network.Chain2.EtherClientRPC {
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		if err != nil {
+			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
+			continue
+		}
+
+		di.EtherClients = append(di.EtherClients, client)
+		bcClientsL2 = append(bcClientsL2, client)
+	}
+
+	if len(bcClientsL2) == 0 {
+		return errors.New("no l2 rpc endpoints loaded, can't continue")
+	}
+
+	di.EtherClientL1, err = di.bootstrapMultiClientBC(bcClientsL1)
 	if err != nil {
 		return err
 	}
-	di.EtherClientL2, err = paymentClient.NewReconnectableEthClient(network.Chain2.EtherClientRPC)
+
+	di.EtherClientL2, err = di.bootstrapMultiClientBC(bcClientsL2)
 	if err != nil {
 		return err
 	}
@@ -683,14 +729,16 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	if err := di.AllowURLAccess(
-		network.Chain1.EtherClientRPC,
-		network.Chain2.EtherClientRPC,
+	allow := []string{
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
 		hermesURL,
 		options.PilvytisAddress,
-	); err != nil {
+	}
+	allow = append(allow, network.Chain1.EtherClientRPC...)
+	allow = append(allow, network.Chain2.EtherClientRPC...)
+
+	if err := di.AllowURLAccess(allow...); err != nil {
 		return err
 	}
 	return di.IdentityRegistry.Subscribe(di.EventBus)
@@ -842,8 +890,8 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 		return err
 	}
 
-	if options.ExperimentNATPunching {
-		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
+	if options.NATHolePunching {
+		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
 			traversal.DefaultPingConfig(),
 			di.EventBus,
@@ -919,23 +967,20 @@ func (di *Dependencies) handleConnStateChange() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPTransport.CloseIdleConnections()
 
-			if err := di.EtherClientL2.Reconnect(); err != nil {
-				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
-				// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
-				// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
-				// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
-				// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
-				// https://github.com/mysteriumnetwork/node/issues/2282
-				if err := di.EtherClientL2.Reconnect(); err != nil {
-					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+			for _, cl := range di.EtherClients {
+				if err := cl.Reconnect(time.Second * 15); err != nil {
+					log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
+					// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
+					// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
+					// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
+					// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
+					// https://github.com/mysteriumnetwork/node/issues/2282
+					if err := cl.Reconnect(time.Second * 15); err != nil {
+						log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+					}
 				}
 			}
-			if err := di.EtherClientL1.Reconnect(); err != nil {
-				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
-				if err := di.EtherClientL1.Reconnect(); err != nil {
-					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
-				}
-			}
+
 			di.EventBus.Publish(registry.AppTopicEthereumClientReconnected, struct{}{})
 		}
 		latestState = e.State
@@ -956,6 +1001,17 @@ func (di *Dependencies) handleNATStatusForPublicIP() {
 	if outIP == pubIP && pubIP != "" {
 		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
 	}
+}
+
+func (di *Dependencies) bootstrapMultiClientBC(clients []paymentClient.AddressableEthClientGetter) (*client.EthMultiClient, error) {
+	notifyl1Channel := make(chan string, 10)
+	cl, err := paymentClient.NewEthMultiClientNotifyDown(time.Second*20, clients, notifyl1Channel)
+	if err != nil {
+		return nil, err
+	}
+	go bcutil.ManageMultiClient(cl, notifyl1Channel)
+
+	return cl, nil
 }
 
 func (di *Dependencies) bootstrapResidentCountry() error {
@@ -991,4 +1047,13 @@ func (di *Dependencies) AllowURLAccess(servers ...string) error {
 	}
 
 	return nil
+}
+
+func getUDPListenPorts() (port.Range, error) {
+	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
+		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
+	}
+	return *udpPortRange, nil
 }

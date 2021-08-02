@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package cli
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Localnet bool
-	Testnet3 bool
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
-	NATHolePunching bool
+var (
+	errWrongArgumentCount = errors.New("wrong number of arguments")
+	errUnknownArgument    = errors.New("unknown argument")
+	errTimeout            = errors.New("operation timed out")
+)
 
-	MysteriumAPIAddress string
-	BrokerAddresses     []string
-	EtherClientRPCL1    []string
-	EtherClientRPCL2    []string
-	ChainID             int64
-	DNSMap              map[string][]string
+func errUnknownSubCommand(cmd string) error {
+	return fmt.Errorf("unknown sub-command '%s'\n", cmd)
+}
+
+func formatForHuman(err error) string {
+	msg := err.Error()
+	if len(msg) < 1 {
+		return msg
+	}
+	return strings.ToUpper(string(msg[0])) + msg[1:]
 }

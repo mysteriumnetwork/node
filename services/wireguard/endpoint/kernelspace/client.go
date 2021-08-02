@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/actionstack"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 )
@@ -58,6 +59,8 @@ func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
+	rollback := actionstack.NewActionStack()
+
 	var deviceConfig wgtypes.Config
 	port := config.ListenPort
 	privateKey, err := stringToKey(config.PrivateKey)
@@ -70,19 +73,25 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	if err := c.up(config.IfaceName, config.Subnet); err != nil {
 		return err
 	}
+	rollback.Push(func() {
+		_ = c.DestroyDevice(config.IfaceName)
+	})
 
 	if config.Peer.Endpoint != nil {
 		if err := configureRoutes(config.IfaceName, config.Peer.Endpoint.IP); err != nil {
+			rollback.Run()
 			return err
 		}
 	}
 	peer, err := addPeerConfig(config.Peer)
 	if err != nil {
+		rollback.Run()
 		return err
 	}
 	deviceConfig.Peers = []wgtypes.PeerConfig{peer}
 	c.iface = config.IfaceName
 	if err := c.wgClient.ConfigureDevice(c.iface, deviceConfig); err != nil {
+		rollback.Run()
 		return fmt.Errorf("could not configure kernel space device: %w", err)
 	}
 	if err := c.dnsManager.Set(dns.Config{
@@ -90,6 +99,7 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 		IfaceName: config.IfaceName,
 		DNS:       config.DNS,
 	}); err != nil {
+		rollback.Run()
 		return fmt.Errorf("could not set DNS: %w", err)
 	}
 
@@ -150,17 +160,27 @@ func (c *client) DestroyDevice(name string) error {
 }
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
+	rollback := actionstack.NewActionStack()
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
 		if err := cmdutil.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
+	rollback.Push(func() {
+		_ = c.DestroyDevice(iface)
+	})
 
 	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
+		rollback.Run()
 		return err
 	}
 
-	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
+	if err := cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up"); err != nil {
+		rollback.Run()
+		return err
+	}
+
+	return nil
 }
 
 func (c *client) Close() (err error) {

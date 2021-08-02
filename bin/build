@@ -29,7 +29,16 @@ if [ "$FLAG_RACE" == "true" ]; then R=-race; fi
 
 echo "Compiling 'myst' for '$GOOS/$GOARCH'.."
 
-go build $R -ldflags="-w -s $(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go
+LD_FLAGS="-w -s $(get_linker_ldflags)"
+STATIC_OPTS=
+
+if [[ "$BUILD_STATIC" = 1 ]] ; then
+	export CGO_ENABLED=0
+	LD_FLAGS="$LD_FLAGS"' -extldflags "-static"'
+	STATIC_OPTS="$STATIC_OPTS -a -tags netgo"
+fi
+
+go build $R -ldflags="$LD_FLAGS" $STATIC_OPTS -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go
 if [ $? -ne 0 ]; then
     print_error "Compile failed!"
     exit 1
