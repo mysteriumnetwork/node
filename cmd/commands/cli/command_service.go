@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -72,13 +71,8 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) (e
 	}
 
 	service, err := c.tequilapi.ServiceStart(contract.ServiceStartRequest{
-		ProviderID: providerID,
-		Type:       serviceType,
-		Price: contract.Price{
-			Currency: config.GetString(config.FlagDefaultCurrency),
-			PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
-			PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
-		},
+		ProviderID:     providerID,
+		Type:           serviceType,
 		AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 		Options:        serviceOpts.TypeOptions,
 	})

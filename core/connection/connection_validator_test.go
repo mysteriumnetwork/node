@@ -23,7 +23,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +33,7 @@ func TestValidator_Validate(t *testing.T) {
 	}
 	type args struct {
 		consumerID identity.Identity
-		proposal   market.ServiceProposal
+		price      market.Price
 		chainID    int64
 	}
 	tests := []struct {
@@ -58,10 +57,10 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
-					Price:    market.NewPricePtr(120, 100, money.CurrencyMystt),
-					Contacts: []market.Contact{activeProviderContact},
-				}),
+				price: market.Price{
+					PricePerHour: big.NewInt(6000),
+					PricePerGiB:  big.NewInt(6000),
+				},
 			},
 		},
 		{
@@ -79,10 +78,10 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
-					Price:    market.NewPricePtr(15, 0, money.CurrencyMystt),
-					Contacts: []market.Contact{activeProviderContact},
-				}),
+				price: market.Price{
+					PricePerHour: big.NewInt(600),
+					PricePerGiB:  big.NewInt(600),
+				},
 			},
 		},
 		{
@@ -112,10 +111,10 @@ func TestValidator_Validate(t *testing.T) {
 			args: args{
 				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
-				proposal: market.NewProposal(activeProviderID.Address, activeServiceType, market.NewProposalOpts{
-					Price:    market.NewPricePtr(15, 0, money.CurrencyMystt),
-					Contacts: []market.Contact{activeProviderContact},
-				}),
+				price: market.Price{
+					PricePerHour: big.NewInt(100),
+					PricePerGiB:  big.NewInt(100),
+				},
 			},
 		},
 	}
@@ -125,7 +124,7 @@ func TestValidator_Validate(t *testing.T) {
 				consumerBalanceGetter: tt.fields.consumerBalanceGetter,
 				unlockChecker:         tt.fields.unlockChecker,
 			}
-			err := v.Validate(tt.args.chainID, tt.args.consumerID, tt.args.proposal)
+			err := v.Validate(tt.args.chainID, tt.args.consumerID, tt.args.price)
 			if tt.wantErr != nil {
 				assert.EqualError(t, err, tt.wantErr.Error(), tt.name)
 			} else {

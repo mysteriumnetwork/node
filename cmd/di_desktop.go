@@ -136,12 +136,11 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 
 	cfg := registry.ProviderRegistrarConfig{
-		IsTestnet2:          nodeOptions.OptionsNetwork.Testnet2,
+		IsTestnet3:          nodeOptions.OptionsNetwork.Testnet3,
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
-		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg, di.PayoutAddressStorage)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
@@ -166,6 +165,9 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 
 	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
+		di.HermesPromiseStorage,
+		di.HermesPromiseHandler,
+		di.AddressProvider,
 		func(hermesURL string) pingpong.HermesHTTPRequester {
 			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 		},
@@ -178,6 +180,8 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		pingpong.HermesPromiseSettlerConfig{
 			Threshold:            nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+			L1ChainID:            nodeOptions.Chains.Chain1.ChainID,
+			L2ChainID:            nodeOptions.Chains.Chain2.ChainID,
 		},
 	)
 	if err := settler.Subscribe(di.EventBus); err != nil {
@@ -216,7 +220,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.HermesStatusChecker,
 			di.EventBus,
-			serviceInstance.Proposal,
 			di.HermesPromiseHandler,
 			di.AddressProvider,
 		)
@@ -228,6 +231,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.EventBus,
 			channel,
 			service.DefaultConfig(),
+			di.PricingHelper,
 		)
 	}
 

@@ -19,18 +19,7 @@ package mocks
 
 import (
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
-
-// Price is the default price for test proposals.
-func Price() market.Price {
-	return market.Price{
-		Currency: money.CurrencyMyst,
-		PerHour:  crypto.FloatToBigMyst(0.005),
-		PerGiB:   crypto.FloatToBigMyst(0.007),
-	}
-}
 
 // Quality is the default quality for test proposals.
 func Quality() market.Quality {

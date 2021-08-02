@@ -45,3 +45,8 @@ func (n *NoopHermesPromiseSettler) SettleWithBeneficiary(chainID int64, _ identi
 func (n *NoopHermesPromiseSettler) GetHermesFee(chainID int64, _ common.Address) (uint16, error) {
 	return 0, nil
 }
+
+// Withdraw does absolutely nothing.
+func (n *NoopHermesPromiseSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	return nil
+}

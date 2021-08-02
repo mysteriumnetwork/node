@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,7 +47,6 @@ var (
 	mockAccessPolicyEndpoint = "https://some.domain/api/v1/lists/"
 	mockProposal             = market.NewProposal(mockProviderID.Address, mockServiceType, market.NewProposalOpts{
 		Location: &TestLocation,
-		Price:    &price,
 		Quality:  &mockQuality,
 	})
 	ap = []market.AccessPolicy{
@@ -70,7 +70,6 @@ var (
 	serviceTypeWithAccessPolicy  = "mockAccessPolicyService"
 	mockProposalWithAccessPolicy = market.NewProposal(mockProviderID.Address, serviceTypeWithAccessPolicy, market.NewProposalOpts{
 		Location:       &TestLocation,
-		Price:          &price,
 		Quality:        &mockQuality,
 		AccessPolicies: ap,
 	})
@@ -85,7 +84,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(_ identity.Identity, serviceType string, _ []string, _ service.Options, _ market.Price) (service.ID, error) {
+func (sm *mockServiceManager) Start(_ identity.Identity, serviceType string, _ []string, _ service.Options) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}
@@ -122,8 +121,12 @@ var fakeOptionsParser = map[string]services.ServiceOptionsParser{
 
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser)
-
+	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
+		priceToAdd: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	})
 	tests := []struct {
 		method         string
 		path           string
@@ -143,7 +146,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
-                    "format": "service-proposal/v2",
+                    "format": "service-proposal/v3",
                     "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
@@ -152,16 +155,16 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
-					"price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10
-                    }
+                    },
+					"price": {
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
 			}]`,
@@ -178,8 +181,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
-                    "format": "service-proposal/v2",
-                    "compatibility": 0,
+		            "format": "service-proposal/v3",
+		            "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"location": {
@@ -187,16 +190,16 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
+		            "quality": {
+		              "quality": 2.0,
+		              "latency": 50,
+		              "bandwidth": 10
+		            },
 					"price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
-                    "quality": {
-                      "quality": 2.0,
-                      "latency": 50,
-                      "bandwidth": 10
-                    }
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
@@ -213,8 +216,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
-                    "format": "service-proposal/v2",
-                    "compatibility": 0,
+		            "format": "service-proposal/v3",
+		            "compatibility": 0,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"location": {
@@ -222,16 +225,16 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					},
+		            "quality": {
+		              "quality": 2.0,
+		              "latency": 50,
+		              "bandwidth": 10
+		            },
 					"price": {
-                      "currency": "MYST",
-                      "per_hour": 5e+15,
-                      "per_gib": 7e+15
-                    },
-                    "quality": {
-                      "quality": 2.0,
-                      "latency": 50,
-                      "bandwidth": 10
-                    }
+						"currency": "MYSTT",
+						"per_gib": 2.0,
+						"per_hour": 1.0
+					}
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
@@ -261,7 +264,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 }
 
 func Test_ServiceStartInvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -290,7 +293,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -319,7 +322,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidOptions(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -348,7 +351,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 }
 
 func Test_ServiceStartAlreadyRunning(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -372,7 +375,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 }
 
 func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -383,7 +386,12 @@ func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
 }
 
 func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
+		priceToAdd: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -400,7 +408,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
-				"format": "service-proposal/v2",
+				"format": "service-proposal/v3",
 				"compatibility": 0,
 				"provider_id": "0xproviderid",
 				"service_type": "testprotocol",
@@ -409,15 +417,15 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 					"country": "Lithuania",
 					"city": "Vilnius"
 				},
-				"price": {
-				  "currency": "MYST",
-				  "per_hour": 5e+15,
-				  "per_gib": 7e+15
-				},
 				"quality": {
 				  "quality": 2.0,
 				  "latency": 50,
 				  "bandwidth": 10
+				},
+				"price": {
+					"currency": "MYSTT",
+					"per_gib": 2.0,
+					"per_hour": 1.0
 				}
 			},
 			"connection_statistics": {"attempted":0, "successful":0}
@@ -426,7 +434,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 	)
 }
 func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
@@ -444,7 +452,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 }
 
 func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
@@ -465,7 +473,12 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 }
 
 func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
+		priceToAdd: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	})
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -492,7 +505,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
-				"format": "service-proposal/v2",
+				"format": "service-proposal/v3",
 				"compatibility": 0,
 				"provider_id": "0xproviderid",
 				"service_type": "mockAccessPolicyService",
@@ -501,15 +514,15 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 					"country": "Lithuania",
 					"city": "Vilnius"
 				},
-				"price": {
-				  "currency": "MYST",
-				  "per_hour": 5e+15,
-				  "per_gib": 7e+15
-				},
 				"quality": {
 				  "quality": 2.0,
 				  "latency": 50,
 				  "bandwidth": 10
+				},
+				"price": {
+					"currency": "MYSTT",
+					"per_gib": 2.0,
+					"per_hour": 1.0
 				},
 				"access_policies": [
 					{
@@ -537,7 +550,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 }
 
 func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
 
 	req := httptest.NewRequest(
 		http.MethodGet,

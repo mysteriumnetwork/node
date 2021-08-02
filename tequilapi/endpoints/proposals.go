@@ -18,15 +18,15 @@
 package endpoints
 
 import (
-	"math/big"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -36,15 +36,23 @@ type QualityFinder interface {
 	ProposalsQuality() []quality.ProposalQuality
 }
 
+type priceAPI interface {
+	GetCurrentPrice(nodeType string, country string) (market.Price, error)
+}
+
 type proposalsEndpoint struct {
-	proposalRepository proposal.Repository
+	proposalRepository proposalRepository
+	pricer             priceAPI
+	locationResolver   location.Resolver
 	filterPresets      proposal.FilterPresetRepository
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalRepository proposal.Repository, filterPresetRepository proposal.FilterPresetRepository) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository) *proposalsEndpoint {
 	return &proposalsEndpoint{
 		proposalRepository: proposalRepository,
+		pricer:             pricer,
+		locationResolver:   locationResolver,
 		filterPresets:      filterPresetRepository,
 	}
 }
@@ -79,14 +87,6 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, filterPresetRe
 //     description: IP Type (residential, datacenter, etc.).
 //     type: string
 //   - in: query
-//     name: price_hour_max
-//     description: Maximum price/hour.
-//     type: string
-//   - in: query
-//     name: price_gib_max
-//     description: Maximum price/GiB.
-//     type: string
-//   - in: query
 //     name: compatibility_min
 //     description: Minimum compatibility level of the proposal.
 //     type: integer
@@ -109,19 +109,6 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, filterPresetRe
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
-
-	priceHourMax, err := parsePriceBound(req, "price_hour_max")
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-
-	priceGiBMax, err := parsePriceBound(req, "price_gib_max")
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-
 	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
 	qualityMin := func() float32 {
@@ -141,8 +128,6 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		AccessPolicySource:      req.URL.Query().Get("access_policy_source"),
 		LocationCountry:         req.URL.Query().Get("location_country"),
 		IPType:                  req.URL.Query().Get("ip_type"),
-		PriceGiBMax:             priceGiBMax,
-		PriceHourMax:            priceHourMax,
 		CompatibilityMin:        compatibilityMin,
 		CompatibilityMax:        compatibilityMax,
 		QualityMin:              qualityMin,
@@ -160,6 +145,38 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 	}
 
 	utils.WriteAsJSON(proposalsRes, resp)
+}
+
+// swagger:operation GET /prices/current
+// ---
+// summary: Returns proposals
+// description: Returns list of proposals filtered by provider id
+// responses:
+//   200:
+//     description: Current proposal price
+//     schema:
+//       "$ref": "#/definitions/CurrentPriceResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (pe *proposalsEndpoint) CurrentPrice(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	loc, err := pe.locationResolver.DetectLocation()
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("could not retrieve current prices: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	price, err := pe.pricer.GetCurrentPrice(loc.IPType, loc.Country)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("could not retrieve current prices: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.CurrentPriceResponse{
+		PricePerHour: price.PricePerHour,
+		PricePerGiB:  price.PricePerGiB,
+	}, resp)
 }
 
 // swagger:operation GET /proposals/filter-presets Proposal proposalFilterPresets
@@ -188,21 +205,10 @@ func (pe *proposalsEndpoint) FilterPresets(resp http.ResponseWriter, req *http.R
 	utils.WriteAsJSON(presetsRes, resp)
 }
 
-func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
-	bound := req.URL.Query().Get(key)
-	if bound == "" {
-		return nil, nil
-	}
-	upperPriceBound, ok := new(big.Int).SetString(req.URL.Query().Get(key), 10)
-	if !ok {
-		return upperPriceBound, errors.New("could not parse price bound")
-	}
-	return upperPriceBound, nil
-}
-
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository, filterPresetRepository proposal.FilterPresetRepository) {
-	pe := NewProposalsEndpoint(proposalRepository, filterPresetRepository)
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository) {
+	pe := NewProposalsEndpoint(proposalRepository, pricer, locationResolver, filterPresetRepository)
 	router.GET("/proposals", pe.List)
 	router.GET("/proposals/filter-presets", pe.FilterPresets)
+	router.GET("/prices/current", pe.CurrentPrice)
 }

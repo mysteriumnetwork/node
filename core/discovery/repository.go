@@ -28,13 +28,12 @@ import (
 
 // repository provides proposals from multiple other repositories.
 type repository struct {
-	delegates     []proposal.Repository
-	filterPresets proposal.FilterPresetRepository
+	delegates []proposal.Repository
 }
 
 // NewRepository constructs a new composite repository.
-func NewRepository(filterPresets proposal.FilterPresetRepository) *repository {
-	return &repository{filterPresets: filterPresets}
+func NewRepository() *repository {
+	return &repository{}
 }
 
 // Add adds a delegate repositories from which proposals can be acquired.
@@ -86,14 +85,6 @@ func (c *repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposa
 	var result []market.ServiceProposal
 	for _, val := range uniqueProposals {
 		result = append(result, val)
-	}
-
-	if filter.PresetID != 0 {
-		preset, err := c.filterPresets.Get(filter.PresetID)
-		if err != nil {
-			return nil, err
-		}
-		result = preset.Filter(result)
 	}
 
 	allErrors := utils.ErrorCollection{}

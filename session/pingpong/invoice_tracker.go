@@ -119,7 +119,6 @@ type InvoiceTracker struct {
 	maxNotReceivedExchangeMessages uint64
 	maxNotSentExchangeMessages     uint64
 	once                           sync.Once
-	rnd                            *rand.Rand
 	agreementID                    *big.Int
 	firstInvoicePaid               bool
 	invoicesSent                   map[string]sentInvoice
@@ -128,6 +127,9 @@ type InvoiceTracker struct {
 
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
+
+	rnd     *rand.Rand
+	rndLock sync.Mutex
 
 	criticalInvoiceErrors chan error
 	lastInvoiceSent       time.Duration
@@ -139,7 +141,7 @@ type InvoiceTracker struct {
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
 type InvoiceTrackerDeps struct {
-	Proposal                   market.ServiceProposal
+	AgreedPrice                market.Price
 	Peer                       identity.Identity
 	PeerInvoiceSender          PeerInvoiceSender
 	InvoiceStorage             providerInvoiceStorage
@@ -178,7 +180,7 @@ func NewInvoiceTracker(
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		maxNotSentExchangeMessages:     calculateMaxNotSentExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		invoicesSent:                   make(map[string]sentInvoice),
-		rnd:                            rand.New(rand.NewSource(1)),
+		rnd:                            rand.New(rand.NewSource(time.Now().UnixNano())),
 		promiseErrors:                  make(chan error),
 		criticalInvoiceErrors:          make(chan error),
 		invoiceChannel:                 make(chan bool),
@@ -234,7 +236,8 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 }
 
 func (it *InvoiceTracker) generateAgreementID() {
-	it.rnd.Seed(time.Now().UnixNano())
+	it.rndLock.Lock()
+	defer it.rndLock.Unlock()
 	agreementID := make([]byte, 32)
 	it.rnd.Read(agreementID)
 	it.agreementID = new(big.Int).SetBytes(agreementID)
@@ -258,7 +261,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 	it.resetNotSentExchangeMessageCount()
 
 	// incase of zero payment, we'll just skip going to the hermes
-	if it.deps.Proposal.Price.IsFree() {
+	if it.deps.AgreedPrice.IsFree() {
 		return nil
 	}
 
@@ -266,7 +269,6 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not store r: %s", hex.EncodeToString(invoice.r)))
 	}
-
 	errChan := it.deps.PromiseHandler.RequestPromise(invoice.r, em, it.deps.ProviderID, it.deps.SessionID)
 	go it.handlePromiseErrors(errChan)
 	return nil
@@ -351,7 +353,7 @@ func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
 			return
 		case <-time.After(interval):
 			currentlyElapsed := it.deps.TimeTracker.Elapsed()
-			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.Proposal.Price)
+			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.AgreedPrice)
 			lastEM := it.getLastExchangeMessage()
 			diff := safeSub(shouldBe, lastEM.AgreementTotal)
 			if diff.Cmp(it.deps.MaxNotPaidInvoice) >= 0 && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
@@ -459,7 +461,7 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 		return ErrExchangeWaitTimeout
 	}
 
-	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.Price)
+	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.AgreedPrice)
 
 	lastEm := it.getLastExchangeMessage()
 	if lastEm.AgreementTotal.Cmp(big.NewInt(0)) == 0 && shouldBe.Cmp(big.NewInt(0)) == 1 {

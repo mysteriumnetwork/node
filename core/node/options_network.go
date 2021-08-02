@@ -20,13 +20,14 @@ package node
 // OptionsNetwork describes possible parameters of network configuration
 type OptionsNetwork struct {
 	Localnet bool
-	Testnet2 bool
+	Testnet3 bool
 
 	NATHolePunching bool
 
 	MysteriumAPIAddress string
 	BrokerAddresses     []string
-	EtherClientRPC      string
+	EtherClientRPCL1    []string
+	EtherClientRPCL2    []string
 	ChainID             int64
 	DNSMap              map[string][]string
 }

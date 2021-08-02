@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -63,12 +62,20 @@ func (mac *mockHermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, 
 	return crypto.Promise{}, mac.errToReturn
 }
 
+func (mac *mockHermesCaller) PayAndSettle(rp RequestPromise) (crypto.Promise, error) {
+	return crypto.Promise{}, mac.errToReturn
+}
+
 func (mac *mockHermesCaller) RevealR(r string, provider string, agreementID *big.Int) error {
 	return mac.errToReturn
 }
 
 func (mac *mockHermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error) {
 	return promise, nil
+}
+
+func (mac *mockHermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
+	return ConsumerData{}, nil
 }
 
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
@@ -92,9 +99,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(600, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		EventBus:                   mocks.NewEventBus(),
@@ -141,9 +146,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(600, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -192,9 +195,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	NewHermesPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(600, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -241,9 +242,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(600, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(600, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -297,9 +296,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(60000000000000, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(60000000000000, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -349,9 +346,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(60000000000000, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(60000000000000, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -401,9 +396,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	deps := InvoiceTrackerDeps{
-		Proposal: market.NewProposal(acc.Address.Hex(), "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
-		}),
+		AgreedPrice:                *market.NewPrice(600, 0),
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -437,11 +430,9 @@ func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	tracker.StartTracking()
 	deps := InvoiceTrackerDeps{
-		TimeTracker: &tracker,
-		EventBus:    mocks.NewEventBus(),
-		Proposal: market.NewProposal("0x1", "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(600, 10995116277760, money.CurrencyMystt),
-		}),
+		TimeTracker:       &tracker,
+		EventBus:          mocks.NewEventBus(),
+		AgreedPrice:       *market.NewPrice(600, 10995116277760),
 		MaxNotPaidInvoice: big.NewInt(100),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -462,11 +453,9 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	tracker.StartTracking()
 	deps := InvoiceTrackerDeps{
-		TimeTracker: &tracker,
-		EventBus:    mocks.NewEventBus(),
-		Proposal: market.NewProposal("0x1", "mock", market.NewProposalOpts{
-			Price: market.NewPricePtr(600, 1024^3*10, money.CurrencyMyst),
-		}),
+		TimeTracker:       &tracker,
+		EventBus:          mocks.NewEventBus(),
+		AgreedPrice:       *market.NewPrice(600, 0),
 		MaxNotPaidInvoice: big.NewInt(100),
 		ChargePeriod:      time.Millisecond,
 	}
@@ -642,7 +631,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
 				AddressProvider:            tt.fields.addressProvider,
-				Proposal:                   market.NewProposal("0xbeef", "mock", market.NewProposalOpts{}),
+				AgreedPrice:                *market.NewPrice(0, 0),
 			}
 			it := &InvoiceTracker{
 				hermesFailureCount:  tt.fields.hermesFailureCount,
@@ -745,6 +734,10 @@ type mockHermesPromiseStorage struct {
 }
 
 func (maps *mockHermesPromiseStorage) Store(_ HermesPromise) error {
+	return maps.errToReturn
+}
+
+func (maps *mockHermesPromiseStorage) Delete(_ HermesPromise) error {
 	return maps.errToReturn
 }
 

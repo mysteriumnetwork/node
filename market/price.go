@@ -19,47 +19,48 @@ package market
 
 import (
 	"math/big"
-
-	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/mysteriumnetwork/node/money"
+	"time"
 )
 
-// Price represents the proposal price.
+// LatestPrices represents the latest pricing.
+type LatestPrices struct {
+	Defaults           *PriceHistory            `json:"defaults"`
+	PerCountry         map[string]*PriceHistory `json:"per_country"`
+	CurrentValidUntil  time.Time                `json:"current_valid_until"`
+	PreviousValidUNtil time.Time                `json:"previous_valid_until"`
+}
+
+// PriceHistory represents the current and previous price.
+type PriceHistory struct {
+	Current  *PriceByType `json:"current"`
+	Previous *PriceByType `json:"previous"`
+}
+
+// PriceByType is a slice of pricing by type.
+type PriceByType struct {
+	Residential *Price `json:"residential"`
+	Other       *Price `json:"other"`
+}
+
+// Price represents the price.
 type Price struct {
-	Currency money.Currency `json:"currency"`
-	PerHour  *big.Int       `json:"per_hour"`
-	PerGiB   *big.Int       `json:"per_gib"`
+	PricePerHour *big.Int `json:"price_per_hour"`
+	PricePerGiB  *big.Int `json:"price_per_gib"`
+}
+
+// IsFree Determines if the price has any values set or not.
+func (p Price) IsFree() bool {
+	return p.PricePerGiB.Cmp(big.NewInt(0)) == 0 && p.PricePerHour.Cmp(big.NewInt(0)) == 0
 }
 
 // NewPrice creates a new Price instance.
-func NewPrice(perHour, perGiB uint64, currency money.Currency) Price {
-	return Price{
-		Currency: currency,
-		PerHour:  new(big.Int).SetUint64(perHour),
-		PerGiB:   new(big.Int).SetUint64(perGiB),
+func NewPrice(perHour, perGiB int64) *Price {
+	return &Price{
+		PricePerHour: big.NewInt(perHour),
+		PricePerGiB:  big.NewInt(perGiB),
 	}
 }
 
-// NewPricePtr returns a pointer to a new Price instance.
-func NewPricePtr(perHour, perGiB uint64, currency money.Currency) *Price {
-	price := NewPrice(perHour, perGiB, currency)
-	return &price
-}
-
-// IsFree returns true if the service pricing is set to 0.
-func (p Price) IsFree() bool {
-	return p.PerHour.Cmp(big.NewInt(0)) == 0 && p.PerGiB.Cmp(big.NewInt(0)) == 0
-}
-
-// Validate validates the price.
-func (p Price) Validate() error {
-	return validation.ValidateStruct(&p,
-		validation.Field(&p.Currency, validation.Required),
-		validation.Field(&p.PerHour, validation.Required),
-		validation.Field(&p.PerGiB, validation.Required),
-	)
-}
-
 func (p Price) String() string {
-	return p.PerHour.String() + "/h, " + p.PerGiB.String() + "/GiB, " + "Currency: " + string(p.Currency)
+	return p.PricePerHour.String() + "/h, " + p.PricePerGiB.String() + "/GiB "
 }

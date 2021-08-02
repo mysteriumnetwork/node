@@ -66,6 +66,7 @@ func ReleaseDebianPPASnapshot() error {
 	if err != nil {
 		return err
 	}
+
 	if !env.Bool(env.SnapshotBuild) {
 		log.Info().Msg("Not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
 		return nil

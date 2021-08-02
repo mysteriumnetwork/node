@@ -21,7 +21,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -121,31 +120,8 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 // IdentityRegisterRequest represents the identity registration user input parameters
 // swagger:model IdentityRegisterRequestDTO
 type IdentityRegisterRequest struct {
-	// Stake is used by Provider, default 0
-	Stake *big.Int `json:"stake,omitempty"`
-	// Cache out address for Provider
-	Beneficiary string `json:"beneficiary,omitempty"`
 	// Token: referral token, if the user has one
 	ReferralToken *string `json:"referral_token,omitempty"`
-}
-
-// Validate validates fields in request
-func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
-	errors := validation.NewErrorMap()
-
-	if irr.Beneficiary != "" && !common.IsHexAddress(irr.Beneficiary) {
-		errors.ForField("beneficiary").Invalid(irr.Beneficiary + " - is not a valid ethereum wallet address")
-	}
-
-	if irr.ReferralToken == nil {
-		if irr.Stake == nil {
-			errors.ForField("stake").Required()
-		} else if irr.Stake.Cmp(big.NewInt(0)) == -1 {
-			errors.ForField("stake").Invalid("Must be positive")
-		}
-	}
-
-	return errors
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity

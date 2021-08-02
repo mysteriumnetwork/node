@@ -470,9 +470,7 @@ func (c *cliApp) proposals(filter string) (err error) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	priceHourMax := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPriceHourMax)
-	priceGiBMax := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPriceGiBMax)
-	proposals, err := c.tequilapi.ProposalsByPrice(priceHourMax, priceGiBMax)
+	proposals, err := c.tequilapi.Proposals()
 	if err != nil {
 		clio.Warn(err)
 		return []contract.ProposalDTO{}

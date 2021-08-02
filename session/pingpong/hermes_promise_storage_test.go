@@ -104,3 +104,44 @@ func TestHermesPromiseStorage(t *testing.T) {
 	err = hermesStorage.Store(overwritingPromise)
 	assert.Equal(t, err, ErrAttemptToOverwrite)
 }
+
+func TestHermesPromiseStorageDelete(t *testing.T) {
+	dir, err := ioutil.TempDir("", "hermesPromiseStorageTest")
+	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	bolt, err := boltdb.NewStorage(dir)
+	assert.NoError(t, err)
+	defer bolt.Close()
+
+	hermesStorage := NewHermesPromiseStorage(bolt)
+
+	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
+	firstHermes := common.HexToAddress("0x000000acc1")
+
+	firstPromise := HermesPromise{
+		ChannelID:   "1",
+		Identity:    id,
+		HermesID:    firstHermes,
+		Promise:     crypto.Promise{Amount: big.NewInt(1), Fee: big.NewInt(1), ChainID: 1},
+		R:           "some r",
+		AgreementID: big.NewInt(123),
+	}
+
+	// should error since no such promise
+	err = hermesStorage.Delete(firstPromise)
+	assert.Error(t, err)
+
+	err = hermesStorage.Store(firstPromise)
+	assert.NoError(t, err)
+
+	promise, err := hermesStorage.Get(1, firstPromise.ChannelID)
+	assert.NoError(t, err)
+	assert.EqualValues(t, firstPromise, promise)
+
+	err = hermesStorage.Delete(firstPromise)
+	assert.NoError(t, err)
+
+	_, err = hermesStorage.Get(1, firstPromise.ChannelID)
+	assert.Error(t, err)
+}

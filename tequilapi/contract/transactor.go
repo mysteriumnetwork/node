@@ -194,6 +194,14 @@ type SettleRequest struct {
 	ProviderID string `json:"provider_id"`
 }
 
+// WithdrawRequest represents the request to withdraw earnings to l1.
+// swagger:model WithdrawRequestDTO
+type WithdrawRequest struct {
+	HermesID    string `json:"hermes_id"`
+	ProviderID  string `json:"provider_id"`
+	Beneficiary string `json:"beneficiary"`
+}
+
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
 type SettleWithBeneficiaryRequest struct {
 	SettleRequest

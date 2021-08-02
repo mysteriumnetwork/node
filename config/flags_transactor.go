@@ -49,12 +49,6 @@ var (
 		Usage: "the duration that the provider will wait between each retry",
 		Value: time.Minute * 3,
 	}
-	// FlagTransactorProviderRegistrationStake determines the stake size for registration of provider
-	FlagTransactorProviderRegistrationStake = cli.StringFlag{
-		Name:  "transactor.provider.registration-stake",
-		Usage: "the stake we'll use when registering provider",
-		Value: "50000000000000000000",
-	}
 )
 
 // RegisterFlagsTransactor function register network flags to flag list
@@ -65,7 +59,6 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		&FlagTransactorIdentity,
 		&FlagTransactorProviderMaxRegistrationAttempts,
 		&FlagTransactorProviderRegistrationRetryDelay,
-		&FlagTransactorProviderRegistrationStake,
 	)
 }
 
@@ -75,5 +68,4 @@ func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
-	Current.ParseStringFlag(ctx, FlagTransactorProviderRegistrationStake)
 }

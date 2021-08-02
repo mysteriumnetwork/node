@@ -35,16 +35,6 @@ var (
 		Usage: "Subnet to be used by the wireguard service",
 		Value: "10.182.0.0/16",
 	}
-	// FlagWireguardPriceHour sets the price/hour for provided wireguard service.
-	FlagWireguardPriceHour = cli.Float64Flag{
-		Name:  "wireguard.price-hour",
-		Usage: "Sets the price of the wireguard service/hour.",
-	}
-	// FlagWireguardPriceGiB sets the price/GiB for provided wireguard service.
-	FlagWireguardPriceGiB = cli.Float64Flag{
-		Name:  "wireguard.price-gib",
-		Usage: "Sets the price of the wireguard service/hour.",
-	}
 	// FlagWireguardAccessPolicies a comma-separated list of access policies that determines allowed identities to use the service.
 	FlagWireguardAccessPolicies = cli.StringFlag{
 		Name:  "wireguard.access-policies",
@@ -57,8 +47,6 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		&FlagWireguardListenPorts,
 		&FlagWireguardListenSubnet,
-		&FlagWireguardPriceHour,
-		&FlagWireguardPriceGiB,
 		&FlagWireguardAccessPolicies,
 	)
 }
@@ -67,7 +55,5 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 func ParseFlagsServiceWireguard(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
 	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
-	Current.ParseFloat64Flag(ctx, FlagWireguardPriceHour)
-	Current.ParseFloat64Flag(ctx, FlagWireguardPriceGiB)
 	Current.ParseStringFlag(ctx, FlagWireguardAccessPolicies)
 }

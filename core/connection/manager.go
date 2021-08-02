@@ -30,6 +30,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -112,15 +113,20 @@ type PaymentIssuer interface {
 	Stop()
 }
 
+// PriceGetter fetches the current price.
+type PriceGetter interface {
+	GetCurrentPrice(nodeType string, country string) (market.Price, error)
+}
+
 type validator interface {
-	Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error
+	Validate(chainID int64, consumerID identity.Identity, p market.Price) error
 }
 
 // TimeGetter function returns current time
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -188,7 +194,7 @@ func (m *connectionManager) chainID() int64 {
 	return config.GetInt64(config.FlagChainID)
 }
 
-func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal proposal.PricedServiceProposal, params ConnectParams) (err error) {
 	var sessionID session.ID
 
 	tracer := trace.NewTracer("Consumer whole Connect")
@@ -208,7 +214,9 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return ErrAlreadyExists
 	}
 
-	err = m.validator.Validate(m.chainID(), consumerID, proposal)
+	prc := m.priceFromProposal(proposal)
+
+	err = m.validator.Validate(m.chainID(), consumerID, prc)
 	if err != nil {
 		return err
 	}
@@ -240,7 +248,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
-	sessionID, err = m.initSession(tracer)
+	sessionID, err = m.initSession(tracer, prc)
 	if err != nil {
 		return err
 	}
@@ -264,7 +272,7 @@ func (m *connectionManager) autoReconnect() (err error) {
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
-	sessionID, err = m.initSession(tracer)
+	sessionID, err = m.initSession(tracer, m.priceFromProposal(m.connectOptions.Proposal))
 	if err != nil {
 		return err
 	}
@@ -277,7 +285,14 @@ func (m *connectionManager) autoReconnect() (err error) {
 	return nil
 }
 
-func (m *connectionManager) initSession(tracer *trace.Tracer) (sessionID session.ID, err error) {
+func (m *connectionManager) priceFromProposal(proposal proposal.PricedServiceProposal) market.Price {
+	return market.Price{
+		PricePerHour: proposal.Price.PricePerHour,
+		PricePerGiB:  proposal.Price.PricePerGiB,
+	}
+}
+
+func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) (sessionID session.ID, err error) {
 	err = m.createP2PChannel(m.connectOptions, tracer)
 	if err != nil {
 		return sessionID, fmt.Errorf("could not create p2p channel during connect: %w", err)
@@ -286,12 +301,12 @@ func (m *connectionManager) initSession(tracer *trace.Tracer) (sessionID session
 	m.connectOptions.ProviderNATConn = m.channel.ServiceConn()
 	m.connectOptions.ChannelConn = m.channel.Conn()
 
-	paymentSession, err := m.paymentLoop(m.connectOptions)
+	paymentSession, err := m.paymentLoop(m.connectOptions, prc)
 	if err != nil {
 		return sessionID, err
 	}
 
-	sessionDTO, err := m.createP2PSession(m.activeConnection, m.connectOptions, tracer)
+	sessionDTO, err := m.createP2PSession(m.activeConnection, m.connectOptions, tracer, prc)
 	sessionID = session.ID(sessionDTO.GetID())
 	if err != nil {
 		m.sendSessionStatus(m.channel, m.connectOptions.ConsumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
@@ -394,8 +409,8 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) paymentLoop(opts ConnectOptions) (PaymentIssuer, error) {
-	payments, err := m.paymentEngineFactory(m.channel, opts.ConsumerID, opts.ProviderID, opts.HermesID, opts.Proposal)
+func (m *connectionManager) paymentLoop(opts ConnectOptions, price market.Price) (PaymentIssuer, error) {
+	payments, err := m.paymentEngineFactory(m.channel, opts.ConsumerID, opts.ProviderID, opts.HermesID, opts.Proposal, price)
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +507,7 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, tracer *trace.Tracer) (*pb.SessionResponse, error) {
+func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, tracer *trace.Tracer, requestedPrice market.Price) (*pb.SessionResponse, error) {
 	trace := tracer.StartStage("Consumer session creation")
 	defer tracer.EndStage(trace)
 
@@ -513,6 +528,10 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 			PaymentVersion: "v3",
 			Location: &pb.LocationInfo{
 				Country: m.Status().ConsumerLocation.Country,
+			},
+			Pricing: &pb.Pricing{
+				PerGib:  requestedPrice.PricePerGiB.Bytes(),
+				PerHour: requestedPrice.PricePerHour.Bytes(),
 			},
 		},
 		ProposalID: opts.Proposal.ID,
@@ -654,7 +673,7 @@ func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)
 	}
 }
 
-func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
+func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal proposal.PricedServiceProposal) {
 	m.setStatus(func(status *connectionstate.Status) {
 		*status = connectionstate.Status{
 			StartedAt:        m.timeGetter(),

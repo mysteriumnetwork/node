@@ -102,7 +102,7 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "could not pull images")
 	}
 
-	if err := r.compose("up", "-d", "broker", "ganache", "ipify", "morqa", "mongodb"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 
@@ -137,7 +137,18 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
 
-	time.Sleep(time.Second)
+	log.Info().Msg("Deploying contracts to bc2")
+	err = r.compose("run", "go-runner",
+		"/usr/local/bin/deployer",
+		"--keystore.directory=./keystore",
+		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
+		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
+		"--geth.url=ws://ganache2:8545")
+	if err != nil {
+		return errors.Wrap(err, "failed to deploy contracts!")
+	}
+
+	time.Sleep(time.Second * 5)
 
 	log.Info().Msg("Seeding http mock")
 	if err := seedHTTPMock(); err != nil {

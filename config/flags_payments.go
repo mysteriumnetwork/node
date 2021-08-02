@@ -29,8 +29,8 @@ var (
 	// FlagPaymentsMaxHermesFee represents the max hermes fee.
 	FlagPaymentsMaxHermesFee = cli.IntFlag{
 		Name:  "payments.hermes.max.fee",
-		Value: 1500,
-		Usage: "The max fee that we'll accept from an hermes. In percentiles. 1500 means 15%",
+		Value: 3000,
+		Usage: "The max fee that we'll accept from an hermes. In percentiles. 3000 means 30%",
 	}
 	// FlagPaymentsBCTimeout represents the BC call timeout.
 	FlagPaymentsBCTimeout = cli.DurationFlag{
@@ -56,23 +56,11 @@ var (
 		Value: time.Minute,
 		Usage: "Determines how often the provider sends invoices.",
 	}
-	// FlagPaymentsConsumerPriceGiBMax sets the maximum price/GiB.
-	FlagPaymentsConsumerPriceGiBMax = cli.StringFlag{
-		Name:  "payments.consumer.price-gib-max",
-		Usage: "Sets the maximum price of the service per GiB. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: metadata.Testnet2Definition.Payments.Consumer.PriceGiBMax,
-	}
-	// FlagPaymentsConsumerPriceHourMax sets the maximum price/hour.
-	FlagPaymentsConsumerPriceHourMax = cli.StringFlag{
-		Name:  "payments.consumer.price-hour-max",
-		Usage: "Sets the maximum price of the service per hour. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: metadata.Testnet2Definition.Payments.Consumer.PriceHourMax,
-	}
 	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
 		Name:  "payments.consumer.data-leeway-megabytes",
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
-		Value: metadata.Testnet2Definition.Payments.Consumer.DataLeewayMegabytes,
+		Value: metadata.Testnet3Definition.Payments.Consumer.DataLeewayMegabytes,
 	}
 	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
 	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
@@ -105,8 +93,6 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsHermesPromiseSettleThreshold,
 		&FlagPaymentsHermesPromiseSettleTimeout,
 		&FlagPaymentsProviderInvoiceFrequency,
-		&FlagPaymentsConsumerPriceGiBMax,
-		&FlagPaymentsConsumerPriceHourMax,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
@@ -121,8 +107,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
-	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPriceGiBMax)
-	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPriceHourMax)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)

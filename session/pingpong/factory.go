@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -59,14 +60,13 @@ func InvoiceFactoryCreator(
 	maxUnpaidInvoiceValue *big.Int,
 	hermesStatusChecker hermesStatusChecker,
 	eventBus eventbus.EventBus,
-	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
 	addressProvider addressProvider,
-) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage, market.Price) (service.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Price) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoiceTrackerDeps{
-			Proposal:                   proposal,
+			AgreedPrice:                price,
 			Peer:                       consumerID,
 			PeerInvoiceSender:          NewInvoiceSender(channel),
 			InvoiceStorage:             invoiceStorage,
@@ -99,8 +99,8 @@ func ExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	addressProvider addressProvider,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
-	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
@@ -114,7 +114,7 @@ func ExchangeFactoryFunc(
 			Ks:                        keystore,
 			Identity:                  consumer,
 			Peer:                      provider,
-			Proposal:                  proposal,
+			AgreedPrice:               price,
 			AddressProvider:           addressProvider,
 			EventBus:                  eventBus,
 			HermesAddress:             hermes,

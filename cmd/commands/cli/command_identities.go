@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -49,8 +49,7 @@ func (c *cliApp) identities(argsString string) (err error) {
 		"  " + usageGetReferralCode,
 		"  " + usageExportIdentity,
 		"  " + usageImportIdentity,
-		"  " + usageSetBeneficiary,
-		"  " + usageSetBeneficiaryStatus,
+		"  " + usageWithdraw,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -81,10 +80,8 @@ func (c *cliApp) identities(argsString string) (err error) {
 		return c.exportIdentity(actionArgs)
 	case "import":
 		return c.importIdentity(actionArgs)
-	case "beneficiary":
-		return c.setBeneficiary(actionArgs)
-	case "beneficiary-status":
-		return c.setBeneficiaryStatus(actionArgs)
+	case "withdraw":
+		return c.withdraw(actionArgs)
 	default:
 		fmt.Println(usage)
 		return errUnknownSubCommand(argsString)
@@ -174,40 +171,27 @@ func (c *cliApp) unlockIdentity(actionArgs []string) (err error) {
 	return nil
 }
 
-const usageRegisterIdentity = "register <identity> [stake] [beneficiary] [referralcode]"
+const usageRegisterIdentity = "register <identity> [referralcode]"
 
-func (c *cliApp) registerIdentity(actionArgs []string) (err error) {
-	if len(actionArgs) < 1 || len(actionArgs) > 4 {
+func (c *cliApp) registerIdentity(actionArgs []string) error {
+	if len(actionArgs) < 1 || len(actionArgs) > 2 {
 		clio.Info("Usage: " + usageRegisterIdentity)
 		return errWrongArgumentCount
 	}
 
 	address := actionArgs[0]
-	stake := new(big.Int).SetInt64(0)
-	if len(actionArgs) >= 2 {
-		s, ok := new(big.Int).SetString(actionArgs[1], 10)
-		if !ok {
-			clio.Warn("could not parse stake")
-		}
-		stake = s
-	}
-	var beneficiary string
-	if len(actionArgs) >= 3 {
-		beneficiary = actionArgs[2]
-	}
-
 	var token *string
-	if len(actionArgs) >= 4 {
-		token = &actionArgs[3]
+	if len(actionArgs) >= 2 {
+		token = &actionArgs[1]
 	}
 
-	err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, token)
+	err := c.tequilapi.RegisterIdentity(address, token)
 	if err != nil {
 		return fmt.Errorf("could not register identity: %w", err)
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.config.GetBoolByFlag(config.FlagTestnet2) {
+	if c.config.GetBoolByFlag(config.FlagTestnet3) {
 		msg = "Registration successful, try to connect."
 	}
 
@@ -261,9 +245,53 @@ func (c *cliApp) settle(args []string) (err error) {
 	}
 }
 
+const usageWithdraw = "withdraw <providerIdentity> <beneficiary>"
+
+func (c *cliApp) withdraw(args []string) error {
+	if len(args) != 2 {
+		clio.Info("Usage: " + usageWithdraw)
+		fees, err := c.tequilapi.GetTransactorFees()
+		if err != nil {
+			clio.Warn("could not get transactor fee: ", err)
+		}
+		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
+		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
+		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
+		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
+		return errWrongArgumentCount
+	}
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		return fmt.Errorf("could not get Hermes ID: %w", err)
+	}
+	clio.Info("Waiting for withdrawal to complete")
+	errChan := make(chan error)
+
+	go func() {
+		errChan <- c.tequilapi.Withdraw(identity.FromAddress(args[0]), common.HexToAddress(hermesID), common.HexToAddress(args[1]))
+	}()
+
+	timeout := time.After(time.Minute * 2)
+	for {
+		select {
+		case <-timeout:
+			return errors.New("withdrawal timed out")
+		case <-time.After(time.Millisecond * 500):
+			fmt.Print(".")
+		case err := <-errChan:
+			fmt.Println()
+			if err != nil {
+				return fmt.Errorf("withdrawal failed: %w", err)
+			}
+			clio.Info("withdrawal succeeded")
+			return nil
+		}
+	}
+}
+
 const usageGetReferralCode = "referralcode <identity>"
 
-func (c *cliApp) getReferralCode(actionArgs []string) (err error) {
+func (c *cliApp) getReferralCode(actionArgs []string) error {
 	if len(actionArgs) != 1 {
 		clio.Info("Usage: " + usageGetReferralCode)
 		return errWrongArgumentCount
@@ -276,91 +304,6 @@ func (c *cliApp) getReferralCode(actionArgs []string) (err error) {
 	}
 
 	clio.Success(fmt.Sprintf("Your referral token is: %q", res.Token))
-	return nil
-}
-
-const usageSetBeneficiary = "beneficiary <identity> <new beneficiary>"
-
-func (c *cliApp) setBeneficiary(actionArgs []string) (err error) {
-	if len(actionArgs) < 2 || len(actionArgs) > 3 {
-		clio.Info("Usage: " + usageSetBeneficiary)
-		return errWrongArgumentCount
-	}
-
-	address := actionArgs[0]
-	benef := actionArgs[1]
-	hermesID, err := c.config.GetHermesID()
-	if err != nil {
-		return fmt.Errorf("could not get Hermes ID: %w", err)
-	}
-
-	err = c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
-	if err != nil {
-		return fmt.Errorf("could not settle with beneficiary: %w", err)
-	}
-
-	timeout := time.After(30 * time.Second)
-	for {
-		select {
-		case <-timeout:
-			clio.Info("Beneficiary change in progress")
-			clio.Info(fmt.Sprintf("To get additional information use command: \"%s\"", usageSetBeneficiaryStatus))
-			return nil
-		case <-time.After(time.Second):
-			st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
-			if err != nil {
-				break
-			}
-
-			if !strings.EqualFold(st.ChangeTo, benef) || st.State != beneficiary.Completed {
-				break
-			}
-
-			if st.Error != "" {
-				return fmt.Errorf("could not set the new beneficiary address: %w", errors.New(st.Error))
-			}
-
-			data, err := c.tequilapi.Beneficiary(address)
-			if err != nil {
-				break
-			}
-
-			if strings.EqualFold(data.Beneficiary, benef) {
-				clio.Success("New beneficiary address set")
-				return nil
-			}
-		}
-	}
-}
-
-const usageSetBeneficiaryStatus = "beneficiary-status <identity>"
-
-func (c *cliApp) setBeneficiaryStatus(actionArgs []string) (err error) {
-	if len(actionArgs) != 1 {
-		clio.Info("Usage: " + usageSetBeneficiary)
-		return errWrongArgumentCount
-	}
-
-	address := actionArgs[0]
-
-	data, err := c.tequilapi.Beneficiary(address)
-	if err != nil {
-		return fmt.Errorf("could not get current beneficiary: %w", err)
-	}
-
-	clio.Info(fmt.Sprintf("Current beneficiary: %s", data.Beneficiary))
-
-	st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
-	if err != nil {
-		return fmt.Errorf("could not get beneficiary change status: %w", err)
-	}
-
-	clio.Info("Last change request information:")
-	clio.Info(fmt.Sprintf("Change to: %s", st.ChangeTo))
-	clio.Info(fmt.Sprintf("State: %s", st.State))
-	if st.Error != "" {
-		return errors.New(st.Error)
-	}
 	return nil
 }
 

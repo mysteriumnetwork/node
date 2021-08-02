@@ -28,6 +28,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -80,6 +81,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
+	"github.com/mysteriumnetwork/node/utils/bcutil"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
@@ -100,7 +102,11 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
-	EtherClient       *paymentClient.ReconnectableEthClient
+	PricingHelper     *pingpong.Pricer
+	EtherClientL1     *paymentClient.EthMultiClient
+	EtherClientL2     *paymentClient.EthMultiClient
+
+	EtherClients []*paymentClient.ReconnectableEthClient
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -115,7 +121,7 @@ type Dependencies struct {
 	IdentityMover    *identity.Mover
 
 	DiscoveryFactory    service.DiscoveryFactory
-	ProposalRepository  proposal.Repository
+	ProposalRepository  *discovery.PricedServiceProposalRepository
 	FilterPresetStorage *proposal.FilterPresetStorage
 	DiscoveryWorker     discovery.Worker
 
@@ -179,6 +185,8 @@ type Dependencies struct {
 	PilvytisAPI     *pilvytis.API
 	Pilvytis        *pilvytis.Service
 	ResidentCountry *identity.ResidentCountry
+
+	PayoutAddressStorage *payout.AddressStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -214,10 +222,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	netutil.ClearStaleRoutes()
-
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
+
 	if err := di.bootstrapLocationComponents(nodeOptions); err != nil {
 		return err
 	}
@@ -292,13 +300,13 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	ch1 := nodeOptions.Chains.Chain1
 	ch2 := nodeOptions.Chains.Chain2
 	addresses := map[int64]client.SmartContractAddresses{
-		ch1.ChainID: client.SmartContractAddresses{
+		ch1.ChainID: {
 			Registry:              common.HexToAddress(ch1.RegistryAddress),
 			Myst:                  common.HexToAddress(ch1.MystAddress),
 			Hermes:                common.HexToAddress(ch1.HermesID),
 			ChannelImplementation: common.HexToAddress(ch1.ChannelImplAddress),
 		},
-		ch2.ChainID: client.SmartContractAddresses{
+		ch2.ChainID: {
 			Registry:              common.HexToAddress(ch2.RegistryAddress),
 			Myst:                  common.HexToAddress(ch2.MystAddress),
 			Hermes:                common.HexToAddress(ch2.HermesID),
@@ -349,7 +357,9 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		BalanceProvider:           di.ConsumerBalanceTracker,
 		EarningsProvider:          di.HermesChannelRepository,
 		ChainID:                   options.ChainID,
+		ProposalPricer:            di.ProposalRepository,
 	}
+
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
 }
@@ -408,6 +418,15 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+
+	if di.EtherClientL1 != nil {
+		di.EtherClientL1.Close()
+	}
+
+	if di.EtherClientL2 != nil {
+		di.EtherClientL2.Close()
+	}
+
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
 	}
@@ -464,6 +483,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) getHermesURL(nodeOptions node.Options) (string, error) {
+	log.Info().Msgf("node chain id %v", nodeOptions.ChainID)
 	if nodeOptions.ChainID == nodeOptions.Chains.Chain1.ChainID {
 		return di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, common.HexToAddress(nodeOptions.Chains.Chain1.HermesID))
 	}
@@ -478,6 +498,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
+	di.bootstrapBeneficiarySaver(nodeOptions)
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage, di.MMN)
+
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
@@ -486,14 +510,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.EventBus,
 		di.BCHelper,
 	)
-
-	di.bootstrapBeneficiaryProvider(nodeOptions)
-
-	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
-		return err
-	}
-
-	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
@@ -526,6 +542,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	})
 
 	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
 
@@ -577,14 +597,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	return nil
 }
 
-// function decides on network definition combined from testnet2/localnet flags and possible overrides
+// function decides on network definition combined from testnet3/localnet flags and possible overrides
 func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
 	optionsNetwork := options.OptionsNetwork
 	network := metadata.DefaultNetwork
 
 	switch {
-	case optionsNetwork.Testnet2:
-		network = metadata.Testnet2Definition
+	case optionsNetwork.Testnet3:
+		network = metadata.Testnet3Definition
 	case optionsNetwork.Localnet:
 		network = metadata.LocalnetDefinition
 	}
@@ -598,8 +618,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.BrokerAddresses = optionsNetwork.BrokerAddresses
 	}
 
-	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
-		network.EtherClientRPC = optionsNetwork.EtherClientRPC
+	if fmt.Sprint(optionsNetwork.EtherClientRPCL1) != fmt.Sprint(metadata.DefaultNetwork.Chain1.EtherClientRPC) {
+		network.Chain1.EtherClientRPC = optionsNetwork.EtherClientRPCL1
+	}
+	if fmt.Sprint(optionsNetwork.EtherClientRPCL2) != fmt.Sprint(metadata.DefaultNetwork.Chain2.EtherClientRPC) {
+		network.Chain2.EtherClientRPC = optionsNetwork.EtherClientRPCL2
 	}
 
 	di.NetworkDefinition = network
@@ -618,6 +641,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
+	di.PricingHelper = pingpong.NewPricer(di.MysteriumAPI)
+	err = di.PricingHelper.Subscribe(di.EventBus)
+	if err != nil {
+		return err
+	}
 
 	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
@@ -633,17 +661,59 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
-	di.EtherClient, err = paymentClient.NewReconnectableEthClient(network.EtherClientRPC)
+	log.Info().Msgf("Using L1 Eth endpoints: %v", network.Chain1.EtherClientRPC)
+	log.Info().Msgf("Using L2 Eth endpoints: %v", network.Chain2.EtherClientRPC)
+
+	di.EtherClients = make([]*paymentClient.ReconnectableEthClient, 0)
+	bcClientsL1 := make([]paymentClient.AddressableEthClientGetter, 0)
+	for _, rpc := range network.Chain1.EtherClientRPC {
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		if err != nil {
+			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
+			continue
+		}
+		di.EtherClients = append(di.EtherClients, client)
+		bcClientsL1 = append(bcClientsL1, client)
+	}
+
+	if len(bcClientsL1) == 0 {
+		return errors.New("no l1 rpc endpoints loaded, can't continue")
+	}
+
+	bcClientsL2 := make([]paymentClient.AddressableEthClientGetter, 0)
+	for _, rpc := range network.Chain2.EtherClientRPC {
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		if err != nil {
+			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
+			continue
+		}
+
+		di.EtherClients = append(di.EtherClients, client)
+		bcClientsL2 = append(bcClientsL2, client)
+	}
+
+	if len(bcClientsL2) == 0 {
+		return errors.New("no l2 rpc endpoints loaded, can't continue")
+	}
+
+	di.EtherClientL1, err = di.bootstrapMultiClientBC(bcClientsL1)
 	if err != nil {
 		return err
 	}
 
-	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
-	clients := make(map[int64]paymentClient.BC)
-	clients[network.DefaultChainID] = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
-	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
+	di.EtherClientL2, err = di.bootstrapMultiClientBC(bcClientsL2)
+	if err != nil {
+		return err
+	}
 
+	bcL1 := paymentClient.NewBlockchain(di.EtherClientL1, options.Payments.BCTimeout)
+	bcL2 := paymentClient.NewBlockchain(di.EtherClientL2, options.Payments.BCTimeout)
+
+	clients := make(map[int64]paymentClient.BC)
+	clients[options.Chains.Chain1.ChainID] = bcL1
+	clients[options.Chains.Chain2.ChainID] = bcL2
+
+	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
@@ -655,20 +725,22 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
 		return err
 	}
 
-	if err := di.AllowURLAccess(
-		network.EtherClientRPC,
+	allow := []string{
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
 		hermesURL,
 		options.PilvytisAddress,
-	); err != nil {
+	}
+	allow = append(allow, network.Chain1.EtherClientRPC...)
+	allow = append(allow, network.Chain2.EtherClientRPC...)
+
+	if err := di.AllowURLAccess(allow...); err != nil {
 		return err
 	}
-
 	return di.IdentityRegistry.Subscribe(di.EventBus)
 }
 
@@ -895,17 +967,20 @@ func (di *Dependencies) handleConnStateChange() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPTransport.CloseIdleConnections()
 
-			if err := di.EtherClient.Reconnect(); err != nil {
-				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
-				// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
-				// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
-				// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
-				// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
-				// https://github.com/mysteriumnetwork/node/issues/2282
-				if err := di.EtherClient.Reconnect(); err != nil {
-					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+			for _, cl := range di.EtherClients {
+				if err := cl.Reconnect(time.Second * 15); err != nil {
+					log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
+					// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
+					// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
+					// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
+					// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
+					// https://github.com/mysteriumnetwork/node/issues/2282
+					if err := cl.Reconnect(time.Second * 15); err != nil {
+						log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+					}
 				}
 			}
+
 			di.EventBus.Publish(registry.AppTopicEthereumClientReconnected, struct{}{})
 		}
 		latestState = e.State
@@ -926,6 +1001,17 @@ func (di *Dependencies) handleNATStatusForPublicIP() {
 	if outIP == pubIP && pubIP != "" {
 		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
 	}
+}
+
+func (di *Dependencies) bootstrapMultiClientBC(clients []paymentClient.AddressableEthClientGetter) (*client.EthMultiClient, error) {
+	notifyl1Channel := make(chan string, 10)
+	cl, err := paymentClient.NewEthMultiClientNotifyDown(time.Second*20, clients, notifyl1Channel)
+	if err != nil {
+		return nil, err
+	}
+	go bcutil.ManageMultiClient(cl, notifyl1Channel)
+
+	return cl, nil
 }
 
 func (di *Dependencies) bootstrapResidentCountry() error {

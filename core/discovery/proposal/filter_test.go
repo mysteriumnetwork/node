@@ -18,11 +18,9 @@
 package proposal
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,26 +50,7 @@ var (
 		Location:       &locationResidential,
 		AccessPolicies: []market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	})
-	proposalTimeExpensive = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPricePtr(9999999999999, 0, money.CurrencyMystt),
-	})
-	proposalTimeCheap = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
-	})
-	proposalTimeExact = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPricePtr(60000000, 0, money.CurrencyMystt),
-	})
-	proposalBytesExpensive = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPricePtr(0, 7000001, money.CurrencyMystt),
-	})
-	proposalBytesCheap = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPricePtr(0, 0, money.CurrencyMystt),
-	})
-	proposalBytesExact = market.NewProposal("0xbeef", "mock", market.NewProposalOpts{
-		Price: market.NewPricePtr(0, 7000000, money.CurrencyMystt),
-	})
 	proposalSupported = market.NewProposal("0xbeef", serviceTypeNoop, market.NewProposalOpts{
-		Price: market.NewPricePtr(0, 7168000427, money.CurrencyMystt),
 		Contacts: []market.Contact{{
 			Type:       "phone",
 			Definition: "69935951",
@@ -175,28 +154,10 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 }
 
-func Test_ProposalFilter_Filters_ByTimeBounds(t *testing.T) {
-	filter := &Filter{PriceHourMax: big.NewInt(60000000)}
-
-	assert.True(t, filter.Matches(proposalEmpty))
-	assert.False(t, filter.Matches(proposalTimeExpensive))
-	assert.True(t, filter.Matches(proposalTimeCheap))
-	assert.True(t, filter.Matches(proposalTimeExact))
-}
-
 func Test_ProposalFilter_Filters_Unsupported(t *testing.T) {
 	filter := &Filter{ExcludeUnsupported: true}
 
 	market.RegisterServiceType(serviceTypeNoop)
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalSupported))
-}
-
-func Test_ProposalFilter_Filters_ByByteBounds(t *testing.T) {
-	filter := &Filter{PriceGiBMax: big.NewInt(7000000)}
-
-	assert.True(t, filter.Matches(proposalEmpty))
-	assert.False(t, filter.Matches(proposalBytesExpensive))
-	assert.True(t, filter.Matches(proposalBytesCheap))
-	assert.True(t, filter.Matches(proposalBytesExact))
 }

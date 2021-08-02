@@ -101,10 +101,11 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery:
-    image: mysteriumnetwork/discovery:1.0.0
+    image: mysteriumnetwork/discovery:testnet3-rc3
     depends_on:
-      db:
-        condition: service_healthy
+      - db
+      - redis
+      - http-mock
     expose:
       - 8080
     cap_add:
@@ -119,8 +120,8 @@ services:
       - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
       - QUALITY_ORACLE_URL=http://morqa:8085
       - BROKER_URL=broker
-    depends_on:
-      - db
+      - REDIS_ADDRESS=redis:6379
+      - UNIVERSE_JWT_SECRET=suchsecret
     dns: 172.30.0.254
     networks:
       public0:
@@ -146,6 +147,24 @@ services:
         ipv4_address: 172.30.0.202
       public1:
         ipv4_address: 172.31.0.202
+        
+  ganache2:
+    image: trufflesuite/ganache-cli:v6.12.0
+    expose:
+      - 8545
+    command: >
+      --chainId 80001 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+    dns: 172.30.0.254
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
+    networks:
+      public0:
+        ipv4_address: 172.30.0.209
+      public1:
+        ipv4_address: 172.31.0.209
 
   trust:
     image: mysteriumnetwork/trust-oracle:latest
@@ -181,8 +200,29 @@ services:
         ipv4_address: 172.31.0.211
 
 
+  transactordatabase:
+    image: 'mongo:4.2.3'
+    environment:
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_DATABASE=transactor
+      - MONGO_NON_ROOT_USERNAME=transactor
+      - MONGO_NON_ROOT_PASSWORD=transactor
+    expose:
+      - 27017
+      - 27018
+      - 27019
+    volumes:
+      - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.210
+      public1:
+        ipv4_address: 172.31.0.210
+
   transactor:
-    image: mysteriumnetwork/transactor:0.8.0
+    image: mysteriumnetwork/transactor:matic-rc3
     environment:
       PORT: 8888
     expose:
@@ -195,23 +235,31 @@ services:
     depends_on:
       - ganache
       - redis
-      - mongodb
+      - ganache2
+      - transactordatabase
       - http-mock
     command: >
-      -overrideGasStation=true
+      -ethStaticGasPrice=0.001
+      -maticStaticGasPrice=0.001
+      -settlementThrottleTime=1ms
       -geckoUrl=http://http-mock:1080/gecko
       -chain1RPCEndpoint ws://ganache:8545
       -chain1ChainID 5
       -stakeAmount 62000000000000000000
       -topUpAmount 7000000000000000000
+      -chain2MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -chain2Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -chain2RPCEndpoint ws://ganache2:8545
+      -chain2ChainID 80001
+      -registrationGasLimit=450000
+      -settlementCheckInterval=50ms
       -chain1MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -chain1Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -chain1ChImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -balanceCheckInterval 1s
       -MongoUser transactor
       -MongoPass transactor
-      -MongoHost mongodb:27017
+      -MongoHost transactordatabase:27017
       -MongoReplSet ""
       -freeRegistration=true
       -redisAddress "redis:6379"
@@ -225,9 +273,10 @@ services:
         ipv4_address: 172.31.0.203
 
   hermes:
-    image: mysteriumnetwork/hermes:0.8.0
+    image: mysteriumnetwork/hermes:matic-rc3
     environment:
       PORT: 8889
+      LOG_LEVEL: trace
     expose:
       - 8889
     sysctls:
@@ -239,16 +288,26 @@ services:
       - ganache
       - redis
       - mongodb
+      - ganache2
+      - transactor
     command: >
       -identityPassphrase ""
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -Chain1RPCEndpoint ws://ganache:8545
       -Chain1ChainID 5
+      -transactorBaseUri "http://transactor:8888/api/v1/"
+      -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      -keystoreDir /keystore
       -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -Chain2Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -Chain2RPCEndpoint ws://ganache2:8545
+      -Chain2ChainID 80001
+      -Chain2chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -Chain2Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain2HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -MongoReplSet rs0
+      -keystoreDir /keystore
       -bcDataRefreshInterval 1ns
       -MongoUser hermes
       -transactorBaseUri "http://transactor:8888/api/v1/"
@@ -285,9 +344,10 @@ services:
     environment:
       - MONGO_INITDB_ROOT_PASSWORD=root
       - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_DATABASE=hermes
+      - MONGO_INITDB_DATABASE=admin
       - MONGO_NON_ROOT_USERNAME=hermes
       - MONGO_NON_ROOT_PASSWORD=hermes
+      - MONGO_REPLICA_SET_NAME=rs0
     expose:
       - 27017
       - 27018
@@ -300,6 +360,11 @@ services:
         ipv4_address: 172.30.0.205
       public1:
         ipv4_address: 172.31.0.205
+    command: ["mongod", "--replSet", "rs0"]
+    healthcheck:
+        test: 'test $$(echo "rs.initiate({_id: \"rs0\",version: 1,members: [{ _id: 0, host : \"mongodb:27017\" }]}).ok || rs.status().ok" | mongo -u root -p root --quiet) -eq 1'
+        interval: 5s
+        start_period: 5s
 
   myst-consumer-hermes2:
     sysctls:
@@ -335,7 +400,14 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.2.hermes=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.2.chainID=80001
+      --chain-id=80001
+      --ether.client.rpcl2=ws://ganache2:8545
+      --ether.client.rpcl1=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
@@ -348,7 +420,7 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:0.8.0
+    image: mysteriumnetwork/hermes:matic-rc3
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
@@ -356,26 +428,36 @@ services:
       - net.ipv4.conf.eth1.rp_filter=0
     environment:
       PORT: 8889
+      LOG_LEVEL: trace
     expose:
       - 8889
     depends_on:
       - ganache
+      - ganache2
       - redis
       - mongodb
+      - transactor
     command: >
       -identityPassphrase ""
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -Chain1RPCEndpoint ws://ganache:8545
       -Chain1ChainID 5
+      -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -Chain2Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -Chain2RPCEndpoint ws://ganache2:8545
+      -Chain2ChainID 80001
+      -Chain2Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -Chain2HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -Chain2chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
       -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -keystoreDir /keystore
-      -transactorBaseUri "http://transactor:8888/api/v1/"
-      -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -bcDataRefreshInterval 1ns
       -MongoUser hermes2
       -MongoPass hermes2
+      -MongoReplSet rs0
+      -transactorBaseUri "http://transactor:8888/api/v1/"
       -MongoHost "mongodb:27017"
       -MongoDatabase hermes2
       -MongoReplSet ""
@@ -421,7 +503,14 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.chainID=80001
+      --chain-id=80001
+      --ether.client.rpcl2=ws://ganache2:8545
+      --ether.client.rpcl1=ws://ganache:8545
       --keystore.lightweight
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
@@ -473,7 +562,14 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.chainID=80001
+      --chain-id=80001
+      --ether.client.rpcl2=ws://ganache2:8545
+      --ether.client.rpcl1=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
@@ -519,10 +615,17 @@ services:
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --log-level=debug
+      --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.chainID=80001
+      --chain-id=80001
       --broker-address=broker
       --tequilapi.address=0.0.0.0
+      --ether.client.rpcl2=ws://ganache2:8545
+      --ether.client.rpcl1=ws://ganache:8545
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
@@ -569,14 +672,24 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --firewall.protected.networks=""
-      --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.1.chainID=5
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.chainID=80001
+      --chain-id=80001
+      --ether.client.rpcl2=ws://ganache2:8545
+      --ether.client.rpcl1=ws://ganache:8545
+      --firewall.protected.networks=""
+      --api.address=http://discovery:8080/api/v3
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
+      --payments.hermes.promise.threshold=100
       --quality.address=http://morqa:8085/api/v2
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/

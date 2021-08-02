@@ -22,11 +22,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -36,8 +33,9 @@ import (
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
-	serviceManager ServiceManager
-	optionsParser  map[string]services.ServiceOptionsParser
+	serviceManager     ServiceManager
+	optionsParser      map[string]services.ServiceOptionsParser
+	proposalRepository proposalRepository
 }
 
 var (
@@ -48,10 +46,11 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository) *ServiceEndpoint {
 	return &ServiceEndpoint{
-		serviceManager: serviceManager,
-		optionsParser:  optionsParser,
+		serviceManager:     serviceManager,
+		optionsParser:      optionsParser,
+		proposalRepository: proposalRepository,
 	}
 }
 
@@ -68,7 +67,11 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	instances := se.serviceManager.List()
 
-	statusResponse := toServiceListResponse(instances)
+	statusResponse, err := se.toServiceListResponse(instances)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -95,7 +98,11 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 		return
 	}
 
-	statusResponse := toServiceInfoResponse(id, instance)
+	statusResponse, err := se.toServiceInfoResponse(id, instance)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -155,7 +162,6 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		sr.Type,
 		sr.AccessPolicies.IDs,
 		sr.Options,
-		market.NewPrice(sr.Price.PerHour, sr.Price.PerGiB, money.Currency(config.GetString(config.FlagDefaultCurrency))),
 	)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -168,7 +174,12 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	instance := se.serviceManager.Service(id)
 
 	resp.WriteHeader(http.StatusCreated)
-	statusResponse := toServiceInfoResponse(id, instance)
+	statusResponse, err := se.toServiceInfoResponse(id, instance)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -215,8 +226,8 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) boo
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)
@@ -229,7 +240,6 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID     string                          `json:"provider_id"`
 		Type           string                          `json:"type"`
 		Options        *json.RawMessage                `json:"options"`
-		Price          *contract.Price                 `json:"price"`
 		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
 	}
 	decoder := json.NewDecoder(req.Body)
@@ -243,17 +253,9 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID: jsonData.ProviderID,
 		Type:       se.toServiceType(jsonData.Type),
 		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
-		Price: contract.Price{
-			Currency: config.GetString(config.FlagDefaultCurrency),
-			PerHour:  serviceOpts.PaymentPriceHour.Uint64(),
-			PerGiB:   serviceOpts.PaymentPriceGiB.Uint64(),
-		},
 		AccessPolicies: contract.ServiceAccessPolicies{
 			IDs: serviceOpts.AccessPolicyList,
 		},
-	}
-	if jsonData.Price != nil {
-		sr.Price = *jsonData.Price
 	}
 	if jsonData.AccessPolicies != nil {
 		sr.AccessPolicies = *jsonData.AccessPolicies
@@ -288,23 +290,32 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 	return options
 }
 
-func toServiceInfoResponse(id service.ID, instance *service.Instance) contract.ServiceInfoDTO {
+func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *service.Instance) (contract.ServiceInfoDTO, error) {
+	priced, err := se.proposalRepository.EnrichProposalWithPrice(instance.Proposal)
+	if err != nil {
+		return contract.ServiceInfoDTO{}, err
+	}
+
 	return contract.ServiceInfoDTO{
 		ID:         string(id),
 		ProviderID: instance.ProviderID.Address,
 		Type:       instance.Type,
 		Options:    instance.Options,
 		Status:     string(instance.State()),
-		Proposal:   contract.NewProposalDTO(instance.Proposal),
-	}
+		Proposal:   contract.NewProposalDTO(priced),
+	}, nil
 }
 
-func toServiceListResponse(instances map[service.ID]*service.Instance) contract.ServiceListResponse {
+func (se *ServiceEndpoint) toServiceListResponse(instances map[service.ID]*service.Instance) (contract.ServiceListResponse, error) {
 	res := make([]contract.ServiceInfoDTO, 0)
 	for id, instance := range instances {
-		res = append(res, toServiceInfoResponse(id, instance))
+		mapped, err := se.toServiceInfoResponse(id, instance)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, mapped)
 	}
-	return res
+	return res, nil
 }
 
 func validateServiceRequest(sr contract.ServiceStartRequest) *validation.FieldErrorMap {
@@ -326,7 +337,7 @@ func validateServiceRequest(sr contract.ServiceStartRequest) *validation.FieldEr
 
 // ServiceManager represents service manager that is used for services management.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, policies []string, options service.Options, price market.Price) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, policies []string, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

@@ -45,6 +45,11 @@ type txer interface {
 
 type multiChainAddressKeeper interface {
 	GetRegistryAddress(chainID int64) (common.Address, error)
+	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+}
+
+type bsaver interface {
+	Save(id string, beneficiary string) error
 }
 
 type bc interface {
@@ -61,6 +66,7 @@ type ProviderRegistrar struct {
 	stopChan                  chan struct{}
 	queue                     chan queuedEvent
 	registeredIdentities      map[string]struct{}
+	saver                     bsaver
 
 	cfg ProviderRegistrarConfig
 }
@@ -72,9 +78,8 @@ type queuedEvent struct {
 
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
-	IsTestnet2          bool
+	IsTestnet3          bool
 	MaxRetries          int
-	Stake               *big.Int
 	DelayBetweenRetries time.Duration
 }
 
@@ -85,6 +90,7 @@ func NewProviderRegistrar(
 	multiChainAddressKeeper multiChainAddressKeeper,
 	bc bc,
 	prc ProviderRegistrarConfig,
+	saver bsaver,
 ) *ProviderRegistrar {
 	return &ProviderRegistrar{
 		stopChan:                  make(chan struct{}),
@@ -95,6 +101,7 @@ func NewProviderRegistrar(
 		txer:                      transactor,
 		multiChainAddressKeeper:   multiChainAddressKeeper,
 		bc:                        bc,
+		saver:                     saver,
 	}
 }
 
@@ -166,6 +173,14 @@ func (pr *ProviderRegistrar) delayedRequeue(qe queuedEvent) {
 	}
 }
 
+func (pr *ProviderRegistrar) l2chainID() int64 {
+	return config.GetInt64(config.FlagChain2ChainID)
+}
+
+func (pr *ProviderRegistrar) l1chainID() int64 {
+	return config.GetInt64(config.FlagChain1ChainID)
+}
+
 func (pr *ProviderRegistrar) chainID() int64 {
 	return config.GetInt64(config.FlagChainID)
 }
@@ -190,7 +205,7 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 	id := identity.FromAddress(qe.event.ProviderID)
 
-	if !pr.cfg.IsTestnet2 {
+	if !pr.cfg.IsTestnet3 {
 		eligible, err := pr.txer.CheckIfRegistrationBountyEligible(id)
 		if err != nil {
 			log.Error().Err(err).Msgf("eligibility for registration check failed for %q", id.Address)
@@ -217,10 +232,29 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 		return nil
 	}
 
-	err := pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, nil, benef.Hex(), pr.chainID(), nil)
+	settleBeneficiary := benef
+
+	// If chain is l2 (matic) beneficiary should be set to channel address
+	if pr.chainID() == pr.l2chainID() {
+		var err error
+		settleBeneficiary, err = pr.multiChainAddressKeeper.GetChannelAddress(pr.chainID(), id)
+		if err != nil {
+			log.Error().Err(err).Msg("Registration failed for could not generate channel address")
+			return err
+		}
+	}
+
+	err := pr.txer.RegisterIdentity(qe.event.ProviderID, big.NewInt(0), nil, settleBeneficiary.Hex(), pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
+	}
+
+	// If chain is l2 we should save the new beneficiary to db.
+	if pr.chainID() == pr.l2chainID() {
+		if err := pr.saver.Save(id.Address, benef.Hex()); err != nil {
+			log.Error().Err(err).Msg("Failed to save beneficiary to the database")
+		}
 	}
 
 	pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
@@ -228,17 +262,16 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 	return nil
 }
 
-// TODO: change this address once we know the new registry address.
-var newRegistryAddress = common.HexToAddress("0x0010000000000100000000001000000010000000")
+var newRegistryAddress = common.HexToAddress("0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39")
 var oldRegistryAddress = common.HexToAddress("0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2")
 
 func (pr *ProviderRegistrar) getBeneficiaryFromOldRegistry(id identity.Identity) (common.Address, error) {
-	// This checks for migration from old registry to new on testnet2 related to matic.
+	// This checks for migration from old registry to new on testnet3 related to matic.
 	// In such a case, we need to check if provider was already registered and just migrate them to new registry with the
 	// old beneficiary.
-	registryAddress, err := pr.multiChainAddressKeeper.GetRegistryAddress(pr.chainID())
+	registryAddress, err := pr.multiChainAddressKeeper.GetRegistryAddress(pr.l1chainID())
 	if err != nil {
-		return common.Address{}, fmt.Errorf("could not get registry address for chain %v: %w", pr.chainID(), err)
+		return common.Address{}, fmt.Errorf("could not get registry address for chain %v: %w", pr.l1chainID(), err)
 	}
 
 	if bytes.EqualFold(registryAddress.Bytes(), newRegistryAddress.Bytes()) {

@@ -23,9 +23,9 @@ import (
 
 // Change this to slice as needed
 var logLevelsByTopic = map[string]zerolog.Level{
-	"*.proposal-register.v2":   zerolog.TraceLevel,
-	"*.proposal-ping.v2":       zerolog.TraceLevel,
-	"*.proposal-unregister.v2": zerolog.TraceLevel,
+	"*.proposal-register.v3":   zerolog.TraceLevel,
+	"*.proposal-ping.v3":       zerolog.TraceLevel,
+	"*.proposal-unregister.v3": zerolog.TraceLevel,
 }
 
 func levelFor(topic string) zerolog.Level {

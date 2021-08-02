@@ -1320,18 +1320,6 @@
             "in": "query"
           },
           {
-            "type": "string",
-            "description": "Maximum price/hour.",
-            "name": "price_hour_max",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "Maximum price/GiB.",
-            "name": "price_gib_max",
-            "in": "query"
-          },
-          {
             "type": "integer",
             "description": "Minimum compatibility level of the proposal.",
             "name": "compatibility_min",
@@ -2032,6 +2020,34 @@
         }
       }
     },
+    "/transactor/settle/withdraw": {
+      "post": {
+        "description": "Asks to perform withdrawal to l1.",
+        "summary": "Asks to perform withdrawal to l1.",
+        "operationId": "Withdraw",
+        "parameters": [
+          {
+            "description": "withdraw request body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/WithdrawRequestDTO"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "withdraw request accepted"
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/transactor/stake/decrease": {
       "post": {
         "description": "Decreases stake on eth blockchain via the mysterium transactor.",
@@ -2441,6 +2457,19 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "CurrentPriceResponse": {
+      "type": "object",
+      "title": "CurrentPriceResponse represents the price.",
+      "properties": {
+        "price_per_gib": {
+          "$ref": "#/definitions/Int"
+        },
+        "price_per_hour": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "DNSOption": {
       "description": "DNSOption defines DNS server selection strategy for consumer",
       "type": "string",
@@ -2739,18 +2768,10 @@
       "description": "IdentityRegisterRequest represents the identity registration user input parameters",
       "type": "object",
       "properties": {
-        "beneficiary": {
-          "description": "Cache out address for Provider",
-          "type": "string",
-          "x-go-name": "Beneficiary"
-        },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
           "type": "string",
           "x-go-name": "ReferralToken"
-        },
-        "stake": {
-          "$ref": "#/definitions/Int"
         }
       },
       "x-go-name": "IdentityRegisterRequest",
@@ -3089,6 +3110,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "PayoutAddressRequest": {
+      "description": "PayoutAddressRequest payout address request",
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "x-go-name": "Address"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "Price": {
       "type": "object",
       "title": "Price represents the service price.",
@@ -3360,9 +3392,6 @@
             "port": 1123,
             "protocol": "udp"
           }
-        },
-        "price": {
-          "$ref": "#/definitions/Price"
         },
         "provider_id": {
           "description": "provider identity",
@@ -3746,6 +3775,26 @@
       },
       "x-go-name": "validationErrorMessage",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/utils"
+    },
+    "WithdrawRequestDTO": {
+      "type": "object",
+      "title": "WithdrawRequest represents the request to withdraw earnings to l1.",
+      "properties": {
+        "beneficiary": {
+          "type": "string",
+          "x-go-name": "Beneficiary"
+        },
+        "hermes_id": {
+          "type": "string",
+          "x-go-name": "HermesID"
+        },
+        "provider_id": {
+          "type": "string",
+          "x-go-name": "ProviderID"
+        }
+      },
+      "x-go-name": "WithdrawRequest",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "accessPolicy": {
       "type": "object",

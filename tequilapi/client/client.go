@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -200,10 +201,8 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake *big.Int, token *string) error {
+func (client *Client) RegisterIdentity(address string, token *string) error {
 	payload := contract.IdentityRegisterRequest{
-		Stake:         stake,
-		Beneficiary:   beneficiary,
 		ReferralToken: token,
 	}
 
@@ -328,6 +327,14 @@ func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDT
 	return client.proposals(queryParams)
 }
 
+// ProposalsByTypeWithWhitelisting fetches proposals by given type with all whitelisting options.
+func (client *Client) ProposalsByTypeWithWhitelisting(serviceType string) ([]contract.ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("service_type", serviceType)
+	queryParams.Add("access_policy", "all")
+	return client.proposals(queryParams)
+}
+
 // ProposalsByLocationAndService fetches proposals by given service and node location types.
 func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
@@ -352,16 +359,6 @@ func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error
 	var proposals contract.ListProposalsResponse
 	err = parseResponseJSON(response, &proposals)
 	return proposals.Proposals, err
-}
-
-// ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(priceHourMax, priceGiBMax *big.Int) ([]contract.ProposalDTO, error) {
-	values := url.Values{}
-	values.Add("price_gib_max", fmt.Sprintf("%v", priceGiBMax))
-	values.Add("price_hour_max", fmt.Sprintf("%v", priceHourMax))
-	values.Add("access_policy", "all")
-	values.Add("include_monitoring_failed", "true")
-	return client.proposals(values)
 }
 
 // Unlock allows using identity in following commands
@@ -522,6 +519,28 @@ func filterSessionsByStatus(status string, sessions contract.SessionListResponse
 	return sessions
 }
 
+// Withdraw requests the withdrawal of money from l2 to l1 of hermes promises
+func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	withdrawRequest := contract.WithdrawRequest{
+		ProviderID:  providerID.Address,
+		HermesID:    hermesID.Hex(),
+		Beneficiary: beneficiary.Hex(),
+	}
+
+	path := "transactor/settle/withdraw"
+
+	response, err := client.http.Post(path, withdrawRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not withdraw")
+	}
+	return nil
+}
+
 // Settle requests the settling of hermes promises
 func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
 	settleRequest := contract.SettleRequest{
@@ -592,44 +611,6 @@ func (client *Client) DecreaseStake(ID identity.Identity, amount *big.Int) error
 	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
 		return errors.Wrap(err, "could not decrease stake")
 	}
-	return nil
-}
-
-// SettleWithBeneficiaryStatus set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiaryStatus(address string) (res contract.BeneficiaryTxStatus, err error) {
-	response, err := client.http.Get("identities/"+address+"/beneficiary-status", nil)
-	if err != nil {
-		return contract.BeneficiaryTxStatus{}, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return contract.BeneficiaryTxStatus{}, fmt.Errorf("expected 200 got %v", response.StatusCode)
-	}
-
-	err = parseResponseJSON(response, &res)
-	return res, err
-}
-
-// SettleWithBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
-	payload := contract.SettleWithBeneficiaryRequest{
-		SettleRequest: contract.SettleRequest{
-			ProviderID: address,
-			HermesID:   hermesID,
-		},
-		Beneficiary: beneficiary,
-	}
-	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
-	}
-
 	return nil
 }
 

@@ -33,13 +33,14 @@ import (
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
 	di.FilterPresetStorage = proposal.NewFilterPresetStorage(di.Storage)
-	proposalRepository := discovery.NewRepository(di.FilterPresetStorage)
+	proposalRepository := discovery.NewRepository()
 	proposalRegistry := discovery.NewRegistry()
 	discoveryWorker := discovery.NewWorker()
 
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
+			// Broker is the way to announce node presence currently, so enabled by default no matter the users preferences.
 			proposalRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
 
@@ -76,7 +77,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		return errors.Wrap(err, "failed to start discovery")
 	}
 
-	di.ProposalRepository = proposalRepository
+	di.ProposalRepository = discovery.NewPricedServiceProposalRepository(proposalRepository, di.PricingHelper, di.FilterPresetStorage)
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, proposalRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
 	}

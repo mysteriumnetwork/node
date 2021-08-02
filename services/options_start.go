@@ -18,12 +18,10 @@
 package services
 
 import (
-	"math/big"
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
@@ -35,8 +33,6 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	opts.TypeOptions, err = TypeConfiguredOptions(serviceType)
 	if err != nil {
 		return StartOptions{
-			PaymentPriceGiB:  big.NewInt(0),
-			PaymentPriceHour: big.NewInt(0),
 			AccessPolicyList: nil,
 			TypeOptions:      nil,
 		}, err
@@ -44,28 +40,13 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 
 	switch serviceType {
 	case openvpn.ServiceType:
-		opts.PaymentPriceGiB = getPrice(config.FlagOpenVPNPriceGiB, config.FlagPaymentPriceGiB)
-		opts.PaymentPriceHour = getPrice(config.FlagOpenVPNPriceHour, config.FlagPaymentPriceHour)
 		opts.AccessPolicyList = getPolicies(config.FlagOpenVPNAccessPolicies, config.FlagAccessPolicyList)
 	case wireguard.ServiceType:
-		opts.PaymentPriceGiB = getPrice(config.FlagWireguardPriceGiB, config.FlagPaymentPriceGiB)
-		opts.PaymentPriceHour = getPrice(config.FlagWireguardPriceHour, config.FlagPaymentPriceHour)
 		opts.AccessPolicyList = getPolicies(config.FlagWireguardAccessPolicies, config.FlagAccessPolicyList)
 	case noop.ServiceType:
-		opts.PaymentPriceGiB = getPrice(config.FlagNoopPriceGB, config.FlagPaymentPriceGiB)
-		opts.PaymentPriceHour = getPrice(config.FlagNoopPriceHour, config.FlagPaymentPriceHour)
 		opts.AccessPolicyList = getPolicies(config.FlagNoopAccessPolicies, config.FlagAccessPolicyList)
 	}
 	return opts, nil
-}
-
-func getPrice(flag cli.Float64Flag, fallback cli.Float64Flag) *big.Int {
-	value := config.GetFloat64(flag)
-	if value == 0 {
-		value = config.GetFloat64(fallback)
-	}
-	res, _ := new(big.Float).Mul(big.NewFloat(value), new(big.Float).SetInt(money.MystSize)).Int(nil)
-	return res
 }
 
 func getPolicies(flag cli.StringFlag, fallback cli.StringFlag) []string {
@@ -85,8 +66,6 @@ func getPolicies(flag cli.StringFlag, fallback cli.StringFlag) []string {
 
 // StartOptions describes options shared among multiple services
 type StartOptions struct {
-	PaymentPriceGiB  *big.Int
-	PaymentPriceHour *big.Int
 	AccessPolicyList []string
 	TypeOptions      service.Options
 }

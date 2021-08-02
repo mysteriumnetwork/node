@@ -20,7 +20,6 @@ package account
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -262,14 +261,14 @@ func (c *command) parseToken(ctx *cli.Context) *string {
 }
 
 func (c *command) registerIdentity(identity string, token *string) {
-	err := c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), token)
+	err := c.tequilapi.RegisterIdentity(identity, token)
 	if err != nil {
 		clio.Error("Failed to register the identity")
 		return
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.cfg.GetBoolByFlag(config.FlagTestnet2) {
+	if c.cfg.GetBoolByFlag(config.FlagTestnet3) {
 		msg = "Registration successful, try to connect."
 	}
 	clio.Success(msg)

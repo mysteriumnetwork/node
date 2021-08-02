@@ -29,10 +29,10 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
-	// FlagTestnet2 uses testnet2 network.
-	FlagTestnet2 = cli.BoolFlag{
-		Name:  "testnet2",
-		Usage: "Defines testnet2 configuration",
+	// FlagTestnet3 uses testnet3 network.
+	FlagTestnet3 = cli.BoolFlag{
+		Name:  "testnet3",
+		Usage: "Defines testnet3 configuration",
 		Value: true,
 	}
 	// FlagAPIAddress Mysterium API URL
@@ -53,11 +53,17 @@ var (
 		Usage: "URI of message broker",
 		Value: cli.NewStringSlice(metadata.DefaultNetwork.BrokerAddresses...),
 	}
-	// FlagEtherRPC URL or IPC socket to connect to Ethereum node.
-	FlagEtherRPC = cli.StringFlag{
-		Name:  "ether.client.rpc",
-		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
-		Value: metadata.DefaultNetwork.EtherClientRPC,
+	// FlagEtherRPCL1 URL or IPC socket to connect to Ethereum node.
+	FlagEtherRPCL1 = cli.StringSliceFlag{
+		Name:  "ether.client.rpcl1",
+		Usage: "L1 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain1.EtherClientRPC...),
+	}
+	// FlagEtherRPCL2 URL or IPC socket to connect to Ethereum node.
+	FlagEtherRPCL2 = cli.StringSliceFlag{
+		Name:  "ether.client.rpcl2",
+		Usage: "L2 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain2.EtherClientRPC...),
 	}
 	// FlagNATHolePunching enables NAT hole punching.
 	FlagNATHolePunching = cli.BoolFlag{
@@ -119,10 +125,11 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagNATHolePunching,
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
-		&FlagEtherRPC,
+		&FlagEtherRPCL1,
+		&FlagEtherRPCL2,
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
-		&FlagTestnet2,
+		&FlagTestnet3,
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
 		&FlagSTUNservers,
@@ -134,10 +141,11 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
-	Current.ParseBoolFlag(ctx, FlagTestnet2)
+	Current.ParseBoolFlag(ctx, FlagTestnet3)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
-	Current.ParseStringFlag(ctx, FlagEtherRPC)
+	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL1)
+	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL2)
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
 	Current.ParseBoolFlag(ctx, FlagNATHolePunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)

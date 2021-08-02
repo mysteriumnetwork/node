@@ -88,15 +88,16 @@ type Options struct {
 func GetOptions() *Options {
 	network := OptionsNetwork{
 		Localnet:            config.GetBool(config.FlagLocalnet),
-		Testnet2:            config.GetBool(config.FlagTestnet2),
+		Testnet3:            config.GetBool(config.FlagTestnet3),
 		NATHolePunching:     config.GetBool(config.FlagNATHolePunching),
 		MysteriumAPIAddress: config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:     config.GetStringSlice(config.FlagBrokerAddress),
-		EtherClientRPC:      config.GetString(config.FlagEtherRPC),
+		EtherClientRPCL1:    config.GetStringSlice(config.FlagEtherRPCL1),
+		EtherClientRPCL2:    config.GetStringSlice(config.FlagEtherRPCL2),
 		ChainID:             config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
-			"testnet2-location.mysterium.network": {"95.216.204.232"},
-			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
+			"testnet3-location.mysterium.network": {"167.233.11.60"},
+			"testnet3-quality.mysterium.network":  {"167.233.11.60"},
 			"feedback.mysterium.network":          {"116.203.17.150"},
 			"api.ipify.org": {
 				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
@@ -143,15 +144,12 @@ func GetOptions() *Options {
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
-			ProviderRegistrationStake:       config.GetBigInt(config.FlagTransactorProviderRegistrationStake),
 		},
 		Payments: OptionsPayments{
 			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),
 			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
 			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
 			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
-			ConsumerPriceGiBMax:            config.GetBigInt(config.FlagPaymentsConsumerPriceGiBMax),
-			ConsumerPriceHourMax:           config.GetBigInt(config.FlagPaymentsConsumerPriceHourMax),
 			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),

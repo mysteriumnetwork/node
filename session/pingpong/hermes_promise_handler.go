@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -49,9 +48,11 @@ type feeProvider interface {
 
 // HermesHTTPRequester represents HTTP requests to Hermes.
 type HermesHTTPRequester interface {
+	PayAndSettle(rp RequestPromise) (crypto.Promise, error)
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
 	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
+	GetConsumerData(chainID int64, id string) (ConsumerData, error)
 }
 
 type encryption interface {
@@ -92,11 +93,12 @@ func NewHermesPromiseHandler(deps HermesPromiseHandlerDeps) *HermesPromiseHandle
 }
 
 type enqueuedRequest struct {
-	errChan    chan error
-	r          []byte
-	em         crypto.ExchangeMessage
-	providerID identity.Identity
-	sessionID  string
+	errChan     chan error
+	r           []byte
+	em          crypto.ExchangeMessage
+	providerID  identity.Identity
+	requestFunc func(rp RequestPromise) (crypto.Promise, error)
+	sessionID   string
 }
 
 type hermesURLGetter interface {
@@ -112,7 +114,46 @@ func (aph *HermesPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMess
 		errChan:    make(chan error),
 		sessionID:  sessionID,
 	}
+
+	hermesID := common.HexToAddress(em.HermesID)
+	hermesCaller, err := aph.getHermesCaller(em.ChainID, hermesID)
+	if err != nil {
+		go func() {
+			er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
+		}()
+		return er.errChan
+	}
+
+	er.requestFunc = hermesCaller.RequestPromise
+
 	aph.queue <- er
+	return er.errChan
+}
+
+// PayAndSettle adds the request to the queue.
+func (aph *HermesPromiseHandler) PayAndSettle(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
+	er := enqueuedRequest{
+		r:          r,
+		em:         em,
+		providerID: providerID,
+		errChan:    make(chan error),
+		sessionID:  sessionID,
+	}
+
+	hermesID := common.HexToAddress(em.HermesID)
+	hermesCaller, err := aph.getHermesCaller(em.ChainID, hermesID)
+	if err != nil {
+		go func() {
+			er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
+		}()
+		return er.errChan
+	}
+	log.Info().Msg("caller created")
+	er.requestFunc = hermesCaller.PayAndSettle
+
+	log.Info().Msg("queuing")
+	aph.queue <- er
+	log.Info().Msg("queued")
 	return er.errChan
 }
 
@@ -141,26 +182,12 @@ func (aph *HermesPromiseHandler) handleRequests() {
 
 // Subscribe subscribes HermesPromiseHandler to relevant events.
 func (aph *HermesPromiseHandler) Subscribe(bus eventbus.Subscriber) error {
-	err := bus.SubscribeAsync(event.AppTopicNode, aph.handleNodeStopEvents)
+	err := bus.SubscribeAsync(event.AppTopicNode, aph.handleNodeEvents)
 	if err != nil {
 		return fmt.Errorf("could not subscribe to node events: %w", err)
 	}
 
-	err = bus.SubscribeAsync(servicestate.AppTopicServiceStatus, aph.handleServiceEvent)
-	if err != nil {
-		return fmt.Errorf("could not subscribe to service events: %w", err)
-	}
 	return nil
-}
-
-func (aph *HermesPromiseHandler) handleServiceEvent(ev servicestate.AppEventServiceStatus) {
-	if ev.Status == string(servicestate.Running) {
-		aph.startOnce.Do(
-			func() {
-				aph.updateFee()
-				aph.handleRequests()
-			})
-	}
 }
 
 func (aph *HermesPromiseHandler) doStop() {
@@ -169,9 +196,18 @@ func (aph *HermesPromiseHandler) doStop() {
 	})
 }
 
-func (aph *HermesPromiseHandler) handleNodeStopEvents(e event.Payload) {
+func (aph *HermesPromiseHandler) handleNodeEvents(e event.Payload) {
 	if e.Status == event.StatusStopped {
 		aph.doStop()
+		return
+	}
+	if e.Status == event.StatusStarted {
+		aph.startOnce.Do(
+			func() {
+				aph.updateFee()
+				aph.handleRequests()
+			},
+		)
 		return
 	}
 }
@@ -181,12 +217,6 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	providerID := er.providerID
 	hermesID := common.HexToAddress(er.em.HermesID)
-	channelID, err := crypto.GenerateProviderChannelID(providerID.Address, hermesID.Hex())
-	if err != nil {
-		er.errChan <- fmt.Errorf("could not generate provider channel address: %w", err)
-		return
-	}
-
 	if !aph.transactorFee.IsValid() {
 		aph.updateFee()
 	}
@@ -214,14 +244,13 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
-	hermesCaller, err := aph.getHermesCaller(er.em.ChainID, hermesID)
-	if err != nil {
-		er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
-		return
-	}
-	promise, err := hermesCaller.RequestPromise(request)
+	promise, err := er.requestFunc(request)
 	err = aph.handleHermesError(err, providerID, er.em.ChainID, hermesID)
 	if err != nil {
+		if errors.Is(err, errRrecovered) {
+			log.Info().Msgf("r recovered")
+			return
+		}
 		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 		return
 	}
@@ -231,7 +260,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	}
 
 	ap := HermesPromise{
-		ChannelID:   channelID,
+		ChannelID:   aph.normalizeChannelID(promise.ChannelID),
 		Identity:    providerID,
 		HermesID:    hermesID,
 		Promise:     promise,
@@ -260,9 +289,18 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	err = aph.revealR(ap)
 	err = aph.handleHermesError(err, providerID, ap.Promise.ChainID, hermesID)
 	if err != nil {
+		if errors.Is(err, errRrecovered) {
+			log.Info().Msgf("r recovered")
+			return
+		}
 		er.errChan <- fmt.Errorf("hermes reveal r error: %w", err)
 		return
 	}
+}
+
+func (aph *HermesPromiseHandler) normalizeChannelID(chid []byte) string {
+	hexStr := common.Bytes2Hex(chid)
+	return "0x" + hexStr
 }
 
 func (aph *HermesPromiseHandler) getHermesCaller(chainID int64, hermesID common.Address) (HermesHTTPRequester, error) {
@@ -286,6 +324,10 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 	err = hermesCaller.RevealR(hermesPromise.R, hermesPromise.Identity.Address, hermesPromise.AgreementID)
 	handledErr := aph.handleHermesError(err, hermesPromise.Identity, hermesPromise.Promise.ChainID, hermesPromise.HermesID)
 	if handledErr != nil {
+		if errors.Is(err, errRrecovered) {
+			log.Info().Msgf("r recovered")
+			return nil
+		}
 		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
@@ -297,6 +339,8 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 
 	return nil
 }
+
+var errRrecovered = errors.New("R recovered")
 
 func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identity.Identity, chainID int64, hermesID common.Address) error {
 	if err == nil {
@@ -314,7 +358,7 @@ func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identit
 		if recoveryErr != nil {
 			return recoveryErr
 		}
-		return nil
+		return errRrecovered
 	case stdErr.Is(err, ErrHermesNoPreviousPromise):
 		log.Info().Msg("no previous promise on hermes, will mark R as revealed")
 		return nil

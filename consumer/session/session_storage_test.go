@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -53,10 +54,12 @@ var (
 		SessionID:  session_node.ID("sessionID"),
 		ConsumerID: identity.FromAddress("consumerID"),
 		HermesID:   common.HexToAddress("0x00000000000000000000000000000000000000AC"),
-		Proposal: market.ServiceProposal{
-			Location:    stubLocation,
-			ServiceType: "serviceType",
-			ProviderID:  "providerID",
+		Proposal: proposal.PricedServiceProposal{
+			ServiceProposal: market.ServiceProposal{
+				Location:    stubLocation,
+				ServiceType: "serviceType",
+				ProviderID:  "providerID",
+			},
 		},
 	}
 	connectionStatsMock   = connectionstate.Statistics{BytesReceived: 100000, BytesSent: 50000}

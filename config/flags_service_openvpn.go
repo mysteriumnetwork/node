@@ -46,16 +46,6 @@ var (
 		Usage: "OpenVPN subnet netmask",
 		Value: "255.255.255.0",
 	}
-	// FlagOpenVPNPriceHour sets the price per hour for provided OpenVPN service.
-	FlagOpenVPNPriceHour = cli.Float64Flag{
-		Name:  "openvpn.price-hour",
-		Usage: "Sets the price of the OpenVPN service per hour.",
-	}
-	// FlagOpenVPNPriceGiB sets the price per GiB for provided OpenVPN service.
-	FlagOpenVPNPriceGiB = cli.Float64Flag{
-		Name:  "openvpn.price-gib",
-		Usage: "Sets the price of the OpenVPN service per GiB.",
-	}
 	// FlagOpenVPNAccessPolicies a comma-separated list of access policies that determines allowed identities to use the service.
 	FlagOpenVPNAccessPolicies = cli.StringFlag{
 		Name:  "openvpn.access-policies",
@@ -70,8 +60,6 @@ func RegisterFlagsServiceOpenvpn(flags *[]cli.Flag) {
 		&FlagOpenvpnPort,
 		&FlagOpenvpnSubnet,
 		&FlagOpenvpnNetmask,
-		&FlagOpenVPNPriceHour,
-		&FlagOpenVPNPriceGiB,
 		&FlagOpenVPNAccessPolicies,
 	)
 }
@@ -82,7 +70,5 @@ func ParseFlagsServiceOpenvpn(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagOpenvpnPort)
 	Current.ParseStringFlag(ctx, FlagOpenvpnSubnet)
 	Current.ParseStringFlag(ctx, FlagOpenvpnNetmask)
-	Current.ParseFloat64Flag(ctx, FlagOpenVPNPriceHour)
-	Current.ParseFloat64Flag(ctx, FlagOpenVPNPriceGiB)
 	Current.ParseStringFlag(ctx, FlagOpenVPNAccessPolicies)
 }
