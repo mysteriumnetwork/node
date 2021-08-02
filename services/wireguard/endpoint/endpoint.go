@@ -66,6 +66,9 @@ func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 	ce.cfg = cfg
 
 	if err := ce.wgClient.ConfigureDevice(cfg); err != nil {
+		if err1 := ce.resourceAllocator.ReleaseInterface(iface); err1 != nil {
+			log.Error().Err(err1).Msg("Can't release allocated interface " + iface)
+		}
 		return errors.Wrap(err, "could not configure device")
 	}
 	return nil
@@ -105,6 +108,9 @@ func (ce *connectionEndpoint) StartProviderMode(publicIP string, config wgcfg.De
 	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: config.ListenPort}
 
 	if err := ce.wgClient.ConfigureDevice(config); err != nil {
+		if err1 := ce.resourceAllocator.ReleaseInterface(iface); err1 != nil {
+			log.Error().Err(err1).Msg("Can't release allocated interface " + iface)
+		}
 		return errors.Wrap(err, "could not configure device")
 	}
 	return nil

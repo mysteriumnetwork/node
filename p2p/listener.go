@@ -344,8 +344,7 @@ func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer
 		return publicIP, localPorts, portsRelease, nil
 	}
 
-	// Check if nat pinger is valid. It's considered as not valid when noop pinger is used in case
-	// manual port forwarding is specified.
+	// Check if nat pinger is valid. It's considered as not valid when noop pinger is used.
 	if _, noop := m.providerPinger.(*traversal.NoopPinger); noop {
 		return publicIP, localPorts, nil, nil
 	}

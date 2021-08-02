@@ -22,7 +22,7 @@ type OptionsNetwork struct {
 	Localnet bool
 	Testnet3 bool
 
-	ExperimentNATPunching bool
+	NATHolePunching bool
 
 	MysteriumAPIAddress string
 	BrokerAddresses     []string

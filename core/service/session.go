@@ -23,13 +23,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofrs/uuid"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/trace"
-	"github.com/rs/zerolog/log"
 )
 
 // Session structure holds all required information about current session between service consumer and provider.

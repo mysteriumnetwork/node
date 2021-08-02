@@ -26,9 +26,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mysteriumnetwork/node/mobile/mysterium"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMobileNodeConsumer(t *testing.T) {
@@ -38,7 +39,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 	options := &mysterium.MobileNodeOptions{
 		Testnet3:                       true,
-		ExperimentNATPunching:          true,
+		NATHolePunching:                true,
 		MysteriumAPIAddress:            "http://discovery:8080/api/v3",
 		BrokerAddresses:                []string{"broker"},
 		EtherClientRPCL1:               []string{"ws://ganache:8545"},

@@ -21,22 +21,19 @@ import (
 	"encoding/json"
 	"net"
 
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/service"
 )
 
 // Options describes options which are required to start Wireguard service.
 type Options struct {
-	Ports  *port.Range
 	Subnet net.IPNet
 }
 
 // DefaultOptions is a wireguard service configuration that will be used if no options provided.
 var DefaultOptions = Options{
-	Ports: port.UnspecifiedRange(),
 	Subnet: net.IPNet{
 		IP:   net.ParseIP("10.182.0.0").To4(),
 		Mask: net.IPv4Mask(255, 255, 0, 0),
@@ -51,25 +48,14 @@ func GetOptions() Options {
 		ipnet = &DefaultOptions.Subnet
 	}
 
-	portRange, err := port.ParseRange(config.GetString(config.FlagWireguardListenPorts))
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to parse listen port range, using default value")
-		portRange = port.UnspecifiedRange()
-	}
-	if portRange.Capacity() > resources.MaxConnections {
-		log.Warn().Msgf("Specified port range exceeds maximum number of connections allowed for the platform (%d), "+
-			"using default value", resources.MaxConnections)
-		portRange = port.UnspecifiedRange()
-	}
 	return Options{
-		Ports:  portRange,
 		Subnet: *ipnet,
 	}
 }
 
 // ParseJSONOptions function fills in Wireguard options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	var requestOptions = GetOptions()
+	requestOptions := GetOptions()
 	if request == nil {
 		return requestOptions, nil
 	}
@@ -82,10 +68,8 @@ func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
 func (o Options) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		Ports  string `json:"ports"`
 		Subnet string `json:"subnet"`
 	}{
-		Ports:  o.Ports.String(),
 		Subnet: o.Subnet.String(),
 	})
 }
@@ -93,7 +77,6 @@ func (o Options) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements json.Unmarshaler interface to receive human readable configuration.
 func (o *Options) UnmarshalJSON(data []byte) error {
 	var options struct {
-		Ports  string `json:"ports"`
 		Subnet string `json:"subnet"`
 	}
 
@@ -101,13 +84,6 @@ func (o *Options) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if options.Ports != "" {
-		p, err := port.ParseRange(options.Ports)
-		if err != nil {
-			return err
-		}
-		o.Ports = p
-	}
 	if len(options.Subnet) > 0 {
 		_, ipnet, err := net.ParseCIDR(options.Subnet)
 		if err != nil {

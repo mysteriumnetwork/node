@@ -119,7 +119,12 @@ func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []net.
 			return wrapErr(err)
 		}
 
-		err = permitWireGuardService(session, baseObjects, 15)
+		err = permitSupervisorWireGuardService(session, baseObjects, 15)
+		if err != nil {
+			return wrapErr(err)
+		}
+
+		err = permitMystWireGuardService(session, baseObjects, 15)
 		if err != nil {
 			return wrapErr(err)
 		}

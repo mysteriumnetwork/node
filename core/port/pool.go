@@ -37,15 +37,6 @@ type ServicePortSupplier interface {
 	AcquireMultiple(n int) (ports []Port, err error)
 }
 
-// NewPool creates a port pool that will provide ports from range 40000-50000
-func NewPool() *Pool {
-	return &Pool{
-		start:    40000,
-		capacity: 10000,
-		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
-	}
-}
-
 // NewFixedRangePool creates a fixed size pool from port.Range
 func NewFixedRangePool(r Range) *Pool {
 	return &Pool{
