@@ -23,7 +23,6 @@ import (
 	"math/big"
 	"net/http"
 
-	"github.com/asdine/storm/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
@@ -532,7 +531,7 @@ func (ia *identitiesAPI) GetPayoutAddress(w http.ResponseWriter, r *http.Request
 	id := params.ByName("id")
 	addr, err := ia.addressStorage.Address(id)
 	if err != nil {
-		if errors.Is(err, storm.ErrNotFound) {
+		if errors.Is(err, payout.ErrNotFound) {
 			utils.SendError(w, err, http.StatusNotFound)
 			return
 		}
