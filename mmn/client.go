@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -133,6 +134,10 @@ func (m *client) GetBeneficiary(identityStr string) (string, error) {
 	}
 
 	if !benef.Success {
+		if strings.Contains(benef.Message, "not found") {
+			return "", nil
+		}
+
 		return "", fmt.Errorf("beneficiary get request failed with message: %s", benef.Message)
 	}
 
