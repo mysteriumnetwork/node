@@ -502,15 +502,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.bootstrapBeneficiaryProvider(nodeOptions)
 	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage, di.MMN)
 
-	di.Transactor = registry.NewTransactor(
-		di.HTTPClient,
-		nodeOptions.Transactor.TransactorEndpointAddress,
-		di.AddressProvider,
-		di.SignerFactory,
-		di.EventBus,
-		di.BCHelper,
-	)
-
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
 	}
@@ -523,6 +514,15 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.Transactor,
 		di.IdentityRegistry,
 		di.AddressProvider,
+		pingpong.ConsumerBalanceTrackerConfig{
+			FastSync: pingpong.PollConfig{
+				Interval: nodeOptions.Payments.BalanceFastPollInterval,
+				Timeout:  nodeOptions.Payments.BalanceFastPollTimeout,
+			},
+			LongSync: pingpong.PollConfig{
+				Interval: nodeOptions.Payments.BalanceLongPollInterval,
+			},
+		},
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -724,8 +724,24 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+	di.SignerFactory = func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(di.Keystore, id)
+	}
+	di.Transactor = registry.NewTransactor(
+		di.HTTPClient,
+		options.Transactor.TransactorEndpointAddress,
+		di.AddressProvider,
+		di.SignerFactory,
+		di.EventBus,
+		di.BCHelper,
+	)
 
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
+	registryCfg := registry.IdentityRegistryConfig{
+		TransactorPollInterval: options.Payments.RegistryTransactorPollInterval,
+		TransactorPollTimeout:  options.Payments.RegistryTransactorPollTimeout,
+	}
+
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg); err != nil {
 		return err
 	}
 
@@ -764,9 +780,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 	}
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus, di.ResidentCountry)
 
-	di.SignerFactory = func(id identity.Identity) identity.Signer {
-		return identity.NewSigner(di.Keystore, id)
-	}
 	di.IdentitySelector = identity_selector.NewHandler(
 		di.IdentityManager,
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),

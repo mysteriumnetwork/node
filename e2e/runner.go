@@ -132,7 +132,7 @@ func (r *Runner) Init() error {
 		"--keystore.directory=./keystore",
 		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
 		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
-		"--geth.url=ws://ganache:8545")
+		"--geth.url=http://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}

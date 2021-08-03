@@ -421,7 +421,7 @@ func initEthClient(t *testing.T) {
 	err = ks.Unlock(acc, "")
 	assert.NoError(t, err)
 
-	c, err := ethclient.Dial("ws://ganache:8545")
+	c, err := ethclient.Dial("http://ganache:8545")
 	assert.NoError(t, err)
 
 	cid, err := c.ChainID(context.Background())

@@ -55,7 +55,7 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
 	github.com/mysteriumnetwork/metrics v0.0.15
-	github.com/mysteriumnetwork/payments v0.2.1-0.20210721075819-975ddd4d49af
+	github.com/mysteriumnetwork/payments v1.0.0
 	github.com/nats-io/nats-server/v2 v2.3.2
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/nwaples/rardecode v1.1.0 // indirect

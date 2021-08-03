@@ -94,7 +94,7 @@ services:
       -topUpAmount 7000000000000000000
       -stakeDecreaseFee 1
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
+      -rpcEndpoint http://ganache:8545
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -119,7 +119,7 @@ services:
     command: >
       -identityPassphrase ""
       -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
+      -rpcEndpoint http://ganache:8545
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -181,7 +181,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --ether.client.rpc=http://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --hermes.hermes-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
@@ -228,7 +228,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --ether.client.rpc=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
@@ -265,7 +265,7 @@ services:
       --firewall.protected.networks=""
       --broker-address=broker
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --ether.client.rpc=http://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --hermes.hermes-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
@@ -312,7 +312,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --api.address=http://discovery:8080/api/v3
-      --ether.client.rpc=ws://ganache:8545
+      --ether.client.rpc=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
