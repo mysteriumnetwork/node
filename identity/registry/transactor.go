@@ -155,7 +155,7 @@ func (t *Transactor) FetchStakeDecreaseFee(chainID int64) (FeesResponse, error) 
 }
 
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel
-func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.Promise) error {
+func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.Promise) (string, error) {
 	payload := PromiseSettlementRequest{
 		HermesID:      hermesID,
 		ProviderID:    providerID,
@@ -169,9 +169,10 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_and_rebalance", payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to create settle and rebalance request")
+		return "", errors.Wrap(err, "failed to create settle and rebalance request")
 	}
-	return t.httpClient.DoRequest(req)
+	res := SettleResponse{}
+	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
 }
 
 func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
@@ -444,16 +445,39 @@ type SettleWithBeneficiaryRequest struct {
 	Registry    string   `json:"registry"`
 }
 
+// QueueResponse represents the queue response from transactor.
+type QueueResponse struct {
+	ID    string `json:"id"`
+	Hash  string `json:"tx_hash"`
+	State string `json:"state"`
+	Error string `json:"error"`
+}
+
+// GetQueueStatus returns the queued transaction status from transactor.
+func (t *Transactor) GetQueueStatus(ID string) (QueueResponse, error) {
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("queue/%v", ID), nil)
+	if err != nil {
+		return QueueResponse{}, fmt.Errorf("failed to create RegisterIdentity request %w", err)
+	}
+	res := QueueResponse{}
+	return res, t.httpClient.DoRequestAndParseResponse(req, &res)
+}
+
+// SettleResponse represents the settle response from transactor.
+type SettleResponse struct {
+	ID string `json:"id"`
+}
+
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
-func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, promise pc.Promise) error {
+func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, promise pc.Promise) (string, error) {
 	registry, err := t.addresser.GetRegistryAddress(promise.ChainID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	signedReq, err := t.fillSetBeneficiaryRequest(promise.ChainID, id, beneficiary, registry.Hex())
 	if err != nil {
-		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
+		return "", fmt.Errorf("failed to fill in set beneficiary request: %w", err)
 	}
 
 	payload := SettleWithBeneficiaryRequest{
@@ -477,10 +501,11 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
 	if err != nil {
-		return fmt.Errorf("failed to create RegisterIdentity request %w", err)
+		return "", fmt.Errorf("failed to create RegisterIdentity request %w", err)
 	}
 
-	return t.httpClient.DoRequest(req)
+	res := SettleResponse{}
+	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
 }
 
 func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary, registry string) (pc.SetBeneficiaryRequest, error) {
@@ -563,7 +588,7 @@ func (t *Transactor) FetchRegistrationStatus(id string) ([]TransactorStatusRespo
 }
 
 // SettleIntoStake requests the transactor to settle and transfer the balance to stake.
-func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Promise) error {
+func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Promise) (string, error) {
 	payload := PromiseSettlementRequest{
 		HermesID:      hermesID,
 		ChannelID:     hex.EncodeToString(promise.ChannelID),
@@ -577,9 +602,10 @@ func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Pro
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle/into_stake", payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to create settle into stake request")
+		return "", errors.Wrap(err, "failed to create settle into stake request")
 	}
-	return t.httpClient.DoRequest(req)
+	res := SettleResponse{}
+	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
 }
 
 // PayAndSettlePayload represents the pay and settle payload.
@@ -590,7 +616,7 @@ type PayAndSettlePayload struct {
 }
 
 // PayAndSettle requests the transactor to withdraw money into l1.
-func (t *Transactor) PayAndSettle(hermesID, providerID string, promise pc.Promise, beneficiary string, beneficiarySignature string) error {
+func (t *Transactor) PayAndSettle(hermesID, providerID string, promise pc.Promise, beneficiary string, beneficiarySignature string) (string, error) {
 	payload := PayAndSettlePayload{
 		PromiseSettlementRequest: PromiseSettlementRequest{
 			HermesID:      hermesID,
@@ -608,9 +634,10 @@ func (t *Transactor) PayAndSettle(hermesID, providerID string, promise pc.Promis
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/pay_and_settle", payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to create pay and settle request")
+		return "", errors.Wrap(err, "failed to create pay and settle request")
 	}
-	return t.httpClient.DoRequest(req)
+	res := SettleResponse{}
+	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
 }
 
 // DecreaseProviderStakeRequest represents all the parameters required for decreasing provider stake.

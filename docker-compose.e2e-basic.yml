@@ -127,7 +127,7 @@ services:
       -topUpAmount 7000000000000000000
       -chain1MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -chain1Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -chain1RPCEndpoint ws://ganache:8545
+      -chain1RPCEndpoint http://ganache:8545
       -chain1ChainID 5
       -chain2MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -chain2Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
@@ -142,6 +142,7 @@ services:
       -MongoPass transactor
       -MongoHost transactordatabase:27017
       -MongoReplSet ""
+      -maxRequestsPerHour 10000000
       -redisAddress "redis:6379"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
@@ -192,7 +193,7 @@ services:
     command: >
       -identityPassphrase ""
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -Chain1RPCEndpoint ws://ganache:8545
+      -Chain1RPCEndpoint http://ganache:8545
       -transactorBaseUri "http://transactor:8888/api/v1/"
       -Chain1ChainID 5
       -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
@@ -234,7 +235,7 @@ services:
       -identityPassphrase ""
       -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -Chain1RPCEndpoint ws://ganache:8545
+      -Chain1RPCEndpoint http://ganache:8545
       -Chain1ChainID 5
       -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -295,7 +296,7 @@ services:
       --chains.2.chainID=80001
       --chain-id=80001
       --ether.client.rpcl2=ws://ganache2:8545
-      --ether.client.rpcl1=ws://ganache:8545
+      --ether.client.rpcl1=http://ganache:8545
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --location.country=e2e-land
@@ -313,6 +314,8 @@ services:
       --payments.hermes.promise.threshold=100
       --stun-servers=""
       --local-service-discovery=true
+      --payments.hermes.settle.check-interval=1s
+      --payments.registry-transactor-poll.interval=1s
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -363,12 +366,13 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
-      --ether.client.rpcl1=ws://ganache:8545
+      --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
       --stun-servers=""
       --local-service-discovery=true
+      --payments.registry-transactor-poll.interval=1s
       daemon
 
   myst-consumer-hermes2:
@@ -410,12 +414,13 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
-      --ether.client.rpcl1=ws://ganache:8545
+      --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
       --stun-servers=""
       --local-service-discovery=true
+      --payments.registry-transactor-poll.interval=1s
       daemon
 
   myst-consumer-openvpn:
@@ -457,12 +462,13 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
-      --ether.client.rpcl1=ws://ganache:8545
+      --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
       --stun-servers=""
       --local-service-discovery=true
+      --payments.registry-transactor-poll.interval=1s
       daemon
 
   myst-consumer-wireguard:
@@ -504,12 +510,13 @@ services:
       --tequilapi.address=0.0.0.0
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
-      --ether.client.rpcl1=ws://ganache:8545
+      --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v2
       --stun-servers=""
       --local-service-discovery=true
+      --payments.registry-transactor-poll.interval=1s
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)

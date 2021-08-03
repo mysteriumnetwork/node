@@ -14,7 +14,7 @@ exec /node/build/myst/myst \
   --location.type=manual \
   --broker-address=broker \
   --api.address=http://discovery:8080/api/v3 \
-  --ether.client.rpc=ws://ganache:8545 \
+  --ether.client.rpc=http://ganache:8545 \
   --keystore.lightweight \
   --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75 \
   --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10 \

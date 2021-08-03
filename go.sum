@@ -860,8 +860,8 @@ github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e h1:r8M+w
 github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e/go.mod h1:izNxG4qVO/POwdPoBfECCvgl4YHRrL6VKopeqj3gNew=
 github.com/mysteriumnetwork/metrics v0.0.15 h1:qr3GlJLs30iMm3mcEYlN9PUjh1tcRaWCtHcYUL10alY=
 github.com/mysteriumnetwork/metrics v0.0.15/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
-github.com/mysteriumnetwork/payments v0.2.1-0.20210721075819-975ddd4d49af h1:hkbmWkqksyLUYte81dl7ui/4WmUe0Mw1s8GGi9Z86gY=
-github.com/mysteriumnetwork/payments v0.2.1-0.20210721075819-975ddd4d49af/go.mod h1:aC+9Bez+lFp19Fs8plh51HnblVJC0CDzHnnEzyidhpQ=
+github.com/mysteriumnetwork/payments v1.0.0 h1:uSrwfLQM9ICEjmq2+tA16fuZim5lz14rucjHqWliHmE=
+github.com/mysteriumnetwork/payments v1.0.0/go.mod h1:aC+9Bez+lFp19Fs8plh51HnblVJC0CDzHnnEzyidhpQ=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
 github.com/nats-io/jwt v1.2.2 h1:w3GMTO969dFg+UOKTmmyuu7IGdusK+7Ytlt//OYH/uU=
