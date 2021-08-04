@@ -32,14 +32,6 @@ var (
 	reqTimeout   = flag.Duration("req-timeout", 3*time.Second, "timeout to wait for each STUN server response")
 	totalTimeout = flag.Duration("total-timeout", 15*time.Second, "overall operation deadline")
 	raw          = flag.Bool("raw", false, "print raw NAT_TYPE_* value")
-
-	humanReadableTypes = map[string]string{
-		behavior.NATTypeNone:               "None",
-		behavior.NATTypeFullCone:           "Full Cone",
-		behavior.NATTypeRestrictedCone:     "Restricted Cone",
-		behavior.NATTypePortRestrictedCone: "Port Restricted Cone",
-		behavior.NATTypeSymmetric:          "Symmetric",
-	}
 )
 
 func run() int {
@@ -55,7 +47,7 @@ func run() int {
 	if *raw {
 		fmt.Println(res)
 	} else {
-		fmt.Println("NAT Type:", humanReadableTypes[res])
+		fmt.Println("NAT Type:", behavior.HumanReadableTypes[res])
 	}
 	return 0
 }
