@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"net"
 
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -28,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/pkg/errors"
 )
 
 // NATEventGetter allows us to fetch the last known NAT event
@@ -41,7 +42,6 @@ func NewManager(
 	ipResolver ip.Resolver,
 	country string,
 	natService nat.NATService,
-	natEventGetter NATEventGetter,
 	eventPublisher eventbus.Publisher,
 	options Options,
 	portSupplier port.ServicePortSupplier,
