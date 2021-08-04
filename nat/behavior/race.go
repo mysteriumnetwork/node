@@ -32,6 +32,8 @@ type discoverResult struct {
 	err error
 }
 
+// RacingDiscoverNATBehavior implements concurrent NAT discovery against multiple STUN servers in parallel.
+// First successful response is returned, other probing sessions are cancelled.
 func RacingDiscoverNATBehavior(ctx context.Context, addresses []string, timeout time.Duration) (string, error) {
 	count := len(addresses)
 
