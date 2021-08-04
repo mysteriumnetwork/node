@@ -22,24 +22,35 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mysteriumnetwork/node/nat/behavior"
 )
 
+const addressListSeparator = ","
+
 var (
-	address      = flag.String("server", "stun.stunprotocol.org:3478", "STUN server address")
-	reqTimeout   = flag.Duration("req-timeout", 3*time.Second, "timeout to wait for each STUN server response")
-	totalTimeout = flag.Duration("total-timeout", 15*time.Second, "overall operation deadline")
+	addressList  = flag.String("servers", "stun.mysterium.network:3478,stun.stunprotocol.org:3478,stun.sip.us:3478", "comma-separated list of STUN servers")
+	reqTimeout   = flag.Duration("req-timeout", 1*time.Second, "timeout to wait for each STUN server response")
+	totalTimeout = flag.Duration("total-timeout", 10*time.Second, "overall operation deadline")
 	raw          = flag.Bool("raw", false, "print raw NAT_TYPE_* value")
 )
 
 func run() int {
 	flag.Parse()
 
+	var addresses []string
+	for _, address := range strings.Split(*addressList, addressListSeparator) {
+		address = strings.TrimSpace(address)
+		if address != "" {
+			addresses = append(addresses, address)
+		}
+	}
+
 	ctx, cl := context.WithTimeout(context.Background(), *totalTimeout)
 	defer cl()
-	res, err := behavior.DiscoverNATBehavior(ctx, *address, *reqTimeout)
+	res, err := behavior.RacingDiscoverNATBehavior(ctx, addresses, *reqTimeout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
