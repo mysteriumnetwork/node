@@ -156,7 +156,7 @@ func (r *Runner) Init() error {
 	}
 
 	log.Info().Msg("Starting transactor")
-	if err := r.compose("up", "-d", "transactor"); err != nil {
+	if err := r.compose("up", "-d", "transactor", "transactor-sidecar"); err != nil {
 		return errors.Wrap(err, "starting transactor failed!")
 	}
 

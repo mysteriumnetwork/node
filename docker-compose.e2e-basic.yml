@@ -106,8 +106,34 @@ services:
     volumes:
       - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
+  transactor-sidecar:
+    image: mysteriumnetwork/transactor-sidecar:1.0.1
+    depends_on:
+      - transactordatabase
+      - redis
+      - http-mock
+    command: >
+      "/usr/bin/sidecar"
+      -redisAddress="redis:6379"
+      -MongoUser=transactor
+      -MongoPass=transactor
+      -MongoHost=transactordatabase:27017
+      -MongoDatabase=transactor
+      -MongoReplSet ""
+      -geckoUrl=http://http-mock:1080/gecko
+      -affiliateHermesAddress=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      -affiliateRegistryAddress=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -affiliateRewardCalcChainID=80001
+      -affiliateRewardCalcRPC="http://ganache2:8545"
+      -affiliateSyncInterval=1h
+      -affiliateSnapshotCronTimer=1h
+      -affiliateOwnerAdress=0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -affiliateOwnerPassphrase=""
+      -affiliateRPCEndpoint="http://ganache:8545"
+      -affiliateRewarderChainID=5
+      
   transactor:
-    image: mysteriumnetwork/transactor:matic-rc3
+    image: mysteriumnetwork/transactor:1.0.1
     environment:
       PORT: 8888
     expose:
@@ -118,8 +144,8 @@ services:
       - transactordatabase
       - redis
       - http-mock
+      - transactor-sidecar
     command: >
-      -geckoUrl=http://http-mock:1080/gecko
       -ethStaticGasPrice=0.001
       -maticStaticGasPrice=0.001
       -settlementThrottleTime=1ms
@@ -142,7 +168,6 @@ services:
       -MongoPass transactor
       -MongoHost transactordatabase:27017
       -MongoReplSet ""
-      -maxRequestsPerHour 10000000
       -redisAddress "redis:6379"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
