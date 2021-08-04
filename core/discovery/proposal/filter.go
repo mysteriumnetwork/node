@@ -37,6 +37,7 @@ type Filter struct {
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
 	IncludeMonitoringFailed            bool
+	NATCompatibility                   string
 	condition                          reducer.AndCondition
 	buildOnce                          sync.Once
 }
@@ -94,6 +95,7 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 		AccessPolicySource:      filter.AccessPolicySource,
 		QualityMin:              filter.QualityMin,
 		IncludeMonitoringFailed: filter.IncludeMonitoringFailed,
+		NATCompatibility:        filter.NATCompatibility,
 	}
 
 	return query

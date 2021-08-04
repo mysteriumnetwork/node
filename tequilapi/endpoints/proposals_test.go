@@ -64,6 +64,8 @@ var serviceProposals = []proposal.PricedServiceProposal{
 	},
 }
 
+var mockedNATProber = &mockNATProber{"none", nil}
+
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	repository := &mockProposalRepository{
 		// we assume that underling component does correct filtering
@@ -82,7 +84,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}).List
+	handlerFunc := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}, mockedNATProber).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -139,7 +141,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}).List
+	handlerFunc := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}, mockedNATProber).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -203,7 +205,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
 			},
 		}},
 	}
-	handlerFunc := NewProposalsEndpoint(repository, nil, nil, presetRepository).List
+	handlerFunc := NewProposalsEndpoint(repository, nil, nil, presetRepository, mockedNATProber).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(

@@ -33,6 +33,7 @@ type ProposalsQuery struct {
 	AccessPolicy, AccessPolicySource   string
 
 	IPType                  string
+	NATCompatibility        string
 	QualityMin              float32
 	IncludeMonitoringFailed bool
 }
@@ -51,6 +52,9 @@ func (q ProposalsQuery) ToURLValues() url.Values {
 	}
 	if q.IPType != "" {
 		values.Set("ip_type", q.IPType)
+	}
+	if q.NATCompatibility != "" {
+		values.Set("nat_compatibility", q.NATCompatibility)
 	}
 	if !(q.CompatibilityMin == 0 && q.CompatibilityMax == 0) {
 		values.Set("compatibility_min", strconv.Itoa(q.CompatibilityMin))

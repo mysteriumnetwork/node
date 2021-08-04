@@ -287,6 +287,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
 			di.FilterPresetStorage,
+			di.NATProber,
 			time.Duration(options.CacheTTLSeconds)*time.Second,
 		),
 		pilvytis:       di.Pilvytis,
