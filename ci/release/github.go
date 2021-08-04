@@ -18,15 +18,18 @@
 package release
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path"
+	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/github"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 type releaseGithubOpts struct {
@@ -101,6 +104,33 @@ func ReleaseGithubSnapshot() error {
 		owner:      env.Str(env.GithubOwner),
 		repository: env.Str(env.GithubSnapshotRepository),
 		version:    env.Str(env.BuildVersion),
+		token:      env.Str(env.GithubAPIToken),
+		createTag:  true,
+	})
+}
+
+// ReleaseGithubNightly releases nightly artifacts to github
+func ReleaseGithubNightly() error {
+	logconfig.Bootstrap()
+
+	err := env.EnsureEnvVars(
+		env.GithubOwner,
+		env.BuildVersion,
+		env.GithubAPIToken,
+	)
+	if err != nil {
+		return err
+	}
+
+	if !env.Bool("NIGHTLY_BUILD") {
+		log.Info().Msg("Not a nightly build, skipping ReleaseGithubNightly action...")
+		return nil
+	}
+
+	return releaseGithub(&releaseGithubOpts{
+		owner:      env.Str(env.GithubOwner),
+		repository: "nightly",
+		version:    fmt.Sprintf("nightly-%s", time.Now().Format("02012006")),
 		token:      env.Str(env.GithubAPIToken),
 		createTag:  true,
 	})
