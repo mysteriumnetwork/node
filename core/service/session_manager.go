@@ -131,7 +131,6 @@ func NewSessionManager(
 	service *Instance,
 	sessionStorage *SessionPool,
 	paymentEngineFactory PaymentEngineFactory,
-	natEventGetter NATEventGetter,
 	publisher publisher,
 	channel p2p.Channel,
 	config Config,
@@ -140,7 +139,6 @@ func NewSessionManager(
 	return &SessionManager{
 		service:              service,
 		sessionStorage:       sessionStorage,
-		natEventGetter:       natEventGetter,
 		publisher:            publisher,
 		paymentEngineFactory: paymentEngineFactory,
 		paymentEngineChan:    make(chan crypto.ExchangeMessage, 1),
@@ -156,7 +154,6 @@ type SessionManager struct {
 	sessionStorage       *SessionPool
 	paymentEngineFactory PaymentEngineFactory
 	paymentEngineChan    chan crypto.ExchangeMessage
-	natEventGetter       NATEventGetter
 	publisher            publisher
 	channel              p2p.Channel
 	config               Config

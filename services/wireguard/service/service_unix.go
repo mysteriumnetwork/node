@@ -37,7 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
-	natevent "github.com/mysteriumnetwork/node/nat/event"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
@@ -46,17 +45,11 @@ import (
 	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
-// NATEventGetter allows us to fetch the last known NAT event
-type NATEventGetter interface {
-	LastEvent() *natevent.Event
-}
-
 // NewManager creates new instance of Wireguard service
 func NewManager(
 	ipResolver ip.Resolver,
 	country string,
 	natService nat.NATService,
-	natEventGetter NATEventGetter,
 	eventBus eventbus.EventBus,
 	options Options,
 	portSupplier port.ServicePortSupplier,
@@ -69,7 +62,6 @@ func NewManager(
 		resourcesAllocator: resourcesAllocator,
 		ipResolver:         ipResolver,
 		natService:         natService,
-		natEventGetter:     natEventGetter,
 		eventBus:           eventBus,
 		trafficFirewall:    trafficFirewall,
 
@@ -89,7 +81,6 @@ type Manager struct {
 	resourcesAllocator *resources.Allocator
 
 	natService      nat.NATService
-	natEventGetter  NATEventGetter
 	eventBus        eventbus.EventBus
 	trafficFirewall firewall.IncomingTrafficFirewall
 

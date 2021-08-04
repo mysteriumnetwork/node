@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/filter"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
@@ -39,27 +41,19 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	nat_event "github.com/mysteriumnetwork/node/nat/event"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/node/utils/stringutil"
-	"github.com/rs/zerolog/log"
 )
 
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
-// NATEventGetter allows us to fetch the last known NAT event
-type NATEventGetter interface {
-	LastEvent() *nat_event.Event
-}
-
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService      nat.NATService
 	ports           port.ServicePortSupplier
-	natEventGetter  NATEventGetter
 	dnsProxy        *dns.Proxy
 	bus             eventbus.EventBus
 	trafficFirewall firewall.IncomingTrafficFirewall
@@ -86,7 +80,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		Mask: net.IPMask(net.ParseIP(m.serviceOptions.Netmask).To4()),
 	}
 
-	var dnsPort = 11153
+	dnsPort := 11153
 	dnsHandler, err := dns.ResolveViaSystem()
 	if err == nil {
 		if instance.Policies().HasDNSRules() {
@@ -247,7 +241,7 @@ func (m *Manager) startServer() error {
 		m.openvpnAuth,
 		state.NewMiddleware(func(state openvpn.State) {
 			stateChannel <- state
-			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+			// this is the last state - close channel (according to best practices of go - channel writer controls channel)
 			if state == openvpn.ProcessExited {
 				close(stateChannel)
 			}

@@ -28,7 +28,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -47,6 +46,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -146,7 +146,6 @@ type Dependencies struct {
 	ServiceFirewall firewall.IncomingTrafficFirewall
 
 	NATPinger  traversal.NATPinger
-	NATTracker *event.Tracker
 	PortPool   *port.Pool
 	PortMapper mapping.PortMapper
 
@@ -898,11 +897,6 @@ func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
-	di.NATTracker = event.NewTracker()
-	if err := di.NATTracker.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
 	if options.NATHolePunching {
 		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
