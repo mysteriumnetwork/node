@@ -19,7 +19,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -28,8 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
 
-func (c *cliApp) service(argsString string) (err error) {
-	args := strings.Fields(argsString)
+func (c *cliApp) service(args []string) (err error) {
 	if len(args) == 0 {
 		fmt.Println(serviceHelp)
 		return errWrongArgumentCount
@@ -61,7 +59,7 @@ func (c *cliApp) service(argsString string) (err error) {
 		return c.serviceSessions()
 	default:
 		fmt.Println(serviceHelp)
-		return errUnknownSubCommand(argsString)
+		return errUnknownSubCommand(args[0])
 	}
 }
 
