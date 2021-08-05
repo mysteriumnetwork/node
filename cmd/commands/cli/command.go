@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -176,7 +177,7 @@ func (c *cliApp) Run(ctx *cli.Context) (err error) {
 	c.fetchedProposals = c.fetchProposals()
 
 	if ctx.Args().Len() > 0 {
-		return c.handleActions(strings.Join(ctx.Args().Slice(), " "))
+		return c.handleActions(ctx.Args().Slice())
 	}
 
 	c.reader, err = readline.NewEx(&readline.Config{
@@ -201,7 +202,11 @@ func (c *cliApp) Run(ctx *cli.Context) (err error) {
 			return err
 		}
 
-		c.handleActions(line)
+		args, err := shlex.Split(line, true)
+		if err != nil {
+			return err
+		}
+		c.handleActions(args)
 	}
 }
 
@@ -211,8 +216,16 @@ func (c *cliApp) Kill() error {
 	return c.reader.Close()
 }
 
-func (c *cliApp) handleActions(line string) error {
-	line = strings.TrimSpace(line)
+func (c *cliApp) handleActions(args []string) error {
+	if len(args) == 0 {
+		return c.help()
+	}
+	cmd := strings.TrimSpace(args[0])
+
+	cmdArgs := make([]string, 0)
+	if len(args) > 1 {
+		cmdArgs = args[1:]
+	}
 
 	staticCmds := []struct {
 		command string
@@ -227,16 +240,16 @@ func (c *cliApp) handleActions(line string) error {
 		{"location", c.location},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
+		{"version", c.version},
 	}
 
 	argCmds := []struct {
 		command string
-		handler func(argsString string) error
+		handler func(args []string) error
 	}{
 		{"connect", c.connect},
 		{"identities", c.identities},
 		{"orders", c.order},
-		{"version", c.version},
 		{"license", c.license},
 		{"proposals", c.proposals},
 		{"service", c.service},
@@ -245,7 +258,7 @@ func (c *cliApp) handleActions(line string) error {
 	}
 
 	for _, c := range staticCmds {
-		if line == c.command {
+		if cmd == c.command {
 			err := c.handler()
 			if err != nil {
 				clio.Error(formatForHuman(err))
@@ -255,9 +268,8 @@ func (c *cliApp) handleActions(line string) error {
 	}
 
 	for _, c := range argCmds {
-		if strings.HasPrefix(line, c.command) {
-			argsString := strings.TrimSpace(line[len(c.command):])
-			err := c.handler(argsString)
+		if cmd == c.command {
+			err := c.handler(cmdArgs)
 			if err != nil {
 				clio.Error(formatForHuman(err))
 			}
@@ -265,15 +277,11 @@ func (c *cliApp) handleActions(line string) error {
 		}
 	}
 
-	if len(line) > 0 {
-		return c.help()
-	}
-	return nil
+	// Command matched nothing
+	return c.help()
 }
 
-func (c *cliApp) connect(argsString string) (err error) {
-	args := strings.Fields(argsString)
-
+func (c *cliApp) connect(args []string) (err error) {
 	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
 	if len(args) < 3 {
 		clio.Info(helpMsg)
@@ -336,9 +344,7 @@ func (c *cliApp) connect(argsString string) (err error) {
 	return nil
 }
 
-func (c *cliApp) mmnApiKey(argsString string) (err error) {
-	args := strings.Fields(argsString)
-
+func (c *cliApp) mmnApiKey(args []string) (err error) {
 	profileUrl := c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
 	usage := "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
@@ -461,10 +467,14 @@ func (c *cliApp) natStatus() (err error) {
 	return nil
 }
 
-func (c *cliApp) proposals(filter string) (err error) {
+func (c *cliApp) proposals(args []string) (err error) {
 	proposals := c.fetchProposals()
 	c.fetchedProposals = proposals
 
+	filter := ""
+	if len(args) > 0 {
+		filter = strings.Join(args, " ")
+	}
 	filterMsg := ""
 	if filter != "" {
 		filterMsg = fmt.Sprintf("(filter: '%s')", filter)
@@ -537,15 +547,19 @@ func (c *cliApp) stopClient() (err error) {
 	return nil
 }
 
-func (c *cliApp) version(argsString string) (err error) {
+func (c *cliApp) version() (err error) {
 	fmt.Println(versionSummary)
 	return nil
 }
 
-func (c *cliApp) license(argsString string) (err error) {
-	if argsString == "warranty" {
+func (c *cliApp) license(args []string) (err error) {
+	arg := ""
+	if len(args) > 0 {
+		arg = args[0]
+	}
+	if arg == "warranty" {
 		fmt.Print(metadata.LicenseWarranty)
-	} else if argsString == "conditions" {
+	} else if arg == "conditions" {
 		fmt.Print(metadata.LicenseConditions)
 	} else {
 		clio.Info("identities command:\n    warranty\n    conditions")
