@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -45,6 +46,7 @@ type Config struct {
 	user               map[string]interface{}
 	cli                map[string]interface{}
 	eventBus           eventbus.EventBus
+	mu                 sync.RWMutex
 }
 
 // Current global configuration instance.
@@ -61,17 +63,23 @@ func NewConfig() *Config {
 }
 
 func (cfg *Config) userConfigLoaded() bool {
+	cfg.mu.RLock()
+	defer cfg.mu.RUnlock()
 	return cfg.userConfigLocation != ""
 }
 
 // EnableEventPublishing enables config event publishing to the event bus.
 func (cfg *Config) EnableEventPublishing(eb eventbus.EventBus) {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
 	cfg.eventBus = eb
 }
 
 // LoadUserConfig loads and remembers user config location.
 func (cfg *Config) LoadUserConfig(location string) error {
 	log.Debug().Msg("Loading user configuration: " + location)
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
 	cfg.userConfigLocation = location
 	_, err := toml.DecodeFile(cfg.userConfigLocation, &cfg.user)
 	if err != nil {
@@ -88,6 +96,8 @@ func (cfg *Config) LoadUserConfig(location string) error {
 // SaveUserConfig saves user configuration to the file from which it was loaded.
 func (cfg *Config) SaveUserConfig() error {
 	log.Info().Msg("Saving user configuration")
+	cfg.mu.RLock()
+	defer cfg.mu.RUnlock()
 	if !cfg.userConfigLoaded() {
 		return errors.New("user configuration cannot be saved, because it must be loaded first")
 	}
@@ -110,70 +120,86 @@ func (cfg *Config) SaveUserConfig() error {
 
 // GetDefaultConfig returns default configuration.
 func (cfg *Config) GetDefaultConfig() map[string]interface{} {
-	return cfg.defaults
+	cfg.mu.RLock()
+	defer cfg.mu.RUnlock()
+	return deepCopyStrMap(cfg.defaults)
 }
 
 // GetUserConfig returns user configuration.
 func (cfg *Config) GetUserConfig() map[string]interface{} {
-	return cfg.user
+	cfg.mu.RLock()
+	defer cfg.mu.RUnlock()
+	return deepCopyStrMap(cfg.user)
 }
 
 // GetConfig returns current configuration.
 func (cfg *Config) GetConfig() map[string]interface{} {
+	cfg.mu.RLock()
+	defer cfg.mu.RUnlock()
 	config := make(map[string]interface{})
 	mergeMaps(cfg.defaults, config, nil)
 	mergeMaps(cfg.user, config, nil)
 	mergeMaps(cfg.cli, config, nil)
-	return config
+	return deepCopyStrMap(config)
 }
 
 // SetDefault sets default value for key.
 func (cfg *Config) SetDefault(key string, value interface{}) {
-	cfg.set(&cfg.defaults, key, value)
+	cfg.set(cfg.defaults, key, value)
 }
 
 // SetUser sets user configuration value for key.
 func (cfg *Config) SetUser(key string, value interface{}) {
-	if cfg.eventBus != nil {
-		cfg.eventBus.Publish(AppTopicConfig(key), value)
-	}
-	cfg.set(&cfg.user, key, value)
+	func() {
+		cfg.mu.RLock()
+		defer cfg.mu.RUnlock()
+		if cfg.eventBus != nil {
+			cfg.eventBus.Publish(AppTopicConfig(key), value)
+		}
+	}()
+	cfg.set(cfg.user, key, value)
 }
 
 // SetCLI sets value passed via CLI flag for key.
 func (cfg *Config) SetCLI(key string, value interface{}) {
-	cfg.set(&cfg.cli, key, value)
+	cfg.set(cfg.cli, key, value)
 }
 
 // RemoveUser removes user configuration value for key.
 func (cfg *Config) RemoveUser(key string) {
-	cfg.remove(&cfg.user, key)
+	cfg.remove(cfg.user, key)
 }
 
 // RemoveCLI removes configured CLI flag value by key.
 func (cfg *Config) RemoveCLI(key string) {
-	cfg.remove(&cfg.cli, key)
+	cfg.remove(cfg.cli, key)
 }
 
 // set sets value to a particular configuration value map.
-func (cfg *Config) set(configMap *map[string]interface{}, key string, value interface{}) {
+func (cfg *Config) set(configMap map[string]interface{}, key string, value interface{}) {
 	key = strings.ToLower(key)
 	segments := strings.Split(key, ".")
 
 	lastKey := strings.ToLower(segments[len(segments)-1])
-	deepestMap := deepSearch(*configMap, segments[0:len(segments)-1])
+
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+	deepestMap := deepSearch(configMap, segments[0:len(segments)-1])
 
 	// set innermost value
 	deepestMap[lastKey] = value
 }
 
 // remove removes a configured value from a particular configuration map.
-func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
+func (cfg *Config) remove(configMap map[string]interface{}, key string) {
 	key = strings.ToLower(key)
 	segments := strings.Split(key, ".")
 
 	lastKey := strings.ToLower(segments[len(segments)-1])
-	deepestMap := deepSearch(*configMap, segments[0:len(segments)-1])
+
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+	deepestMap := deepSearch(configMap, segments[0:len(segments)-1])
 
 	// set innermost value
 	delete(deepestMap, lastKey)
@@ -182,19 +208,45 @@ func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
 // Get returns stored config value as-is.
 func (cfg *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
+	cfg.mu.RLock()
+	defer cfg.mu.RUnlock()
 	cliValue := SearchMap(cfg.cli, segments)
 	if cliValue != nil {
 		log.Debug().Msgf("Returning CLI value %v:%v", key, cliValue)
-		return cliValue
+		return copyValue(cliValue)
 	}
 	userValue := SearchMap(cfg.user, segments)
 	if userValue != nil {
 		log.Debug().Msgf("Returning user config value %v:%v", key, userValue)
-		return userValue
+		return copyValue(userValue)
 	}
 	defaultValue := SearchMap(cfg.defaults, segments)
 	log.Debug().Msgf("Returning default value %v:%v", key, defaultValue)
-	return defaultValue
+	return copyValue(defaultValue)
+}
+
+// returns scalar values as is. deep-copies maps.
+func copyValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		return deepCopyStrMap(v)
+	default:
+		return v
+	}
+}
+
+// deepcopy for nested config structures.
+func deepCopyStrMap(src map[string]interface{}) map[string]interface{} {
+	dst := make(map[string]interface{})
+	for sk, sv := range src {
+		switch typedValue := sv.(type) {
+		case map[string]interface{}:
+			dst[sk] = deepCopyStrMap(typedValue)
+		default:
+			dst[sk] = typedValue
+		}
+	}
+	return dst
 }
 
 // GetBool returns config value as bool.
