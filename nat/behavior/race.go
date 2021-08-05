@@ -57,11 +57,10 @@ func RacingDiscoverNATBehavior(ctx context.Context, addresses []string, timeout 
 	for i := 0; i < count; i++ {
 		select {
 		case res := <-results:
-			if res.err != nil {
-				lastError = res.err
-			} else {
-				return res.res, res.err
+			if res.err == nil {
+				return res.res, nil
 			}
+			lastError = res.err
 		case <-ctx1.Done():
 			return "", ctx1.Err()
 		}
