@@ -1229,13 +1229,19 @@
         "tags": [
           "NAT"
         ],
-        "summary": "Shows NAT type in terms of traversal capabilies",
+        "summary": "Shows NAT type in terms of traversal capabilities.",
         "operationId": "NATTypeDTO",
         "responses": {
           "200": {
             "description": "NAT type",
             "schema": {
               "$ref": "#/definitions/NATTypeDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }

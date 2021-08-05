@@ -61,13 +61,17 @@ func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ ht
 // NATType provides NAT type in terms of traversal capabilities
 // swagger:operation GET /nat/type NAT NATTypeDTO
 // ---
-// summary: Shows NAT type in terms of traversal capabilies
+// summary: Shows NAT type in terms of traversal capabilities.
 // description: Returns NAT type. May produce invalid result while VPN connection is established
 // responses:
 //   200:
 //     description: NAT type
 //     schema:
 //       "$ref": "#/definitions/NATTypeDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ne *NATEndpoint) NATType(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	res, err := ne.natProber.Probe(req.Context())
 	if err != nil {
