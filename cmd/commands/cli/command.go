@@ -440,20 +440,21 @@ func (c *cliApp) natStatus() (err error) {
 		return
 	}
 
-	if connStatus.Status == statusNotConnected {
-		natType, err := c.tequilapi.NATType()
-		switch {
-		case err != nil:
-			clio.Warn(err)
-		case natType.Error != "":
-			clio.Warn(natType.Error)
-		default:
-			displayedNATType, ok := nattype.HumanReadableTypes[natType.Type]
-			if !ok {
-				displayedNATType = natType.Type
-			}
-			clio.Info("NAT type:", displayedNATType)
+	if connStatus.Status != statusNotConnected {
+		return nil
+	}
+	natType, err := c.tequilapi.NATType()
+	switch {
+	case err != nil:
+		clio.Warn(err)
+	case natType.Error != "":
+		clio.Warn(natType.Error)
+	default:
+		displayedNATType, ok := nattype.HumanReadableTypes[natType.Type]
+		if !ok {
+			displayedNATType = natType.Type
 		}
+		clio.Info("NAT type:", displayedNATType)
 	}
 
 	return nil
