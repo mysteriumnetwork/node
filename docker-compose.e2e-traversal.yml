@@ -314,9 +314,8 @@ services:
         ipv4_address: 172.31.0.203
 
   hermes:
-    image: mysteriumnetwork/hermes:matic-rc3
+    image: mysteriumnetwork/hermes:1.0.0
     environment:
-      PORT: 8889
       LOG_LEVEL: trace
     expose:
       - 8889
@@ -357,6 +356,7 @@ services:
       -MongoDatabase hermes
       -MongoReplSet ""
       -redisAddress "redis:6379"
+      -bindAddr "0.0.0.0:8889"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254
@@ -462,14 +462,13 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:matic-rc3
+    image: mysteriumnetwork/hermes:1.0.0
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
       - net.ipv4.conf.eth0.rp_filter=0
       - net.ipv4.conf.eth1.rp_filter=0
     environment:
-      PORT: 8889
       LOG_LEVEL: trace
     expose:
       - 8889
@@ -504,6 +503,7 @@ services:
       -MongoDatabase hermes2
       -MongoReplSet ""
       -redisAddress "redis:6379"
+      -bindAddr "0.0.0.0:8889"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254

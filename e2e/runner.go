@@ -226,7 +226,9 @@ func seedHTTPMock() error {
 
 		req.Header.Add("Content-Type", "application/json")
 		_, err = client.Do(req)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

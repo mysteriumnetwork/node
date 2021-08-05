@@ -203,7 +203,7 @@ services:
         start_period: 5s
 
   hermes:
-    image: mysteriumnetwork/hermes:matic-rc3
+    image: mysteriumnetwork/hermes:1.0.0
     environment:
       PORT: 8889
       LOG_LEVEL: trace
@@ -240,13 +240,13 @@ services:
       -MongoDatabase hermes
       -MongoReplSet ""
       -redisAddress "redis:6379"
+      -bindAddr="0.0.0.0:8889"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
   hermes2:
-    image: mysteriumnetwork/hermes:matic-rc3
+    image: mysteriumnetwork/hermes:1.0.0
     environment:
-      PORT: 8889
       LOG_LEVEL: trace
     expose:
       - 8889
@@ -281,6 +281,7 @@ services:
       -MongoReplSet ""
       -transactorBaseUri "http://transactor:8888/api/v1/"
       -redisAddress "redis:6379"
+      -bindAddr="0.0.0.0:8889"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
