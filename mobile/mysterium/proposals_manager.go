@@ -35,6 +35,11 @@ const (
 	qualityLevelHigh   = 2
 )
 
+// AutoNATType passed as NATCompatibility parameter in proposal request
+// indicates NAT type should be probed automatically immediately within given
+// request
+const AutoNATType = "auto"
+
 type proposalQualityLevel int
 
 const (
@@ -176,7 +181,7 @@ func (m *proposalsManager) addToCache(proposals []proposal.PricedServiceProposal
 
 func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]proposal.PricedServiceProposal, error) {
 	filter := req.toFilter()
-	if filter.NATCompatibility == "auto" {
+	if filter.NATCompatibility == AutoNATType {
 		natType, err := m.natProber.Probe(context.TODO())
 		if err != nil {
 			filter.NATCompatibility = ""

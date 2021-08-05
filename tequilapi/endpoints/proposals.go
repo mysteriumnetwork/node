@@ -126,7 +126,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 	}()
 
 	natCompatibility := req.URL.Query().Get("nat_compatibility")
-	if natCompatibility == "auto" {
+	if natCompatibility == contract.AutoNATType {
 		natType, err := pe.natProber.Probe(req.Context())
 		if err != nil {
 			natCompatibility = ""

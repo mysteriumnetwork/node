@@ -36,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
@@ -117,8 +118,8 @@ type cliApp struct {
 const (
 	redColor                  = "\033[31m%s\033[0m"
 	identityDefaultPassphrase = ""
-	statusConnected           = "Connected"
-	statusNotConnected        = "NotConnected"
+	statusConnected           = string(connectionstate.Connected)
+	statusNotConnected        = string(connectionstate.NotConnected)
 )
 
 var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
