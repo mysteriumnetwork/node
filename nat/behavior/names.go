@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package contract
+package behavior
 
-// NATStatusDTO gives information about NAT traversal success or failure
-// swagger:model NATStatusDTO
-type NATStatusDTO struct {
-	Status string `json:"status"`
-	Error  string `json:"error"`
-}
-
-// NATTypeDTO gives information about NAT type in terms of traversal capabilities
-// swagger:model NATTypeDTO
-type NATTypeDTO struct {
-	Type  string `json:"type"`
-	Error string `json:"error"`
+// HumanReadableTypes is a map of enum values to human readable strings
+var HumanReadableTypes = map[string]string{
+	NATTypeNone:               "None",
+	NATTypeFullCone:           "Full Cone",
+	NATTypeRestrictedCone:     "Restricted Cone",
+	NATTypePortRestrictedCone: "Port Restricted Cone",
+	NATTypeSymmetric:          "Symmetric",
 }

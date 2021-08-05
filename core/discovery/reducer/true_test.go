@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package contract
+package reducer
 
-// NATStatusDTO gives information about NAT traversal success or failure
-// swagger:model NATStatusDTO
-type NATStatusDTO struct {
-	Status string `json:"status"`
-	Error  string `json:"error"`
-}
+import (
+	"testing"
 
-// NATTypeDTO gives information about NAT type in terms of traversal capabilities
-// swagger:model NATTypeDTO
-type NATTypeDTO struct {
-	Type  string `json:"type"`
-	Error string `json:"error"`
+	"github.com/stretchr/testify/assert"
+)
+
+func Test_True(t *testing.T) {
+	assert.True(t, True(proposalEmpty))
 }

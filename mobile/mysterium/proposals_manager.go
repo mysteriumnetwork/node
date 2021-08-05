@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"time"
@@ -34,6 +35,11 @@ const (
 	qualityLevelHigh   = 2
 )
 
+// AutoNATType passed as NATCompatibility parameter in proposal request
+// indicates NAT type should be probed automatically immediately within given
+// request
+const AutoNATType = "auto"
+
 type proposalQualityLevel int
 
 const (
@@ -45,14 +51,15 @@ const (
 
 // GetProposalsRequest represents proposals request.
 type GetProposalsRequest struct {
-	ServiceType     string
-	LocationCountry string
-	IPType          string
-	Refresh         bool
-	PriceHourMax    float64
-	PriceGiBMax     float64
-	QualityMin      float32
-	PresetID        int
+	ServiceType      string
+	LocationCountry  string
+	IPType           string
+	Refresh          bool
+	PriceHourMax     float64
+	PriceGiBMax      float64
+	QualityMin       float32
+	PresetID         int
+	NATCompatibility string
 }
 
 func (r GetProposalsRequest) toFilter() *proposal.Filter {
@@ -62,6 +69,7 @@ func (r GetProposalsRequest) toFilter() *proposal.Filter {
 		IPType:             r.IPType,
 		QualityMin:         r.QualityMin,
 		ExcludeUnsupported: true,
+		NATCompatibility:   r.NATCompatibility,
 	}
 }
 
@@ -103,9 +111,14 @@ type proposalRepository interface {
 	Proposal(market.ProposalID) (*proposal.PricedServiceProposal, error)
 }
 
+type natProber interface {
+	Probe(context.Context) (string, error)
+}
+
 func newProposalsManager(
 	repository proposalRepository,
 	filterPresetStorage *proposal.FilterPresetStorage,
+	natProber natProber,
 	cacheTTL time.Duration,
 ) *proposalsManager {
 	return &proposalsManager{
@@ -121,6 +134,7 @@ type proposalsManager struct {
 	cachedAt            time.Time
 	cacheTTL            time.Duration
 	filterPresetStorage *proposal.FilterPresetStorage
+	natProber           natProber
 }
 
 func (m *proposalsManager) isCacheStale() bool {
@@ -130,7 +144,7 @@ func (m *proposalsManager) isCacheStale() bool {
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposalsResponse, error) {
 	// Get proposals from cache if exists.
 	if req.Refresh || m.isCacheStale() {
-		apiProposals, err := m.getFromRepository(req.toFilter())
+		apiProposals, err := m.getFromRepository(req)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +179,16 @@ func (m *proposalsManager) addToCache(proposals []proposal.PricedServiceProposal
 	m.cachedAt = time.Now()
 }
 
-func (m *proposalsManager) getFromRepository(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
+func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]proposal.PricedServiceProposal, error) {
+	filter := req.toFilter()
+	if filter.NATCompatibility == AutoNATType {
+		natType, err := m.natProber.Probe(context.TODO())
+		if err != nil {
+			filter.NATCompatibility = ""
+		} else {
+			filter.NATCompatibility = natType
+		}
+	}
 	allProposals, err := m.repository.Proposals(filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposals from repository: %w", err)

@@ -36,9 +36,11 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
+	nattype "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/services"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -116,7 +118,8 @@ type cliApp struct {
 const (
 	redColor                  = "\033[31m%s\033[0m"
 	identityDefaultPassphrase = ""
-	statusConnected           = "Connected"
+	statusConnected           = string(connectionstate.Connected)
+	statusNotConnected        = string(connectionstate.NotConnected)
 )
 
 var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
@@ -431,6 +434,30 @@ func (c *cliApp) natStatus() (err error) {
 	} else {
 		clio.Infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
 	}
+
+	connStatus, err := c.tequilapi.ConnectionStatus()
+	if err != nil {
+		clio.Warn(err)
+		return
+	}
+
+	if connStatus.Status != statusNotConnected {
+		return nil
+	}
+	natType, err := c.tequilapi.NATType()
+	switch {
+	case err != nil:
+		clio.Warn(err)
+	case natType.Error != "":
+		clio.Warn(natType.Error)
+	default:
+		displayedNATType, ok := nattype.HumanReadableTypes[natType.Type]
+		if !ok {
+			displayedNATType = natType.Type
+		}
+		clio.Info("NAT type:", displayedNATType)
+	}
+
 	return nil
 }
 

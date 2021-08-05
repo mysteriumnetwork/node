@@ -67,6 +67,7 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
+	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -112,6 +113,7 @@ type Dependencies struct {
 	BrokerConnection nats.Connection
 
 	NATService       nat.NATService
+	NATProber        natprobe.NATProber
 	Storage          *boltdb.Bolt
 	Keystore         *identity.Keystore
 	IdentityManager  identity.Manager
@@ -897,6 +899,7 @@ func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
+	di.NATProber = natprobe.NewNATProber()
 	if options.NATHolePunching {
 		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(

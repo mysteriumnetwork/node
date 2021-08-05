@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"context"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -43,6 +44,7 @@ func (s *proposalManagerTestSuite) SetupTest() {
 	s.proposalsManager = newProposalsManager(
 		s.repository,
 		nil,
+		&mockNATProber{"none", nil},
 		60*time.Second,
 	)
 }
@@ -150,4 +152,13 @@ func (m *mockRepository) Proposal(id market.ProposalID) (*proposal.PricedService
 
 func (m *mockRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
 	return m.data, nil
+}
+
+type mockNATProber struct {
+	returnRes string
+	returnErr error
+}
+
+func (m *mockNATProber) Probe(_ context.Context) (string, error) {
+	return m.returnRes, m.returnErr
 }

@@ -77,7 +77,7 @@ func Test_Finder_MatchProposals(t *testing.T) {
 func Test_Finder_FindProposals(t *testing.T) {
 	storage := createFullStorage()
 
-	proposals, err := storage.FindProposals(proposal.Filter{})
+	proposals, err := storage.FindProposals(&proposal.Filter{})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 3)
 	assert.Exactly(t,
@@ -85,7 +85,7 @@ func Test_Finder_FindProposals(t *testing.T) {
 		proposals,
 	)
 
-	proposals, err = storage.FindProposals(proposal.Filter{ServiceType: "streaming"})
+	proposals, err = storage.FindProposals(&proposal.Filter{ServiceType: "streaming"})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 2)
 	assert.Exactly(t,

@@ -24,6 +24,11 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
+// AutoNATType passed as nat_compatibility parameter to proposal discovery
+// indicates NAT type should be probed automatically immediately within given
+// request
+const AutoNATType = "auto"
+
 // NewProposalDTO maps to API service proposal.
 func NewProposalDTO(p proposal.PricedServiceProposal) ProposalDTO {
 	return ProposalDTO{

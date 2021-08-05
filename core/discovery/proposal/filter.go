@@ -18,6 +18,8 @@
 package proposal
 
 import (
+	"sync"
+
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -35,38 +37,49 @@ type Filter struct {
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
 	IncludeMonitoringFailed            bool
+	NATCompatibility                   string
+	condition                          reducer.AndCondition
+	buildOnce                          sync.Once
+}
+
+// Build ensures filter conditions are assembled
+func (filter *Filter) Build() {
+	filter.buildOnce.Do(func() {
+		conditions := make([]reducer.AndCondition, 0)
+
+		conditions = append(conditions, reducer.True)
+
+		if filter.ExcludeUnsupported {
+			conditions = append(conditions, reducer.Unsupported())
+		}
+
+		if filter.ProviderID != "" {
+			conditions = append(conditions, reducer.Equal(reducer.ProviderID, filter.ProviderID))
+		}
+		if filter.ServiceType != "" {
+			conditions = append(conditions, reducer.Equal(reducer.ServiceType, filter.ServiceType))
+		}
+		if filter.IPType != "" {
+			conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.IPType))
+		}
+		if filter.LocationCountry != "" {
+			conditions = append(conditions, reducer.Equal(reducer.LocationCountry, filter.LocationCountry))
+		}
+		if filter.AccessPolicy != "all" {
+			if filter.AccessPolicy != "" || filter.AccessPolicySource != "" {
+				conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicy, filter.AccessPolicySource))
+			}
+		}
+		filter.condition = reducer.And(conditions...)
+	})
+
 }
 
 // Matches return flag if filter matches given proposal
 func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
-	conditions := make([]reducer.AndCondition, 0)
+	filter.Build()
 
-	if filter.ExcludeUnsupported {
-		conditions = append(conditions, reducer.Unsupported())
-	}
-
-	if filter.ProviderID != "" {
-		conditions = append(conditions, reducer.Equal(reducer.ProviderID, filter.ProviderID))
-	}
-	if filter.ServiceType != "" {
-		conditions = append(conditions, reducer.Equal(reducer.ServiceType, filter.ServiceType))
-	}
-	if filter.IPType != "" {
-		conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.IPType))
-	}
-	if filter.LocationCountry != "" {
-		conditions = append(conditions, reducer.Equal(reducer.LocationCountry, filter.LocationCountry))
-	}
-	if filter.AccessPolicy != "all" {
-		if filter.AccessPolicy != "" || filter.AccessPolicySource != "" {
-			conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicy, filter.AccessPolicySource))
-		}
-	}
-
-	if len(conditions) > 0 {
-		return reducer.And(conditions...)(proposal)
-	}
-	return true
+	return filter.condition(proposal)
 }
 
 // ToAPIQuery serialises filter to query of Mysterium API
@@ -82,6 +95,7 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 		AccessPolicySource:      filter.AccessPolicySource,
 		QualityMin:              filter.QualityMin,
 		IncludeMonitoringFailed: filter.IncludeMonitoringFailed,
+		NATCompatibility:        filter.NATCompatibility,
 	}
 
 	return query
