@@ -57,9 +57,16 @@ func (c *cliApp) identities(argsString string) (err error) {
 		return
 	}
 
-	args := strings.Fields(argsString)
-	action := args[0]
-	actionArgs := args[1:]
+	if err = validateArgs(argsString); err != nil {
+		clio.Error(err)
+		return
+	}
+
+	action, actionArgs, err := parseCommandAndArgs(argsString)
+	if err != nil {
+		clio.Error(err)
+		return
+	}
 
 	switch action {
 	case "list":
