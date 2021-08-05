@@ -130,7 +130,7 @@ func ReleaseGithubNightly() error {
 	return releaseGithub(&releaseGithubOpts{
 		owner:      env.Str(env.GithubOwner),
 		repository: "nightly",
-		version:    fmt.Sprintf("nightly-%s", time.Now().Format("02012006")),
+		version:    fmt.Sprintf("nightly-%s", time.Now().Format("20060102")),
 		token:      env.Str(env.GithubAPIToken),
 		createTag:  true,
 	})
