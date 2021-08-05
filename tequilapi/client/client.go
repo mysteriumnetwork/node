@@ -349,6 +349,13 @@ func (client *Client) Proposals() ([]contract.ProposalDTO, error) {
 	return client.proposals(url.Values{})
 }
 
+// ProposalsNATCompatible returns proposals for services which we can connect to
+func (client *Client) ProposalsNATCompatible() ([]contract.ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("nat_compatibility", contract.AutoNATType)
+	return client.proposals(queryParams)
+}
+
 func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error) {
 	response, err := client.http.Get("proposals", query)
 	if err != nil {

@@ -507,7 +507,7 @@ func (c *cliApp) proposals(args []string) (err error) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	proposals, err := c.tequilapi.Proposals()
+	proposals, err := c.tequilapi.ProposalsNATCompatible()
 	if err != nil {
 		clio.Warn(err)
 		return []contract.ProposalDTO{}
