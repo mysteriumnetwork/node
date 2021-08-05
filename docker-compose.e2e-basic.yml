@@ -49,7 +49,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:testnet3-rc3
+    image: mysteriumnetwork/discovery:2.0.0
     expose:
       - 8080
     environment:
@@ -59,6 +59,7 @@ services:
       - BROKER_URL=broker
       - UNIVERSE_JWT_SECRET=suchsecret
       - REDIS_ADDRESS=redis:6379
+      - BADGER_ADDRESS=http://badger:1234
     depends_on:
       - db
       - redis

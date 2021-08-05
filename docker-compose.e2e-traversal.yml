@@ -101,7 +101,7 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery:
-    image: mysteriumnetwork/discovery:testnet3-rc3
+    image: mysteriumnetwork/discovery:2.0.0
     depends_on:
       - db
       - redis
@@ -122,6 +122,7 @@ services:
       - BROKER_URL=broker
       - REDIS_ADDRESS=redis:6379
       - UNIVERSE_JWT_SECRET=suchsecret
+      - BADGER_ADDRESS=http://badger:1234
     dns: 172.30.0.254
     networks:
       public0:
