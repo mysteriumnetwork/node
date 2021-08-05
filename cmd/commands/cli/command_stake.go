@@ -27,7 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-func (c *cliApp) stake(argsString string) (err error) {
+func (c *cliApp) stake(args []string) (err error) {
 	var usage = strings.Join([]string{
 		"Usage: stake <action> [args]",
 		"Available actions:",
@@ -35,12 +35,11 @@ func (c *cliApp) stake(argsString string) (err error) {
 		"  " + usageDecreaseStake,
 	}, "\n")
 
-	if len(argsString) == 0 {
+	if len(args) == 0 {
 		clio.Info(usage)
 		return errWrongArgumentCount
 	}
 
-	args := strings.Fields(argsString)
 	action := args[0]
 	actionArgs := args[1:]
 
@@ -51,7 +50,7 @@ func (c *cliApp) stake(argsString string) (err error) {
 		return c.decreaseStake(actionArgs)
 	default:
 		fmt.Println(usage)
-		return errUnknownSubCommand(argsString)
+		return errUnknownSubCommand(args[0])
 	}
 }
 
