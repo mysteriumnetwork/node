@@ -20,13 +20,13 @@ package endpoints
 import (
 	"context"
 	"encoding/json"
-	"github.com/mysteriumnetwork/node/nat"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )

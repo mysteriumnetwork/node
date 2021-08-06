@@ -17,6 +17,7 @@
 
 package nat
 
+// NATType represents nat type
 type NATType string
 
 // Enum of DiscoverNATBehavior return values

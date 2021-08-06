@@ -19,10 +19,10 @@ package endpoints
 
 import (
 	"context"
-	"github.com/mysteriumnetwork/node/nat"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )

@@ -20,7 +20,6 @@ package mysterium
 import (
 	"context"
 	"encoding/json"
-	"github.com/mysteriumnetwork/node/nat"
 	"math/big"
 	"testing"
 	"time"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 type proposalManagerTestSuite struct {

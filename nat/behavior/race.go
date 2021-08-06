@@ -21,8 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mysteriumnetwork/node/nat"
 	"time"
+
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // ErrEmptyAddressList indicates there are no servers to get response from

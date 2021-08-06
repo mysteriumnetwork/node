@@ -18,12 +18,12 @@
 package proposal
 
 import (
-	"github.com/mysteriumnetwork/node/nat"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // Filter defines all flags for proposal filtering in discovery of Mysterium Network

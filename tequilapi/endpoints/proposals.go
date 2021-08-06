@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"fmt"
-	"github.com/mysteriumnetwork/node/nat"
 	"net/http"
 	"strconv"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )

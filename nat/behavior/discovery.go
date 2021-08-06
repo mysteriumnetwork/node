@@ -21,11 +21,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mysteriumnetwork/node/nat"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/pion/stun"
 )
 

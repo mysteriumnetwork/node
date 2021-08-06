@@ -21,12 +21,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	nattype "github.com/mysteriumnetwork/node/nat"
 	"io"
 	stdlog "log"
 	"path/filepath"
 	"strings"
 	"time"
+
+	nattype "github.com/mysteriumnetwork/node/nat"
 
 	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"

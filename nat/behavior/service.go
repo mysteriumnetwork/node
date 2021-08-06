@@ -20,10 +20,10 @@ package behavior
 import (
 	"context"
 	"errors"
-	"github.com/mysteriumnetwork/node/nat"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // Only servers compatible with RFC 5780 are usable!

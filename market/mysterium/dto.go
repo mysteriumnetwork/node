@@ -19,9 +19,10 @@ package mysterium
 
 import (
 	"fmt"
-	"github.com/mysteriumnetwork/node/nat"
 	"net/url"
 	"strconv"
+
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // ProposalsQuery represents URL query for proposal listing

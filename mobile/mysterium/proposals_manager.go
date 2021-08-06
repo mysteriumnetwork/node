@@ -20,13 +20,13 @@ package mysterium
 import (
 	"context"
 	"fmt"
-	"github.com/mysteriumnetwork/node/nat"
 	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 )

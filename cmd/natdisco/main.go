@@ -21,10 +21,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/mysteriumnetwork/node/nat"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/mysteriumnetwork/node/nat"
 
 	"github.com/mysteriumnetwork/node/nat/behavior"
 )
