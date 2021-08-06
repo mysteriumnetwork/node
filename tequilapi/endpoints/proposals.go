@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"fmt"
+	"github.com/mysteriumnetwork/node/nat"
 	"net/http"
 	"strconv"
 
@@ -125,7 +126,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		return float32(f)
 	}()
 
-	natCompatibility := req.URL.Query().Get("nat_compatibility")
+	natCompatibility := nat.NATType(req.URL.Query().Get("nat_compatibility"))
 	if natCompatibility == contract.AutoNATType {
 		natType, err := pe.natProber.Probe(req.Context())
 		if err != nil {

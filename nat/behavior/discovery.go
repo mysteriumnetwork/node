@@ -21,20 +21,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mysteriumnetwork/node/nat"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/pion/stun"
-)
-
-// Enum of DiscoverNATBehavior return values
-const (
-	NATTypeNone               = "none"
-	NATTypeFullCone           = "fullcone"
-	NATTypeRestrictedCone     = "rcone"
-	NATTypePortRestrictedCone = "prcone"
-	NATTypeSymmetric          = "symmetric"
 )
 
 // Enum of DiscoverNATMapping return values
@@ -87,7 +79,7 @@ func (c *stunServerConn) Close() error {
 
 // DiscoverNATBehavior returns either one of NATType* constants describing
 // NAT behavior in practical sense for P2P connections or error
-func DiscoverNATBehavior(ctx context.Context, address string, timeout time.Duration) (string, error) {
+func DiscoverNATBehavior(ctx context.Context, address string, timeout time.Duration) (nat.NATType, error) {
 	if timeout == 0 {
 		timeout = DefaultTimeout
 	}
@@ -98,9 +90,9 @@ func DiscoverNATBehavior(ctx context.Context, address string, timeout time.Durat
 	}
 	switch mapping {
 	case MappingAddressDependent, MappingAddressPortDependent:
-		return NATTypeSymmetric, nil
+		return nat.NATTypeSymmetric, nil
 	case MappingNone:
-		return NATTypeNone, nil
+		return nat.NATTypeNone, nil
 	}
 
 	filtering, err := DiscoverNATFiltering(ctx, address, timeout)
@@ -109,11 +101,11 @@ func DiscoverNATBehavior(ctx context.Context, address string, timeout time.Durat
 	}
 	switch filtering {
 	case FilteringIndependent:
-		return NATTypeFullCone, nil
+		return nat.NATTypeFullCone, nil
 	case FilteringAddress:
-		return NATTypeRestrictedCone, nil
+		return nat.NATTypeRestrictedCone, nil
 	default:
-		return NATTypePortRestrictedCone, nil
+		return nat.NATTypePortRestrictedCone, nil
 	}
 }
 

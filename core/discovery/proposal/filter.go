@@ -18,6 +18,7 @@
 package proposal
 
 import (
+	"github.com/mysteriumnetwork/node/nat"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
@@ -37,7 +38,7 @@ type Filter struct {
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
 	IncludeMonitoringFailed            bool
-	NATCompatibility                   string
+	NATCompatibility                   nat.NATType
 	condition                          reducer.AndCondition
 	buildOnce                          sync.Once
 }

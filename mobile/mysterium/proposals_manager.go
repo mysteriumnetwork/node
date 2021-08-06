@@ -20,6 +20,7 @@ package mysterium
 import (
 	"context"
 	"fmt"
+	"github.com/mysteriumnetwork/node/nat"
 	"math/big"
 	"time"
 
@@ -59,7 +60,7 @@ type GetProposalsRequest struct {
 	PriceGiBMax      float64
 	QualityMin       float32
 	PresetID         int
-	NATCompatibility string
+	NATCompatibility nat.NATType
 }
 
 func (r GetProposalsRequest) toFilter() *proposal.Filter {
@@ -112,7 +113,7 @@ type proposalRepository interface {
 }
 
 type natProber interface {
-	Probe(context.Context) (string, error)
+	Probe(context.Context) (nat.NATType, error)
 }
 
 func newProposalsManager(

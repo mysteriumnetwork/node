@@ -15,15 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package behavior
+package nat
 
-import "github.com/mysteriumnetwork/node/nat"
+type NATType string
 
-// HumanReadableTypes is a map of enum values to human readable strings
-var HumanReadableTypes = map[nat.NATType]string{
-	nat.NATTypeNone:               "None",
-	nat.NATTypeFullCone:           "Full Cone",
-	nat.NATTypeRestrictedCone:     "Restricted Cone",
-	nat.NATTypePortRestrictedCone: "Port Restricted Cone",
-	nat.NATTypeSymmetric:          "Symmetric",
-}
+// Enum of DiscoverNATBehavior return values
+const (
+	NATTypeNone               NATType = "none"
+	NATTypeFullCone           NATType = "fullcone"
+	NATTypeRestrictedCone     NATType = "rcone"
+	NATTypePortRestrictedCone NATType = "prcone"
+	NATTypeSymmetric          NATType = "symmetric"
+)

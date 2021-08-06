@@ -20,6 +20,7 @@ package behavior
 import (
 	"context"
 	"errors"
+	"github.com/mysteriumnetwork/node/nat"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -41,7 +42,7 @@ var ErrInappropriateState = errors.New("NAT probing is impossible at this connec
 // NATProber is an abstaction over instances capable probing NAT and
 // returning either it's type or error.
 type NATProber interface {
-	Probe(context.Context) (string, error)
+	Probe(context.Context) (nat.NATType, error)
 }
 
 // ConnectionStatusProvider is a subset of connection.Manager methods
@@ -72,7 +73,7 @@ func newConcurrentNATProber(servers []string, timeout time.Duration) *concurrent
 	}
 }
 
-func (p *concurrentNATProber) Probe(ctx context.Context) (string, error) {
+func (p *concurrentNATProber) Probe(ctx context.Context) (nat.NATType, error) {
 	return RacingDiscoverNATBehavior(ctx, p.servers, p.timeout)
 }
 
@@ -89,7 +90,7 @@ func newGatedNATProber(connStatusProvider ConnectionStatusProvider, next NATProb
 	}
 }
 
-func (p *gatedNATProber) Probe(ctx context.Context) (string, error) {
+func (p *gatedNATProber) Probe(ctx context.Context) (nat.NATType, error) {
 	if p.connStatusProvider.Status().State != connectionstate.NotConnected {
 		return "", ErrInappropriateState
 	}

@@ -459,7 +459,7 @@ func (c *cliApp) natStatus() (err error) {
 	default:
 		displayedNATType, ok := nattype.HumanReadableTypes[natType.Type]
 		if !ok {
-			displayedNATType = natType.Type
+			displayedNATType = string(natType.Type)
 		}
 		clio.Info("NAT type:", displayedNATType)
 	}

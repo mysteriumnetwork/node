@@ -20,6 +20,7 @@ package mysterium
 import (
 	"context"
 	"encoding/json"
+	"github.com/mysteriumnetwork/node/nat"
 	"math/big"
 	"testing"
 	"time"
@@ -155,10 +156,10 @@ func (m *mockRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedSe
 }
 
 type mockNATProber struct {
-	returnRes string
+	returnRes nat.NATType
 	returnErr error
 }
 
-func (m *mockNATProber) Probe(_ context.Context) (string, error) {
+func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
 	return m.returnRes, m.returnErr
 }

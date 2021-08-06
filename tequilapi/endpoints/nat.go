@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"context"
+	"github.com/mysteriumnetwork/node/nat"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -33,7 +34,7 @@ type NATEndpoint struct {
 }
 
 type natProber interface {
-	Probe(context.Context) (string, error)
+	Probe(context.Context) (nat.NATType, error)
 }
 
 // NewNATEndpoint creates and returns nat endpoint
