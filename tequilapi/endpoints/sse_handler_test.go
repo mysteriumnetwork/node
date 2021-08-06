@@ -133,8 +133,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 {
   "payload": {
     "nat_status": {
-      "status": "",
-      "error": ""
+      "status": ""
     },
     "service_info": null,
     "sessions": [],
@@ -218,8 +217,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 {
   "payload": {
     "nat_status": {
-      "status": "",
-      "error": ""
+      "status": ""
     },
     "service_info": null,
     "sessions": [],

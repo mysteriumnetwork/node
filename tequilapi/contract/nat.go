@@ -21,12 +21,12 @@ package contract
 // swagger:model NATStatusDTO
 type NATStatusDTO struct {
 	Status string `json:"status"`
-	Error  string `json:"error"`
+	Error  string `json:"error,omitempty"`
 }
 
 // NATTypeDTO gives information about NAT type in terms of traversal capabilities
 // swagger:model NATTypeDTO
 type NATTypeDTO struct {
 	Type  string `json:"type"`
-	Error string `json:"error"`
+	Error string `json:"error,omitempty"`
 }
