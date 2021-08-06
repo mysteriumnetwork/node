@@ -19,7 +19,10 @@ package behavior
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 )
 
 // Only servers compatible with RFC 5780 are usable!
@@ -31,18 +34,32 @@ var compatibleSTUNServers = []string{
 
 const concurrentRequestTimeout = 1 * time.Second
 
+// ErrInappropriateState error is returned by gatedNATProber when connection
+// is active
+var ErrInappropriateState = errors.New("NAT probing is impossible at this connection state")
+
 // NATProber is an abstaction over instances capable probing NAT and
 // returning either it's type or error.
 type NATProber interface {
 	Probe(context.Context) (string, error)
 }
 
-// NewNATProber constructs some suitable NATProber without any implementation
-// guarantees.
-func NewNATProber() NATProber {
-	return newConcurrentNATProber(compatibleSTUNServers, concurrentRequestTimeout)
+// ConnectionStatusProvider is a subset of connection.Manager methods
+// to provide gatedNATProber with current connection status
+type ConnectionStatusProvider interface {
+	Status() connectionstate.Status
 }
 
+// NewNATProber constructs some suitable NATProber without any implementation
+// guarantees.
+func NewNATProber(connStatusProvider ConnectionStatusProvider) NATProber {
+	var prober NATProber
+	prober = newConcurrentNATProber(compatibleSTUNServers, concurrentRequestTimeout)
+	prober = newGatedNATProber(connStatusProvider, prober)
+	return prober
+}
+
+// Probes NAT status with parallel tests against multiple STUN servers
 type concurrentNATProber struct {
 	servers []string
 	timeout time.Duration
@@ -57,4 +74,24 @@ func newConcurrentNATProber(servers []string, timeout time.Duration) *concurrent
 
 func (p *concurrentNATProber) Probe(ctx context.Context) (string, error) {
 	return RacingDiscoverNATBehavior(ctx, p.servers, p.timeout)
+}
+
+// Gates calls to other NATProber, allowing them only when node is not connected
+type gatedNATProber struct {
+	next               NATProber
+	connStatusProvider ConnectionStatusProvider
+}
+
+func newGatedNATProber(connStatusProvider ConnectionStatusProvider, next NATProber) *gatedNATProber {
+	return &gatedNATProber{
+		next:               next,
+		connStatusProvider: connStatusProvider,
+	}
+}
+
+func (p *gatedNATProber) Probe(ctx context.Context) (string, error) {
+	if p.connStatusProvider.Status().State != connectionstate.NotConnected {
+		return "", ErrInappropriateState
+	}
+	return p.next.Probe(ctx)
 }

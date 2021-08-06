@@ -573,6 +573,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.P2PDialer,
 	)
 
+	di.NATProber = natprobe.NewNATProber(di.ConnectionManager)
+
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
 	if err != nil {
@@ -899,7 +901,6 @@ func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
-	di.NATProber = natprobe.NewNATProber()
 	if options.NATHolePunching {
 		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
