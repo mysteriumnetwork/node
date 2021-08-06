@@ -21,6 +21,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/mysteriumnetwork/node/nat"
 	"os"
 	"strings"
 	"time"
@@ -58,7 +59,7 @@ func run() int {
 	if *raw {
 		fmt.Println(res)
 	} else {
-		fmt.Println("NAT Type:", behavior.HumanReadableTypes[res])
+		fmt.Println("NAT Type:", nat.HumanReadableTypes[res])
 	}
 	return 0
 }

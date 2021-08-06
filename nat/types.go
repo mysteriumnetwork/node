@@ -27,3 +27,12 @@ const (
 	NATTypePortRestrictedCone NATType = "prcone"
 	NATTypeSymmetric          NATType = "symmetric"
 )
+
+// HumanReadableTypes is a map of enum values to human readable strings
+var HumanReadableTypes = map[NATType]string{
+	NATTypeNone:               "None",
+	NATTypeFullCone:           "Full Cone",
+	NATTypeRestrictedCone:     "Restricted Cone",
+	NATTypePortRestrictedCone: "Port Restricted Cone",
+	NATTypeSymmetric:          "Symmetric",
+}
