@@ -47,7 +47,6 @@ func TestInstall(t *testing.T) {
 		"debian-stretch",
 		"ubuntu-bionic",
 		"ubuntu-focal",
-		"ubuntu-groovy",
 		"ubuntu-hirsute",
 	}
 	for _, img := range images {
