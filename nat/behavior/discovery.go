@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/pion/stun"
@@ -68,14 +69,19 @@ var (
 )
 
 type stunServerConn struct {
-	conn        net.PacketConn
+	conn        *net.UDPConn
 	LocalAddr   net.Addr
 	RemoteAddr  *net.UDPAddr
 	OtherAddr   *net.UDPAddr
 	messageChan chan *stun.Message
+	stopChan    chan struct{}
+	stopOnce    sync.Once
 }
 
 func (c *stunServerConn) Close() error {
+	c.stopOnce.Do(func() {
+		close(c.stopChan)
+	})
 	return c.conn.Close()
 }
 
@@ -283,7 +289,7 @@ func parse(msg *stun.Message) (ret struct {
 	return ret
 }
 
-// Given an address string, returns a StunServerConn
+// Given an address string, returns a stunServerConn
 func connect(address string) (*stunServerConn, error) {
 	addr, err := net.ResolveUDPAddr("udp4", address)
 	if err != nil {
@@ -294,14 +300,15 @@ func connect(address string) (*stunServerConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	mChan := listen(c)
-
-	return &stunServerConn{
+	serverConn := &stunServerConn{
 		conn:        c,
 		LocalAddr:   c.LocalAddr(),
 		RemoteAddr:  addr,
-		messageChan: mChan,
-	}, nil
+		messageChan: make(chan *stun.Message),
+		stopChan:    make(chan struct{}),
+	}
+	serverConn.listen()
+	return serverConn, nil
 }
 
 // Send request and wait for response or timeout
@@ -331,17 +338,18 @@ func (c *stunServerConn) roundTrip(ctx context.Context, msg *stun.Message, addr 
 	}
 }
 
-// taken from https://github.com/pion/stun/blob/master/cmd/stun-traversal/main.go
-func listen(conn *net.UDPConn) (messages chan *stun.Message) {
-	messages = make(chan *stun.Message)
+func (c *stunServerConn) listen() {
 	go func() {
-		defer close(messages)
+		defer close(c.messageChan)
 		for {
 			buf := make([]byte, 1024)
 
-			n, _, err := conn.ReadFromUDP(buf)
+			n, _, err := c.conn.ReadFromUDP(buf)
 			if err != nil {
-				return
+				if n == 0 {
+					return
+				}
+				continue
 			}
 			buf = buf[:n]
 
@@ -349,10 +357,14 @@ func listen(conn *net.UDPConn) (messages chan *stun.Message) {
 			m.Raw = buf
 			err = m.Decode()
 			if err != nil {
-				return
+				continue
 			}
 
-			messages <- m
+			select {
+			case c.messageChan <- m:
+			case <-c.stopChan:
+				return
+			}
 		}
 	}()
 	return
