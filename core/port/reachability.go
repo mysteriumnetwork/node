@@ -69,25 +69,35 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 
 	// Send probes. Proceed to listen after first send success.
 	sendResultChan := make(chan error)
+	aggregatedSenderError := make(chan error)
 
+	// Collect and aggregate output of senders. Yield result after first success.
+	// Drain rest until all of them done.
+	go func() {
+		var (
+			success bool
+			lastErr error
+		)
+		for i := 0; i < count; i++ {
+			lastErr = <-sendResultChan
+			if lastErr == nil && !success {
+				success = true
+				aggregatedSenderError <- nil
+			}
+		}
+		if !success {
+			aggregatedSenderError <- lastErr
+		}
+	}()
+
+	// Spawn senders
 	for _, address := range echoServerAddresses {
 		go func(echoServerAddress string) {
-			err := sendProbe(ctx, echoServerAddress, msg)
-			select {
-			case sendResultChan <- err:
-			default:
-			}
+			sendResultChan <- sendProbe(ctx, echoServerAddress, msg)
 		}(address)
 	}
 
-	for i := 0; i < count; i++ {
-		err = <-sendResultChan
-		if err == nil {
-			break
-		}
-	}
-
-	if err != nil {
+	if err := <-aggregatedSenderError; err != nil {
 		return false, fmt.Errorf("every port probe send failed. last error: %w", err)
 	}
 
