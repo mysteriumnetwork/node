@@ -156,6 +156,7 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleCheckInterval)
+	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
 	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollInterval)
 	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsLongBalancePollInterval)
