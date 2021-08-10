@@ -82,6 +82,8 @@ type Options struct {
 
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
+
+	NATStatusTrackerV2 OptionsNATStatusTrackerV2
 }
 
 // GetOptions retrieves node options from the app configuration.

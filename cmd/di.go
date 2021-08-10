@@ -188,6 +188,7 @@ type Dependencies struct {
 	ResidentCountry *identity.ResidentCountry
 
 	PayoutAddressStorage *payout.AddressStorage
+	NATStatusV2Keeper    *nat.StatusTrackerV2
 }
 
 // Bootstrap initiates all container dependencies
@@ -249,10 +250,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
-		return err
-	}
-
 	portRange, err := getUDPListenPorts()
 	if err != nil {
 		return err
@@ -274,6 +271,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
 		return err
 	}
 
@@ -910,6 +911,20 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
+
+	sessionProviderFunc := func(providerID string) (results []nat.Session) {
+		for _, session := range di.QualityClient.ProviderSessions(providerID) {
+			results = append(results, nat.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
+		}
+		return results
+	}
+
+	di.NATStatusV2Keeper = nat.NewStatusTrackerV2(
+		sessionProviderFunc,
+		di.IdentityManager,
+		di.EventBus,
+		options.NATStatusTrackerV2,
+	)
 
 	return nil
 }
