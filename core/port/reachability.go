@@ -107,7 +107,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 	}
 
 	// Await response
-	ctx1, cl := context.WithTimeout(ctx, timeout)
+	ctx, cl := context.WithTimeout(ctx, timeout)
 	defer cl()
 	responseChan := make(chan struct{})
 
@@ -131,7 +131,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 				select {
 				case responseChan <- struct{}{}:
 					return
-				case <-ctx1.Done():
+				case <-ctx.Done():
 					return
 				}
 			}
@@ -142,7 +142,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 	select {
 	case <-responseChan:
 		return true, nil
-	case <-ctx1.Done():
+	case <-ctx.Done():
 		return false, nil
 	}
 }
