@@ -30,13 +30,12 @@ import (
 )
 
 const (
-	PortFieldSize = 2
-	UUIDSize      = uuid.Size
-	PacketSize    = PortFieldSize + UUIDSize
-	SendPackets   = 3
+	portFieldSize = 2
+	packetSize    = portFieldSize + uuid.Size
+	sendPackets   = 3
 )
 
-// ErrServerAddressList indicates there are no servers to get response from
+// ErrEmptyServerAddressList indicates there are no servers to get response from
 var ErrEmptyServerAddressList = errors.New("empty server address list specified")
 
 // GloballyReachable checks if UDP port is reachable from global Internet,
@@ -59,14 +58,14 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 	defer rxSock.Close()
 
 	// Prepare request
-	msg := make([]byte, PacketSize)
+	msg := make([]byte, packetSize)
 	binary.BigEndian.PutUint16(msg, uint16(port.Num()))
 
 	probeUUID, err := uuid.NewV4()
 	if err != nil {
 		return false, err
 	}
-	copy(msg[PortFieldSize:], probeUUID[:])
+	copy(msg[portFieldSize:], probeUUID[:])
 
 	// Send probes. Proceed to listen after first send success.
 	sendResultChan := make(chan error)
@@ -81,7 +80,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 				}
 				defer txSock.Close()
 
-				for i := 0; i < 3; i++ {
+				for i := 0; i < sendPackets; i++ {
 					_, err = txSock.Write(msg)
 					if err != nil && i == 0 {
 						return err
@@ -139,7 +138,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 		}
 	}()
 
-	// Either response will be receiver or not (context timeout)
+	// Either response will be received or not. Both cases are valid results.
 	select {
 	case <-responseChan:
 		return true, nil
