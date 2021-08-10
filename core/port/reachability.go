@@ -72,22 +72,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 
 	for _, address := range echoServerAddresses {
 		go func(echoServerAddress string) {
-			err := func() error {
-				dialer := net.Dialer{}
-				txSock, err := dialer.DialContext(ctx, "udp", echoServerAddress)
-				if err != nil {
-					return err
-				}
-				defer txSock.Close()
-
-				for i := 0; i < sendPackets; i++ {
-					_, err = txSock.Write(msg)
-					if err != nil && i == 0 {
-						return err
-					}
-				}
-				return nil
-			}()
+			err := sendProbe(ctx, echoServerAddress, msg)
 			select {
 			case sendResultChan <- err:
 			default:
@@ -111,32 +96,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 	defer cl()
 	responseChan := make(chan struct{})
 
-	// Background context-aware receiver
-	go func() {
-		buf := make([]byte, uuid.Size)
-		for {
-			n, _, err := rxSock.ReadFromUDP(buf)
-			if err != nil {
-				if n == 0 {
-					return
-				}
-				continue
-			}
-
-			if n < uuid.Size {
-				continue
-			}
-
-			if bytes.Equal(buf, probeUUID[:]) {
-				select {
-				case responseChan <- struct{}{}:
-					return
-				case <-ctx.Done():
-					return
-				}
-			}
-		}
-	}()
+	go probeReceiver(ctx, rxSock, probeUUID, responseChan)
 
 	// Either response will be received or not. Both cases are valid results.
 	select {
@@ -144,5 +104,50 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 		return true, nil
 	case <-ctx.Done():
 		return false, nil
+	}
+}
+
+func sendProbe(ctx context.Context, echoServerAddress string, msg []byte) error {
+	dialer := net.Dialer{}
+	txSock, err := dialer.DialContext(ctx, "udp", echoServerAddress)
+	if err != nil {
+		return err
+	}
+	defer txSock.Close()
+
+	for i := 0; i < sendPackets; i++ {
+		_, err = txSock.Write(msg)
+		if err != nil && i == 0 {
+			return err
+		}
+	}
+	return nil
+}
+
+// receives datagrams from socket until one with correct probe UUID received.
+// notifies caller via supplied channel.
+func probeReceiver(ctx context.Context, rxSock *net.UDPConn, probeUUID uuid.UUID, responseChan chan<- struct{}) {
+	buf := make([]byte, uuid.Size)
+	for {
+		n, _, err := rxSock.ReadFromUDP(buf)
+		if err != nil {
+			if n == 0 {
+				return
+			}
+			continue
+		}
+
+		if n < uuid.Size {
+			continue
+		}
+
+		if bytes.Equal(buf, probeUUID[:]) {
+			select {
+			case responseChan <- struct{}{}:
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
 	}
 }
