@@ -58,6 +58,13 @@ type ProposalQuality struct {
 	MonitoringFailed bool       `json:"monitoringFailed"`
 }
 
+// ProviderSession represents a provider session
+type ProviderSession struct {
+	ProposalID       ProposalID   `json:"proposalId"`
+	ConnectCount     ConnectCount `json:"connectCount"`
+	MonitoringFailed bool         `json:"monitoringFailed"`
+}
+
 // ProposalID represents the struct used to uniquely identify proposals.
 type ProposalID struct {
 	ProviderID  string `json:"providerId" example:"0x286f0e9eb943eca95646bf4933698856579b096e"`
