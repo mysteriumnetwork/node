@@ -123,6 +123,11 @@ type proposalPricer interface {
 func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
+			Nat: contract.Nat{
+				Status: contract.NATStatusDTO{
+					Status: string(nat.Pending),
+				},
+			},
 			NATStatus: contract.NATStatusDTO{
 				Status: nat.StatusNotFinished,
 			},

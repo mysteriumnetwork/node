@@ -34,3 +34,8 @@ type NATTypeDTO struct {
 	Type  nat.NATType `json:"type"`
 	Error string      `json:"error,omitempty"`
 }
+
+// Nat nat related information
+type Nat struct {
+	Status NATStatusDTO `json:"status"`
+}
