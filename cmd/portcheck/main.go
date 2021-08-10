@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/port"
@@ -30,19 +31,26 @@ import (
 const addressListSeparator = ","
 
 var (
-	serverAddress = flag.String("server", "vm-0.com:4589", "asymmetric UDP echo server")
-	reqTimeout    = flag.Duration("req-timeout", 1*time.Second, "timeout to wait for UDP response")
-	checkedPort   = flag.Int("port", 12345, "checked port")
-	totalTimeout  = flag.Duration("total-timeout", 3*time.Second, "overall operation deadline")
-//	raw           = flag.Bool("raw", false, "print raw NAT_TYPE_* value")
+	serverList   = flag.String("server-list", "vm-0.com:4589", "comma-separated list of asymmetric UDP echo servers")
+	reqTimeout   = flag.Duration("req-timeout", 2*time.Second, "timeout to wait for UDP response")
+	checkedPort  = flag.Int("port", 12345, "checked port")
+	totalTimeout = flag.Duration("total-timeout", 5*time.Second, "overall operation deadline")
 )
 
 func run() int {
 	flag.Parse()
 
+	var addresses []string
+	for _, address := range strings.Split(*serverList, addressListSeparator) {
+		address = strings.TrimSpace(address)
+		if address != "" {
+			addresses = append(addresses, address)
+		}
+	}
+
 	ctx, cl := context.WithTimeout(context.Background(), *totalTimeout)
 	defer cl()
-	res, err := port.GloballyReachable(ctx, port.Port(*checkedPort), *serverAddress, *reqTimeout)
+	res, err := port.GloballyReachable(ctx, port.Port(*checkedPort), addresses, *reqTimeout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1

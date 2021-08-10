@@ -21,6 +21,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -34,9 +36,17 @@ const (
 	SendPackets   = 3
 )
 
+// ErrServerAddressList indicates there are no servers to get response from
+var ErrEmptyServerAddressList = errors.New("empty server address list specified")
+
 // GloballyReachable checks if UDP port is reachable from global Internet,
 // performing probe against asymmetric UDP echo server
-func GloballyReachable(ctx context.Context, port Port, echoServerAddress string, timeout time.Duration) (bool, error) {
+func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []string, timeout time.Duration) (bool, error) {
+	count := len(echoServerAddresses)
+	if count == 0 {
+		return false, ErrEmptyServerAddressList
+	}
+
 	// Claim port
 	rxAddr := &net.UDPAddr{
 		Port: port.Num(),
@@ -48,14 +58,7 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddress string,
 	}
 	defer rxSock.Close()
 
-	// Send probe
-	dialer := net.Dialer{}
-	txSock, err := dialer.DialContext(ctx, "udp", echoServerAddress)
-	if err != nil {
-		return false, err
-	}
-	defer txSock.Close()
-
+	// Prepare request
 	msg := make([]byte, PacketSize)
 	binary.BigEndian.PutUint16(msg, uint16(port.Num()))
 
@@ -65,11 +68,43 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddress string,
 	}
 	copy(msg[PortFieldSize:], probeUUID[:])
 
-	for i := 0; i < 3; i++ {
-		_, err = txSock.Write(msg)
-		if err != nil && i == 0 {
-			return false, err
+	// Send probes. Proceed to listen after first send success.
+	sendResultChan := make(chan error)
+
+	for _, address := range echoServerAddresses {
+		go func(echoServerAddress string) {
+			err := func() error {
+				dialer := net.Dialer{}
+				txSock, err := dialer.DialContext(ctx, "udp", echoServerAddress)
+				if err != nil {
+					return err
+				}
+				defer txSock.Close()
+
+				for i := 0; i < 3; i++ {
+					_, err = txSock.Write(msg)
+					if err != nil && i == 0 {
+						return err
+					}
+				}
+				return nil
+			}()
+			select {
+			case sendResultChan <- err:
+			default:
+			}
+		}(address)
+	}
+
+	for i := 0; i < count; i++ {
+		err = <-sendResultChan
+		if err == nil {
+			break
 		}
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("every port probe send failed. last error: %w", err)
 	}
 
 	// Await response
