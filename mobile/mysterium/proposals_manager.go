@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 )
@@ -59,7 +60,7 @@ type GetProposalsRequest struct {
 	PriceGiBMax      float64
 	QualityMin       float32
 	PresetID         int
-	NATCompatibility string
+	NATCompatibility nat.NATType
 }
 
 func (r GetProposalsRequest) toFilter() *proposal.Filter {
@@ -112,7 +113,7 @@ type proposalRepository interface {
 }
 
 type natProber interface {
-	Probe(context.Context) (string, error)
+	Probe(context.Context) (nat.NATType, error)
 }
 
 func newProposalsManager(

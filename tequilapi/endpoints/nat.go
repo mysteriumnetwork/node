@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -33,7 +34,7 @@ type NATEndpoint struct {
 }
 
 type natProber interface {
-	Probe(context.Context) (string, error)
+	Probe(context.Context) (nat.NATType, error)
 }
 
 // NewNATEndpoint creates and returns nat endpoint

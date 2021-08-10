@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	nattype "github.com/mysteriumnetwork/node/nat"
+
 	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
@@ -41,7 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
-	nattype "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/services"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -459,7 +460,7 @@ func (c *cliApp) natStatus() (err error) {
 	default:
 		displayedNATType, ok := nattype.HumanReadableTypes[natType.Type]
 		if !ok {
-			displayedNATType = natType.Type
+			displayedNATType = string(natType.Type)
 		}
 		clio.Info("NAT type:", displayedNATType)
 	}

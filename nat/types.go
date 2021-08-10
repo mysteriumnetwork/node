@@ -15,10 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package behavior
+package nat
+
+// NATType represents nat type
+type NATType string
+
+// Enum of DiscoverNATBehavior return values
+const (
+	NATTypeNone               NATType = "none"
+	NATTypeFullCone           NATType = "fullcone"
+	NATTypeRestrictedCone     NATType = "rcone"
+	NATTypePortRestrictedCone NATType = "prcone"
+	NATTypeSymmetric          NATType = "symmetric"
+)
 
 // HumanReadableTypes is a map of enum values to human readable strings
-var HumanReadableTypes = map[string]string{
+var HumanReadableTypes = map[NATType]string{
 	NATTypeNone:               "None",
 	NATTypeFullCone:           "Full Cone",
 	NATTypeRestrictedCone:     "Restricted Cone",

@@ -22,19 +22,21 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // ErrEmptyAddressList indicates there are no servers to get response from
 var ErrEmptyAddressList = errors.New("empty STUN server list specified")
 
 type discoverResult struct {
-	res string
+	res nat.NATType
 	err error
 }
 
 // RacingDiscoverNATBehavior implements concurrent NAT discovery against multiple STUN servers in parallel.
 // First successful response is returned, other probing sessions are cancelled.
-func RacingDiscoverNATBehavior(ctx context.Context, addresses []string, timeout time.Duration) (string, error) {
+func RacingDiscoverNATBehavior(ctx context.Context, addresses []string, timeout time.Duration) (nat.NATType, error) {
 	count := len(addresses)
 
 	ctx1, cl := context.WithCancel(ctx)

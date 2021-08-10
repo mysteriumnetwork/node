@@ -29,6 +29,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 type proposalManagerTestSuite struct {
@@ -155,10 +156,10 @@ func (m *mockRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedSe
 }
 
 type mockNATProber struct {
-	returnRes string
+	returnRes nat.NATType
 	returnErr error
 }
 
-func (m *mockNATProber) Probe(_ context.Context) (string, error) {
+func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
 	return m.returnRes, m.returnErr
 }

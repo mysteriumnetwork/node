@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // Filter defines all flags for proposal filtering in discovery of Mysterium Network
@@ -37,7 +38,7 @@ type Filter struct {
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
 	IncludeMonitoringFailed            bool
-	NATCompatibility                   string
+	NATCompatibility                   nat.NATType
 	condition                          reducer.AndCondition
 	buildOnce                          sync.Once
 }

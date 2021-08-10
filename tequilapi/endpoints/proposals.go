@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -125,7 +126,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		return float32(f)
 	}()
 
-	natCompatibility := req.URL.Query().Get("nat_compatibility")
+	natCompatibility := nat.NATType(req.URL.Query().Get("nat_compatibility"))
 	if natCompatibility == contract.AutoNATType {
 		natType, err := pe.natProber.Probe(req.Context())
 		if err != nil {

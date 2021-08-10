@@ -2960,6 +2960,11 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "NATType": {
+      "description": "NATType represents nat type",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/nat"
+    },
     "NATTypeDTO": {
       "description": "NATTypeDTO gives information about NAT type in terms of traversal capabilities",
       "type": "object",
@@ -2969,8 +2974,7 @@
           "x-go-name": "Error"
         },
         "type": {
-          "type": "string",
-          "x-go-name": "Type"
+          "$ref": "#/definitions/NATType"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

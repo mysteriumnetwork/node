@@ -17,6 +17,10 @@
 
 package contract
 
+import (
+	"github.com/mysteriumnetwork/node/nat"
+)
+
 // NATStatusDTO gives information about NAT traversal success or failure
 // swagger:model NATStatusDTO
 type NATStatusDTO struct {
@@ -27,6 +31,6 @@ type NATStatusDTO struct {
 // NATTypeDTO gives information about NAT type in terms of traversal capabilities
 // swagger:model NATTypeDTO
 type NATTypeDTO struct {
-	Type  string `json:"type"`
-	Error string `json:"error,omitempty"`
+	Type  nat.NATType `json:"type"`
+	Error string      `json:"error,omitempty"`
 }
