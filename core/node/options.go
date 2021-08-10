@@ -187,6 +187,9 @@ func GetOptions() *Options {
 		},
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
+		NATStatusTrackerV2: OptionsNATStatusTrackerV2{
+			PollInterval: config.GetDuration(config.FlagNATStatusPollInterval),
+		},
 	}
 }
 

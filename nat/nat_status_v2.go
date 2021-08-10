@@ -111,10 +111,8 @@ func (k *StatusTrackerV2) startPolling() {
 	k.updateAndAnnounce()
 	go func() {
 		for {
-			select {
-			case <-time.After(k.pollInterval):
-				k.updateAndAnnounce()
-			}
+			<-time.After(k.pollInterval)
+			k.updateAndAnnounce()
 		}
 	}()
 }
@@ -123,18 +121,19 @@ func (k *StatusTrackerV2) updateAndAnnounce() {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	id, ok := k.currentIdentity.GetUnlockedIdentity()
+	prevStatus := k.status
 	if ok {
 		k.status = resolveNATStatus(k.providerSessions(id.Address))
 	} else {
 		k.status = Pending
 	}
-	k.publisher.Publish(AppTopicNATStatusUpdate, V2NatStatusEvent{Status: k.status})
+	if prevStatus != k.status {
+		k.publisher.Publish(AppTopicNATStatusUpdate, V2NatStatusEvent{Status: k.status})
+	}
 }
 
 // StatusForce force update status and return current result
 func (k *StatusTrackerV2) StatusForce() NATStatusV2 {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	k.updateAndAnnounce()
 	return k.status
 }

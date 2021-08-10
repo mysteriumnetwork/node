@@ -274,8 +274,8 @@ var (
 	// FlagNATStatusPollInterval nat status poll interval in seconds
 	FlagNATStatusPollInterval = cli.DurationFlag{
 		Name:  "nat-status.poll",
-		Usage: `NAT status poll interval in seconds. Lowest interval of 1 minute is allowed.`,
-		Value: 5 * 60 * time.Second,
+		Usage: `NAT status poll interval. (lower than 1 minute wil be set to 1 minute)`,
+		Value: 5 * time.Minute,
 	}
 )
 
