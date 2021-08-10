@@ -18,6 +18,7 @@
 package state
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -91,6 +92,7 @@ type Keeper struct {
 	consumeNATEvent                      func(e interface{})
 	consumeServiceSessionStatisticsEvent func(e interface{})
 	consumeServiceSessionEarningsEvent   func(e interface{})
+	consumeNATStatusUpdateEvent          func(e interface{})
 	// consumer
 	consumeConnectionStatisticsEvent func(interface{})
 	consumeConnectionThroughputEvent func(interface{})
@@ -141,6 +143,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
 	k.consumeServiceSessionStatisticsEvent = debounce(k.updateSessionStats, debounceDuration)
 	k.consumeServiceSessionEarningsEvent = debounce(k.updateSessionEarnings, debounceDuration)
+	k.consumeNATStatusUpdateEvent = debounce(k.updateNATStatusV2, debounceDuration)
 
 	// consumer
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
@@ -195,6 +198,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(nat.AppTopicNATStatusUpdate, k.consumeNATStatusUpdateEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, k.consumeConnectionStateEvent); err != nil {
@@ -275,6 +281,17 @@ func (k *Keeper) getServiceByID(id string) (se contract.ServiceInfoDTO, found bo
 		}
 	}
 	return
+}
+
+func (k *Keeper) updateNATStatusV2(raw interface{}) {
+	e, ok := raw.(nat.V2NatStatusEvent)
+	if !ok {
+		log.Warn().Msg(fmt.Sprintf("NAT Status update: received `%T` instead of `%T` event - ignoring", raw, nat.V2NatStatusEvent{}))
+		return
+	}
+
+	k.state.Nat.Status.Status = string(e.Status)
+	go k.announceStateChanges(nil)
 }
 
 func (k *Keeper) updateNatStatus(e interface{}) {

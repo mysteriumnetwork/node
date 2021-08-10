@@ -39,12 +39,19 @@ const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
+	Nat Nat
+	// Deprecated: use state.nat
 	NATStatus        contract.NATStatusDTO
 	Services         []contract.ServiceInfoDTO
 	Sessions         []session.History
 	Connection       Connection
 	Identities       []Identity
 	ProviderChannels []pingpong.HermesChannel
+}
+
+// Nat nat related information
+type Nat struct {
+	Status contract.NATStatusDTO
 }
 
 // Identity represents identity and its status.
