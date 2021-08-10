@@ -108,11 +108,10 @@ func NewStatusTrackerV2(
 }
 
 func (k *StatusTrackerV2) startPolling() {
-	k.updateAndAnnounce()
 	go func() {
 		for {
-			<-time.After(k.pollInterval)
 			k.updateAndAnnounce()
+			time.Sleep(k.pollInterval)
 		}
 	}()
 }
