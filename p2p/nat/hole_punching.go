@@ -29,8 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
-const pingMaxPorts = 20
-
 type StartPorts func(ctx context.Context, peerIP string, peerPorts, localPorts []int) ([]*net.UDPConn, error)
 
 type natHolePunchingPort struct {
@@ -42,7 +40,6 @@ func NewNatHolePunchingPortProvider() PortProvider {
 	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
-		// return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
 
 	return &natHolePunchingPort{
@@ -65,5 +62,5 @@ func (hp *natHolePunchingPort) PreparePorts() (ports []int, release func(), star
 }
 
 func (hp *natHolePunchingPort) Start(ctx context.Context, peerIP string, peerPorts, localPorts []int) ([]*net.UDPConn, error) {
-	return hp.pinger.PingConsumerPeer(context.Background(), "remove this id", peerIP, localPorts, peerPorts, 1, 2)
+	return hp.pinger.PingConsumerPeer(context.Background(), "remove this id", peerIP, localPorts, peerPorts, providerInitialTTL, requiredConnCount)
 }

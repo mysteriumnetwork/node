@@ -37,7 +37,6 @@ func NewUPnPPortProvider() PortProvider {
 	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
-		// return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
 
 	return &upnpPort{
@@ -47,7 +46,7 @@ func NewUPnPPortProvider() PortProvider {
 }
 
 func (up *upnpPort) PreparePorts() (ports []int, release func(), start StartPorts, err error) {
-	localPorts, err := up.pool.AcquireMultiple(2)
+	localPorts, err := up.pool.AcquireMultiple(requiredConnCount)
 	if err != nil {
 		return nil, nil, nil, err
 	}

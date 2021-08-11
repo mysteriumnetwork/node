@@ -95,6 +95,9 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 			return
 		}
 	})
+	if err != nil {
+		return nil, fmt.Errorf("could not subscribe to ready subject: %w", err)
+	}
 
 	config, err = m.startConfigExchange(config, ctx, brokerConn, providerID, serviceType, consumerID)
 	if err != nil {
