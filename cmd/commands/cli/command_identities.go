@@ -36,7 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 )
 
-func (c *cliApp) identities(argsString string) (err error) {
+func (c *cliApp) identities(args []string) (err error) {
 	usage := strings.Join([]string{
 		"Usage: identities <action> [args]",
 		"Available actions:",
@@ -52,12 +52,11 @@ func (c *cliApp) identities(argsString string) (err error) {
 		"  " + usageWithdraw,
 	}, "\n")
 
-	if len(argsString) == 0 {
+	if len(args) == 0 {
 		clio.Info(usage)
 		return
 	}
 
-	args := strings.Fields(argsString)
 	action := args[0]
 	actionArgs := args[1:]
 
@@ -84,7 +83,7 @@ func (c *cliApp) identities(argsString string) (err error) {
 		return c.withdraw(actionArgs)
 	default:
 		fmt.Println(usage)
-		return errUnknownSubCommand(argsString)
+		return errUnknownSubCommand(args[0])
 	}
 }
 

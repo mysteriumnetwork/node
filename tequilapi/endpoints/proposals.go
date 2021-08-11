@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -45,15 +46,17 @@ type proposalsEndpoint struct {
 	pricer             priceAPI
 	locationResolver   location.Resolver
 	filterPresets      proposal.FilterPresetRepository
+	natProber          natProber
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository, natProber natProber) *proposalsEndpoint {
 	return &proposalsEndpoint{
 		proposalRepository: proposalRepository,
 		pricer:             pricer,
 		locationResolver:   locationResolver,
 		filterPresets:      filterPresetRepository,
+		natProber:          natProber,
 	}
 }
 
@@ -98,6 +101,10 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 //     name: quality_min
 //     description: Minimum quality of the provider.
 //     type: number
+//   - in: query
+//     name: nat_compatibility
+//     description: Pick nodes compatible with NAT of specified type. Specify "auto" to probe NAT.
+//     type: string
 // responses:
 //   200:
 //     description: List of proposals
@@ -119,6 +126,16 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		return float32(f)
 	}()
 
+	natCompatibility := nat.NATType(req.URL.Query().Get("nat_compatibility"))
+	if natCompatibility == contract.AutoNATType {
+		natType, err := pe.natProber.Probe(req.Context())
+		if err != nil {
+			natCompatibility = ""
+		} else {
+			natCompatibility = natType
+		}
+	}
+
 	includeMonitoringFailed, _ := strconv.ParseBool(req.URL.Query().Get("include_monitoring_failed"))
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
 		PresetID:                presetID,
@@ -128,6 +145,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 		AccessPolicySource:      req.URL.Query().Get("access_policy_source"),
 		LocationCountry:         req.URL.Query().Get("location_country"),
 		IPType:                  req.URL.Query().Get("ip_type"),
+		NATCompatibility:        natCompatibility,
 		CompatibilityMin:        compatibilityMin,
 		CompatibilityMax:        compatibilityMax,
 		QualityMin:              qualityMin,
@@ -206,8 +224,8 @@ func (pe *proposalsEndpoint) FilterPresets(resp http.ResponseWriter, req *http.R
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository) {
-	pe := NewProposalsEndpoint(proposalRepository, pricer, locationResolver, filterPresetRepository)
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository, natProber natProber) {
+	pe := NewProposalsEndpoint(proposalRepository, pricer, locationResolver, filterPresetRepository, natProber)
 	router.GET("/proposals", pe.List)
 	router.GET("/proposals/filter-presets", pe.FilterPresets)
 	router.GET("/prices/current", pe.CurrentPrice)

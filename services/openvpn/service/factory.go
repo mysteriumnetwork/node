@@ -20,6 +20,8 @@ package service
 import (
 	"crypto/x509/pkix"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -27,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/rs/zerolog/log"
 )
 
 // NewManager creates new instance of Openvpn service
@@ -37,7 +38,6 @@ func NewManager(nodeOptions node.Options,
 	ipResolver ip.Resolver,
 	sessionMap SessionMap,
 	natService nat.NATService,
-	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
 	bus eventbus.EventBus,
 	trafficFirewall firewall.IncomingTrafficFirewall,
@@ -46,7 +46,6 @@ func NewManager(nodeOptions node.Options,
 		nodeOptions:     nodeOptions,
 		serviceOptions:  serviceOptions,
 		natService:      natService,
-		natEventGetter:  natEventGetter,
 		ports:           portPool,
 		bus:             bus,
 		trafficFirewall: trafficFirewall,

@@ -28,7 +28,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -47,6 +46,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -67,6 +67,7 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
+	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -112,6 +113,7 @@ type Dependencies struct {
 	BrokerConnection nats.Connection
 
 	NATService       nat.NATService
+	NATProber        natprobe.NATProber
 	Storage          *boltdb.Bolt
 	Keystore         *identity.Keystore
 	IdentityManager  identity.Manager
@@ -146,7 +148,6 @@ type Dependencies struct {
 	ServiceFirewall firewall.IncomingTrafficFirewall
 
 	NATPinger  traversal.NATPinger
-	NATTracker *event.Tracker
 	PortPool   *port.Pool
 	PortMapper mapping.PortMapper
 
@@ -187,6 +188,7 @@ type Dependencies struct {
 	ResidentCountry *identity.ResidentCountry
 
 	PayoutAddressStorage *payout.AddressStorage
+	NATStatusV2Keeper    *nat.StatusTrackerV2
 }
 
 // Bootstrap initiates all container dependencies
@@ -502,15 +504,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.bootstrapBeneficiaryProvider(nodeOptions)
 	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage, di.MMN)
 
-	di.Transactor = registry.NewTransactor(
-		di.HTTPClient,
-		nodeOptions.Transactor.TransactorEndpointAddress,
-		di.AddressProvider,
-		di.SignerFactory,
-		di.EventBus,
-		di.BCHelper,
-	)
-
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
 	}
@@ -523,6 +516,15 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.Transactor,
 		di.IdentityRegistry,
 		di.AddressProvider,
+		pingpong.ConsumerBalanceTrackerConfig{
+			FastSync: pingpong.PollConfig{
+				Interval: nodeOptions.Payments.BalanceFastPollInterval,
+				Timeout:  nodeOptions.Payments.BalanceFastPollTimeout,
+			},
+			LongSync: pingpong.PollConfig{
+				Interval: nodeOptions.Payments.BalanceLongPollInterval,
+			},
+		},
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -572,6 +574,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.P2PDialer,
 	)
 
+	di.NATProber = natprobe.NewNATProber(di.ConnectionManager)
+
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
 	if err != nil {
@@ -594,6 +598,21 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	sleepNotifier.Subscribe()
 
 	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer, sleepNotifier)
+
+	sessionProviderFunc := func(providerID string) (results []nat.Session) {
+		for _, session := range di.QualityClient.ProviderSessions(providerID) {
+			results = append(results, nat.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
+		}
+		return results
+	}
+
+	di.NATStatusV2Keeper = nat.NewStatusTrackerV2(
+		sessionProviderFunc,
+		di.IdentityManager,
+		di.EventBus,
+		nodeOptions.NATStatusTrackerV2,
+	)
+
 	return nil
 }
 
@@ -724,8 +743,24 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+	di.SignerFactory = func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(di.Keystore, id)
+	}
+	di.Transactor = registry.NewTransactor(
+		di.HTTPClient,
+		options.Transactor.TransactorEndpointAddress,
+		di.AddressProvider,
+		di.SignerFactory,
+		di.EventBus,
+		di.BCHelper,
+	)
 
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
+	registryCfg := registry.IdentityRegistryConfig{
+		TransactorPollInterval: options.Payments.RegistryTransactorPollInterval,
+		TransactorPollTimeout:  options.Payments.RegistryTransactorPollTimeout,
+	}
+
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg); err != nil {
 		return err
 	}
 
@@ -764,9 +799,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 	}
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus, di.ResidentCountry)
 
-	di.SignerFactory = func(id identity.Identity) identity.Signer {
-		return identity.NewSigner(di.Keystore, id)
-	}
 	di.IdentitySelector = identity_selector.NewHandler(
 		di.IdentityManager,
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
@@ -885,11 +917,6 @@ func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
-	di.NATTracker = event.NewTracker()
-	if err := di.NATTracker.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
 	if options.NATHolePunching {
 		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(

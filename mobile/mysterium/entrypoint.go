@@ -45,6 +45,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
+	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/router"
@@ -62,6 +63,7 @@ type MobileNode struct {
 	stateKeeper               *state.Keeper
 	connectionManager         connection.Manager
 	locationResolver          *location.Cache
+	natProber                 natprobe.NATProber
 	identitySelector          selector.Handler
 	signerFactory             identity.SignerFactory
 	identityMover             *identity.Mover
@@ -271,6 +273,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		stateKeeper:               di.StateKeeper,
 		connectionManager:         di.ConnectionManager,
 		locationResolver:          di.LocationResolver,
+		natProber:                 di.NATProber,
 		identitySelector:          di.IdentitySelector,
 		signerFactory:             di.SignerFactory,
 		ipResolver:                di.IPResolver,
@@ -284,6 +287,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
 			di.FilterPresetStorage,
+			di.NATProber,
 			time.Duration(options.CacheTTLSeconds)*time.Second,
 		),
 		pilvytis:       di.Pilvytis,

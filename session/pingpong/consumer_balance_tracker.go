@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -34,8 +33,8 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	pevent "github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/units"
 	"github.com/rs/zerolog/log"
@@ -62,11 +61,25 @@ type ConsumerBalanceTracker struct {
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider
 	stop                                 chan struct{}
 	once                                 sync.Once
+
+	cfg ConsumerBalanceTrackerConfig
 }
 
 type transactorRegistrationStatusProvider interface {
 	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
 	FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error)
+}
+
+// PollConfig sets the interval and timeout for polling.
+type PollConfig struct {
+	Interval time.Duration
+	Timeout  time.Duration
+}
+
+// ConsumerBalanceTrackerConfig represents the consumer balance tracker configuration.
+type ConsumerBalanceTrackerConfig struct {
+	FastSync PollConfig
+	LongSync PollConfig
 }
 
 // NewConsumerBalanceTracker creates a new instance
@@ -78,6 +91,7 @@ func NewConsumerBalanceTracker(
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider,
 	registry registrationStatusProvider,
 	addressProvider addressProvider,
+	cfg ConsumerBalanceTrackerConfig,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
 		balances:                             make(map[balanceKey]ConsumerBalance),
@@ -89,6 +103,7 @@ func NewConsumerBalanceTracker(
 		registry:                             registry,
 		addressProvider:                      addressProvider,
 		stop:                                 make(chan struct{}),
+		cfg:                                  cfg,
 	}
 }
 
@@ -97,7 +112,6 @@ type consumerInfoGetter interface {
 }
 
 type consumerBalanceChecker interface {
-	SubscribeToConsumerBalanceEvent(chainID int64, channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error)
 	GetConsumerChannel(chainID int64, addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error)
 	GetMystBalance(chainID int64, mystAddress, identity common.Address) (*big.Int, error)
 }
@@ -118,7 +132,43 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
+	err = bus.SubscribeAsync(pevent.AppTopicOrderUpdated, cbt.handleOrderUpdatedEvent)
+	if err != nil {
+		return err
+	}
 	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, cbt.handleUnlockEvent)
+}
+
+func (cbt *ConsumerBalanceTracker) handleOrderUpdatedEvent(ev pevent.AppEventOrderUpdated) {
+	if ev.Status.Incomplete() {
+		return
+	}
+
+	go cbt.aggressiveSync(config.GetInt64(config.FlagChainID), identity.FromAddress(ev.IdentityAddress), cbt.cfg.FastSync.Timeout, cbt.cfg.FastSync.Interval)
+}
+
+// Performs a more aggresive type of sync on BC for the given identity on the given chain.
+// Should be used after events that cause a state change on blockchain.
+func (cbt *ConsumerBalanceTracker) aggressiveSync(chainID int64, id identity.Identity, timeout, frequency time.Duration) {
+	b, ok := cbt.getBalance(chainID, id)
+	if ok && b.IsOffchain {
+		log.Info().Bool("is_offchain", b.IsOffchain).Msg("skipping aggresive sync")
+		return
+	}
+
+	stop := make(chan struct{})
+
+	go func() {
+		defer close(stop)
+		select {
+		case <-cbt.stop:
+			return
+		case <-time.After(timeout):
+			return
+		}
+	}()
+
+	cbt.periodicSync(stop, chainID, id, frequency)
 }
 
 // NeedsForceSync returns true if balance needs to be force synced.
@@ -179,7 +229,7 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(data identity.AppEventIdent
 		cbt.ForceBalanceUpdate(data.ChainID, data.ID)
 	}
 
-	go cbt.subscribeToExternalChannelTopup(data.ChainID, data.ID)
+	go cbt.lifetimeBCSync(data.ChainID, data.ID)
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
@@ -212,93 +262,25 @@ func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, 
 	return balance
 }
 
-func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64, id identity.Identity) {
+func (cbt *ConsumerBalanceTracker) lifetimeBCSync(chainID int64, id identity.Identity) {
 	b, ok := cbt.getBalance(chainID, id)
 	if ok && b.IsOffchain {
 		log.Info().Bool("is_offchain", b.IsOffchain).Msg("skipping external channel topup tracking")
 		return
 	}
 
-	// if we've been stopped, don't re-start
-	select {
-	case <-cbt.stop:
-		return
-	default:
-		break
-	}
+	cbt.periodicSync(cbt.stop, chainID, id, cbt.cfg.LongSync.Interval)
+}
 
-	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id)
-	if err != nil {
-		log.Error().Err(err).Msg("could not compute channel address")
-		return
-	}
-
-	myst, err := cbt.addressProvider.GetMystAddress(chainID)
-	if err != nil {
-		log.Error().Err(err).Msg("could not get myst address")
-		return
-	}
-
-	ev, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(chainID, addr, myst, time.Hour*72)
-	if err != nil {
-		log.Error().Err(err).Msg("could not subscribe to channel balance events")
-		return
-	}
-	defer cancel()
-	log.Info().Msgf("Subscribed to channel %v balance events", addr.Hex())
-
-	go func() {
-		<-cbt.stop
-		// cancel closes ev, so no need to close it.
-		cancel()
-	}()
-
-	cbt.bus.Subscribe(registry.AppTopicEthereumClientReconnected, func(interface{}) {
-		cancel()
-	})
-
-	func() {
-		defer func() {
-			// we've been interrupted, restart
-			go cbt.subscribeToExternalChannelTopup(chainID, id)
-		}()
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		for e := range ev {
-			if e == nil {
-				return
-			}
-
-			if cbt.isFreeRegistrationTransaction(ctx, e, id, chainID) {
-				log.Debug().Msg("skipping balance update reason: free registration transaction")
-				return
-			}
-
-			previous, _ := cbt.getBalance(chainID, id)
-			if bytes.Equal(e.To.Bytes(), addr.Bytes()) {
-				cbt.setBalance(chainID, id, ConsumerBalance{
-					BCBalance:          new(big.Int).Add(previous.BCBalance, e.Value),
-					BCSettled:          previous.BCSettled,
-					GrandTotalPromised: previous.GrandTotalPromised,
-					IsOffchain:         previous.IsOffchain,
-					LastOffchainSync:   previous.LastOffchainSync,
-				})
-			} else {
-				cbt.setBalance(chainID, id, ConsumerBalance{
-					BCBalance:          new(big.Int).Sub(previous.BCBalance, e.Value),
-					BCSettled:          previous.BCSettled,
-					GrandTotalPromised: previous.GrandTotalPromised,
-					IsOffchain:         previous.IsOffchain,
-					LastOffchainSync:   previous.LastOffchainSync,
-				})
-			}
-
-			currentBalance, _ := cbt.getBalance(chainID, id)
-			go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
+func (cbt *ConsumerBalanceTracker) periodicSync(stop <-chan struct{}, chainID int64, id identity.Identity, syncPeriod time.Duration) {
+	for {
+		select {
+		case <-cbt.stop:
+			return
+		case <-time.After(syncPeriod):
+			_ = cbt.ForceBalanceUpdate(chainID, id)
 		}
-	}()
+	}
 }
 
 func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Identity) (*big.Int, error) {
@@ -568,20 +550,6 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) increaseBCBalance(chainID int64, id identity.Identity, diff *big.Int) {
-	b, ok := cbt.getBalance(chainID, id)
-	before := b.BCBalance
-	if ok {
-		b.BCBalance = new(big.Int).Add(b.BCBalance, diff)
-		cbt.setBalance(chainID, id, b)
-	} else {
-		cbt.ForceBalanceUpdate(chainID, id)
-	}
-	after, _ := cbt.getBalance(chainID, id)
-
-	go cbt.publishChangeEvent(id, before, after.GetBalance())
-}
-
 func (cbt *ConsumerBalanceTracker) getBalance(chainID int64, id identity.Identity) (ConsumerBalance, bool) {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
@@ -647,29 +615,6 @@ func (cbt *ConsumerBalanceTracker) identityRegistrationStatus(ctx context.Contex
 	}
 
 	return data, backoff.Retry(toRetry, boff)
-}
-
-// isFreeRegistrationTransaction returns true if a given transaction was received
-// because of transactor allowing free registration.
-func (cbt *ConsumerBalanceTracker) isFreeRegistrationTransaction(ctx context.Context, e *bindings.MystTokenTransfer, id identity.Identity, chainID int64) bool {
-	if e.From.Hex() != cbt.addressProvider.GetTransactorAddress().Hex() {
-		return false
-	}
-
-	data, err := cbt.identityRegistrationStatus(ctx, id, chainID)
-	if err != nil {
-		log.Error().Err(fmt.Errorf("could not fetch registration status from transactor: %w", err))
-		return false
-	}
-
-	fess, err := cbt.transactorRegistrationStatusProvider.FetchRegistrationFees(chainID)
-	if err != nil {
-		log.Error().Err(fmt.Errorf("failed to get registration fees: %w", err))
-		return false
-	}
-
-	total := new(big.Int).Add(data.BountyAmount, fess.Fee)
-	return total.Cmp(e.Value) == 0
 }
 
 func safeSub(a, b *big.Int) *big.Int {

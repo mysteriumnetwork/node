@@ -66,7 +66,7 @@ func (r *Repository) Proposal(id market.ProposalID) (*market.ServiceProposal, er
 
 // Proposals returns proposals matching the filter.
 func (r *Repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
-	return r.storage.FindProposals(*filter)
+	return r.storage.FindProposals(filter)
 }
 
 // Start begins proposals synchronization to storage

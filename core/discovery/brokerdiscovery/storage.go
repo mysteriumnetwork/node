@@ -73,7 +73,7 @@ func (s *ProposalStorage) MatchProposals(match ProposalReducer) ([]market.Servic
 }
 
 // FindProposals fetches currently active service proposals from storage by given filter
-func (s *ProposalStorage) FindProposals(filter proposal.Filter) ([]market.ServiceProposal, error) {
+func (s *ProposalStorage) FindProposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
 	return s.MatchProposals(filter.Matches)
 }
 

@@ -42,7 +42,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		NATHolePunching:                true,
 		MysteriumAPIAddress:            "http://discovery:8080/api/v3",
 		BrokerAddresses:                []string{"broker"},
-		EtherClientRPCL1:               []string{"ws://ganache:8545"},
+		EtherClientRPCL1:               []string{"http://ganache:8545"},
 		EtherClientRPCL2:               []string{"ws://ganache2:8545"},
 		FeedbackURL:                    "TODO",
 		QualityOracleURL:               "http://morqa:8085/api/v2",

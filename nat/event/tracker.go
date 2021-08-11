@@ -17,21 +17,8 @@
 
 package event
 
-import (
-	"time"
-
-	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/rs/zerolog/log"
-)
-
 // AppTopicTraversal the topic that traversal events are published on
 const AppTopicTraversal = "Traversal"
-
-// Tracker is able to track NAT traversal events
-type Tracker struct {
-	lastEvent *Event
-	eventChan chan Event
-}
 
 // BuildSuccessfulEvent returns new event for successful NAT traversal
 func BuildSuccessfulEvent(id, stage string) Event {
@@ -41,43 +28,6 @@ func BuildSuccessfulEvent(id, stage string) Event {
 // BuildFailureEvent returns new event for failed NAT traversal
 func BuildFailureEvent(id, stage string, err error) Event {
 	return Event{ID: id, Stage: stage, Successful: false, Error: err}
-}
-
-// NewTracker returns a new instance of event tracker
-func NewTracker() *Tracker {
-	return &Tracker{eventChan: make(chan Event, 1)}
-}
-
-// consumeNATEvent consumes a NAT event
-func (et *Tracker) consumeNATEvent(event Event) {
-	log.Info().Interface("event", event).Msg("Got NAT event")
-
-	et.lastEvent = &event
-	select {
-	case et.eventChan <- event:
-	case <-time.After(300 * time.Millisecond):
-	}
-}
-
-// Subscribe subscribes to relevant events of event bus.
-func (et *Tracker) Subscribe(bus eventbus.Subscriber) error {
-	return bus.Subscribe(AppTopicTraversal, et.consumeNATEvent)
-}
-
-// LastEvent returns the last known event and boolean flag, indicating if such event exists
-func (et *Tracker) LastEvent() *Event {
-	log.Info().Interface("event", et.lastEvent).Msg("Getting last NAT event")
-	return et.lastEvent
-}
-
-// WaitForEvent waits for event to occur
-func (et *Tracker) WaitForEvent() Event {
-	if et.lastEvent != nil {
-		return *et.lastEvent
-	}
-	e := <-et.eventChan
-	log.Info().Interface("event", e).Msg("Got NAT event")
-	return e
 }
 
 // Event represents a NAT traversal related event

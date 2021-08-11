@@ -19,8 +19,6 @@ package proposal
 
 import (
 	"fmt"
-	"math/big"
-	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -36,9 +34,31 @@ type persistentStorage interface {
 }
 
 const (
-	bucketName = "proposal-filter-presets"
-	startingID = 100
+	bucketName         = "proposal-filter-presets"
+	startingID         = 100
+	maxPossibleQuality = 3.
+	avgQualityBaseline = maxPossibleQuality / 2
 )
+
+var defaultPresets = []FilterPreset{
+	{
+		ID:     1,
+		Name:   "Media Streaming",
+		IPType: Residential,
+		filter: mediaStreamingFilter,
+	},
+	{
+		ID:     2,
+		Name:   "Browsing",
+		filter: browsingFilter,
+	},
+	{
+		ID:     3,
+		Name:   "Download",
+		IPType: Hosting,
+		filter: downloadFilter,
+	},
+}
 
 // FilterPresetRepository provides proposal filter presets by which they can be filtered.
 type FilterPresetRepository interface {
@@ -138,113 +158,6 @@ func (fps *FilterPresetStorage) nextID() (int, error) {
 		return 0, err
 	}
 	return last.ID + 1, err
-}
-
-var defaultPresets = []FilterPreset{
-	{
-		ID:     1,
-		Name:   "Media Streaming",
-		IPType: Residential,
-		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
-			var totalBandwidth, averageBandwidth float64
-			var totalQuality, avgQuality float64
-
-			for _, p := range proposals {
-				totalBandwidth += p.Quality.Bandwidth
-				totalQuality += p.Quality.Quality
-			}
-			averageBandwidth = totalBandwidth / float64(len(proposals))
-			avgQuality = totalQuality / float64(len(proposals))
-
-			var filtered []PricedServiceProposal
-			for _, p := range proposals {
-				if p.Quality.Quality >= avgQuality && p.Quality.Bandwidth >= averageBandwidth && p.Location.IPType == "residential" {
-					filtered = append(filtered, p)
-				}
-			}
-
-			sort.SliceStable(filtered, func(i, j int) bool {
-				qx, qy := filtered[i].Quality, filtered[j].Quality
-
-				if qx.Bandwidth == qy.Bandwidth {
-					return qx.Quality > qy.Quality
-				}
-				return qx.Bandwidth > qy.Bandwidth
-			})
-
-			return filtered
-		},
-	},
-	{
-		ID:   2,
-		Name: "Browsing",
-		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
-			totalPerHour, totalPerGiB := new(big.Int), new(big.Int)
-			avgPerHour, avgPerGiB := new(big.Int), new(big.Int)
-			var totalQuality, avgQuality float64
-
-			for _, p := range proposals {
-				totalPerHour = new(big.Int).Add(totalPerHour, p.Price.PricePerHour)
-				totalPerGiB = new(big.Int).Add(totalPerGiB, p.Price.PricePerGiB)
-				totalQuality += p.Quality.Quality
-			}
-			avgPerHour = new(big.Int).Sub(totalPerHour, avgPerHour)
-			avgPerGiB = new(big.Int).Sub(totalPerGiB, avgPerGiB)
-			avgQuality = totalQuality / float64(len(proposals))
-
-			var filtered []PricedServiceProposal
-			for _, p := range proposals {
-				if p.Price.PricePerGiB.Cmp(avgPerGiB) <= 0 && p.Price.PricePerHour.Cmp(avgPerHour) <= 0 && p.Quality.Quality > avgQuality {
-					filtered = append(filtered, p)
-				}
-			}
-			sort.SliceStable(filtered, func(i, j int) bool {
-				qx, qy := filtered[i].Quality, filtered[j].Quality
-				px, py := filtered[i].Price, filtered[j].Price
-				if qx.Quality == qy.Quality {
-					if px.PricePerGiB.Cmp(py.PricePerGiB) == 0 {
-						return px.PricePerHour.Cmp(py.PricePerHour) == -1
-					}
-					return px.PricePerGiB.Cmp(py.PricePerGiB) == -1
-				}
-				return qx.Quality > qy.Quality
-			})
-
-			return filtered
-		},
-	},
-	{
-		ID:     3,
-		Name:   "Download",
-		IPType: Hosting,
-		filter: func(proposals []PricedServiceProposal) []PricedServiceProposal {
-			totalPerHour, totalPerGiB := new(big.Int), new(big.Int)
-			avgPerHour, avgPerGiB := new(big.Int), new(big.Int)
-
-			for _, p := range proposals {
-				totalPerHour = new(big.Int).Add(totalPerHour, p.Price.PricePerHour)
-				totalPerGiB = new(big.Int).Add(totalPerGiB, p.Price.PricePerGiB)
-			}
-			avgPerHour = new(big.Int).Sub(totalPerHour, avgPerHour)
-			avgPerGiB = new(big.Int).Sub(totalPerGiB, avgPerGiB)
-
-			var filtered []PricedServiceProposal
-			for _, p := range proposals {
-				if p.Price.PricePerHour.Cmp(avgPerGiB) <= 0 && p.Price.PricePerHour.Cmp(avgPerHour) <= 0 && p.Location.IPType == "hosting" {
-					filtered = append(filtered, p)
-				}
-			}
-			sort.SliceStable(filtered, func(i, j int) bool {
-				px, py := filtered[i].Price, filtered[j].Price
-				if px.PricePerGiB.Cmp(py.PricePerGiB) == 0 {
-					return px.PricePerHour.Cmp(py.PricePerHour) == -1
-				}
-				return px.PricePerGiB.Cmp(py.PricePerGiB) == -1
-			})
-
-			return filtered
-		},
-	},
 }
 
 // IPType represents type of node

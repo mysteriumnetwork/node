@@ -270,6 +270,13 @@ var (
 		Name:  "resident-country",
 		Usage: "set resident country. If not set initially a default country will be resolved.",
 	}
+
+	// FlagNATStatusPollInterval nat status poll interval in seconds
+	FlagNATStatusPollInterval = cli.DurationFlag{
+		Name:  "nat-status.poll",
+		Usage: `NAT status poll interval. (lower than 1 minute will be set to 1 minute)`,
+		Value: 5 * time.Minute,
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -324,6 +331,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagDocsURL,
 		&FlagDNSResolutionHeadstart,
 		&FlagResidentCountry,
+		&FlagNATStatusPollInterval,
 	)
 
 	return nil
@@ -377,6 +385,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
 	Current.ParseStringFlag(ctx, FlagDocsURL)
 	Current.ParseDurationFlag(ctx, FlagDNSResolutionHeadstart)
+	Current.ParseDurationFlag(ctx, FlagNATStatusPollInterval)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

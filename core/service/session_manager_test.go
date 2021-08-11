@@ -26,18 +26,18 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/trace"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -67,7 +67,6 @@ func (m mockBalanceTracker) Start() error {
 }
 
 func (m mockBalanceTracker) Stop() {
-
 }
 
 func (m mockBalanceTracker) WaitFirstInvoice(time.Duration) error {
@@ -245,13 +244,6 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond, "Waiting for session destroy")
 }
 
-type MockNatEventTracker struct {
-}
-
-func (mnet *MockNatEventTracker) LastEvent() *event.Event {
-	return &event.Event{}
-}
-
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	publisher := mocks.NewEventBus()
 	sessionStore := NewSessionPool(publisher)
@@ -317,7 +309,6 @@ func newManager(service *Instance, sessions *SessionPool, publisher publisher, p
 		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage, price market.Price) (PaymentEngine, error) {
 			return paymentEngine, nil
 		},
-		&MockNatEventTracker{},
 		publisher,
 		&mockP2PChannel{tracer: trace.NewTracer("Provider connect")},
 		DefaultConfig(),

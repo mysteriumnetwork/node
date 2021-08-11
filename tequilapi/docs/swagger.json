@@ -1223,6 +1223,30 @@
         }
       }
     },
+    "/nat/type": {
+      "get": {
+        "description": "Returns NAT type. May produce invalid result while VPN connection is established",
+        "tags": [
+          "NAT"
+        ],
+        "summary": "Shows NAT type in terms of traversal capabilities.",
+        "operationId": "NATTypeDTO",
+        "responses": {
+          "200": {
+            "description": "NAT type",
+            "schema": {
+              "$ref": "#/definitions/NATTypeDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/payment-order-currencies": {
       "get": {
         "description": "Gets all possible currencies that can be used for payments",
@@ -1335,6 +1359,12 @@
             "type": "number",
             "description": "Minimum quality of the provider.",
             "name": "quality_min",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Pick nodes compatible with NAT of specified type. Specify \"auto\" to probe NAT.",
+            "name": "nat_compatibility",
             "in": "query"
           }
         ],
@@ -2140,6 +2170,21 @@
           }
         }
       }
+    },
+    "/v2/nat/status": {
+      "get": {
+        "description": "NAT status returns the last known NAT traversal status",
+        "summary": "Shows NAT status",
+        "operationId": "NAT",
+        "responses": {
+          "200": {
+            "description": "NAT status (\"passed\"/\"failed\"/\"pending)",
+            "schema": {
+              "$ref": "#/definitions/NATStatusDTO"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -2926,6 +2971,25 @@
         "status": {
           "type": "string",
           "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "NATType": {
+      "description": "NATType represents nat type",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/nat"
+    },
+    "NATTypeDTO": {
+      "description": "NATTypeDTO gives information about NAT type in terms of traversal capabilities",
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "type": {
+          "$ref": "#/definitions/NATType"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

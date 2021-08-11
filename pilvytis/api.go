@@ -23,18 +23,18 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 )
 
 // API is object which exposes pilvytis API.
 type API struct {
 	req               *requests.HTTPClient
-	channelCalculator *pingpong.AddressProvider
+	channelCalculator addressProvider
 	signer            identity.SignerFactory
 	lp                locationProvider
 	url               string
@@ -51,8 +51,12 @@ const (
 	exchangeEndpoint     = "payment/exchange-rate"
 )
 
+type addressProvider interface {
+	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+}
+
 // NewAPI returns a new API instance.
-func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, lp locationProvider, cc *pingpong.AddressProvider) *API {
+func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, lp locationProvider, cc addressProvider) *API {
 	return &API{
 		req:               hc,
 		signer:            signer,

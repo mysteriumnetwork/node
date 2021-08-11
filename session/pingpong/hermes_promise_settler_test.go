@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -304,9 +305,9 @@ func TestPromiseSettler_RejectsIfFeesExceedSettlementAmount(t *testing.T) {
 
 	settled := big.NewInt(6000)
 
-	mockSettler := func(crypto.Promise) error { return nil }
+	mockSettler := func(crypto.Promise) (string, error) { return "", nil }
 	err := promiseSettler.settle(mockSettler, identity.Identity{}, common.Address{}, mockPromise, common.Address{}, settled)
-	assert.Equal(t, "Settlement fees exceed earning amount. Please provide more service and try again. Current earnings: 29000, current fees: 30000", err.Error())
+	assert.Equal(t, "settlement fees exceed earning amount. Please provide more service and try again. Current earnings: 29000, current fees: 30000", err.Error())
 }
 
 func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
@@ -315,12 +316,21 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 	hermesFee := big.NewInt(20000)
 	bc := &mockProviderChannelStatusProvider{
 		calculatedFees: hermesFee,
-		sinkToReturn:   make(chan *bindings.HermesImplementationPromiseSettled),
 		subCancel:      func() {},
+		promiseEventsToReturn: []bindings.HermesImplementationPromiseSettled{
+			{},
+		},
+		headerToReturn: &types.Header{
+			Number: big.NewInt(0),
+		},
 	}
 	promiseSettler := hermesPromiseSettler{
 		currentState: make(map[identity.Identity]settlementState),
 		transactor: &mockTransactor{
+			idToReturn: "123",
+			queueToReturn: registry.QueueResponse{
+				State: "done",
+			},
 			feesToReturn: registry.FeesResponse{
 				Fee: transactorFee,
 			},
@@ -330,7 +340,7 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 		bc:                  bc,
 		channelProvider:     &mockHermesChannelProvider{},
 		config: HermesPromiseSettlerConfig{
-			MaxWaitForSettlement: time.Millisecond * 50,
+			SettlementCheckTimeout: time.Millisecond * 50,
 		},
 		settlementHistoryStorage: &settlementHistoryStorageMock{},
 	}
@@ -342,10 +352,9 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 
 	settled := big.NewInt(6000)
 
-	mockSettler := func(crypto.Promise) error { return nil }
+	mockSettler := func(crypto.Promise) (string, error) { return "", nil }
 
-	go func() { bc.sinkToReturn <- &bindings.HermesImplementationPromiseSettled{} }()
-	err := promiseSettler.settle(mockSettler, identity.Identity{}, common.Address{}, mockPromise, common.Address{}, settled)
+	err := promiseSettler.settle(mockSettler, identity.Identity{Address: "0x92fE1c838b08dB4c072DDa805FB4292d9b76B5E7"}, common.HexToAddress("0x07b5fD382b5e375F202184052BeF2C50b3B1404F"), mockPromise, common.Address{}, settled)
 	assert.NoError(t, err)
 }
 
@@ -395,20 +404,20 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 
 // mocks start here
 type mockProviderChannelStatusProvider struct {
-	channelToReturn    client.ProviderChannel
-	channelReturnError error
-	sinkToReturn       chan *bindings.HermesImplementationPromiseSettled
-	subCancel          func()
-	subError           error
-	feeToReturn        uint16
-	feeError           error
-	calculatedFees     *big.Int
-	calculationError   error
-	balanceToReturn    *big.Int
-}
-
-func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
-	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
+	channelToReturn       client.ProviderChannel
+	channelReturnError    error
+	sinkToReturn          chan *bindings.HermesImplementationPromiseSettled
+	subCancel             func()
+	subError              error
+	feeToReturn           uint16
+	feeError              error
+	calculatedFees        *big.Int
+	calculationError      error
+	balanceToReturn       *big.Int
+	headerToReturn        *types.Header
+	errorToReturn         error
+	promiseEventsToReturn []bindings.HermesImplementationPromiseSettled
+	promiseError          error
 }
 
 func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
@@ -435,13 +444,18 @@ func (mpcsp *mockProviderChannelStatusProvider) GetProvidersWithdrawalChannel(ch
 	return client.ProviderChannel{}, nil
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) SubscribeToWithdrawalPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
-	return nil, func() {}, nil
+func (mpcsp *mockProviderChannelStatusProvider) FilterPromiseSettledEventByChannelID(chainID int64, from uint64, to *uint64, hermesID common.Address, providerAddresses [][32]byte) ([]bindings.HermesImplementationPromiseSettled, error) {
+	return mpcsp.promiseEventsToReturn, mpcsp.promiseError
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) HeaderByNumber(chainID int64, number *big.Int) (*types.Header, error) {
+	return mpcsp.headerToReturn, mpcsp.errorToReturn
 }
 
 var cfg = HermesPromiseSettlerConfig{
-	Threshold:            0.1,
-	MaxWaitForSettlement: time.Millisecond * 10,
+	Threshold:               0.1,
+	SettlementCheckTimeout:  time.Millisecond * 10,
+	SettlementCheckInterval: time.Millisecond * 1,
 }
 
 type mockHermesChannelProvider struct {
@@ -490,26 +504,32 @@ type mockTransactor struct {
 
 	statusToReturn registry.TransactorStatusResponse
 	statusError    error
+
+	queueToReturn registry.QueueResponse
+	queueError    error
+
+	idToReturn  string
+	settleError error
 }
 
 func (mt *mockTransactor) FetchSettleFees(chainID int64) (registry.FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 
-func (mt *mockTransactor) SettleAndRebalance(_, _ string, _ crypto.Promise) error {
-	return nil
+func (mt *mockTransactor) SettleAndRebalance(_, _ string, _ crypto.Promise) (string, error) {
+	return mt.idToReturn, mt.settleError
 }
 
-func (mt *mockTransactor) SettleWithBeneficiary(_, _, _ string, _ crypto.Promise) error {
-	return nil
+func (mt *mockTransactor) SettleWithBeneficiary(_, _, _ string, _ crypto.Promise) (string, error) {
+	return mt.idToReturn, mt.settleError
 }
 
-func (mt *mockTransactor) SettleIntoStake(accountantID, providerID string, promise crypto.Promise) error {
-	return nil
+func (mt *mockTransactor) SettleIntoStake(accountantID, providerID string, promise crypto.Promise) (string, error) {
+	return mt.idToReturn, mt.settleError
 }
 
-func (mt *mockTransactor) PayAndSettle(hermesID, providerID string, promise crypto.Promise, beneficiary string, beneficiarySignature string) error {
-	return nil
+func (mt *mockTransactor) PayAndSettle(hermesID, providerID string, promise crypto.Promise, beneficiary string, beneficiarySignature string) (string, error) {
+	return mt.idToReturn, mt.settleError
 }
 
 func (mt *mockTransactor) FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error) {
@@ -518,6 +538,10 @@ func (mt *mockTransactor) FetchRegistrationStatus(id string) ([]registry.Transac
 
 func (mt *mockTransactor) FetchRegistrationFees(chainID int64) (registry.FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
+}
+
+func (mt *mockTransactor) GetQueueStatus(ID string) (registry.QueueResponse, error) {
+	return mt.queueToReturn, mt.queueError
 }
 
 type settlementHistoryStorageMock struct{}

@@ -26,4 +26,5 @@ type Manager interface {
 	HasIdentity(address string) bool
 	Unlock(chainID int64, address string, passphrase string) error
 	IsUnlocked(address string) bool
+	GetUnlockedIdentity() (Identity, bool)
 }

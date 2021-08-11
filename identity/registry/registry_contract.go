@@ -18,9 +18,9 @@
 package registry
 
 import (
-	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -44,26 +44,40 @@ type hermesCaller interface {
 	IsIdentityOffchain(chainID int64, id string) (bool, error)
 }
 
+type transactor interface {
+	FetchRegistrationStatus(id string) ([]TransactorStatusResponse, error)
+}
+
 type contractRegistry struct {
-	storage   registryStorage
-	stop      chan struct{}
-	once      sync.Once
-	publisher eventbus.Publisher
-	lock      sync.Mutex
-	ethC      paymentClient.EtherClient
-	ap        AddressProvider
-	hermes    hermesCaller
+	storage    registryStorage
+	stop       chan struct{}
+	once       sync.Once
+	publisher  eventbus.Publisher
+	lock       sync.Mutex
+	ethC       paymentClient.EtherClient
+	ap         AddressProvider
+	hermes     hermesCaller
+	transactor transactor
+	cfg        IdentityRegistryConfig
+}
+
+// IdentityRegistryConfig contains the configuration for registry contract.
+type IdentityRegistryConfig struct {
+	TransactorPollInterval time.Duration
+	TransactorPollTimeout  time.Duration
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient paymentClient.EtherClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller) (*contractRegistry, error) {
+func NewIdentityRegistryContract(ethClient paymentClient.EtherClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller, transactor transactor, cfg IdentityRegistryConfig) (*contractRegistry, error) {
 	return &contractRegistry{
-		storage:   registryStorage,
-		stop:      make(chan struct{}),
-		publisher: publisher,
-		ethC:      ethClient,
-		ap:        ap,
-		hermes:    caller,
+		storage:    registryStorage,
+		stop:       make(chan struct{}),
+		publisher:  publisher,
+		ethC:       ethClient,
+		ap:         ap,
+		hermes:     caller,
+		transactor: transactor,
+		cfg:        cfg,
 	}, nil
 }
 
@@ -204,109 +218,79 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 		log.Error().Err(err).Stack().Msg("Could not store registration status")
 	}
 
-	registry.subscribeToRegistrationEvent(ev.ChainID, ID)
+	go registry.subscribeToRegistrationEventViaTransactor(ev)
 }
 
-func (registry *contractRegistry) subscribeToRegistrationEvent(chainID int64, identity identity.Identity) {
-	userIdentities := []common.Address{
-		common.HexToAddress(identity.Address),
-	}
-
-	filterOps := &bind.WatchOpts{
-		Context: context.Background(),
-	}
-
-	go func() {
-		reg, err := registry.ap.GetRegistryAddress(chainID)
-		if err != nil {
-			log.Error().Err(err).Msg("could not get registry address")
-			return
-		}
-
-		hermes, err := registry.ap.GetActiveHermes(chainID)
-		if err != nil {
-			log.Error().Err(err).Msg("could not get registry address")
-			return
-		}
-
-		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), hermes.Hex())
-		sink := make(chan *bindings.RegistryRegisteredIdentity)
-
-		filterer, err := bindings.NewRegistryFilterer(reg, registry.ethC)
-		if err != nil {
-			log.Error().Err(err).Msg("could not create registry filterer")
-			return
-		}
-
-		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities)
-		if err != nil {
-			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:      identity,
-				Status:  RegistrationError,
-				ChainID: chainID,
-			})
-			log.Error().Err(err).Msg("Could not register to identity events")
-
-			updateErr := registry.storage.Store(StoredRegistrationStatus{
-				Identity:           identity,
-				RegistrationStatus: RegistrationError,
-				ChainID:            chainID,
-			})
-			if updateErr != nil {
-				log.Error().Err(updateErr).Msg("Could not store registration status")
-			}
-			return
-		}
-		defer subscription.Unsubscribe()
-
+func (registry *contractRegistry) subscribeToRegistrationEventViaTransactor(ev IdentityRegistrationRequest) {
+	timeout := time.After(registry.cfg.TransactorPollTimeout)
+	for {
 		select {
 		case <-registry.stop:
+			registry.saveRegistrationStatus(ev.ChainID, ev.Identity, RegistrationError)
 			return
-		case <-sink:
-			log.Info().Msgf("Received registration event for %v", identity)
-			_, err := registry.storage.Get(chainID, identity)
+		case <-timeout:
+			log.Info().Msg("registration watch subscription timed out")
+			registry.saveRegistrationStatus(ev.ChainID, ev.Identity, RegistrationError)
+			return
+		case <-time.After(registry.cfg.TransactorPollInterval):
+			res, err := registry.transactor.FetchRegistrationStatus(ev.Identity)
 			if err != nil {
-				log.Error().Err(err).Msg("Could not store registration status")
+				log.Warn().Err(err).Msg("could not fetch registration status from transactor")
+				break
 			}
 
-			status := Registered
-
-			log.Debug().Msgf("Sending registration success event for %v", identity)
-			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:      identity,
-				Status:  status,
-				ChainID: chainID,
-			})
-
-			err = registry.storage.Store(StoredRegistrationStatus{
-				Identity:           identity,
-				RegistrationStatus: status,
-				ChainID:            chainID,
-			})
-			if err != nil {
-				log.Error().Err(err).Msg("Could not store registration status")
+			var resp *TransactorStatusResponse
+			for _, v := range res {
+				if v.ChainID != ev.ChainID {
+					continue
+				}
+				resp = &v
+				break
 			}
-		case err := <-subscription.Err():
-			if err == nil {
+
+			if resp == nil {
+				log.Warn().Msg("no matching registration entries for chain in transactor response, will continue")
+				break
+			}
+
+			switch resp.Status {
+			case TransactorRegistrationEntryStatusSucceed:
+				registry.resyncWithBC(ev.ChainID, ev.Identity)
+				return
+			case TransactorRegistrationEntryStatusFailed:
+				log.Error().Msg("registration reported as failed by transactor")
+				registry.saveRegistrationStatus(ev.ChainID, ev.Identity, RegistrationError)
 				return
 			}
-
-			log.Error().Err(err).Msg("Subscription error")
-			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:      identity,
-				Status:  RegistrationError,
-				ChainID: chainID,
-			})
-			updateErr := registry.storage.Store(StoredRegistrationStatus{
-				Identity:           identity,
-				RegistrationStatus: RegistrationError,
-				ChainID:            chainID,
-			})
-			if updateErr != nil {
-				log.Error().Err(updateErr).Msg("could not store registration status")
-			}
 		}
-	}()
+	}
+}
+
+func (registry *contractRegistry) resyncWithBC(chainID int64, id string) {
+	status, err := registry.bcRegistrationStatus(chainID, identity.FromAddress(id))
+	if err != nil {
+		log.Err(err).Msg("could not check registration status on chain")
+		registry.saveRegistrationStatus(chainID, id, RegistrationError)
+		return
+	}
+	registry.saveRegistrationStatus(chainID, id, status)
+}
+
+func (registry *contractRegistry) saveRegistrationStatus(chainID int64, id string, status RegistrationStatus) {
+	err := registry.storage.Store(StoredRegistrationStatus{
+		Identity:           identity.FromAddress(id),
+		RegistrationStatus: status,
+		ChainID:            chainID,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Could not store registration status")
+	}
+
+	registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
+		ID:      identity.FromAddress(id),
+		Status:  status,
+		ChainID: chainID,
+	})
 }
 
 func (registry *contractRegistry) handleStop() {
@@ -370,10 +354,11 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID 
 		return errors.Wrap(err, "could not check status on blockchain")
 	}
 
-	if status != Registered {
-		registry.subscribeToRegistrationEvent(chainID, id)
+	if status == Registered {
+		return nil
 	}
 
+	registry.resyncWithBC(chainID, id.Address)
 	return nil
 }
 

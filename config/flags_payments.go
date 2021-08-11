@@ -46,9 +46,52 @@ var (
 	}
 	// FlagPaymentsHermesPromiseSettleTimeout represents the time we wait for confirmation of the promise settlement.
 	FlagPaymentsHermesPromiseSettleTimeout = cli.DurationFlag{
-		Name:  "payments.hermes.promise.timeout",
-		Value: time.Hour * 2,
-		Usage: "The duration we'll wait before timing out our wait for promise settle.",
+		Name:   "payments.hermes.settle.timeout",
+		Value:  time.Minute * 3,
+		Usage:  "The duration we'll wait before timing out our wait for promise settle.",
+		Hidden: true,
+	}
+	// FlagPaymentsHermesPromiseSettleCheckInterval represents the time for polling for confirmation of the promise settlement.
+	FlagPaymentsHermesPromiseSettleCheckInterval = cli.DurationFlag{
+		Name:   "payments.hermes.settle.check-interval",
+		Value:  time.Second * 30,
+		Usage:  "The duration we'll wait before trying to fetch new events.",
+		Hidden: true,
+	}
+	// FlagPaymentsLongBalancePollInterval determines how often we resync balance on chain.
+	FlagPaymentsLongBalancePollInterval = cli.DurationFlag{
+		Name:   "payments.balance-long-poll.interval",
+		Value:  time.Hour * 1,
+		Usage:  "The duration we'll wait before trying to fetch new balance.",
+		Hidden: true,
+	}
+	// FlagPaymentsFastBalancePollInterval determines how often we resync balance on chain after on chain events.
+	FlagPaymentsFastBalancePollInterval = cli.DurationFlag{
+		Name:   "payments.balance-short-poll.interval",
+		Value:  time.Second * 30,
+		Usage:  "The duration we'll wait before trying to fetch new balance.",
+		Hidden: true,
+	}
+	// FlagPaymentsFastBalancePollTimeout determines how long we try to resync balance on chain after on chain events.
+	FlagPaymentsFastBalancePollTimeout = cli.DurationFlag{
+		Name:   "payments.balance-short-poll.timeout",
+		Value:  time.Minute * 3,
+		Usage:  "The duration we'll wait before giving up trying to fetch new balance.",
+		Hidden: true,
+	}
+	// FlagPaymentsRegistryTransactorPollInterval The duration we'll wait before calling transactor to check for new status updates.
+	FlagPaymentsRegistryTransactorPollInterval = cli.DurationFlag{
+		Name:   "payments.registry-transactor-poll.interval",
+		Value:  time.Second * 20,
+		Usage:  "The duration we'll wait before calling transactor to check for new status updates",
+		Hidden: true,
+	}
+	// FlagPaymentsRegistryTransactorPollTimeout The duration we'll wait before polling up the transactors registration status again.
+	FlagPaymentsRegistryTransactorPollTimeout = cli.DurationFlag{
+		Name:   "payments.registry-transactor-poll.timeout",
+		Value:  time.Minute * 20,
+		Usage:  "The duration we'll wait before giving up on transactors registration status",
+		Hidden: true,
 	}
 	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
 	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
@@ -92,6 +135,12 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsBCTimeout,
 		&FlagPaymentsHermesPromiseSettleThreshold,
 		&FlagPaymentsHermesPromiseSettleTimeout,
+		&FlagPaymentsHermesPromiseSettleCheckInterval,
+		&FlagPaymentsLongBalancePollInterval,
+		&FlagPaymentsFastBalancePollInterval,
+		&FlagPaymentsFastBalancePollTimeout,
+		&FlagPaymentsRegistryTransactorPollTimeout,
+		&FlagPaymentsRegistryTransactorPollInterval,
 		&FlagPaymentsProviderInvoiceFrequency,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
@@ -106,7 +155,14 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
+	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleCheckInterval)
 	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
+	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollInterval)
+	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollTimeout)
+	Current.ParseDurationFlag(ctx, FlagPaymentsLongBalancePollInterval)
+	Current.ParseDurationFlag(ctx, FlagPaymentsLongBalancePollInterval)
+	Current.ParseDurationFlag(ctx, FlagPaymentsRegistryTransactorPollInterval)
+	Current.ParseDurationFlag(ctx, FlagPaymentsRegistryTransactorPollTimeout)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)

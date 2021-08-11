@@ -82,6 +82,8 @@ type Options struct {
 
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
+
+	NATStatusTrackerV2 OptionsNATStatusTrackerV2
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -150,6 +152,12 @@ func GetOptions() *Options {
 			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
 			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
 			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
+			SettlementRecheckInterval:      config.GetDuration(config.FlagPaymentsHermesPromiseSettleCheckInterval),
+			BalanceLongPollInterval:        config.GetDuration(config.FlagPaymentsLongBalancePollInterval),
+			BalanceFastPollInterval:        config.GetDuration(config.FlagPaymentsFastBalancePollInterval),
+			BalanceFastPollTimeout:         config.GetDuration(config.FlagPaymentsFastBalancePollTimeout),
+			RegistryTransactorPollInterval: config.GetDuration(config.FlagPaymentsRegistryTransactorPollInterval),
+			RegistryTransactorPollTimeout:  config.GetDuration(config.FlagPaymentsRegistryTransactorPollTimeout),
 			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
@@ -179,6 +187,9 @@ func GetOptions() *Options {
 		},
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
+		NATStatusTrackerV2: OptionsNATStatusTrackerV2{
+			PollInterval: config.GetDuration(config.FlagNATStatusPollInterval),
+		},
 	}
 }
 
