@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/trace"
@@ -50,14 +51,14 @@ type Dialer interface {
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
-func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifierFactory identity.VerifierFactory, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier, eventBus eventbus.EventBus) Dialer {
+func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifierFactory identity.VerifierFactory, ipResolver ip.Resolver, portPool port.ServicePortSupplier, eventBus eventbus.EventBus) Dialer {
 	return &dialer{
 		broker:          broker,
 		ipResolver:      ipResolver,
 		signer:          signer,
 		verifierFactory: verifierFactory,
 		portPool:        portPool,
-		consumerPinger:  consumerPinger,
+		consumerPinger:  traversal.NewPinger(traversal.DefaultPingConfig(), eventbus.New()),
 		eventBus:        eventBus,
 	}
 }
