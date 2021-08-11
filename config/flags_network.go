@@ -114,6 +114,12 @@ var (
 		Usage: "Range of UDP listen ports used for connections",
 		Value: "10000:60000",
 	}
+	// FlagTraversalOrder order of NAT traversal methods to be used for providing service.
+	FlagTraversal = cli.StringFlag{
+		Name:  "traversal",
+		Usage: "Comma separated order of NAT traversal methods to be used for providing service",
+		Value: "holepunching,upnp,manual",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -135,6 +141,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagSTUNservers,
 		&FlagLocalServiceDiscovery,
 		&FlagUDPListenPorts,
+		&FlagTraversal,
 	)
 }
 
@@ -155,4 +162,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
 	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
 	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
+	Current.ParseStringFlag(ctx, FlagTraversal)
 }
