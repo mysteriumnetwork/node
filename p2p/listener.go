@@ -86,7 +86,7 @@ type p2pConnectConfig struct {
 	privateKey       PrivateKey
 	peerPubKey       PublicKey
 	tracer           *trace.Tracer
-	upnpPortsRelease []func()
+	upnpPortsRelease func()
 	start            nat.StartPorts
 }
 
@@ -293,7 +293,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 // required ports count for actual p2p and service connections and fallback to
 // acquiring extra ports for nat pinger if provider is behind nat, port mapping failed
 // and no manual port forwarding is enabled.
-func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, []int, []func(), nat.StartPorts, error) {
+func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, []int, func(), nat.StartPorts, error) {
 	trace := tracer.StartStage("Provider P2P exchange (ports)")
 	defer tracer.EndStage(trace)
 
@@ -305,7 +305,7 @@ func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, [
 	for _, p := range nat.OrderedPortProviders() {
 		ports, release, start, err := p.PreparePorts()
 		if err == nil {
-			return publicIP, ports, []func(){release}, start, nil
+			return publicIP, ports, release, start, nil
 		}
 	}
 
