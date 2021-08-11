@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -15,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package p2p
+package nat
 
-//providerInitialTTL initial ttl to start punching a hole with. Minimal value us 2 is needed to make windows network stack happy
-const providerInitialTTL = 2
+// providerInitialTTL initial ttl to start punching a hole with.
+const providerInitialTTL = 1
