@@ -202,6 +202,34 @@ func (m *MysteriumMORQA) ProposalsQuality() []ProposalQuality {
 	return qualityResponse
 }
 
+// ProviderSessions fetch provider sessions from prometheus
+func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
+	request, err := m.newRequestJSON(http.MethodGet, fmt.Sprintf("providers/sessions?provider_id=%s", providerID), nil)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to create proposals quality request")
+
+		return nil
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to request proposals quality")
+
+		return nil
+	}
+	defer response.Body.Close()
+
+	var responseBody struct {
+		Connects []ProviderSession `json:"connects"`
+	}
+	if err = parseResponseJSON(response, &responseBody); err != nil {
+		log.Warn().Err(err).Msg("Failed to parse proposals quality")
+
+		return nil
+	}
+	return responseBody.Connects
+}
+
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{

@@ -59,6 +59,20 @@ func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ ht
 	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, resp)
 }
 
+// NATStatusV2 provides NAT configuration info
+// swagger:operation GET /v2/nat/status NAT
+// ---
+// summary: Shows NAT status
+// description: NAT status returns the last known NAT traversal status
+// responses:
+//   200:
+//     description: NAT status ("passed"/"failed"/"pending)
+//     schema:
+//       "$ref": "#/definitions/NATStatusDTO"
+func (ne *NATEndpoint) NATStatusV2(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	utils.WriteAsJSON(ne.stateProvider.GetState().Nat.Status, resp)
+}
+
 // NATType provides NAT type in terms of traversal capabilities
 // swagger:operation GET /nat/type NAT NATTypeDTO
 // ---
@@ -91,4 +105,6 @@ func AddRoutesForNAT(router *httprouter.Router, stateProvider stateProvider, nat
 
 	router.GET("/nat/status", natEndpoint.NATStatus)
 	router.GET("/nat/type", natEndpoint.NATType)
+
+	router.GET("/v2/nat/status", natEndpoint.NATStatusV2)
 }

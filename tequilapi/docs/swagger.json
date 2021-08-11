@@ -2170,6 +2170,21 @@
           }
         }
       }
+    },
+    "/v2/nat/status": {
+      "get": {
+        "description": "NAT status returns the last known NAT traversal status",
+        "summary": "Shows NAT status",
+        "operationId": "NAT",
+        "responses": {
+          "200": {
+            "description": "NAT status (\"passed\"/\"failed\"/\"pending)",
+            "schema": {
+              "$ref": "#/definitions/NATStatusDTO"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {

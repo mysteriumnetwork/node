@@ -76,6 +76,16 @@ func NewIdentityManager(keystore keystore, eventBus eventbus.EventBus, residentC
 	}
 }
 
+// GetUnlockedIdentity retrieves unlocked identity
+func (idm *identityManager) GetUnlockedIdentity() (Identity, bool) {
+	for _, identity := range idm.GetIdentities() {
+		if idm.IsUnlocked(identity.Address) {
+			return identity, true
+		}
+	}
+	return Identity{}, false
+}
+
 // IsUnlocked checks if the given identity is unlocked or not
 func (idm *identityManager) IsUnlocked(identity string) bool {
 	idm.unlockedMu.Lock()

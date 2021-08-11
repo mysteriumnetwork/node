@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package identity
+package core
 
-// Manager interface exposes identity management methods
-// TODO this interface must decay into caller specific smaller interfaces
-type Manager interface {
-	CreateNewIdentity(passphrase string) (Identity, error)
-	GetIdentities() []Identity
-	GetIdentity(address string) (Identity, error)
-	HasIdentity(address string) bool
-	Unlock(chainID int64, address string, passphrase string) error
-	IsUnlocked(address string) bool
-	GetUnlockedIdentity() (Identity, bool)
+// ServiceType core enum type
+type ServiceType string
+
+const (
+	// OpenVPN enum for openVPN
+	OpenVPN ServiceType = "openvpn"
+	// WireGuard enum for wireguard
+	WireGuard ServiceType = "wireguard"
+)
+
+func (st ServiceType) String() string {
+	return string(st)
 }
