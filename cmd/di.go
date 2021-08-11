@@ -82,10 +82,10 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
-	"github.com/mysteriumnetwork/node/utils/bcutil"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
 )
 
 // UIServer represents our web server
@@ -106,6 +106,9 @@ type Dependencies struct {
 	PricingHelper     *pingpong.Pricer
 	EtherClientL1     *paymentClient.EthMultiClient
 	EtherClientL2     *paymentClient.EthMultiClient
+
+	SorterClientL1 *psort.MultiClientSorter
+	SorterClientL2 *psort.MultiClientSorter
 
 	EtherClients []*paymentClient.ReconnectableEthClient
 
@@ -413,9 +416,15 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.EtherClientL1 != nil {
 		di.EtherClientL1.Close()
 	}
+	if di.SorterClientL1 != nil {
+		di.SorterClientL1.Stop()
+	}
 
 	if di.EtherClientL2 != nil {
 		di.EtherClientL2.Close()
+	}
+	if di.SorterClientL2 != nil {
+		di.SorterClientL2.Stop()
 	}
 
 	if di.DiscoveryWorker != nil {
@@ -704,15 +713,23 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return errors.New("no l2 rpc endpoints loaded, can't continue")
 	}
 
-	di.EtherClientL1, err = di.bootstrapMultiClientBC(bcClientsL1)
+	notifyChannelL1 := make(chan paymentClient.Notification, 5)
+	di.EtherClientL1, err = paymentClient.NewEthMultiClientNotifyDown(time.Second*20, bcClientsL1, notifyChannelL1)
 	if err != nil {
 		return err
 	}
+	di.SorterClientL1 = psort.NewMultiClientSorterNoTicker(di.EtherClientL1, notifyChannelL1)
+	di.SorterClientL1.AddOnNotificationAction(psort.DefaultByAvailability)
+	go di.SorterClientL1.Run()
 
-	di.EtherClientL2, err = di.bootstrapMultiClientBC(bcClientsL2)
+	notifyChannelL2 := make(chan paymentClient.Notification, 5)
+	di.EtherClientL2, err = paymentClient.NewEthMultiClientNotifyDown(time.Second*20, bcClientsL2, notifyChannelL2)
 	if err != nil {
 		return err
 	}
+	di.SorterClientL2 = psort.NewMultiClientSorterNoTicker(di.EtherClientL2, notifyChannelL2)
+	di.SorterClientL2.AddOnNotificationAction(psort.DefaultByAvailability)
+	go di.SorterClientL2.Run()
 
 	bcL1 := paymentClient.NewBlockchain(di.EtherClientL1, options.Payments.BCTimeout)
 	bcL2 := paymentClient.NewBlockchain(di.EtherClientL2, options.Payments.BCTimeout)
@@ -1003,17 +1020,6 @@ func (di *Dependencies) handleNATStatusForPublicIP() {
 	if outIP == pubIP && pubIP != "" {
 		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
 	}
-}
-
-func (di *Dependencies) bootstrapMultiClientBC(clients []paymentClient.AddressableEthClientGetter) (*client.EthMultiClient, error) {
-	notifyl1Channel := make(chan string, 10)
-	cl, err := paymentClient.NewEthMultiClientNotifyDown(time.Second*20, clients, notifyl1Channel)
-	if err != nil {
-		return nil, err
-	}
-	go bcutil.ManageMultiClient(cl, notifyl1Channel)
-
-	return cl, nil
 }
 
 func (di *Dependencies) bootstrapResidentCountry() error {
