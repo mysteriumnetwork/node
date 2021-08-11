@@ -30,13 +30,11 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p/nat"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/trace"
 )
@@ -53,30 +51,24 @@ type Listener interface {
 }
 
 // NewListener creates new p2p communication listener which is used on provider side.
-func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper, eventBus eventbus.EventBus) Listener {
+func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, eventBus eventbus.EventBus) Listener {
 	return &listener{
 		brokerConn:     brokerConn,
 		pendingConfigs: map[PublicKey]p2pConnectConfig{},
 		ipResolver:     ipResolver,
 		signer:         signer,
 		verifier:       verifier,
-		portPool:       portPool,
-		providerPinger: providerPinger,
-		portMapper:     portMapper,
 		eventBus:       eventBus,
 	}
 }
 
 // listener implements Listener interface.
 type listener struct {
-	eventBus       eventbus.EventBus
-	portPool       port.ServicePortSupplier
-	brokerConn     nats.Connection
-	providerPinger natProviderPinger
-	signer         identity.SignerFactory
-	verifier       identity.Verifier
-	ipResolver     ip.Resolver
-	portMapper     mapping.PortMapper
+	eventBus   eventbus.EventBus
+	brokerConn nats.Connection
+	signer     identity.SignerFactory
+	verifier   identity.Verifier
+	ipResolver ip.Resolver
 
 	// Keys holds pendingConfigs temporary configs for provider side since it
 	// need to handle key exchange in two steps.
@@ -95,6 +87,7 @@ type p2pConnectConfig struct {
 	peerPubKey       PublicKey
 	tracer           *trace.Tracer
 	upnpPortsRelease []func()
+	start            nat.StartPorts
 }
 
 func (c *p2pConnectConfig) peerIP() string {
@@ -115,13 +108,8 @@ func (m *listener) GetContact() market.Contact {
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 // to channelHandlers.
 func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) (func(), error) {
-	outboundIP, err := m.ipResolver.GetOutboundIP()
-	if err != nil {
-		return func() {}, fmt.Errorf("could not get outbound IP: %w", err)
-	}
-
 	configSub, err := m.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		if err := m.providerStartConfigExchange(providerID, msg, outboundIP); err != nil {
+		if err := m.providerStartConfigExchange(providerID, msg); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
@@ -157,26 +145,12 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		}(msg.Reply)
 
 		var conn1, conn2 *net.UDPConn
-		if len(config.peerPorts) == requiredConnCount {
-			traceDial := config.tracer.StartStage("Provider P2P dial (upnp)")
-			log.Debug().Msg("Skipping consumer ping")
-			conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
-			if err != nil {
-				log.Err(err).Msg("Could not create UDP conn for p2p channel")
-				return
-			}
-			conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
-			if err != nil {
-				log.Err(err).Msg("Could not create UDP conn for service")
-				return
-			}
-			config.tracer.EndStage(traceDial)
-		} else {
-			traceDial := config.tracer.StartStage("Provider P2P dial (pinger)")
+		if config.start != nil {
+			traceDial := config.tracer.StartStage("Provider P2P dial (preparation)")
 			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v initial ttl: %v",
-				config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL)
+				config.peerIP(), config.localPorts, config.peerPorts, 1)
 
-			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), providerID.Address, config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
+			conns, err := config.start(context.Background(), config.peerIP(), config.peerPorts, config.localPorts)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
@@ -189,6 +163,20 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 
 			conn1 = conns[0]
 			conn2 = conns[1]
+			config.tracer.EndStage(traceDial)
+		} else {
+			traceDial := config.tracer.StartStage("Provider P2P dial (direct)")
+			log.Debug().Msg("Skipping consumer ping")
+			conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
+			if err != nil {
+				log.Err(err).Msg("Could not create UDP conn for p2p channel")
+				return
+			}
+			conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
+			if err != nil {
+				log.Err(err).Msg("Could not create UDP conn for service")
+				return
+			}
 			config.tracer.EndStage(traceDial)
 		}
 
@@ -231,7 +219,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	}, nil
 }
 
-func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
+func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg *nats_lib.Msg) error {
 	tracer := trace.NewTracer("Provider whole Connect")
 
 	trace := tracer.StartStage("Provider P2P exchange")
@@ -257,7 +245,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	}
 	log.Debug().Msgf("Received consumer public key %s", peerPubKey.Hex())
 
-	publicIP, localPorts, portsRelease, err := m.prepareLocalPorts(providerID.Address, outboundIP, tracer)
+	publicIP, localPorts, portsRelease, start, err := m.prepareLocalPorts(providerID.Address, tracer)
 	if err != nil {
 		return fmt.Errorf("could not prepare ports: %w", err)
 	}
@@ -273,6 +261,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 		upnpPortsRelease: portsRelease,
 		peerPublicIP:     "",
 		peerPorts:        nil,
+		start:            start,
 	}
 	m.setPendingConfig(p2pConnConfig)
 
@@ -304,60 +293,23 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 // required ports count for actual p2p and service connections and fallback to
 // acquiring extra ports for nat pinger if provider is behind nat, port mapping failed
 // and no manual port forwarding is enabled.
-func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer) (string, []int, []func(), error) {
+func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, []int, []func(), nat.StartPorts, error) {
 	trace := tracer.StartStage("Provider P2P exchange (ports)")
 	defer tracer.EndStage(trace)
 
-	// Send reply with encrypted exchange config.
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("could not get public IP: %w", err)
+		return "", nil, nil, nil, fmt.Errorf("could not get public IP: %w", err)
 	}
 
-	// First acquire required only ports for needed n connections.
-	localPorts, err := acquireLocalPorts(m.portPool, requiredConnCount)
-	if err != nil {
-		return "", nil, nil, fmt.Errorf("could not acquire initial local ports: %w", err)
-	}
-
-	// Return these ports if provider is not behind NAT.
-	if outboundIP == publicIP {
-		m.eventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, "public_ip"))
-		return publicIP, localPorts, nil, nil
-	}
-
-	// Try to add upnp ports mapping.
-	var portsRelease []func()
-	var portMappingOk bool
-	var portRelease func()
-
-	for _, p := range localPorts {
-		portRelease, portMappingOk = m.portMapper.Map(id, "UDP", p, "Myst node p2p port mapping")
-		if !portMappingOk {
-			break
+	for _, p := range nat.OrderedPortProviders() {
+		ports, release, start, err := p.PreparePorts()
+		if err == nil {
+			return publicIP, ports, []func(){release}, start, nil
 		}
-
-		portsRelease = append(portsRelease, portRelease)
 	}
 
-	if portMappingOk {
-		return publicIP, localPorts, portsRelease, nil
-	}
-
-	// Check if nat pinger is valid. It's considered as not valid when noop pinger is used.
-	if _, noop := m.providerPinger.(*traversal.NoopPinger); noop {
-		return publicIP, localPorts, nil, nil
-	}
-
-	// Acquire more ports for nat pinger.
-	morePorts, err := acquireLocalPorts(m.portPool, pingMaxPorts-requiredConnCount)
-	if err != nil {
-		return publicIP, nil, nil, fmt.Errorf("could not acquire more local ports: %w", err)
-	}
-
-	localPorts = append(localPorts, morePorts...)
-
-	return publicIP, localPorts, nil, nil
+	return "", nil, nil, nil, fmt.Errorf("failed to prepare local ports")
 }
 
 func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConfig, error) {
@@ -397,6 +349,7 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 		publicIP:         config.publicIP,
 		tracer:           config.tracer,
 		upnpPortsRelease: config.upnpPortsRelease,
+		start:            config.start,
 	}, nil
 }
 
