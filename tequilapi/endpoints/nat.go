@@ -66,7 +66,7 @@ func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ ht
 // description: NAT status returns the last known NAT traversal status
 // responses:
 //   200:
-//     description: NAT status ("online"/"offline"/"failed","pending)
+//     description: NAT status ("passed"/"failed"/"pending)
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
 func (ne *NATEndpoint) NATStatusV2(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {

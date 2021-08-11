@@ -2178,7 +2178,7 @@
         "operationId": "NAT",
         "responses": {
           "200": {
-            "description": "NAT status (\"online\"/\"offline\"/\"failed\",\"pending)",
+            "description": "NAT status (\"passed\"/\"failed\"/\"pending)",
             "schema": {
               "$ref": "#/definitions/NATStatusDTO"
             }

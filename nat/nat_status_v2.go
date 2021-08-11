@@ -34,10 +34,8 @@ import (
 type NATStatusV2 string
 
 const (
-	// Online enum
-	Online NATStatusV2 = "online"
-	// Offline enum
-	Offline NATStatusV2 = "offline"
+	// Passed enum
+	Passed NATStatusV2 = "passed"
 	// Failed enum
 	Failed NATStatusV2 = "failed"
 	// Pending enum
@@ -147,13 +145,13 @@ func (k *StatusTrackerV2) Status() NATStatusV2 {
 func resolveNATStatus(sessions []Session) NATStatusV2 {
 	wgSession, ok := findWireGuard(sessions)
 	if !ok {
-		return Offline
+		return Pending
 	}
 
 	if wgSession.MonitoringFailed {
 		return Failed
 	}
-	return Online
+	return Passed
 }
 
 // openvpn is considered deprecated
