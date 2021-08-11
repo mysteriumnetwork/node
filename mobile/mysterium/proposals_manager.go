@@ -126,6 +126,7 @@ func newProposalsManager(
 		repository:          repository,
 		filterPresetStorage: filterPresetStorage,
 		cacheTTL:            cacheTTL,
+		natProber:           natProber,
 	}
 }
 
