@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
+// StartPorts starts the process of serving connections for the provided ports.
 type StartPorts func(ctx context.Context, peerIP string, peerPorts, localPorts []int) ([]*net.UDPConn, error)
 
 type natHolePunchingPort struct {
@@ -36,7 +37,8 @@ type natHolePunchingPort struct {
 	pinger traversal.NATPinger
 }
 
-func NewNatHolePunchingPortProvider() PortProvider {
+// NewNATHolePunchingPortProvider creates new instance of the NAT hole punching port provider.
+func NewNATHolePunchingPortProvider() PortProvider {
 	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")

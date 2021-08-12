@@ -114,7 +114,7 @@ var (
 		Usage: "Range of UDP listen ports used for connections",
 		Value: "10000:60000",
 	}
-	// FlagTraversalOrder order of NAT traversal methods to be used for providing service.
+	// FlagTraversal order of NAT traversal methods to be used for providing service.
 	FlagTraversal = cli.StringFlag{
 		Name:  "traversal",
 		Usage: "Comma separated order of NAT traversal methods to be used for providing service",

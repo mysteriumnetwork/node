@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 )
 
+// PortProvider describes an method for provideing ports for the service.
 type PortProvider interface {
 	PreparePorts() (ports []int, release func(), start StartPorts, err error)
 }
@@ -32,9 +33,10 @@ type PortProvider interface {
 var traversalOptions map[string]func() PortProvider = map[string]func() PortProvider{
 	"manual":       NewManualPortProvider,
 	"upnp":         NewUPnPPortProvider,
-	"holepunching": NewNatHolePunchingPortProvider,
+	"holepunching": NewNATHolePunchingPortProvider,
 }
 
+// OrderedPortProviders returns a ordered list of the port providers.
 func OrderedPortProviders() (list []PortProvider) {
 	methods := strings.Split(config.GetString(config.FlagTraversal), ",")
 

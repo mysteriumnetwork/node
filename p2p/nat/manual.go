@@ -28,6 +28,7 @@ type manualPort struct {
 	pool *port.Pool
 }
 
+// NewManualPortProvider creates new instance of the manual port provider.
 func NewManualPortProvider() PortProvider {
 	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {

@@ -33,6 +33,7 @@ type upnpPort struct {
 	portMapper mapping.PortMapper
 }
 
+// NewUPnPPortProvider returns a new instance of the UPnP port provider.
 func NewUPnPPortProvider() PortProvider {
 	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
