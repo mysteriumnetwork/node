@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package p2p
+package nat
 
-//providerInitialTTL initial ttl to start punching a hole with. Minimal value us 2 is needed to make windows network stack happy
-const providerInitialTTL = 2
+const (
+	requiredConnCount = 2
+	pingMaxPorts      = 20
+)

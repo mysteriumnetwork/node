@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	pingMaxPorts       = 20
 	requiredConnCount  = 2
 	consumerInitialTTL = 128
 )

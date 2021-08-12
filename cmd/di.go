@@ -147,7 +147,6 @@ type Dependencies struct {
 	ServiceSessions *service.SessionPool
 	ServiceFirewall firewall.IncomingTrafficFirewall
 
-	NATPinger  traversal.NATPinger
 	PortPool   *port.Pool
 	PortMapper mapping.PortMapper
 
@@ -250,22 +249,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
-		return err
-	}
-
 	portRange, err := getUDPListenPorts()
 	if err != nil {
 		return err
 	}
 
 	di.PortPool = port.NewFixedRangePool(portRange)
-	if config.GetBool(config.FlagPortMapping) {
-		portmapConfig := mapping.DefaultConfig()
-		di.PortMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
-	} else {
-		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
-	}
 
 	di.bootstrapP2P()
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
@@ -325,8 +314,8 @@ func (di *Dependencies) bootstrapP2P() {
 		return identity.NewVerifierIdentity(id)
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper, di.EventBus)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, di.NATPinger, di.PortPool, di.EventBus)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.EventBus)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, di.PortPool, di.EventBus)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -597,7 +586,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	sleepNotifier := sleep.NewNotifier(di.ConnectionManager, di.EventBus)
 	sleepNotifier.Subscribe()
 
-	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer, sleepNotifier)
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
 	sessionProviderFunc := func(providerID string) (results []nat.Session) {
 		for _, session := range di.QualityClient.ProviderSessions(providerID) {
@@ -916,20 +905,6 @@ func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 	di.Pilvytis.Start()
 }
 
-func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
-	if options.NATHolePunching {
-		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
-		di.NATPinger = traversal.NewPinger(
-			traversal.DefaultPingConfig(),
-			di.EventBus,
-		)
-	} else {
-		di.NATPinger = &traversal.NoopPinger{}
-	}
-
-	return nil
-}
-
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall(config.GetBool(config.FlagOutgoingFirewall))
 	if err := firewall.DefaultOutgoingFirewall.Setup(); err != nil {
@@ -1082,5 +1057,5 @@ func getUDPListenPorts() (port.Range, error) {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
 		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
-	return *udpPortRange, nil
+	return udpPortRange, nil
 }

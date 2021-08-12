@@ -31,26 +31,27 @@ type Range struct {
 }
 
 // ParseRange parses port range expression, e.g. "1000:1200" into Range struct
-func ParseRange(rangeExpr string) (*Range, error) {
-	if rangeExpr == "" {
-		return nil, nil
-	}
+func ParseRange(rangeExpr string) (Range, error) {
 	bounds := strings.Split(rangeExpr, ":")
 	if len(bounds) != 2 {
-		return nil, errors.New("invalid port range expression: " + rangeExpr)
+		return Range{}, errors.New("invalid port range expression: " + rangeExpr)
 	}
+
 	start, err := strconv.Atoi(bounds[0])
 	if err != nil {
-		return nil, errors.New("invalid start port number: " + bounds[0])
+		return Range{}, errors.New("invalid start port number: " + bounds[0])
 	}
+
 	end, err := strconv.Atoi(bounds[1])
 	if err != nil {
-		return nil, errors.New("invalid end port number: " + bounds[0])
+		return Range{}, errors.New("invalid end port number: " + bounds[0])
 	}
+
 	if start > end {
-		return nil, errors.New("start port cannot be greater than end port: " + rangeExpr)
+		return Range{}, errors.New("start port cannot be greater than end port: " + rangeExpr)
 	}
-	return &Range{start, end}, nil
+
+	return Range{start, end}, nil
 }
 
 // Capacity returns range capacity

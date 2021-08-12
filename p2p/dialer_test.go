@@ -92,7 +92,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			portPool := port.NewFixedRangePool(port.Range{Start: 10000, End: 60000})
 
 			// Provider starts listening.
-			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper, eventbus.New())
+			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, eventbus.New())
 			_, err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 				ch.Handle("test", func(c Context) error {
 					return c.OkWithReply(&Message{Data: []byte("pong")})
@@ -101,7 +101,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Consumer starts dialing provider.
-			channelDialer := NewDialer(mockBroker, signerFactory, verifierFactory, test.ipResolver, test.natConsumerPinger, portPool, nil)
+			channelDialer := NewDialer(mockBroker, signerFactory, verifierFactory, test.ipResolver, portPool, nil)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			consumerChannel, err := channelDialer.Dial(ctx, identity.FromAddress("0x2"), providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}}, trace.NewTracer("Dial"))

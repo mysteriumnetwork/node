@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package p2p
+package nat
 
 // providerInitialTTL initial ttl to start punching a hole with.
 const providerInitialTTL = 1
