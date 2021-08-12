@@ -95,12 +95,9 @@ func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPor
 	for _, p := range localPorts {
 		if port, ok := m[p]; ok {
 			remotePorts = append(remotePorts, port)
+		} else {
+			remotePorts = append(remotePorts, p)
 		}
-	}
-
-	if len(remotePorts) == 0 {
-		log.Warn().Msg("Failed to get ports from STUN servers, falling back to local ports")
-		return localPorts
 	}
 
 	return remotePorts
