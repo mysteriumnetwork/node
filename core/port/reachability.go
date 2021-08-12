@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -45,6 +46,8 @@ func GloballyReachable(ctx context.Context, port Port, echoServerAddresses []str
 	if count == 0 {
 		return false, ErrEmptyServerAddressList
 	}
+
+	log.Debug().Msgf("Checking if port %d globally reachable via %v", port, echoServerAddresses)
 
 	// Claim port
 	rxAddr := &net.UDPAddr{

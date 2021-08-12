@@ -118,7 +118,13 @@ var (
 	FlagTraversal = cli.StringFlag{
 		Name:  "traversal",
 		Usage: "Comma separated order of NAT traversal methods to be used for providing service",
-		Value: "holepunching,upnp,manual",
+		Value: "manual,upnp,holepunching",
+	}
+	// FlagPortCheckServers list of asymmetric UDP echo servers for checking port availability
+	FlagPortCheckServers = cli.StringFlag{
+		Name:  "port-check-servers",
+		Usage: "Comma separated list of asymmetric UDP echo servers for checking port availability",
+		Value: "echo.mysterium.network:4589",
 	}
 )
 
@@ -142,6 +148,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagLocalServiceDiscovery,
 		&FlagUDPListenPorts,
 		&FlagTraversal,
+		&FlagPortCheckServers,
 	)
 }
 
@@ -163,4 +170,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
 	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
 	Current.ParseStringFlag(ctx, FlagTraversal)
+	Current.ParseStringFlag(ctx, FlagPortCheckServers)
 }
