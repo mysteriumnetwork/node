@@ -447,7 +447,10 @@ func (c *channel) Close() error {
 	var closeErr error
 	c.once.Do(func() {
 		close(c.stop)
-		c.upnpPortsRelease()
+
+		if c.upnpPortsRelease != nil {
+			c.upnpPortsRelease()
+		}
 
 		if err := c.tr.remoteConn.Close(); err != nil {
 			closeErr = fmt.Errorf("could not close remote conn: %w", err)

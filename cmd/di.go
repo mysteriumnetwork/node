@@ -1057,5 +1057,5 @@ func getUDPListenPorts() (port.Range, error) {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
 		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
-	return *udpPortRange, nil
+	return udpPortRange, nil
 }

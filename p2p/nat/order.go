@@ -48,5 +48,10 @@ func OrderedPortProviders() (list []PortProvider) {
 		}
 	}
 
+	if len(list) == 0 {
+		log.Warn().Msg("Failed to parse ordered list of traversal methods, falling back to default values")
+		return []PortProvider{NewManualPortProvider(), NewNATHolePunchingPortProvider(), NewUPnPPortProvider()}
+	}
+
 	return list
 }

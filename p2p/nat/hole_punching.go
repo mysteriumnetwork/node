@@ -42,10 +42,15 @@ func NewNATHolePunchingPortProvider() PortProvider {
 	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
+
+		udpPortRange, err = port.ParseRange("10000:60000")
+		if err != nil {
+			panic(err) // This must never happen.
+		}
 	}
 
 	return &natHolePunchingPort{
-		pool:   port.NewFixedRangePool(*udpPortRange),
+		pool:   port.NewFixedRangePool(udpPortRange),
 		pinger: traversal.NewPinger(traversal.DefaultPingConfig(), eventbus.New()),
 	}
 }
