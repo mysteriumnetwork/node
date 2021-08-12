@@ -80,7 +80,7 @@ func (up *upnpPort) PreparePorts() (ports []int, release func(), start StartPort
 	}
 
 	if err := checkAllPorts(ports); err != nil {
-		log.Debug().Err(err).Msgf("Failed to check manual ports %d globally", ports)
+		log.Debug().Err(err).Msgf("Failed to check UPnP ports %d globally", ports)
 		return nil, nil, nil, err
 	}
 
