@@ -70,7 +70,6 @@ import (
 	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -334,15 +333,8 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 }
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
-	var lastStageName string
-	if options.NATHolePunching {
-		lastStageName = traversal.StageName
-	} else {
-		lastStageName = mapping.StageName
-	}
-
 	deps := state.KeeperDeps{
-		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
+		NATStatusProvider:         nat.NewStatusTracker("unknown"),
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		IdentityProvider:          di.IdentityManager,

@@ -65,17 +65,17 @@ var (
 		Usage: "L2 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain2.EtherClientRPC...),
 	}
-	// FlagNATHolePunching enables NAT hole punching.
+	// FlagNATHolePunching remove the deprecated flag once all users stop to call it.
 	FlagNATHolePunching = cli.BoolFlag{
 		Name:    "nat-hole-punching",
 		Aliases: []string{"experiment-natpunching"}, // TODO: remove the deprecated alias once all users stop to use it.
-		Usage:   "Enables NAT hole punching",
+		Usage:   "Deprecated flag use `traversal` flag instead to disable or enable methods",
 		Value:   true,
 	}
 	// FlagPortMapping enables NAT port mapping.
 	FlagPortMapping = cli.BoolFlag{
 		Name:  "nat-port-mapping",
-		Usage: "Enables NAT port mapping",
+		Usage: "Deprecated flag use `traversal` flag instead to disable or enable methods",
 		Value: true,
 	}
 	// FlagIncomingFirewall enables incoming traffic filtering.
