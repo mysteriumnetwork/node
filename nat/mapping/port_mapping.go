@@ -118,7 +118,14 @@ func (p *portMapper) routerIPPublic() bool {
 
 	log.Debug().Msgf("Detected router public IP address: %s", ip)
 
-	for _, s := range []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"} {
+	for _, s := range []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"100.64.0.0/10",
+		"127.0.0.0/8",
+		"169.254.0.0/16",
+	} {
 		_, subnet, _ := net.ParseCIDR(s)
 		if subnet.Contains(ip) {
 			return false
