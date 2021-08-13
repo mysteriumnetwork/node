@@ -122,9 +122,10 @@ var (
 	}
 	// FlagPortCheckServers list of asymmetric UDP echo servers for checking port availability
 	FlagPortCheckServers = cli.StringFlag{
-		Name:  "port-check-servers",
-		Usage: "Comma separated list of asymmetric UDP echo servers for checking port availability",
-		Value: "echo.mysterium.network:4589",
+		Name:   "port-check-servers",
+		Usage:  "Comma separated list of asymmetric UDP echo servers for checking port availability",
+		Value:  "echo.mysterium.network:4589",
+		Hidden: true,
 	}
 )
 
