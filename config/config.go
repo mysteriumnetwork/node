@@ -137,9 +137,9 @@ func (cfg *Config) GetConfig() map[string]interface{} {
 	cfg.mu.RLock()
 	defer cfg.mu.RUnlock()
 	config := make(map[string]interface{})
-	mergeMaps(cfg.defaults, config, nil)
-	mergeMaps(cfg.user, config, nil)
-	mergeMaps(cfg.cli, config, nil)
+	mergeMaps(deepCopyStrMap(cfg.defaults), config, nil)
+	mergeMaps(deepCopyStrMap(cfg.defaults), config, nil)
+	mergeMaps(deepCopyStrMap(cfg.defaults), config, nil)
 	return deepCopyStrMap(config)
 }
 
