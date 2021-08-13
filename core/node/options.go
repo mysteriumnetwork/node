@@ -91,7 +91,6 @@ func GetOptions() *Options {
 	network := OptionsNetwork{
 		Localnet:            config.GetBool(config.FlagLocalnet),
 		Testnet3:            config.GetBool(config.FlagTestnet3),
-		NATHolePunching:     config.GetBool(config.FlagNATHolePunching),
 		MysteriumAPIAddress: config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:     config.GetStringSlice(config.FlagBrokerAddress),
 		EtherClientRPCL1:    config.GetStringSlice(config.FlagEtherRPCL1),

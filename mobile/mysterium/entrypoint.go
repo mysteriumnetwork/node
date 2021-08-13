@@ -89,7 +89,6 @@ type MobileNode struct {
 type MobileNodeOptions struct {
 	Testnet3                       bool
 	Localnet                       bool
-	NATHolePunching                bool
 	KeepConnectedOnFail            bool
 	MysteriumAPIAddress            string
 	BrokerAddresses                []string
@@ -122,7 +121,6 @@ type ConsumerPaymentConfig struct {
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
 		Testnet3:                       true,
-		NATHolePunching:                true,
 		KeepConnectedOnFail:            true,
 		MysteriumAPIAddress:            metadata.Testnet3Definition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.Testnet3Definition.BrokerAddresses,
@@ -168,7 +166,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	network := node.OptionsNetwork{
 		Testnet3:            options.Testnet3,
 		Localnet:            options.Localnet,
-		NATHolePunching:     options.NATHolePunching,
 		MysteriumAPIAddress: options.MysteriumAPIAddress,
 		BrokerAddresses:     options.BrokerAddresses,
 		EtherClientRPCL1:    options.EtherClientRPCL1,
