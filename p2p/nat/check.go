@@ -76,7 +76,7 @@ func checkAllPorts(ports []int) error {
 
 	for resp := range ch {
 		if !resp.ok || resp.err != nil {
-			return fmt.Errorf("local port not reachable %w", resp.err)
+			return fmt.Errorf("local port not reachable: %w", resp.err)
 		}
 	}
 
