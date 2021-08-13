@@ -570,7 +570,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, "New", se.Status)
 
 	// Wait some time for session to collect stats.
-	assert.Eventually(t, sessionStatsReceived(tequilapi, serviceType), 40*time.Second, 1*time.Second, serviceType)
+	assert.Eventually(t, sessionStatsReceived(tequilapi, serviceType), 60*time.Second, 1*time.Second, serviceType)
 
 	err = tequilapi.ConnectionDestroy()
 	assert.NoError(t, err)
@@ -591,7 +591,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	// call the custom asserter for the given service type
 	serviceTypeAssertionMap[serviceType](t, se)
-	var consumerStatus = contract.IdentityDTO{}
+	consumerStatus := contract.IdentityDTO{}
 	assert.Eventually(t, func() bool {
 		cs, err := tequilapi.Identity(consumerID)
 		if err != nil {
@@ -659,11 +659,11 @@ func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string
 	var delegate func(stats contract.ConnectionStatisticsDTO) bool
 	if serviceType != "noop" {
 		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
-			return stats.BytesReceived > 0 && stats.BytesSent > 0 && stats.Duration > 30
+			return stats.BytesReceived > 0 && stats.BytesSent > 0 && stats.Duration > 45
 		}
 	} else {
 		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
-			return stats.Duration > 30
+			return stats.Duration > 45
 		}
 	}
 

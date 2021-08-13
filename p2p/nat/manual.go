@@ -53,5 +53,10 @@ func (mp *manualPort) PreparePorts() (ports []int, release func(), start StartPo
 		ports = append(ports, p.Num())
 	}
 
-	return ports, func() {}, nil, nil
+	if err := checkAllPorts(ports); err != nil {
+		log.Debug().Err(err).Msgf("Failed to check manual ports %d globally", ports)
+		return nil, nil, nil, err
+	}
+
+	return ports, nil, nil, nil
 }

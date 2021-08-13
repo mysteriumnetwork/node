@@ -1,5 +1,10 @@
 version: '3.0'
 services:
+  echo:
+    image: mysteriumnetwork/assymmetric-udp-echo:latest
+    expose:
+      - 4589
+
   morqa:
     image: mysteriumnetwork/quality-oracle:latest
     command: >
@@ -91,7 +96,7 @@ services:
     image: mockserver/mockserver:mockserver-5.11.2
     ports:
       - 9999:1080
-  
+
   transactordatabase:
     image: 'mongo:4.2.3'
     environment:
@@ -132,7 +137,7 @@ services:
       -affiliateOwnerPassphrase=""
       -affiliateRPCEndpoint="http://ganache:8545"
       -affiliateRewarderChainID=5
-      
+
   transactor:
     image: mysteriumnetwork/transactor:1.0.1
     environment:
@@ -400,6 +405,7 @@ services:
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
+      --port-check-servers="echo:4589"
       daemon
 
   myst-consumer-hermes2:
@@ -448,6 +454,7 @@ services:
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
+      --port-check-servers="echo:4589"
       daemon
 
   myst-consumer-openvpn:
@@ -496,6 +503,7 @@ services:
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
+      --port-check-servers="echo:4589"
       daemon
 
   myst-consumer-wireguard:
@@ -544,6 +552,7 @@ services:
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
+      --port-check-servers="echo:4589"
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
