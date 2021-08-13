@@ -24,16 +24,16 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/session/pingpong"
-
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/consumer/session"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // EventType represents all the event types we're subscribing to
@@ -209,9 +209,7 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NAT contract.Nat `json:"nat"`
-	// Deprecated: will be replaced by NAT
-	NATStatus     contract.NATStatusDTO        `json:"nat_status"`
+	NAT           contract.Nat                 `json:"nat"`
 	Services      []contract.ServiceInfoDTO    `json:"service_info"`
 	Sessions      []contract.SessionDTO        `json:"sessions"`
 	SessionsStats contract.SessionStatsDTO     `json:"sessions_stats"`
@@ -258,7 +256,6 @@ func mapState(event stateEvent.State) stateRes {
 
 	res := stateRes{
 		NAT:           event.Nat,
-		NATStatus:     event.NATStatus,
 		Services:      event.Services,
 		Sessions:      sessionsRes,
 		SessionsStats: contract.NewSessionStatsDTO(sessionsStats),

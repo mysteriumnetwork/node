@@ -33,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -119,11 +118,6 @@ type PaymentEngine interface {
 	Start() error
 	WaitFirstInvoice(time.Duration) error
 	Stop()
-}
-
-// NATEventGetter lets us access the last known traversal event
-type NATEventGetter interface {
-	LastEvent() *event.Event
 }
 
 // NewSessionManager returns new session SessionManager

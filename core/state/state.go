@@ -18,7 +18,6 @@
 package state
 
 import (
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -39,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	nodeSession "github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -49,11 +47,6 @@ import (
 
 // DefaultDebounceDuration is the default time interval suggested for debouncing
 const DefaultDebounceDuration = time.Millisecond * 200
-
-type natStatusProvider interface {
-	Status() nat.Status
-	ConsumeNATEvent(event natEvent.Event)
-}
 
 type publisher interface {
 	Publish(topic string, data interface{})
@@ -89,7 +82,6 @@ type Keeper struct {
 
 	// provider
 	consumeServiceStateEvent             func(e interface{})
-	consumeNATEvent                      func(e interface{})
 	consumeServiceSessionStatisticsEvent func(e interface{})
 	consumeServiceSessionEarningsEvent   func(e interface{})
 	consumeNATStatusUpdateEvent          func(e interface{})
@@ -103,7 +95,6 @@ type Keeper struct {
 
 // KeeperDeps to construct the state.Keeper.
 type KeeperDeps struct {
-	NATStatusProvider         natStatusProvider
 	Publisher                 publisher
 	ServiceLister             serviceLister
 	IdentityProvider          identityProvider
@@ -123,14 +114,6 @@ type proposalPricer interface {
 func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
-			Nat: contract.Nat{
-				Status: contract.NATStatusDTO{
-					Status: string(nat.Pending),
-				},
-			},
-			NATStatus: contract.NATStatusDTO{
-				Status: nat.StatusNotFinished,
-			},
 			Sessions: make([]session.History, 0),
 			Connection: stateEvent.Connection{
 				Session: connectionstate.Status{
@@ -145,10 +128,8 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
-	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
 	k.consumeServiceSessionStatisticsEvent = debounce(k.updateSessionStats, debounceDuration)
 	k.consumeServiceSessionEarningsEvent = debounce(k.updateSessionEarnings, debounceDuration)
-	k.consumeNATStatusUpdateEvent = debounce(k.updateNATStatusV2, debounceDuration)
 
 	// consumer
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
@@ -200,9 +181,6 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(sevent.AppTopicTokensEarned, k.consumeServiceSessionEarningsEvent); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(nat.AppTopicNATStatusUpdate, k.consumeNATStatusUpdateEvent); err != nil {
@@ -286,37 +264,6 @@ func (k *Keeper) getServiceByID(id string) (se contract.ServiceInfoDTO, found bo
 		}
 	}
 	return
-}
-
-func (k *Keeper) updateNATStatusV2(raw interface{}) {
-	e, ok := raw.(nat.V2NatStatusEvent)
-	if !ok {
-		log.Warn().Msg(fmt.Sprintf("NAT Status update: received `%T` instead of `%T` event - ignoring", raw, nat.V2NatStatusEvent{}))
-		return
-	}
-
-	k.state.Nat.Status.Status = string(e.Status)
-	go k.announceStateChanges(nil)
-}
-
-func (k *Keeper) updateNatStatus(e interface{}) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-
-	event, ok := e.(natEvent.Event)
-	if !ok {
-		log.Warn().Msg("Received a non-NAT event on NAT status call - ignoring")
-		return
-	}
-
-	k.deps.NATStatusProvider.ConsumeNATEvent(event)
-	status := k.deps.NATStatusProvider.Status()
-	k.state.NATStatus = contract.NATStatusDTO{Status: status.Status}
-	if status.Error != nil {
-		k.state.NATStatus.Error = status.Error.Error()
-	}
-
-	go k.announceStateChanges(nil)
 }
 
 // consumeServiceSessionEvent consumes the session change events

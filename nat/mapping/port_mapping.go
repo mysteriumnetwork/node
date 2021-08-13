@@ -23,9 +23,9 @@ import (
 	"time"
 
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/eventbus"
 )
 
 // StageName is used to indicate port mapping NAT traversal stage
@@ -72,7 +72,6 @@ func (p *portMapper) Map(id, protocol string, port int, name string) (release fu
 	if !p.routerIPPublic() {
 		err := errors.New("failed to find router public IP")
 		log.Info().Err(err).Msg("Port mapping is useless, skipping it.")
-		p.notify(id, err)
 
 		return nil, false
 	}
@@ -80,7 +79,6 @@ func (p *portMapper) Map(id, protocol string, port int, name string) (release fu
 	// Try add mapping first to determine if it is supported and
 	// if permanent lease only is supported.
 	permanent, err := p.addMapping(protocol, port, port, name)
-	p.notify(id, err)
 	if err != nil {
 		return nil, false
 	}
@@ -98,7 +96,9 @@ func (p *portMapper) Map(id, protocol string, port int, name string) (release fu
 				return
 			case <-time.After(p.config.MapUpdateInterval):
 				_, err := p.addMapping(protocol, port, port, name)
-				p.notify(id, err)
+				if err != nil {
+					log.Info().Err(err).Msg("Failed to add port mapping")
+				}
 			}
 		}
 	}()
@@ -126,14 +126,6 @@ func (p *portMapper) routerIPPublic() bool {
 	}
 
 	return true
-}
-
-func (p *portMapper) notify(id string, err error) {
-	if err != nil {
-		p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, err))
-	} else {
-		p.publisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, StageName))
-	}
 }
 
 func (p *portMapper) addMapping(protocol string, extPort, intPort int, name string) (permanent bool, err error) {

@@ -25,7 +25,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
@@ -51,7 +50,7 @@ func NewNATHolePunchingPortProvider() PortProvider {
 
 	return &natHolePunchingPort{
 		pool:   port.NewFixedRangePool(udpPortRange),
-		pinger: traversal.NewPinger(traversal.DefaultPingConfig(), eventbus.New()),
+		pinger: traversal.NewPinger(traversal.DefaultPingConfig()),
 	}
 }
 
@@ -69,5 +68,5 @@ func (hp *natHolePunchingPort) PreparePorts() (ports []int, release func(), star
 }
 
 func (hp *natHolePunchingPort) Start(ctx context.Context, peerIP string, peerPorts, localPorts []int) ([]*net.UDPConn, error) {
-	return hp.pinger.PingConsumerPeer(context.Background(), "remove this id", peerIP, localPorts, peerPorts, providerInitialTTL, requiredConnCount)
+	return hp.pinger.PingConsumerPeer(context.Background(), peerIP, localPorts, peerPorts, providerInitialTTL, requiredConnCount)
 }

@@ -31,8 +31,6 @@ import (
 	"golang.org/x/net/ipv4"
 
 	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/router"
 )
 
@@ -53,7 +51,7 @@ var errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	PingProviderPeer(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
-	PingConsumerPeer(ctx context.Context, id string, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumerPeer(ctx context.Context, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	Stop()
 }
 
@@ -75,10 +73,9 @@ func DefaultPingConfig() *PingConfig {
 
 // Pinger represents NAT pinger structure
 type Pinger struct {
-	pingConfig     *PingConfig
-	stop           chan struct{}
-	once           sync.Once
-	eventPublisher eventbus.Publisher
+	pingConfig *PingConfig
+	stop       chan struct{}
+	once       sync.Once
 }
 
 // PortSupplier provides port needed to run a service on
@@ -87,11 +84,10 @@ type PortSupplier interface {
 }
 
 // NewPinger returns Pinger instance
-func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
+func NewPinger(pingConfig *PingConfig) NATPinger {
 	return &Pinger{
-		pingConfig:     pingConfig,
-		stop:           make(chan struct{}),
-		eventPublisher: publisher,
+		pingConfig: pingConfig,
+		stop:       make(chan struct{}),
 	}
 }
 
@@ -105,7 +101,7 @@ func (p *Pinger) Stop() {
 // PingConsumerPeer pings remote peer with a defined configuration
 // and notifies peer which connections will be used.
 // It returns n connections if possible or error.
-func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+func (p *Pinger) PingConsumerPeer(ctx context.Context, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
 	defer cancel()
 
@@ -149,12 +145,10 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, remoteIP strin
 	for {
 		select {
 		case <-ctx.Done():
-			p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, ctx.Err()))
 			return nil, fmt.Errorf("ping failed: %w", ctx.Err())
 		case ping := <-pingsCh:
 			pings = append(pings, ping)
 			if len(pings) == n {
-				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, StageName))
 				return sortedConns(pings), nil
 			}
 		}

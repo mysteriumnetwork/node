@@ -58,7 +58,7 @@ func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifierFa
 		signer:          signer,
 		verifierFactory: verifierFactory,
 		portPool:        portPool,
-		consumerPinger:  traversal.NewPinger(traversal.DefaultPingConfig(), eventbus.New()),
+		consumerPinger:  traversal.NewPinger(traversal.DefaultPingConfig()),
 		eventBus:        eventBus,
 	}
 }

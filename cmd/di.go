@@ -68,10 +68,7 @@ import (
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
-	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
@@ -284,8 +281,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	appconfig.Current.EnableEventPublishing(di.EventBus)
 
-	di.handleNATStatusForPublicIP()
-
 	log.Info().Msg("Mysterium node started!")
 	return nil
 }
@@ -334,15 +329,7 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 }
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
-	var lastStageName string
-	if options.NATHolePunching {
-		lastStageName = traversal.StageName
-	} else {
-		lastStageName = mapping.StageName
-	}
-
 	deps := state.KeeperDeps{
-		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		IdentityProvider:          di.IdentityManager,
@@ -850,14 +837,6 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 		return err
 	}
 
-	// warm up the loader as the load takes up to a couple of secs
-	loader := &upnp.GatewayLoader{}
-	go loader.Get()
-	natSender := event.NewSender(qualitySender, di.IPResolver.GetPublicIP, loader.HumanReadable)
-	if err := natSender.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -1004,22 +983,6 @@ func (di *Dependencies) handleConnStateChange() error {
 		}
 		latestState = e.State
 	})
-}
-
-func (di *Dependencies) handleNATStatusForPublicIP() {
-	outIP, err := di.IPResolver.GetOutboundIP()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get outbound IP address")
-	}
-
-	pubIP, err := di.IPResolver.GetPublicIP()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get public IP address")
-	}
-
-	if outIP == pubIP && pubIP != "" {
-		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
-	}
 }
 
 func (di *Dependencies) bootstrapResidentCountry() error {

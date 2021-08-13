@@ -25,10 +25,11 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
+
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockNATProber struct {
@@ -40,40 +41,8 @@ func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
 	return m.returnRes, m.returnErr
 }
 
-func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
-	provider := &mockStateProvider{stateToReturn: stateEvent.State{
-		NATStatus: contract.NATStatusDTO{
-			Status: "something",
-			Error:  "maybe",
-		},
-	}}
-	natProber := &mockNATProber{
-		returnRes: "none",
-		returnErr: nil,
-	}
-
-	expectedJSON, err := json.Marshal(provider.stateToReturn.NATStatus)
-	assert.Nil(t, err)
-
-	req, err := http.NewRequest(http.MethodGet, "/nat/status", nil)
-	assert.Nil(t, err)
-	resp := httptest.NewRecorder()
-	router := httprouter.New()
-	AddRoutesForNAT(router, provider, natProber)
-
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, string(expectedJSON), resp.Body.String())
-}
-
 func Test_NATStatus_ReturnsTypeSuccessful_WithSuccessfulEvent(t *testing.T) {
-	provider := &mockStateProvider{stateToReturn: stateEvent.State{
-		NATStatus: contract.NATStatusDTO{
-			Status: "something",
-			Error:  "maybe",
-		},
-	}}
+	provider := &mockStateProvider{stateToReturn: stateEvent.State{}}
 	natProber := &mockNATProber{
 		returnRes: "none",
 		returnErr: nil,

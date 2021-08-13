@@ -1205,24 +1205,6 @@
         }
       }
     },
-    "/nat/status": {
-      "get": {
-        "description": "NAT status returns the last known NAT traversal status",
-        "tags": [
-          "NAT"
-        ],
-        "summary": "Shows NAT status",
-        "operationId": "NATStatusDTO",
-        "responses": {
-          "200": {
-            "description": "NAT status (\"not_finished\"/\"successful\"/\"failed\") and optionally error if status is \"failed\"",
-            "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
-            }
-          }
-        }
-      }
-    },
     "/nat/type": {
       "get": {
         "description": "Returns NAT type. May produce invalid result while VPN connection is established",
@@ -2170,21 +2152,6 @@
           }
         }
       }
-    },
-    "/v2/nat/status": {
-      "get": {
-        "description": "NAT status returns the last known NAT traversal status",
-        "summary": "Shows NAT status",
-        "operationId": "NAT",
-        "responses": {
-          "200": {
-            "description": "NAT status (\"passed\"/\"failed\"/\"pending)",
-            "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
-            }
-          }
-        }
-      }
     }
   },
   "definitions": {
@@ -2956,21 +2923,6 @@
         "api_key": {
           "type": "string",
           "x-go-name": "ApiKey"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "NATStatusDTO": {
-      "description": "NATStatusDTO gives information about NAT traversal success or failure",
-      "type": "object",
-      "properties": {
-        "error": {
-          "type": "string",
-          "x-go-name": "Error"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

@@ -22,7 +22,6 @@ import (
 	"net"
 
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/nat/event"
 )
 
 // NoopPinger does nothing
@@ -44,7 +43,6 @@ func (np *NoopPinger) PingProviderPeer(ctx context.Context, localIP, remoteIP st
 
 // PingConsumerPeer does nothing.
 func (np *NoopPinger) PingConsumerPeer(ctx context.Context, id, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
-	np.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, "noop_pinger"))
 	return []*net.UDPConn{}, nil
 }
 

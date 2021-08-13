@@ -30,12 +30,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockStateProvider struct {
@@ -163,10 +163,6 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState := msp.GetState()
-	changedState.NATStatus = contract.NATStatusDTO{
-		Status: "mass panic",
-		Error:  "cookie prices rise drastically",
-	}
 	h.ConsumeStateEvent(changedState)
 
 	msg = <-results

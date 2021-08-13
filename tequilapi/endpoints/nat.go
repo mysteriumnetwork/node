@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -43,34 +44,6 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 		stateProvider: stateProvider,
 		natProber:     natProber,
 	}
-}
-
-// NATStatus provides NAT configuration info
-// swagger:operation GET /nat/status NAT NATStatusDTO
-// ---
-// summary: Shows NAT status
-// description: NAT status returns the last known NAT traversal status
-// responses:
-//   200:
-//     description: NAT status ("not_finished"/"successful"/"failed") and optionally error if status is "failed"
-//     schema:
-//       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, resp)
-}
-
-// NATStatusV2 provides NAT configuration info
-// swagger:operation GET /v2/nat/status NAT
-// ---
-// summary: Shows NAT status
-// description: NAT status returns the last known NAT traversal status
-// responses:
-//   200:
-//     description: NAT status ("passed"/"failed"/"pending)
-//     schema:
-//       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatusV2(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().Nat.Status, resp)
 }
 
 // NATType provides NAT type in terms of traversal capabilities
@@ -102,8 +75,6 @@ func (ne *NATEndpoint) NATType(resp http.ResponseWriter, req *http.Request, _ ht
 // AddRoutesForNAT adds nat routes to given router
 func AddRoutesForNAT(router *httprouter.Router, stateProvider stateProvider, natProber natProber) {
 	natEndpoint := NewNATEndpoint(stateProvider, natProber)
-
-	router.GET("/nat/status", natEndpoint.NATStatus)
 	router.GET("/nat/type", natEndpoint.NATType)
 
 	router.GET("/v2/nat/status", natEndpoint.NATStatusV2)
