@@ -39,7 +39,6 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 	options := &mysterium.MobileNodeOptions{
 		Testnet3:                       true,
-		NATHolePunching:                true,
 		MysteriumAPIAddress:            "http://discovery:8080/api/v3",
 		BrokerAddresses:                []string{"broker"},
 		EtherClientRPCL1:               []string{"http://ganache:8545"},

@@ -384,13 +384,11 @@ func (client *Client) Unlock(identity, passphrase string) error {
 	return nil
 }
 
-// Payout registers payout address for identity
-func (client *Client) Payout(identity, ethAddress string) error {
-	path := fmt.Sprintf("identities/%s/payout", identity)
-	payload := struct {
-		EthAddress string `json:"eth_address"`
-	}{
-		ethAddress,
+// SetPayout registers payout address for identity.
+func (client *Client) SetPayout(identity, ethAddress string) error {
+	path := fmt.Sprintf("identities/%s/payout-address", identity)
+	payload := contract.PayoutAddressRequest{
+		Address: ethAddress,
 	}
 
 	response, err := client.http.Put(path, payload)
@@ -400,6 +398,20 @@ func (client *Client) Payout(identity, ethAddress string) error {
 	defer response.Body.Close()
 
 	return nil
+}
+
+// GetPayout gets the current payout address.
+func (client *Client) GetPayout(identity string) (contract.PayoutAddressRequest, error) {
+	path := fmt.Sprintf("identities/%s/payout-address", identity)
+	res := contract.PayoutAddressRequest{}
+	response, err := client.http.Get(path, nil)
+	if err != nil {
+		return res, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	return res, err
 }
 
 // Stop kills mysterium client

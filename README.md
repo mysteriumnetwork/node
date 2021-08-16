@@ -86,7 +86,7 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+For a detailed guide, please visit our [developer docs](https://docs.mysterium.network/developers/).
 
 ## Contributors
 * **Valdas Petrulis** - *Lead developer, go evangelist, node bootstrapper* - [Waldz](https://github.com/Waldz)

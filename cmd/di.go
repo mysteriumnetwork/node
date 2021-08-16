@@ -70,7 +70,6 @@ import (
 	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -82,10 +81,10 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
-	"github.com/mysteriumnetwork/node/utils/bcutil"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
 )
 
 // UIServer represents our web server
@@ -106,6 +105,9 @@ type Dependencies struct {
 	PricingHelper     *pingpong.Pricer
 	EtherClientL1     *paymentClient.EthMultiClient
 	EtherClientL2     *paymentClient.EthMultiClient
+
+	SorterClientL1 *psort.MultiClientSorter
+	SorterClientL2 *psort.MultiClientSorter
 
 	EtherClients []*paymentClient.ReconnectableEthClient
 
@@ -147,7 +149,6 @@ type Dependencies struct {
 	ServiceSessions *service.SessionPool
 	ServiceFirewall firewall.IncomingTrafficFirewall
 
-	NATPinger  traversal.NATPinger
 	PortPool   *port.Pool
 	PortMapper mapping.PortMapper
 
@@ -250,22 +251,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
-		return err
-	}
-
 	portRange, err := getUDPListenPorts()
 	if err != nil {
 		return err
 	}
 
 	di.PortPool = port.NewFixedRangePool(portRange)
-	if config.GetBool(config.FlagPortMapping) {
-		portmapConfig := mapping.DefaultConfig()
-		di.PortMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
-	} else {
-		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
-	}
 
 	di.bootstrapP2P()
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
@@ -325,8 +316,8 @@ func (di *Dependencies) bootstrapP2P() {
 		return identity.NewVerifierIdentity(id)
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper, di.EventBus)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, di.NATPinger, di.PortPool, di.EventBus)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.EventBus)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, verifierFactory, di.IPResolver, di.PortPool, di.EventBus)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -342,15 +333,8 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 }
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
-	var lastStageName string
-	if options.NATHolePunching {
-		lastStageName = traversal.StageName
-	} else {
-		lastStageName = mapping.StageName
-	}
-
 	deps := state.KeeperDeps{
-		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
+		NATStatusProvider:         nat.NewStatusTracker("unknown"),
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		IdentityProvider:          di.IdentityManager,
@@ -424,9 +408,15 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.EtherClientL1 != nil {
 		di.EtherClientL1.Close()
 	}
+	if di.SorterClientL1 != nil {
+		di.SorterClientL1.Stop()
+	}
 
 	if di.EtherClientL2 != nil {
 		di.EtherClientL2.Close()
+	}
+	if di.SorterClientL2 != nil {
+		di.SorterClientL2.Stop()
 	}
 
 	if di.DiscoveryWorker != nil {
@@ -597,7 +587,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	sleepNotifier := sleep.NewNotifier(di.ConnectionManager, di.EventBus)
 	sleepNotifier.Subscribe()
 
-	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer, sleepNotifier)
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
 	sessionProviderFunc := func(providerID string) (results []nat.Session) {
 		for _, session := range di.QualityClient.ProviderSessions(providerID) {
@@ -715,15 +705,23 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return errors.New("no l2 rpc endpoints loaded, can't continue")
 	}
 
-	di.EtherClientL1, err = di.bootstrapMultiClientBC(bcClientsL1)
+	notifyChannelL1 := make(chan paymentClient.Notification, 5)
+	di.EtherClientL1, err = paymentClient.NewEthMultiClientNotifyDown(time.Second*20, bcClientsL1, notifyChannelL1)
 	if err != nil {
 		return err
 	}
+	di.SorterClientL1 = psort.NewMultiClientSorterNoTicker(di.EtherClientL1, notifyChannelL1)
+	di.SorterClientL1.AddOnNotificationAction(psort.DefaultByAvailability)
+	go di.SorterClientL1.Run()
 
-	di.EtherClientL2, err = di.bootstrapMultiClientBC(bcClientsL2)
+	notifyChannelL2 := make(chan paymentClient.Notification, 5)
+	di.EtherClientL2, err = paymentClient.NewEthMultiClientNotifyDown(time.Second*20, bcClientsL2, notifyChannelL2)
 	if err != nil {
 		return err
 	}
+	di.SorterClientL2 = psort.NewMultiClientSorterNoTicker(di.EtherClientL2, notifyChannelL2)
+	di.SorterClientL2.AddOnNotificationAction(psort.DefaultByAvailability)
+	go di.SorterClientL2.Run()
 
 	bcL1 := paymentClient.NewBlockchain(di.EtherClientL1, options.Payments.BCTimeout)
 	bcL2 := paymentClient.NewBlockchain(di.EtherClientL2, options.Payments.BCTimeout)
@@ -916,20 +914,6 @@ func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 	di.Pilvytis.Start()
 }
 
-func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
-	if options.NATHolePunching {
-		log.Debug().Msg("NAT hole punching enabled, creating a pinger")
-		di.NATPinger = traversal.NewPinger(
-			traversal.DefaultPingConfig(),
-			di.EventBus,
-		)
-	} else {
-		di.NATPinger = &traversal.NoopPinger{}
-	}
-
-	return nil
-}
-
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall(config.GetBool(config.FlagOutgoingFirewall))
 	if err := firewall.DefaultOutgoingFirewall.Setup(); err != nil {
@@ -1030,17 +1014,6 @@ func (di *Dependencies) handleNATStatusForPublicIP() {
 	}
 }
 
-func (di *Dependencies) bootstrapMultiClientBC(clients []paymentClient.AddressableEthClientGetter) (*client.EthMultiClient, error) {
-	notifyl1Channel := make(chan string, 10)
-	cl, err := paymentClient.NewEthMultiClientNotifyDown(time.Second*20, clients, notifyl1Channel)
-	if err != nil {
-		return nil, err
-	}
-	go bcutil.ManageMultiClient(cl, notifyl1Channel)
-
-	return cl, nil
-}
-
 func (di *Dependencies) bootstrapResidentCountry() error {
 	if di.EventBus == nil {
 		return errMissingDependency("di.EventBus")
@@ -1082,5 +1055,5 @@ func getUDPListenPorts() (port.Range, error) {
 		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
 		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
-	return *udpPortRange, nil
+	return udpPortRange, nil
 }

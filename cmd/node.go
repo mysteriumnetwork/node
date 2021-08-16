@@ -42,12 +42,11 @@ type SleepNotifier interface {
 }
 
 // NewNode function creates new Mysterium node by given options
-func NewNode(connectionManager connection.Manager, tequilapiServer tequilapi.APIServer, publisher Publisher, natPinger NATPinger, uiServer UIServer, notifier SleepNotifier) *Node {
+func NewNode(connectionManager connection.Manager, tequilapiServer tequilapi.APIServer, publisher Publisher, uiServer UIServer, notifier SleepNotifier) *Node {
 	return &Node{
 		connectionManager: connectionManager,
 		httpAPIServer:     tequilapiServer,
 		publisher:         publisher,
-		natPinger:         natPinger,
 		uiServer:          uiServer,
 		sleepNotifier:     notifier,
 	}
@@ -58,7 +57,6 @@ type Node struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 	publisher         Publisher
-	natPinger         NATPinger
 	uiServer          UIServer
 	sleepNotifier     SleepNotifier
 }
@@ -99,9 +97,6 @@ func (node *Node) Kill() error {
 
 	node.uiServer.Stop()
 	log.Info().Msg("Web UI server stopped")
-
-	node.natPinger.Stop()
-	log.Info().Msg("NAT pinger stopped")
 
 	node.sleepNotifier.Stop()
 	log.Info().Msg("Sleep notifier stopped")

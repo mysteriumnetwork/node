@@ -171,7 +171,7 @@ type channel struct {
 	sendQueue chan *transportMsg
 
 	// upnpPortsRelease should be called to close mapped upnp ports when channel is closed.
-	upnpPortsRelease []func()
+	upnpPortsRelease func()
 
 	// stop is used to stop all running goroutines.
 	stop chan struct{}
@@ -447,8 +447,9 @@ func (c *channel) Close() error {
 	var closeErr error
 	c.once.Do(func() {
 		close(c.stop)
-		for _, release := range c.upnpPortsRelease {
-			release()
+
+		if c.upnpPortsRelease != nil {
+			c.upnpPortsRelease()
 		}
 
 		if err := c.tr.remoteConn.Close(); err != nil {
@@ -555,7 +556,7 @@ func (c *channel) setServiceConn(conn *net.UDPConn) {
 	c.serviceConn = conn
 }
 
-func (c *channel) setUpnpPortsRelease(release []func()) {
+func (c *channel) setUpnpPortsRelease(release func()) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

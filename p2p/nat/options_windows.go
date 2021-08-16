@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package nat
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Localnet bool
-	Testnet3 bool
-
-	MysteriumAPIAddress string
-	BrokerAddresses     []string
-	EtherClientRPCL1    []string
-	EtherClientRPCL2    []string
-	ChainID             int64
-	DNSMap              map[string][]string
-}
+// providerInitialTTL initial ttl to start punching a hole with. Minimal value us 2 is needed to make windows network stack happy
+const providerInitialTTL = 2
