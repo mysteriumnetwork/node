@@ -63,6 +63,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 		config.FlagPaymentPriceGiB.Value,
 		config.FlagPaymentPriceHour.Value,
 	))
+	tequilapi_endpoints.AddRoutesForEthInfo(router, di.EtherClientL2)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}

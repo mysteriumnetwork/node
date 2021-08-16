@@ -2608,6 +2608,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/feedback/client"
     },
+    "EthInfoResponse": {
+      "description": "EthInfoResponse contains information related to active eth client settings",
+      "type": "object",
+      "properties": {
+        "eth_rpc_l2_url": {
+          "type": "string",
+          "x-go-name": "EthRPCL2URL"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "FeesDTO": {
       "description": "FeesDTO represents the transactor fees",
       "type": "object",
