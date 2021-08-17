@@ -238,6 +238,12 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			BCTimeout:                      time.Second * 30,
 			HermesPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:              time.Hour * 2,
+			HermesStatusRecheckInterval:    time.Hour * 2,
+			BalanceFastPollInterval:        time.Second * 30,
+			BalanceFastPollTimeout:         time.Minute * 3,
+			BalanceLongPollInterval:        time.Hour * 1,
+			RegistryTransactorPollInterval: time.Second * 20,
+			RegistryTransactorPollTimeout:  time.Minute * 20,
 		},
 		Chains: node.OptionsChains{
 			Chain1: metadata.ChainDefinition{

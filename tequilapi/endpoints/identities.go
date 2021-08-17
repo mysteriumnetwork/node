@@ -39,7 +39,7 @@ import (
 )
 
 type balanceProvider interface {
-	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
+	GetBalance(chainID int64, id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
@@ -313,7 +313,7 @@ func (ia *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params h
 		stake = data.Stake
 	}
 
-	balance := ia.balanceProvider.ForceBalanceUpdate(chainID, id)
+	balance := ia.balanceProvider.GetBalance(chainID, id)
 	settlement := ia.earningsProvider.GetEarnings(chainID, id)
 	status := contract.IdentityDTO{
 		Address:            address,
