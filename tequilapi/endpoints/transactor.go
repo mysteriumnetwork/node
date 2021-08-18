@@ -49,6 +49,7 @@ type Transactor interface {
 	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
 	GetReferralToken(id common.Address) (string, error)
 	ReferralTokenAvailable(id common.Address) error
+	RegistrationTokenReward(token string) (*big.Int, error)
 }
 
 // promiseSettler settles the given promises
@@ -534,6 +535,41 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 	resp.WriteHeader(http.StatusOK)
 }
 
+// swagger:operation POST /transactor/token/{token}/reward Reward
+// ---
+// summary: Returns the amount of reward for a token
+// parameters:
+// - in: path
+//   name: token
+//   description: Token for which to lookup the reward
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Token Reward
+//     schema:
+//       "$ref": "#/definitions/TokenRewardAmount"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) TokenRewardAmount(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	token := params.ByName("token")
+	reward, err := te.transactor.RegistrationTokenReward(token)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	if reward == nil {
+		utils.SendError(resp, errors.New("no reward for token"), http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.TokenRewardAmount{
+		Amount: reward,
+	}, resp)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
 	router *httprouter.Router,
@@ -556,4 +592,5 @@ func AddRoutesForTransactor(
 	router.POST("/transactor/stake/increase/sync", te.SettleIntoStakeSync)
 	router.POST("/transactor/stake/increase/async", te.SettleIntoStakeAsync)
 	router.POST("/transactor/stake/decrease", te.DecreaseStake)
+	router.GET("/transactor/token/:token/reward", te.TokenRewardAmount)
 }
