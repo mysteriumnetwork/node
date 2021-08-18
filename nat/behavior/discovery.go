@@ -22,11 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/nat"
 	"github.com/pion/stun"
+	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 // Enum of DiscoverNATMapping return values
@@ -288,7 +293,12 @@ func connect(address string) (*stunServerConn, error) {
 		return nil, err
 	}
 
-	c, err := net.ListenUDP("udp4", nil)
+	laddr, err := localAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := net.ListenUDP("udp4", laddr)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +310,28 @@ func connect(address string) (*stunServerConn, error) {
 		stopChan:    make(chan struct{}),
 	}
 	serverConn.listen()
+
 	return serverConn, nil
+}
+
+func localAddress() (*net.UDPAddr, error) {
+	udpPortRange, err := port.ParseRange(config.GetString(config.FlagUDPListenPorts))
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to parse UDP listen port range, using default value")
+
+		udpPortRange, err = port.ParseRange("10000:60000")
+		if err != nil {
+			panic(err) // This must never happen.
+		}
+	}
+
+	pool := port.NewFixedRangePool(udpPortRange)
+	port, err := pool.Acquire()
+	if err != nil {
+		return nil, err
+	}
+
+	return net.ResolveUDPAddr("udp", ":"+strconv.Itoa(port.Num()))
 }
 
 // Send request and wait for response or timeout
