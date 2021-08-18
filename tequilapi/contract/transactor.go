@@ -229,3 +229,9 @@ type BeneficiaryTxStatus struct {
 	// example: 0x0000000000000000000000000000000000000001
 	ChangeTo string `json:"change_to"`
 }
+
+// TokenRewardAmount represents a response for token rewards.
+// swagger:model TokenRewardAmount
+type TokenRewardAmount struct {
+	Amount *big.Int `json:"amount"`
+}

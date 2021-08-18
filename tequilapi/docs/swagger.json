@@ -2171,6 +2171,35 @@
         }
       }
     },
+    "/transactor/token/{token}/reward": {
+      "post": {
+        "summary": "Returns the amount of reward for a token",
+        "operationId": "Reward",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Token for which to lookup the reward",
+            "name": "token",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token Reward",
+            "schema": {
+              "$ref": "#/definitions/TokenRewardAmount"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/v2/nat/status": {
       "get": {
         "description": "NAT status returns the last known NAT traversal status",
@@ -3821,6 +3850,16 @@
           "type": "string",
           "x-go-name": "CurrentVersion",
           "example": "0.0.27"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TokenRewardAmount": {
+      "type": "object",
+      "title": "TokenRewardAmount represents a response for token rewards.",
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
