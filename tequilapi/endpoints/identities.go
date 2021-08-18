@@ -40,6 +40,7 @@ import (
 
 type balanceProvider interface {
 	GetBalance(chainID int64, id identity.Identity) *big.Int
+	ForceBalanceUpdateCached(chainID int64, id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
@@ -255,6 +256,39 @@ func (ia *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request,
 		return
 	}
 	resp.WriteHeader(http.StatusAccepted)
+}
+
+// swagger:operation PUT /identities/{id}/balance/refresh Identity getIdentity
+// ---
+// summary: Refresh balance of given identity
+// description: Refresh balance of given identity
+// parameters:
+//   - in: path
+//     name: id
+//     description: hex address of identity
+//     type: string
+//     required: true
+// responses:
+//   200:
+//     description: Updated balance
+//     schema:
+//       "$ref": "#/definitions/BalanceDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (ia *identitiesAPI) BalanceRefresh(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	id, err := ia.idm.GetIdentity(address)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
+	}
+	chainID := config.GetInt64(config.FlagChainID)
+	status := contract.BalanceDTO{
+		Balance: ia.balanceProvider.ForceBalanceUpdateCached(chainID, id),
+	}
+	utils.WriteAsJSON(status, resp)
 }
 
 // swagger:operation GET /identities/{id} Identity getIdentity
@@ -632,6 +666,7 @@ func AddRoutesForIdentities(
 	router.GET("/identities/:id/referral-available", idAPI.ReferralTokenAvailable)
 	router.GET("/identities/:id/payout-address", idAPI.GetPayoutAddress)
 	router.PUT("/identities/:id/payout-address", idAPI.SavePayoutAddress)
+	router.PUT("/identities/:id/balance/refresh", idAPI.BalanceRefresh)
 
 	router.POST("/identities-import", idAPI.Import)
 }
