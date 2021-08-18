@@ -62,7 +62,7 @@ type ConsumerBalanceTracker struct {
 	stop                                 chan struct{}
 	once                                 sync.Once
 
-	fullBalanceUpdateThrottle map[string]*big.Int
+	fullBalanceUpdateThrottle map[string]struct{}
 	fullBalanceUpdateLock     sync.Mutex
 
 	cfg ConsumerBalanceTrackerConfig
@@ -107,7 +107,7 @@ func NewConsumerBalanceTracker(
 		addressProvider:                      addressProvider,
 		stop:                                 make(chan struct{}),
 		cfg:                                  cfg,
-		fullBalanceUpdateThrottle:            make(map[string]*big.Int),
+		fullBalanceUpdateThrottle:            make(map[string]struct{}),
 	}
 }
 
@@ -365,7 +365,8 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdateCached(chainID int64, id id
 		return cbt.GetBalance(chainID, id)
 	}
 
-	cbt.fullBalanceUpdateThrottle[key] = cbt.ForceBalanceUpdate(chainID, id)
+	currentBalance := cbt.ForceBalanceUpdate(chainID, id)
+	cbt.fullBalanceUpdateThrottle[key] = struct{}{}
 
 	go func() {
 		select {
@@ -376,7 +377,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdateCached(chainID int64, id id
 		}
 	}()
 
-	return cbt.fullBalanceUpdateThrottle[key]
+	return currentBalance
 }
 
 func (cbt *ConsumerBalanceTracker) deleteCachedForceBalance(key string) {

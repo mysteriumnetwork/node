@@ -258,7 +258,7 @@ func (ia *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request,
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-// swagger:operation PUT /identities/{id}/balance/refresh Identity getIdentity
+// swagger:operation PUT /identities/{id}/balance/refresh Identity balance
 // ---
 // summary: Refresh balance of given identity
 // description: Refresh balance of given identity
