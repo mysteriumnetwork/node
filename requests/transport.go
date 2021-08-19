@@ -34,5 +34,6 @@ func NewTransport(dialFunc DialContext) *http.Transport {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   30 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		DisableKeepAlives:     true,
 	}
 }
