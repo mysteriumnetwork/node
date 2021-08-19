@@ -541,6 +541,13 @@ func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, e
 	return &GetBalanceResponse{Balance: b}, nil
 }
 
+// ForceBalanceUpdate force updates balance and returns the updated balance.
+func (mb *MobileNode) ForceBalanceUpdate(req *GetBalanceRequest) *GetBalanceResponse {
+	return &GetBalanceResponse{
+		Balance: crypto.BigMystToFloat(mb.consumerBalanceTracker.ForceBalanceUpdateCached(mb.chainID, identity.FromAddress(req.IdentityAddress))),
+	}
+}
+
 // SendFeedbackRequest represents user feedback request.
 type SendFeedbackRequest struct {
 	Email       string
