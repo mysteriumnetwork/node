@@ -62,6 +62,9 @@ type ConsumerBalanceTracker struct {
 	stop                                 chan struct{}
 	once                                 sync.Once
 
+	fullBalanceUpdateThrottle map[string]struct{}
+	fullBalanceUpdateLock     sync.Mutex
+
 	cfg ConsumerBalanceTrackerConfig
 }
 
@@ -104,6 +107,7 @@ func NewConsumerBalanceTracker(
 		addressProvider:                      addressProvider,
 		stop:                                 make(chan struct{}),
 		cfg:                                  cfg,
+		fullBalanceUpdateThrottle:            make(map[string]struct{}),
 	}
 }
 
@@ -348,6 +352,43 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 	}
 
 	return balance, backoff.Retry(alignBalance, boff)
+}
+
+// ForceBalanceUpdateCached forces a balance update for the given identity only if the last call to this func was done no sooner than a minute ago.
+func (cbt *ConsumerBalanceTracker) ForceBalanceUpdateCached(chainID int64, id identity.Identity) *big.Int {
+	cbt.fullBalanceUpdateLock.Lock()
+	defer cbt.fullBalanceUpdateLock.Unlock()
+
+	key := getKeyForForceBalanceCache(chainID, id)
+	_, ok := cbt.fullBalanceUpdateThrottle[key]
+	if ok {
+		return cbt.GetBalance(chainID, id)
+	}
+
+	currentBalance := cbt.ForceBalanceUpdate(chainID, id)
+	cbt.fullBalanceUpdateThrottle[key] = struct{}{}
+
+	go func() {
+		select {
+		case <-time.After(time.Minute):
+			cbt.deleteCachedForceBalance(key)
+		case <-cbt.stop:
+			return
+		}
+	}()
+
+	return currentBalance
+}
+
+func (cbt *ConsumerBalanceTracker) deleteCachedForceBalance(key string) {
+	cbt.fullBalanceUpdateLock.Lock()
+	defer cbt.fullBalanceUpdateLock.Unlock()
+
+	delete(cbt.fullBalanceUpdateThrottle, key)
+}
+
+func getKeyForForceBalanceCache(chainID int64, id identity.Identity) string {
+	return fmt.Sprintf("%v_%v", id.ToCommonAddress().Hex(), chainID)
 }
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance

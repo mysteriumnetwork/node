@@ -121,11 +121,6 @@ func (ac *HermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error
 }
 
 func (ac *HermesCaller) promiseRequest(rp RequestPromise, endpoint string) (crypto.Promise, error) {
-	req, err := requests.NewPostRequest(ac.hermesBaseURI, endpoint, rp)
-	if err != nil {
-		return crypto.Promise{}, fmt.Errorf("could not form %v request: %w", endpoint, err)
-	}
-
 	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
 	boff := backoff.WithMaxRetries(eback, 3)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -135,6 +130,12 @@ func (ac *HermesCaller) promiseRequest(rp RequestPromise, endpoint string) (cryp
 	res := crypto.Promise{}
 
 	return res, backoff.Retry(func() error {
+		req, err := requests.NewPostRequest(ac.hermesBaseURI, endpoint, rp)
+		if err != nil {
+			cancel()
+			return fmt.Errorf("could not form %v request: %w", endpoint, err)
+		}
+
 		err = ac.doRequest(req, &res)
 		if err != nil {
 			// if too many requests, retry
@@ -183,21 +184,22 @@ type RevealObject struct {
 
 // RevealR reveals hashlock key 'r' from 'provider' to the hermes for the agreement identified by 'agreementID'.
 func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error {
-	req, err := requests.NewPostRequest(ac.hermesBaseURI, "reveal_r", RevealObject{
-		R:           r,
-		Provider:    provider,
-		AgreementID: agreementID,
-	})
-	if err != nil {
-		return fmt.Errorf("could not form reveal_r request: %w", err)
-	}
-
 	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
 	boff := backoff.WithMaxRetries(eback, 3)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	boff = backoff.WithContext(boff, ctx)
 	return backoff.Retry(func() error {
+		req, err := requests.NewPostRequest(ac.hermesBaseURI, "reveal_r", RevealObject{
+			R:           r,
+			Provider:    provider,
+			AgreementID: agreementID,
+		})
+		if err != nil {
+			cancel()
+			return fmt.Errorf("could not form reveal_r request: %w", err)
+		}
+
 		err = ac.doRequest(req, &RevealSuccess{})
 		if err != nil {
 			// if too many requests, retry

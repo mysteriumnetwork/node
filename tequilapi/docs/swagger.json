@@ -746,6 +746,39 @@
         }
       }
     },
+    "/identities/{id}/balance/refresh": {
+      "put": {
+        "description": "Refresh balance of given identity",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Refresh balance of given identity",
+        "operationId": "balance",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "hex address of identity",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated balance",
+            "schema": {
+              "$ref": "#/definitions/BalanceDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/identities/{id}/beneficiary": {
       "get": {
         "description": "Provides beneficiary address for given identity",
@@ -2274,6 +2307,16 @@
           "type": "string",
           "x-go-name": "Token",
           "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im15c3QiLCJleHAiOjE2MDEwNDA1NzB9.hnn9FosblyWtx1feSupx3MhZZdkbCuMTaiM6xl54VwQ"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "BalanceDTO": {
+      "type": "object",
+      "title": "BalanceDTO holds balance information.",
+      "properties": {
+        "Balance": {
+          "$ref": "#/definitions/Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
