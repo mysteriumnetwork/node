@@ -15,7 +15,6 @@ fi
 exec /usr/bin/myst \
  --config-dir=$OS_DIR_DATA \
  --script-dir=$OS_DIR_CONFIG \
- --log-dir="" \
  --data-dir=$OS_DIR_DATA \
  --runtime-dir=$OS_DIR_RUN \
  --local-service-discovery=false \
