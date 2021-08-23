@@ -307,16 +307,16 @@ func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, [
 		if err == nil {
 			m.eventBus.Publish(nat.AppTopicNATTraversalMethod, nat.NATTraversalMethod{
 				Identity: id,
-				Method: p.Method,
-				Success: true,
+				Method:   p.Method,
+				Success:  true,
 			})
 			return publicIP, ports, release, start, nil
 		}
 
 		m.eventBus.Publish(nat.AppTopicNATTraversalMethod, nat.NATTraversalMethod{
 			Identity: id,
-			Method: p.Method,
-			Success: false,
+			Method:   p.Method,
+			Success:  false,
 		})
 	}
 

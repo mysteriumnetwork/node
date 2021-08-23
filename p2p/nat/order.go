@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 )
 
+// NamedPortProvider contains information of the NAT traversal method.
 type NamedPortProvider struct {
 	Method   string
 	Provider PortProvider

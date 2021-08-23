@@ -18,6 +18,7 @@
 package nat
 
 const (
+	// AppTopicNATTraversalMethod represent NAT traversal method topic.
 	AppTopicNATTraversalMethod = "NAT-traversal-method"
 
 	requiredConnCount = 2
