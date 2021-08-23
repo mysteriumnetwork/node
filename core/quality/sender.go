@@ -33,7 +33,10 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/p2p"
+	p2pnat "github.com/mysteriumnetwork/node/p2p/nat"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -54,6 +57,8 @@ const (
 	pingEventName            = "ping_event"
 	residentCountryEventName = "resident_country_event"
 	stunDetectionEvent       = "stun_detection_event"
+	natTypeDetectionEvent    = "nat_type_detection_event"
+	natTraversalMethod       = "nat_traversal_method"
 )
 
 // Transport allows sending events
@@ -75,6 +80,9 @@ func NewSender(transport Transport, appVersion string) *Sender {
 type Sender struct {
 	Transport  Transport
 	AppVersion string
+
+	identitiesMu       sync.RWMutex
+	identitiesUnlocked []identity.Identity
 
 	sessionsMu     sync.RWMutex
 	sessionsActive map[string]sessionContext
@@ -158,6 +166,12 @@ type natTypeEvent struct {
 	NATType string
 }
 
+type natMethodEvent struct {
+	ID        string
+	NATMethod string
+	Success   bool
+}
+
 // Subscribe subscribes to relevant events of event bus.
 func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 	subscription := map[string]interface{}{
@@ -176,6 +190,8 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 		AppTopicProviderPingP2P:                      s.sendProviderPingDistance,
 		identity.AppTopicResidentCountry:             s.sendResidentCountry,
 		p2p.AppTopicSTUN:                             s.sendSTUNDetectionStatus,
+		behavior.AppTopicNATTypeDetected:             s.sendNATType,
+		p2pnat.AppTopicNATTraversalMethod:            s.sendNATtraversalMethod,
 	}
 
 	for topic, fn := range subscription {
@@ -185,6 +201,26 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 	}
 
 	return nil
+}
+
+func (s *Sender) sendNATtraversalMethod(method p2pnat.NATTraversalMethod) {
+	s.sendEvent(natTraversalMethod, natMethodEvent{
+		ID:        method.Identity,
+		NATMethod: method.Method,
+		Success:   method.Success,
+	})
+}
+
+func (s *Sender) sendNATType(natType nat.NATType) {
+	s.identitiesMu.RLock()
+	defer s.identitiesMu.RUnlock()
+
+	for _, id := range s.identitiesUnlocked {
+		s.sendEvent(natTypeDetectionEvent, natTypeEvent{
+			ID:      id.Address,
+			NATType: string(natType),
+		})
+	}
 }
 
 func (s *Sender) sendSTUNDetectionStatus(status p2p.STUNDetectionStatus) {
@@ -339,6 +375,10 @@ func (s *Sender) sendSessionEvent(e connectionstate.AppEventConnectionSession) {
 
 // sendUnlockEvent sends startup event
 func (s *Sender) sendUnlockEvent(ev identity.AppEventIdentityUnlock) {
+	s.identitiesMu.Lock()
+	defer s.identitiesMu.Unlock()
+	s.identitiesUnlocked = append(s.identitiesUnlocked, ev.ID)
+
 	s.sendEvent(unlockEventName, ev.ID.Address)
 }
 

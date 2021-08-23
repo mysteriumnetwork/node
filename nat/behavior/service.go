@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat"
 )
 
@@ -33,7 +34,12 @@ var compatibleSTUNServers = []string{
 	"stun.sip.us:3478",
 }
 
-const concurrentRequestTimeout = 1 * time.Second
+const (
+	// AppTopicNATTypeDetected represents NAT type detection topic.
+	AppTopicNATTypeDetected = "NAT-type-detected"
+
+	concurrentRequestTimeout = 1 * time.Second
+)
 
 // ErrInappropriateState error is returned by gatedNATProber when connection
 // is active
@@ -53,10 +59,10 @@ type ConnectionStatusProvider interface {
 
 // NewNATProber constructs some suitable NATProber without any implementation
 // guarantees.
-func NewNATProber(connStatusProvider ConnectionStatusProvider) NATProber {
+func NewNATProber(connStatusProvider ConnectionStatusProvider, eventbus eventbus.Publisher) NATProber {
 	var prober NATProber
 	prober = newConcurrentNATProber(compatibleSTUNServers, concurrentRequestTimeout)
-	prober = newGatedNATProber(connStatusProvider, prober)
+	prober = newGatedNATProber(connStatusProvider, eventbus, prober)
 	return prober
 }
 
@@ -81,12 +87,14 @@ func (p *concurrentNATProber) Probe(ctx context.Context) (nat.NATType, error) {
 type gatedNATProber struct {
 	next               NATProber
 	connStatusProvider ConnectionStatusProvider
+	eventbus           eventbus.Publisher
 }
 
-func newGatedNATProber(connStatusProvider ConnectionStatusProvider, next NATProber) *gatedNATProber {
+func newGatedNATProber(connStatusProvider ConnectionStatusProvider, eventbus eventbus.Publisher, next NATProber) *gatedNATProber {
 	return &gatedNATProber{
 		next:               next,
 		connStatusProvider: connStatusProvider,
+		eventbus:           eventbus,
 	}
 }
 
@@ -94,5 +102,12 @@ func (p *gatedNATProber) Probe(ctx context.Context) (nat.NATType, error) {
 	if p.connStatusProvider.Status().State != connectionstate.NotConnected {
 		return "", ErrInappropriateState
 	}
-	return p.next.Probe(ctx)
+
+	s, err := p.next.Probe(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	p.eventbus.Publish(AppTopicNATTypeDetected, s)
+	return s, nil
 }
