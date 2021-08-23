@@ -60,7 +60,7 @@ type GetProposalsRequest struct {
 	PriceGiBMax      float64
 	QualityMin       float32
 	PresetID         int
-	NATCompatibility nat.NATType
+	NATCompatibility string
 }
 
 func (r GetProposalsRequest) toFilter() *proposal.Filter {
@@ -70,7 +70,7 @@ func (r GetProposalsRequest) toFilter() *proposal.Filter {
 		IPType:             r.IPType,
 		QualityMin:         r.QualityMin,
 		ExcludeUnsupported: true,
-		NATCompatibility:   r.NATCompatibility,
+		NATCompatibility:   nat.NATType(r.NATCompatibility),
 	}
 }
 
