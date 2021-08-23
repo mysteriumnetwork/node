@@ -564,7 +564,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.P2PDialer,
 	)
 
-	di.NATProber = natprobe.NewNATProber(di.ConnectionManager)
+	di.NATProber = natprobe.NewNATProber(di.ConnectionManager, di.EventBus)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
