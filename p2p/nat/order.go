@@ -25,6 +25,11 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 )
 
+type NamedPortProvider struct {
+	Method   string
+	Provider PortProvider
+}
+
 // PortProvider describes an method for provideing ports for the service.
 type PortProvider interface {
 	PreparePorts() (ports []int, release func(), start StartPorts, err error)
@@ -37,12 +42,12 @@ var traversalOptions map[string]func() PortProvider = map[string]func() PortProv
 }
 
 // OrderedPortProviders returns a ordered list of the port providers.
-func OrderedPortProviders() (list []PortProvider) {
+func OrderedPortProviders() (list []NamedPortProvider) {
 	methods := strings.Split(config.GetString(config.FlagTraversal), ",")
 
 	for _, m := range methods {
 		if t, ok := traversalOptions[m]; ok {
-			list = append(list, t())
+			list = append(list, NamedPortProvider{Method: m, Provider: t()})
 		} else {
 			log.Warn().Msgf("Unsupported traversal method %s, ignoring it", m)
 		}
@@ -50,7 +55,12 @@ func OrderedPortProviders() (list []PortProvider) {
 
 	if len(list) == 0 {
 		log.Warn().Msg("Failed to parse ordered list of traversal methods, falling back to default values")
-		return []PortProvider{NewManualPortProvider(), NewNATHolePunchingPortProvider(), NewUPnPPortProvider()}
+
+		return []NamedPortProvider{
+			{"manual", NewManualPortProvider()},
+			{"upnp", NewUPnPPortProvider()},
+			{"holepunching", NewNATHolePunchingPortProvider()},
+		}
 	}
 
 	return list

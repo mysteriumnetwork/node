@@ -303,10 +303,21 @@ func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, [
 	}
 
 	for _, p := range nat.OrderedPortProviders() {
-		ports, release, start, err := p.PreparePorts()
+		ports, release, start, err := p.Provider.PreparePorts()
 		if err == nil {
+			m.eventBus.Publish(nat.AppTopicNATTraversalMethod, nat.NATTraversalMethod{
+				Identity: id,
+				Method: p.Method,
+				Success: true,
+			})
 			return publicIP, ports, release, start, nil
 		}
+
+		m.eventBus.Publish(nat.AppTopicNATTraversalMethod, nat.NATTraversalMethod{
+			Identity: id,
+			Method: p.Method,
+			Success: false,
+		})
 	}
 
 	return "", nil, nil, nil, fmt.Errorf("failed to prepare local ports")

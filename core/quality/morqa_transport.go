@@ -86,9 +86,25 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 		return residentCountryToMetricsEvent(event.Context.(residentCountryEvent))
 	case stunDetectionEvent:
 		return natTypeToMetricsEvent(event.Context.(natTypeEvent))
+	case natTypeDetectionEvent:
+		return natTypeToMetricsEvent(event.Context.(natTypeEvent))
+	case natTraversalMethod:
+		return natTraversalMethodToMetricsEvent(event.Context.(natMethodEvent))
 	}
 
 	return "", nil
+}
+
+func natTraversalMethodToMetricsEvent(event natMethodEvent) (string, *metrics.Event) {
+	return event.ID, &metrics.Event{
+		IsProvider: true,
+		Metric: &metrics.Event_NatMethod{
+			NatMethod: &metrics.NatMethodResult{
+				Method:  event.NATMethod,
+				Success: event.Success,
+			},
+		},
+	}
 }
 
 func natTypeToMetricsEvent(event natTypeEvent) (string, *metrics.Event) {

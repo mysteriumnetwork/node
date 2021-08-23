@@ -18,6 +18,15 @@
 package nat
 
 const (
+	AppTopicNATTraversalMethod = "NAT-traversal-method"
+
 	requiredConnCount = 2
 	pingMaxPorts      = 20
 )
+
+// NATTraversalMethod represents information about NAT traversal methods results.
+type NATTraversalMethod struct {
+	Identity string
+	Method   string
+	Success  bool
+}
