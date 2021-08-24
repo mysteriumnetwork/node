@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +31,8 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 	listener, err := net.Listen("tcp", "localhost:31337")
 	assert.Nil(t, err)
 
-	server := NewServer(listener, nil, RegexpCorsPolicy{})
+	server, err := NewServer(listener, []func(e *gin.Engine) error{})
+	assert.NoError(t, err)
 
 	server.StartServing()
 
@@ -46,6 +49,7 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
 	listener, err := net.Listen("tcp", "localhost:31337")
 	assert.Nil(t, err)
-	server := NewServer(listener, nil, RegexpCorsPolicy{})
+	server, err := NewServer(listener, []func(e *gin.Engine) error{})
+	assert.NoError(t, err)
 	server.Stop()
 }
