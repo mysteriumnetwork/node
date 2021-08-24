@@ -19,11 +19,16 @@ package endpoints
 
 import (
 	"context"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
+	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/gin-gonic/gin"
 
@@ -382,46 +387,46 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 	assert.Equal(t, fakeManager.disconnectCount, 1)
 }
 
-//func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-//	fakeState := &mockStateProvider{}
-//	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
-//	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
-//	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: big.NewInt(10001)}
-//
-//	manager := mockConnectionManager{}
-//
-//	resp := httptest.NewRecorder()
-//
-//	req := httptest.NewRequest(
-//		http.MethodPut,
-//		"/connection/statistics",
-//		strings.NewReader(
-//			`{
-//				"consumer_id" : "my-identity",
-//				"provider_id" : "required-node",
-//				"hermes_id": "hermes",
-//				"service_type": "noop"
-//			}`))
-//
-//	g := gin.Default()
-//	err := AddRoutesForConnection(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})(g)
-//	assert.NoError(t, err)
-//
-//	g.ServeHTTP(resp, req)
-//
-//	assert.JSONEq(
-//		t,
-//		`{
-//			"bytes_sent": 1,
-//			"bytes_received": 2,
-//			"throughput_sent": 1000,
-//			"throughput_received": 2000,
-//			"duration": 0,
-//			"tokens_spent": 10001
-//		}`,
-//		resp.Body.String(),
-//	)
-//}
+func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
+	fakeState := &mockStateProvider{}
+	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
+	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: big.NewInt(10001)}
+
+	manager := mockConnectionManager{}
+
+	resp := httptest.NewRecorder()
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/connection/statistics",
+		strings.NewReader(
+			`{
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"hermes_id": "hermes",
+				"service_type": "noop"
+			}`))
+
+	g := gin.Default()
+	err := AddRoutesForConnection(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
+
+	assert.JSONEq(
+		t,
+		`{
+			"bytes_sent": 1,
+			"bytes_received": 2,
+			"throughput_sent": 1000,
+			"throughput_received": 2000,
+			"duration": 0,
+			"tokens_spent": 10001
+		}`,
+		resp.Body.String(),
+	)
+}
 
 func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager := mockConnectionManager{}

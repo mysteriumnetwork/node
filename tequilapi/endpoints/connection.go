@@ -302,12 +302,12 @@ func AddRoutesForConnection(
 ) func(*gin.Engine) error {
 	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry, publisher, addressProvider)
 	return func(e *gin.Engine) error {
-		connGroup := e.Group("/connection")
+		connGroup := e.Group("")
 		{
-			connGroup.GET("", connectionEndpoint.Status)
-			connGroup.PUT("", connectionEndpoint.Create)
-			connGroup.DELETE("", connectionEndpoint.Kill)
-			connGroup.GET("/statistics", connectionEndpoint.GetStatistics)
+			connGroup.GET("/connection", connectionEndpoint.Status)
+			connGroup.PUT("/connection", connectionEndpoint.Create)
+			connGroup.DELETE("/connection", connectionEndpoint.Kill)
+			connGroup.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 		}
 		return nil
 	}

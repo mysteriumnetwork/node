@@ -698,7 +698,7 @@ func AddRoutesForIdentities(
 			identityGroup.GET("/:id/referral-available", idAPI.ReferralTokenAvailable)
 			identityGroup.GET("/:id/payout-address", idAPI.GetPayoutAddress)
 			identityGroup.PUT("/:id/payout-address", idAPI.SavePayoutAddress)
-			identityGroup.PUT("/identities/:id/balance/refresh", idAPI.BalanceRefresh)
+			identityGroup.PUT("/:id/balance/refresh", idAPI.BalanceRefresh)
 		}
 		e.POST("/identities-import", idAPI.Import)
 		return nil

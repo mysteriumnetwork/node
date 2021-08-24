@@ -18,52 +18,59 @@
 package endpoints
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Docs(t *testing.T) {
-	/*	// given
-		router := httprouter.New()
-		AddRoutesForDocs(router)
+	// given
+	router := gin.Default()
+	err := AddRoutesForDocs(router)
+	assert.NoError(t, err)
 
-		// when
-		req := httptest.NewRequest("GET", "/", nil)
-		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
+	// when
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
 
-		// then
-		assert.Equal(t, 301, resp.Code)
-		assert.Equal(t, "/docs/", resp.Header().Get("Location"))
+	// then
+	assert.Equal(t, 301, resp.Code)
+	assert.Equal(t, "/docs", resp.Header().Get("Location"))
 
-		// when
-		req, _ = http.NewRequest("GET", "/docs", nil)
-		resp = httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-		// then
-		assert.Equal(t, 301, resp.Code)
-		assert.Equal(t, "/docs/", resp.Header().Get("Location"))
+	// when
+	req, _ = http.NewRequest("GET", "/docs", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 301, resp.Code)
+	assert.Equal(t, "/docs/", resp.Header().Get("Location"))
 
-		// when
-		req, _ = http.NewRequest("GET", "/docs/", nil)
-		resp = httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-		// then
-		assert.Equal(t, 200, resp.Code)
-		assert.Contains(t, resp.Body.String(), `<redoc spec-url="./swagger.json"></redoc>`)
+	// when
+	req, _ = http.NewRequest("GET", "/docs/", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 200, resp.Code)
+	assert.Contains(t, resp.Body.String(), `<redoc spec-url="./swagger.json"></redoc>`)
 
-		// when
-		req, _ = http.NewRequest("GET", "/docs/index.html", nil)
-		resp = httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-		// then
-		assert.Equal(t, 301, resp.Code)
-		assert.Equal(t, "./", resp.Header().Get("Location"))
+	// when
+	req, _ = http.NewRequest("GET", "/docs/index.html", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 301, resp.Code)
+	assert.Equal(t, "./", resp.Header().Get("Location"))
 
-		// when
-		req, _ = http.NewRequest("GET", "/docs/swagger.json", nil)
-		resp = httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-		// then
-		assert.Equal(t, 200, resp.Code)
-		assert.Contains(t, resp.Body.String(), `"host": "127.0.0.1:4050"`)*/
+	// when
+	req, _ = http.NewRequest("GET", "/docs/swagger.json", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 200, resp.Code)
+	assert.Contains(t, resp.Body.String(), `"host": "127.0.0.1:4050"`)
 }

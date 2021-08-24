@@ -568,7 +568,7 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/increase/async", te.SettleIntoStakeAsync)
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
-			transGroup.GET("/transactor/token/:token/reward", te.TokenRewardAmount)
+			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
 		}
 		return nil
 	}

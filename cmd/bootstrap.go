@@ -79,7 +79,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForMMN(di.MMN),
 			tequilapi_endpoints.AddRoutesForFeedback(di.Reporter),
 			tequilapi_endpoints.AddRoutesForConnectivityStatus(di.SessionConnectivityStatusStorage),
-			tequilapi_endpoints.AddRoutesForDocs, // TODO smt wrong
+			tequilapi_endpoints.AddRoutesForDocs,
 			tequilapi_endpoints.AddRoutesForCurrencyExchange(di.PilvytisAPI),
 			tequilapi_endpoints.AddRoutesForPilvytis(di.PilvytisAPI),
 			tequilapi_endpoints.AddRoutesForTerms,

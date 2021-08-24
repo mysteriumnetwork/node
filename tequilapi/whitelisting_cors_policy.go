@@ -23,6 +23,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// CorsPolicy resolves allowed origin
+type CorsPolicy interface {
+	AllowedOrigin(requestOrigin string) string
+	IsOriginAllowed(requestOrigin string) bool
+}
+
 // RegexpCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting domains by regexp
 type RegexpCorsPolicy struct {
 	DefaultTrustedOrigin  string
