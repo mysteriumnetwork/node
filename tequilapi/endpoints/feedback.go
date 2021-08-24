@@ -86,7 +86,6 @@ type ReportIssueError struct {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ReportIssueError"
-//func (api *feedbackAPI) ReportIssue(httpRes http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
 func (api *feedbackAPI) ReportIssue(c *gin.Context) {
 	httpReq := c.Request
 	httpRes := c.Writer

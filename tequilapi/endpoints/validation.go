@@ -21,9 +21,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
