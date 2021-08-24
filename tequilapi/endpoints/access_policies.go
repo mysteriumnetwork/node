@@ -20,7 +20,8 @@ package endpoints
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -68,7 +69,9 @@ func NewAccessPoliciesEndpoint(httpClient *requests.HTTPClient, accessPolicyEndp
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (ape *accessPoliciesEndpoint) List(c *gin.Context) {
+	resp := c.Writer
+
 	req, err := requests.NewGetRequest(ape.accessPolicyEndpointURL, "", nil)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -85,7 +88,14 @@ func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Requ
 }
 
 // AddRoutesForAccessPolicies attaches access policies endpoints to router
-func AddRoutesForAccessPolicies(httpClient *requests.HTTPClient, router *httprouter.Router, accessPolicyEndpointURL string) {
+func AddRoutesForAccessPolicies(
+	httpClient *requests.HTTPClient,
+	accessPolicyEndpointURL string,
+) func(*gin.Engine) error {
 	ape := NewAccessPoliciesEndpoint(httpClient, accessPolicyEndpointURL)
-	router.GET("/access-policies", ape.List)
+	return func(g *gin.Engine) error {
+		g.GET("/access-policies", ape.List)
+		return nil
+	}
+
 }

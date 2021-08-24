@@ -25,7 +25,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,8 +49,9 @@ func TestAddRouteForStop(t *testing.T) {
 		stopAllowed: make(chan struct{}, 1),
 		stopped:     make(chan struct{}, 1),
 	}
-	router := httprouter.New()
-	AddRouteForStop(router, stopper.Stop)
+	router := gin.Default()
+	err := AddRouteForStop(stopper.Stop)(router)
+	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
 

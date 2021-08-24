@@ -26,7 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -101,7 +102,6 @@ func newMockPilvytisResp(id int, identity, priceC, payC string, recvAmount float
 
 func TestCreatePaymentOrder(t *testing.T) {
 	identity := "0x000000000000000000000000000000000000000b"
-	params := httprouter.Params{{Key: "id", Value: identity}}
 	reqBody := contract.OrderRequest{
 		MystAmount:  1,
 		PayCurrency: "BTC",
@@ -119,12 +119,15 @@ func TestCreatePaymentOrder(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPost,
-		"/test",
+		fmt.Sprintf("/identities/%s/payment-order", identity),
 		bytes.NewBuffer(mb),
 	)
 	assert.NoError(t, err)
 
-	handler(resp, req, params)
+	g := gin.Default()
+	g.POST("/identities/:id/payment-order", handler)
+	g.ServeHTTP(resp, req)
+
 	assert.Equal(t, 200, resp.Code)
 	assert.JSONEq(t,
 		`{
@@ -148,27 +151,26 @@ func TestCreatePaymentOrder(t *testing.T) {
 
 func TestGetPaymentOrder(t *testing.T) {
 	identity := "0x000000000000000000000000000000000000000b"
-	id := 11
-	params := httprouter.Params{
-		{Key: "id", Value: identity},
-		{Key: "order_id", Value: fmt.Sprint(id)},
-	}
+	orderID := 11
 
 	mock := &mockPilvytis{
 		identity: identity,
-		resp:     newMockPilvytisResp(id, identity, "BTC", "BTC", 1),
+		resp:     newMockPilvytisResp(orderID, identity, "BTC", "BTC", 1),
 	}
 	handler := NewPilvytisEndpoint(mock).GetPaymentOrder
 
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/test",
+		fmt.Sprintf("/identities/%s/payment-order/%d", identity, orderID),
 		nil,
 	)
 	assert.NoError(t, err)
 
-	handler(resp, req, params)
+	g := gin.Default()
+	g.GET("/identities/:id/payment-order/:order_id", handler)
+	g.ServeHTTP(resp, req)
+
 	assert.Equal(t, 200, resp.Code)
 	assert.JSONEq(t,
 		fmt.Sprintf(`{
@@ -184,7 +186,7 @@ func TestGetPaymentOrder(t *testing.T) {
    "payment_url":"foo.com",
    "receive_amount":1,
    "receive_currency":"BTC"
-}`, id),
+}`, orderID),
 		resp.Body.String(),
 	)
 
@@ -192,9 +194,6 @@ func TestGetPaymentOrder(t *testing.T) {
 
 func TestGetPaymentOrders(t *testing.T) {
 	identity := "0x000000000000000000000000000000000000000b"
-	params := httprouter.Params{
-		{Key: "id", Value: identity},
-	}
 
 	mock := &mockPilvytis{
 		identity: identity,
@@ -204,13 +203,16 @@ func TestGetPaymentOrders(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
-		http.MethodGet,
-		"/test",
+		http.MethodPost,
+		fmt.Sprintf("/identities/%s/payment-order", identity),
 		nil,
 	)
 	assert.NoError(t, err)
 
-	handler(resp, req, params)
+	g := gin.Default()
+	g.POST("/identities/:id/payment-order", handler)
+	g.ServeHTTP(resp, req)
+
 	assert.Equal(t, 200, resp.Code)
 	assert.JSONEq(t,
 		`[{
@@ -237,14 +239,18 @@ func TestGetCurrency(t *testing.T) {
 	handler := NewPilvytisEndpoint(mock).GetPaymentOrderCurrencies
 
 	resp := httptest.NewRecorder()
+	url := "/payment-order-currencies"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/test",
+		url,
 		nil,
 	)
 	assert.NoError(t, err)
 
-	handler(resp, req, httprouter.Params{})
+	g := gin.Default()
+	g.GET(url, handler)
+	g.ServeHTTP(resp, req)
+
 	assert.Equal(t, 200, resp.Code)
 	assert.JSONEq(t,
 		`["BTC"]`,
@@ -257,14 +263,18 @@ func TestGetPaymentOrderOptions(t *testing.T) {
 	handler := NewPilvytisEndpoint(mock).GetPaymentOrderOptions
 
 	resp := httptest.NewRecorder()
+	url := "/payment-order-options"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/payment-order-options",
+		url,
 		nil,
 	)
 	assert.NoError(t, err)
 
-	handler(resp, req, httprouter.Params{})
+	g := gin.Default()
+	g.GET(url, handler)
+	g.ServeHTTP(resp, req)
+
 	assert.Equal(t, 200, resp.Code)
 	assert.JSONEq(t,
 		`{

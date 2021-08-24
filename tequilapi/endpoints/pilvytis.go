@@ -22,7 +22,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -75,7 +76,11 @@ func NewPilvytisEndpoint(pil api) *pilvytisEndpoint {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *pilvytisEndpoint) CreatePaymentOrder(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (e *pilvytisEndpoint) CreatePaymentOrder(c *gin.Context) {
+	r := c.Request
+	w := c.Writer
+	params := c.Params
+
 	var req contract.OrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendError(w, errors.Wrap(err, "failed to parse order req"), http.StatusBadRequest)
@@ -121,7 +126,10 @@ func (e *pilvytisEndpoint) CreatePaymentOrder(w http.ResponseWriter, r *http.Req
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *pilvytisEndpoint) GetPaymentOrder(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (e *pilvytisEndpoint) GetPaymentOrder(c *gin.Context) {
+	w := c.Writer
+	params := c.Params
+
 	id := params.ByName("order_id")
 	if id == "" {
 		utils.SendError(w, errors.New("missing ID param"), http.StatusBadRequest)
@@ -166,7 +174,10 @@ func (e *pilvytisEndpoint) GetPaymentOrder(w http.ResponseWriter, r *http.Reques
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *pilvytisEndpoint) GetPaymentOrders(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (e *pilvytisEndpoint) GetPaymentOrders(c *gin.Context) {
+	w := c.Writer
+	params := c.Params
+
 	resp, err := e.api.GetPaymentOrders(identity.FromAddress(params.ByName("id")))
 	if err != nil {
 		utils.SendError(w, err, http.StatusInternalServerError)
@@ -193,7 +204,9 @@ func (e *pilvytisEndpoint) GetPaymentOrders(w http.ResponseWriter, r *http.Reque
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(c *gin.Context) {
+	w := c.Writer
+
 	resp, err := e.api.GetPaymentOrderCurrencies()
 	if err != nil {
 		utils.SendError(w, err, http.StatusInternalServerError)
@@ -218,7 +231,9 @@ func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(w http.ResponseWriter, r *h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *pilvytisEndpoint) GetPaymentOrderOptions(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
+	w := c.Writer
+
 	resp, err := e.api.GetPaymentOrderOptions()
 	if err != nil {
 		utils.SendError(w, err, http.StatusInternalServerError)
@@ -229,11 +244,17 @@ func (e *pilvytisEndpoint) GetPaymentOrderOptions(w http.ResponseWriter, r *http
 }
 
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.
-func AddRoutesForPilvytis(router *httprouter.Router, pilvytis api) {
+func AddRoutesForPilvytis(pilvytis api) func(*gin.Engine) error {
 	pil := NewPilvytisEndpoint(pilvytis)
-	router.POST("/identities/:id/payment-order", pil.CreatePaymentOrder)
-	router.GET("/identities/:id/payment-order/:order_id", pil.GetPaymentOrder)
-	router.GET("/identities/:id/payment-order", pil.GetPaymentOrders)
-	router.GET("/payment-order-options", pil.GetPaymentOrderOptions)
-	router.GET("/payment-order-currencies", pil.GetPaymentOrderCurrencies)
+	return func(e *gin.Engine) error {
+		idGroup := e.Group("/identities")
+		{
+			idGroup.POST("/:id/payment-order", pil.CreatePaymentOrder)
+			idGroup.GET("/:id/payment-order/:order_id", pil.GetPaymentOrder)
+			idGroup.GET("/:id/payment-order", pil.GetPaymentOrders)
+		}
+		e.GET("/payment-order-options", pil.GetPaymentOrderOptions)
+		e.GET("/payment-order-currencies", pil.GetPaymentOrderCurrencies)
+		return nil
+	}
 }

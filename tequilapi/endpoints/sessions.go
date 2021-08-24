@@ -21,9 +21,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/strfmt/conv"
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -64,7 +64,10 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *sessionsEndpoint) List(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	query := contract.NewSessionListQuery()
 	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
@@ -105,7 +108,10 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *sessionsEndpoint) StatsAggregated(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	query := contract.NewSessionQuery()
 	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
@@ -139,7 +145,10 @@ func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, requ
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *sessionsEndpoint) StatsDaily(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	query := contract.SessionQuery{
 		DateFrom: conv.Date(strfmt.Date(time.Now().AddDate(0, 0, -30))),
 		DateTo:   conv.Date(strfmt.Date(time.Now())),
@@ -167,9 +176,15 @@ func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *
 }
 
 // AddRoutesForSessions attaches sessions endpoints to router
-func AddRoutesForSessions(router *httprouter.Router, sessionStorage sessionStorage) {
+func AddRoutesForSessions(sessionStorage sessionStorage) func(*gin.Engine) error {
 	sessionsEndpoint := NewSessionsEndpoint(sessionStorage)
-	router.GET("/sessions", sessionsEndpoint.List)
-	router.GET("/sessions/stats-aggregated", sessionsEndpoint.StatsAggregated)
-	router.GET("/sessions/stats-daily", sessionsEndpoint.StatsDaily)
+	return func(e *gin.Engine) error {
+		g := e.Group("/sessions")
+		{
+			g.GET("", sessionsEndpoint.List)
+			g.GET("/stats-aggregated", sessionsEndpoint.StatsAggregated)
+			g.GET("/stats-daily", sessionsEndpoint.StatsDaily)
+		}
+		return nil
+	}
 }

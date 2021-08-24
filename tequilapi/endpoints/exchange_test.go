@@ -23,32 +23,30 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_ExchangeMyst(t *testing.T) {
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
-		nil,
-	)
-	assert.Nil(t, err)
-
 	me := &mechangeMock{
 		vals: map[string]float64{
 			"BTC": 1.0,
 		},
 	}
 
-	handlerFunc := NewExchangeEndpoint(me).ExchangeMyst
+	g := gin.Default()
+	err := AddRoutesForCurrencyExchange(me)(g)
+	assert.NoError(t, err)
+
 	// Exchange to BTC green path
 	resp := httptest.NewRecorder()
-	handlerFunc(resp, req, httprouter.Params{{
-		Key:   "currency",
-		Value: "btc",
-	}})
+	req, err := http.NewRequest("GET", "/exchange/myst/btc", nil)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
+
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	parsedResponse := contract.CurrencyExchangeDTO{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
@@ -59,10 +57,9 @@ func Test_ExchangeMyst(t *testing.T) {
 
 	// No such currency returns 404
 	resp = httptest.NewRecorder()
-	handlerFunc(resp, req, httprouter.Params{{
-		Key:   "currency",
-		Value: "notACurrency",
-	}})
+	req, err = http.NewRequest("GET", "/myst/notACurrency", nil)
+	g.ServeHTTP(resp, req)
+	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
 }
 

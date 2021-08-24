@@ -20,7 +20,8 @@ package endpoints
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
@@ -78,7 +79,8 @@ func NewConnectionLocationEndpoint(
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (le *ConnectionLocationEndpoint) GetConnectionIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (le *ConnectionLocationEndpoint) GetConnectionIP(c *gin.Context) {
+	writer := c.Writer
 	ipAddress, err := le.ipResolver.GetPublicIP()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
@@ -105,7 +107,8 @@ func (le *ConnectionLocationEndpoint) GetConnectionIP(writer http.ResponseWriter
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (le *ConnectionLocationEndpoint) GetConnectionLocation(c *gin.Context) {
+	writer := c.Writer
 	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
@@ -129,22 +132,28 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (le *ConnectionLocationEndpoint) GetOriginLocation(c *gin.Context) {
 	originLocation := le.locationOriginResolver.GetOrigin()
 
-	utils.WriteAsJSON(locationToRes(originLocation), writer)
+	utils.WriteAsJSON(locationToRes(originLocation), c.Writer)
 }
 
 // AddRoutesForConnectionLocation adds connection location routes to given router
 func AddRoutesForConnectionLocation(
-	router *httprouter.Router,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 	locationOriginResolver location.OriginResolver,
-) {
+) func(*gin.Engine) error {
 
 	connectionLocationEndpoint := NewConnectionLocationEndpoint(ipResolver, locationResolver, locationOriginResolver)
-	router.GET("/connection/ip", connectionLocationEndpoint.GetConnectionIP)
-	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
-	router.GET("/location", connectionLocationEndpoint.GetOriginLocation)
+	return func(e *gin.Engine) error {
+		connGroup := e.Group("/connection")
+		{
+			connGroup.GET("/ip", connectionLocationEndpoint.GetConnectionIP)
+			connGroup.GET("/location", connectionLocationEndpoint.GetConnectionLocation)
+		}
+
+		e.GET("/location", connectionLocationEndpoint.GetOriginLocation)
+		return nil
+	}
 }

@@ -21,7 +21,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
@@ -64,7 +65,8 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //     description: List of running services
 //     schema:
 //       "$ref": "#/definitions/ServiceListResponse"
-func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
+	resp := c.Writer
 	instances := se.serviceManager.List()
 
 	statusResponse, err := se.toServiceListResponse(instances)
@@ -89,7 +91,10 @@ func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request
 //     description: Service not found
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (se *ServiceEndpoint) ServiceGet(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	id := service.ID(params.ByName("id"))
 
 	instance := se.serviceManager.Service(id)
@@ -138,7 +143,10 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
+	resp := c.Writer
+	req := c.Request
+
 	sr, err := se.toServiceRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -199,7 +207,10 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	id := service.ID(params.ByName("id"))
 
 	instance := se.serviceManager.Service(id)
@@ -226,13 +237,23 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) boo
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository) {
+func AddRoutesForService(
+	serviceManager ServiceManager,
+	optionsParser map[string]services.ServiceOptionsParser,
+	proposalRepository proposalRepository,
+) func(*gin.Engine) error {
 	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository)
 
-	router.GET("/services", serviceEndpoint.ServiceList)
-	router.POST("/services", serviceEndpoint.ServiceStart)
-	router.GET("/services/:id", serviceEndpoint.ServiceGet)
-	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
+	return func(e *gin.Engine) error {
+		g := e.Group("/services")
+		{
+			g.GET("", serviceEndpoint.ServiceList)
+			g.POST("", serviceEndpoint.ServiceStart)
+			g.GET("/:id", serviceEndpoint.ServiceGet)
+			g.DELETE("/:id", serviceEndpoint.ServiceStop)
+		}
+		return nil
+	}
 }
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.ServiceStartRequest, error) {

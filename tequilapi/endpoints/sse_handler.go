@@ -24,9 +24,10 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/session/pingpong"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
@@ -92,7 +93,10 @@ func (h *Handler) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // Sub subscribes a user to sse
-func (h *Handler) Sub(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (h *Handler) Sub(c *gin.Context) {
+	resp := c.Writer
+	req := c.Request
+
 	f, ok := resp.(http.Flusher)
 	if !ok {
 		resp.WriteHeader(http.StatusBadRequest)

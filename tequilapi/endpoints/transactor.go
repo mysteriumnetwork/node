@@ -23,8 +23,9 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
@@ -105,7 +106,9 @@ func NewTransactorEndpoint(
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
+	resp := c.Writer
+
 	chainID := config.GetInt64(config.FlagChainID)
 	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
@@ -162,7 +165,10 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) SettleSync(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	err := te.settle(request, te.promiseSettler.ForceSettle)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -189,7 +195,10 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	err := te.settle(request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
 		go func() {
 			err := te.promiseSettler.ForceSettle(chainID, provider, hermes)
@@ -245,7 +254,11 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+	params := c.Params
+
 	id := identity.FromAddress(params.ByName("id"))
 	chainID := config.GetInt64(config.FlagChainID)
 
@@ -308,7 +321,10 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
+	resp := c.Writer
+	req := c.Request
+
 	query := contract.NewSettlementListQuery()
 	if errors := query.Bind(req); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
@@ -353,7 +369,10 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	var req contract.DecreaseStakeRequest
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
@@ -395,7 +414,10 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) Withdraw(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) Withdraw(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	req := contract.WithdrawRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
@@ -431,7 +453,10 @@ func (te *transactorEndpoint) Withdraw(resp http.ResponseWriter, request *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	err := te.settle(request, te.promiseSettler.SettleIntoStake)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -458,7 +483,10 @@ func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, requ
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
+	resp := c.Writer
+	request := c.Request
+
 	err := te.settle(request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
 		go func() {
 			err := te.promiseSettler.SettleIntoStake(chainID, provider, hermes)
@@ -494,7 +522,10 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) TokenRewardAmount(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
+	resp := c.Writer
+	params := c.Params
+
 	token := params.ByName("token")
 	reward, err := te.transactor.RegistrationTokenReward(token)
 	if err != nil {
@@ -513,22 +544,32 @@ func (te *transactorEndpoint) TokenRewardAmount(resp http.ResponseWriter, reques
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
-	router *httprouter.Router,
 	identityRegistry identityRegistry,
 	transactor Transactor,
 	promiseSettler promiseSettler,
 	settlementHistoryProvider settlementHistoryProvider,
 	addressProvider addressProvider,
-) {
+) func(*gin.Engine) error {
 	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider)
-	router.POST("/identities/:id/register", te.RegisterIdentity)
-	router.GET("/transactor/fees", te.TransactorFees)
-	router.POST("/transactor/settle/sync", te.SettleSync)
-	router.POST("/transactor/settle/async", te.SettleAsync)
-	router.GET("/transactor/settle/history", te.SettlementHistory)
-	router.POST("/transactor/stake/increase/sync", te.SettleIntoStakeSync)
-	router.POST("/transactor/stake/increase/async", te.SettleIntoStakeAsync)
-	router.POST("/transactor/stake/decrease", te.DecreaseStake)
-	router.POST("/transactor/settle/withdraw", te.Withdraw)
-	router.GET("/transactor/token/:token/reward", te.TokenRewardAmount)
+
+	return func(e *gin.Engine) error {
+		idGroup := e.Group("/identities")
+		{
+			idGroup.POST("/:id/register", te.RegisterIdentity)
+		}
+
+		transGroup := e.Group("/transactor")
+		{
+			transGroup.GET("/fees", te.TransactorFees)
+			transGroup.POST("/settle/sync", te.SettleSync)
+			transGroup.POST("/settle/async", te.SettleAsync)
+			transGroup.GET("/settle/history", te.SettlementHistory)
+			transGroup.POST("/stake/increase/sync", te.SettleIntoStakeSync)
+			transGroup.POST("/stake/increase/async", te.SettleIntoStakeAsync)
+			transGroup.POST("/stake/decrease", te.DecreaseStake)
+			transGroup.POST("/settle/withdraw", te.Withdraw)
+			transGroup.GET("/transactor/token/:token/reward", te.TokenRewardAmount)
+		}
+		return nil
+	}
 }

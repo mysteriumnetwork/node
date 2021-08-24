@@ -22,7 +22,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,8 +49,9 @@ func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 	}`
 	server := newTestServer(http.StatusOK, mockResponse)
 
-	router := httprouter.New()
-	AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), router, server.URL)
+	r := gin.Default()
+	err := AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL)(r)
+	assert.Nil(t, err)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -59,7 +61,7 @@ func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
+	r.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(t, mockResponse, resp.Body.String())
@@ -68,8 +70,9 @@ func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 func Test_Get_AccessPolicies_WhenRequestFails_ReturnsError(t *testing.T) {
 	server := newTestServer(http.StatusInternalServerError, `{"error": "something bad"}`)
 
-	router := httprouter.New()
-	AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), router, server.URL)
+	router := gin.Default()
+	err := AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL)(router)
+	assert.Nil(t, err)
 
 	req, err := http.NewRequest(
 		http.MethodGet,

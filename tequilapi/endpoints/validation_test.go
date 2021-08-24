@@ -26,9 +26,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/config"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +39,10 @@ func Test_EthEndpoints(t *testing.T) {
 	defer os.Remove(configFileName)
 	err := config.Current.LoadUserConfig(configFileName)
 	assert.NoError(t, err)
-	endpoint := &validationEndpoints{}
+
+	g := gin.Default()
+	err = AddRoutesForValidator(g)
+	assert.NoError(t, err)
 
 	// expect:
 	for _, data := range []struct {
@@ -62,16 +66,16 @@ func Test_EthEndpoints(t *testing.T) {
 			expectedResponse: 400,
 		},
 	} {
-		config.Current.SetUser(config.FlagChain2ChainID.Name, data.configChainId)
-
 		t.Run(fmt.Sprintf("Validate: %s", data.payload), func(t *testing.T) {
+			config.Current.SetUser(config.FlagChain2ChainID.Name, data.configChainId)
 			req := httptest.NewRequest(
 				http.MethodPost,
-				"/irrelevant",
+				"/validation/validate-rpc-chain2-urls",
 				strings.NewReader(data.payload))
-			resp := httptest.NewRecorder()
 
-			endpoint.ValidateRPCChain2URLS(resp, req, httprouter.Params{})
+			resp := httptest.NewRecorder()
+			g.ServeHTTP(resp, req)
+
 			assert.Equal(t, data.expectedResponse, resp.Code)
 		})
 	}

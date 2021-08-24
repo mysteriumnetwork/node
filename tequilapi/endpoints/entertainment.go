@@ -18,9 +18,8 @@
 package endpoints
 
 import (
-	"net/http"
+	"github.com/gin-gonic/gin"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -53,7 +52,9 @@ type estimator interface {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *entertainmentEndpoint) Estimate(httpRes http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (e *entertainmentEndpoint) Estimate(c *gin.Context) {
+	httpRes := c.Writer
+	httpReq := c.Request
 	req := contract.EntertainmentEstimateRequest{}
 	if errs := req.Bind(httpReq); errs.HasErrors() {
 		utils.SendValidationErrorMessage(httpRes, errs)
@@ -73,7 +74,11 @@ func (e *entertainmentEndpoint) Estimate(httpRes http.ResponseWriter, httpReq *h
 }
 
 // AddEntertainmentRoutes registers routes for entertainment.
-func AddEntertainmentRoutes(router *httprouter.Router, estimator estimator) {
+func AddEntertainmentRoutes(estimator estimator) func(*gin.Engine) error {
 	endpoint := &entertainmentEndpoint{estimator: estimator}
-	router.GET("/entertainment", endpoint.Estimate)
+	return func(e *gin.Engine) error {
+		g := e.Group("/entertainment")
+		g.GET("", endpoint.Estimate)
+		return nil
+	}
 }

@@ -23,7 +23,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -94,10 +94,10 @@ func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvid
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 	status := ce.manager.Status()
 	statusResponse := contract.NewConnectionInfoDTO(status)
-	utils.WriteAsJSON(statusResponse, resp)
+	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
 // Create starts new connection
@@ -136,7 +136,10 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) Create(c *gin.Context) {
+	resp := c.Writer
+	req := c.Request
+
 	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -226,7 +229,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 
 	ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionOK, ""))
 	resp.WriteHeader(http.StatusCreated)
-	ce.Status(resp, req, params)
+	ce.Status(c)
 }
 
 // Kill stops connection
@@ -245,7 +248,9 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
+	resp := c.Writer
+
 	err := ce.manager.Disconnect()
 	if err != nil {
 		switch err {
@@ -273,11 +278,11 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 	connection := ce.stateProvider.GetState().Connection
 	response := contract.NewConnectionStatisticsDTO(connection.Session, connection.Statistics, connection.Throughput, connection.Invoice)
 
-	utils.WriteAsJSON(response, writer)
+	utils.WriteAsJSON(response, c.Writer)
 }
 
 type proposalRepository interface {
@@ -287,13 +292,25 @@ type proposalRepository interface {
 }
 
 // AddRoutesForConnection adds connections routes to given router
-func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) {
+func AddRoutesForConnection(
+	manager connection.Manager,
+	stateProvider stateProvider,
+	proposalRepository proposalRepository,
+	identityRegistry identityRegistry,
+	publisher eventbus.Publisher,
+	addressProvider addressProvider,
+) func(*gin.Engine) error {
 	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry, publisher, addressProvider)
-	router.GET("/connection", connectionEndpoint.Status)
-	router.PUT("/connection", connectionEndpoint.Create)
-	router.DELETE("/connection", connectionEndpoint.Kill)
-	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
+	return func(e *gin.Engine) error {
+		connGroup := e.Group("/connection")
+		{
+			connGroup.GET("", connectionEndpoint.Status)
+			connGroup.PUT("", connectionEndpoint.Create)
+			connGroup.DELETE("", connectionEndpoint.Kill)
+			connGroup.GET("/statistics", connectionEndpoint.GetStatistics)
+		}
+		return nil
+	}
 }
 
 func toConnectionRequest(req *http.Request, defaultHermes string) (*contract.ConnectionCreateRequest, error) {

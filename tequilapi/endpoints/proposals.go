@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -114,7 +114,10 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (pe *proposalsEndpoint) List(c *gin.Context) {
+	req := c.Request
+	resp := c.Writer
+
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
 	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
@@ -178,7 +181,9 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, _
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (pe *proposalsEndpoint) CurrentPrice(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
+	resp := c.Writer
+
 	loc, err := pe.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("could not retrieve current prices: %w", err), http.StatusInternalServerError)
@@ -210,7 +215,9 @@ func (pe *proposalsEndpoint) CurrentPrice(resp http.ResponseWriter, req *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (pe *proposalsEndpoint) FilterPresets(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (pe *proposalsEndpoint) FilterPresets(c *gin.Context) {
+	resp := c.Writer
+
 	presets, err := pe.filterPresets.List()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -224,9 +231,22 @@ func (pe *proposalsEndpoint) FilterPresets(resp http.ResponseWriter, req *http.R
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposalRepository, pricer priceAPI, locationResolver location.Resolver, filterPresetRepository proposal.FilterPresetRepository, natProber natProber) {
+func AddRoutesForProposals(
+	proposalRepository proposalRepository,
+	pricer priceAPI,
+	locationResolver location.Resolver,
+	filterPresetRepository proposal.FilterPresetRepository,
+	natProber natProber,
+) func(*gin.Engine) error {
 	pe := NewProposalsEndpoint(proposalRepository, pricer, locationResolver, filterPresetRepository, natProber)
-	router.GET("/proposals", pe.List)
-	router.GET("/proposals/filter-presets", pe.FilterPresets)
-	router.GET("/prices/current", pe.CurrentPrice)
+	return func(e *gin.Engine) error {
+		proposalGroup := e.Group("/proposals")
+		{
+			proposalGroup.GET("", pe.List)
+			proposalGroup.GET("/filter-presets", pe.FilterPresets)
+		}
+
+		e.GET("/prices/current", pe.CurrentPrice)
+		return nil
+	}
 }

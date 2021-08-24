@@ -24,7 +24,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
@@ -86,10 +86,10 @@ type identitiesAPI struct {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+func (ia *identitiesAPI) List(c *gin.Context) {
 	ids := ia.idm.GetIdentities()
 	idsDTO := contract.NewIdentityListResponse(ids)
-	utils.WriteAsJSON(idsDTO, resp)
+	utils.WriteAsJSON(idsDTO, c.Writer)
 }
 
 // swagger:operation PUT /identities/current Identity currentIdentity
@@ -119,7 +119,10 @@ func (ia *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _ httpr
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Current(c *gin.Context) {
+	request := c.Request
+	resp := c.Writer
+
 	var req contract.IdentityCurrentRequest
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
@@ -176,7 +179,10 @@ func (ia *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+func (ia *identitiesAPI) Create(c *gin.Context) {
+	resp := c.Writer
+	httpReq := c.Request
+
 	var req contract.IdentityCreateRequest
 	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
@@ -229,7 +235,11 @@ func (ia *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request,
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Unlock(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+	httpReq := c.Request
+
 	address := params.ByName("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
@@ -277,7 +287,10 @@ func (ia *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request,
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) BalanceRefresh(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	address := params.ByName("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
@@ -310,7 +323,10 @@ func (ia *identitiesAPI) BalanceRefresh(resp http.ResponseWriter, _ *http.Reques
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Get(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	address := params.ByName("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
@@ -380,7 +396,10 @@ func (ia *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	address := params.ByName("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
@@ -420,7 +439,10 @@ func (ia *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	address := params.ByName("id")
 	data, err := ia.bprovider.GetBeneficiary(common.HexToAddress(address))
 	if err != nil {
@@ -451,7 +473,10 @@ func (ia *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) GetReferralToken(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	id := params.ByName("id")
 	tkn, err := ia.transactor.GetReferralToken(common.HexToAddress(id))
 	if err != nil {
@@ -480,7 +505,10 @@ func (ia *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *htt
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) ReferralTokenAvailable(c *gin.Context) {
+	params := c.Params
+	resp := c.Writer
+
 	id := params.ByName("id")
 	err := ia.transactor.ReferralTokenAvailable(common.HexToAddress(id))
 	if err != nil {
@@ -512,7 +540,10 @@ func (ia *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, reques
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) Import(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) Import(c *gin.Context) {
+	w := c.Writer
+	r := c.Request
+
 	var req contract.IdentityImportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendError(w, err, http.StatusBadRequest)
@@ -561,7 +592,10 @@ func (ia *identitiesAPI) Import(w http.ResponseWriter, r *http.Request, params h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) GetPayoutAddress(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
+	params := c.Params
+	w := c.Writer
+
 	id := params.ByName("id")
 	addr, err := ia.addressStorage.Address(id)
 	if err != nil {
@@ -600,7 +634,11 @@ func (ia *identitiesAPI) GetPayoutAddress(w http.ResponseWriter, r *http.Request
 //     description: Bad Request error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) SavePayoutAddress(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
+	params := c.Params
+	w := c.Writer
+	r := c.Request
+
 	id := params.ByName("id")
 
 	var par contract.PayoutAddressRequest
@@ -620,7 +658,6 @@ func (ia *identitiesAPI) SavePayoutAddress(w http.ResponseWriter, r *http.Reques
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
-	router *httprouter.Router,
 	idm identity.Manager,
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
@@ -632,7 +669,7 @@ func AddRoutesForIdentities(
 	bprovider beneficiaryProvider,
 	mover identityMover,
 	addressStorage *payout.AddressStorage,
-) {
+) func(*gin.Engine) error {
 	idAPI := &identitiesAPI{
 		mover:             mover,
 		idm:               idm,
@@ -646,27 +683,24 @@ func AddRoutesForIdentities(
 		bprovider:         bprovider,
 		addressStorage:    addressStorage,
 	}
-	router.GET("/identities", idAPI.List)
-	router.POST("/identities", idAPI.Create)
-	router.PUT("/identities/:id", func(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-		// TODO: remove this hack when we replace our router
-		switch params.ByName("id") {
-		case "current":
-			idAPI.Current(resp, request, params)
-		default:
-			http.NotFound(resp, request)
+	return func(e *gin.Engine) error {
+		identityGroup := e.Group("/identities")
+		{
+			identityGroup.GET("", idAPI.List)
+			identityGroup.POST("", idAPI.Create)
+			identityGroup.PUT("/current", idAPI.Current)
+			identityGroup.GET("/:id", idAPI.Get)
+			identityGroup.GET("/:id/status", idAPI.Get)
+			identityGroup.PUT("/:id/unlock", idAPI.Unlock)
+			identityGroup.GET("/:id/registration", idAPI.RegistrationStatus)
+			identityGroup.GET("/:id/beneficiary", idAPI.Beneficiary)
+			identityGroup.GET("/:id/referral", idAPI.GetReferralToken)
+			identityGroup.GET("/:id/referral-available", idAPI.ReferralTokenAvailable)
+			identityGroup.GET("/:id/payout-address", idAPI.GetPayoutAddress)
+			identityGroup.PUT("/:id/payout-address", idAPI.SavePayoutAddress)
+			identityGroup.PUT("/identities/:id/balance/refresh", idAPI.BalanceRefresh)
 		}
-	})
-	router.GET("/identities/:id", idAPI.Get)
-	router.GET("/identities/:id/status", idAPI.Get)
-	router.PUT("/identities/:id/unlock", idAPI.Unlock)
-	router.GET("/identities/:id/registration", idAPI.RegistrationStatus)
-	router.GET("/identities/:id/beneficiary", idAPI.Beneficiary)
-	router.GET("/identities/:id/referral", idAPI.GetReferralToken)
-	router.GET("/identities/:id/referral-available", idAPI.ReferralTokenAvailable)
-	router.GET("/identities/:id/payout-address", idAPI.GetPayoutAddress)
-	router.PUT("/identities/:id/payout-address", idAPI.SavePayoutAddress)
-	router.PUT("/identities/:id/balance/refresh", idAPI.BalanceRefresh)
-
-	router.POST("/identities-import", idAPI.Import)
+		e.POST("/identities-import", idAPI.Import)
+		return nil
+	}
 }

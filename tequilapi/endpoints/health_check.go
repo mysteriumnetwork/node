@@ -18,10 +18,10 @@
 package endpoints
 
 import (
-	"net/http"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -59,7 +59,7 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (hce *healthCheckEndpoint) HealthCheck(c *gin.Context) {
 	status := contract.HealthCheckDTO{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
 		Process: hce.processNumber,
@@ -70,5 +70,5 @@ func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request 
 			BuildNumber: metadata.BuildNumber,
 		},
 	}
-	utils.WriteAsJSON(status, writer)
+	utils.WriteAsJSON(status, c.Writer)
 }

@@ -23,7 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
@@ -62,15 +63,15 @@ func (r *locationResolverMock) GetOrigin() locationstate.Location {
 }
 
 func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
-	router := httprouter.New()
+	router := gin.Default()
 
 	locationResolver := &locationResolverMock{ip: "1.2.3.4", ipOrigin: "1.2.3.1"}
-	AddRoutesForConnectionLocation(
-		router,
+	err := AddRoutesForConnectionLocation(
 		ip.NewResolverMock("123.123.123.123"),
 		locationResolver,
 		locationResolver,
-	)
+	)(router)
+	assert.NoError(t, err)
 
 	tests := []struct {
 		method         string
@@ -126,10 +127,18 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	ipResolver := ip.NewResolverMock("123.123.123.123")
-	endpoint := NewConnectionLocationEndpoint(ipResolver, nil, nil)
-	resp := httptest.NewRecorder()
 
-	endpoint.GetConnectionIP(resp, nil, nil)
+	router := gin.Default()
+	err := AddRoutesForConnectionLocation(ipResolver, nil, nil)(router)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/connection/ip",
+		nil,
+	)
+	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
@@ -143,10 +152,17 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	ipResolver := ip.NewResolverMockFailing(errors.New("fake error"))
-	endpoint := NewConnectionLocationEndpoint(ipResolver, nil, nil)
+	router := gin.Default()
+	err := AddRoutesForConnectionLocation(ipResolver, nil, nil)(router)
+	assert.NoError(t, err)
 	resp := httptest.NewRecorder()
 
-	endpoint.GetConnectionIP(resp, nil, nil)
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/connection/ip",
+		nil,
+	)
+	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 	assert.JSONEq(

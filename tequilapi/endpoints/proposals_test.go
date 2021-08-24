@@ -26,6 +26,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -72,9 +74,10 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 		proposals: []proposal.PricedServiceProposal{serviceProposals[0]},
 	}
 
+	path := "/proposals"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		path,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -84,8 +87,10 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}, mockedNATProber).List
-	handlerFunc(resp, req, nil)
+	endpoint := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}, mockedNATProber)
+	g := gin.Default()
+	g.GET(path, endpoint.List)
+	g.ServeHTTP(resp, req)
 
 	assert.JSONEq(
 		t,
@@ -127,10 +132,10 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	repository := &mockProposalRepository{
 		proposals: []proposal.PricedServiceProposal{serviceProposals[0]},
 	}
-
+	path := "/proposals"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		path,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -141,8 +146,11 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}, mockedNATProber).List
-	handlerFunc(resp, req, nil)
+	endpoint := NewProposalsEndpoint(repository, nil, nil, &mockFilterPresetRepository{}, mockedNATProber)
+
+	g := gin.Default()
+	g.GET(path, endpoint.List)
+	g.ServeHTTP(resp, req)
 
 	assert.JSONEq(
 		t,
@@ -188,9 +196,10 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
 		proposals: serviceProposals,
 	}
 
+	path := "/proposals"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		path,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -205,8 +214,10 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
 			},
 		}},
 	}
-	handlerFunc := NewProposalsEndpoint(repository, nil, nil, presetRepository, mockedNATProber).List
-	handlerFunc(resp, req, nil)
+	endpoint := NewProposalsEndpoint(repository, nil, nil, presetRepository, mockedNATProber)
+	g := gin.Default()
+	g.GET(path, endpoint.List)
+	g.ServeHTTP(resp, req)
 
 	assert.JSONEq(
 		t,

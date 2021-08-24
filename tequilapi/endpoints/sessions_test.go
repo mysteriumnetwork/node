@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 
@@ -78,9 +80,10 @@ func Test_SessionsEndpoint_SessionToDto(t *testing.T) {
 }
 
 func Test_SessionsEndpoint_List(t *testing.T) {
+	url := "/sessions"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		url,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -91,7 +94,10 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).List
-	handlerFunc(resp, req, nil)
+
+	g := gin.Default()
+	g.GET(url, handlerFunc)
+	g.ServeHTTP(resp, req)
 
 	parsedResponse := contract.SessionListResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
@@ -116,6 +122,7 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 }
 
 func Test_SessionsEndpoint_ListRespectsFilters(t *testing.T) {
+	path := "/sessions"
 	ssm := &sessionStorageMock{
 		sessionsToReturn: sessionsMock,
 	}
@@ -123,11 +130,13 @@ func Test_SessionsEndpoint_ListRespectsFilters(t *testing.T) {
 	// when
 	req, _ := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant?date_from=2020-09-19&date_to=2020-09-20&direction=direction&service_type=service_type&status=status",
+		path+"?date_from=2020-09-19&date_to=2020-09-20&direction=direction&service_type=service_type&status=status",
 		nil,
 	)
 	resp := httptest.NewRecorder()
-	NewSessionsEndpoint(ssm).List(resp, req, nil)
+	g := gin.Default()
+	g.GET(path, NewSessionsEndpoint(ssm).List)
+	g.ServeHTTP(resp, req)
 
 	// then
 	assert.Equal(
@@ -144,9 +153,10 @@ func Test_SessionsEndpoint_ListRespectsFilters(t *testing.T) {
 }
 
 func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
+	path := "/sessions"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		path,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -158,9 +168,12 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).List
-	handlerFunc(resp, req, nil)
+	g := gin.Default()
+	g.GET(path, handlerFunc)
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+
 	assert.Equal(t,
 		fmt.Sprintf(`{"message":%q}`, mockErr.Error()),
 		resp.Body.String(),
@@ -168,9 +181,10 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 }
 
 func Test_SessionsEndpoint_StatsAggregated(t *testing.T) {
+	path := "/sessions/stats-aggregated"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		path,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -181,7 +195,9 @@ func Test_SessionsEndpoint_StatsAggregated(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).StatsAggregated
-	handlerFunc(resp, req, nil)
+	g := gin.Default()
+	g.GET(path, handlerFunc)
+	g.ServeHTTP(resp, req)
 
 	parsedResponse := contract.SessionStatsAggregatedResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
@@ -198,9 +214,10 @@ func Test_SessionsEndpoint_StatsAggregated(t *testing.T) {
 }
 
 func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
+	path := "/sessions/stats-daily"
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant",
+		path,
 		nil,
 	)
 	assert.Nil(t, err)
@@ -212,7 +229,9 @@ func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).StatsDaily
-	handlerFunc(resp, req, nil)
+	g := gin.Default()
+	g.GET(path, handlerFunc)
+	g.ServeHTTP(resp, req)
 
 	parsedResponse := contract.SessionStatsDailyResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
