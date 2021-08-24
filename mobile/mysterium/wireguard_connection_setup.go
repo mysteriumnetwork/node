@@ -142,7 +142,7 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 		return errors.Wrap(err, "could not start device")
 	}
 
-	if err := c.handshakeWaiter.Wait(c.device.Stats, c.opts.handshakeTimeout, c.done); err != nil {
+	if err := c.handshakeWaiter.Wait(ctx, c.device.Stats, c.opts.handshakeTimeout, c.done); err != nil {
 		return errors.Wrap(err, "failed to handshake")
 	}
 

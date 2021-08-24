@@ -144,6 +144,6 @@ type mockHandshakeWaiter struct {
 	err error
 }
 
-func (m *mockHandshakeWaiter) Wait(statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
+func (m *mockHandshakeWaiter) Wait(ctx context.Context, statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
 	return m.err
 }
