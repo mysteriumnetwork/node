@@ -30,6 +30,7 @@ type corsHandler struct {
 // CorsPolicy resolves allowed origin
 type CorsPolicy interface {
 	AllowedOrigin(requestOrigin string) string
+	IsOriginAllowed(requestOrigin string) bool
 }
 
 func (wrapper corsHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {

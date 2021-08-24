@@ -31,14 +31,15 @@ type RegexpCorsPolicy struct {
 
 // AllowedOrigin returns the same request origin if it is allowed, or default origin if it is not allowed
 func (policy RegexpCorsPolicy) AllowedOrigin(requestOrigin string) string {
-	if policy.isOriginAllowed(requestOrigin) {
+	if policy.IsOriginAllowed(requestOrigin) {
 		return requestOrigin
 	}
 
 	return policy.DefaultTrustedOrigin
 }
 
-func (policy RegexpCorsPolicy) isOriginAllowed(origin string) bool {
+// IsOriginAllowed checks if origin is allowed
+func (policy RegexpCorsPolicy) IsOriginAllowed(origin string) bool {
 	for _, allowedSuffix := range policy.AllowedOriginSuffixes {
 		match, err := regexp.MatchString(allowedSuffix, origin)
 		if err != nil {
