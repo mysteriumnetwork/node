@@ -22,19 +22,19 @@ import (
 )
 
 func mediaStreamingFilter(proposals []PricedServiceProposal) []PricedServiceProposal {
-	var totalBandwidth, averageBandwidth float64
+	var totalBandwidth float64
 	var totalQuality, avgQuality float64
 
 	for _, p := range proposals {
 		totalBandwidth += p.Quality.Bandwidth
 		totalQuality += p.Quality.Quality
 	}
-	averageBandwidth = totalBandwidth / float64(len(proposals))
+	//averageBandwidth = totalBandwidth / float64(len(proposals))
 	avgQuality = avgQualityCeiling(totalQuality / float64(len(proposals)))
 
 	var filtered []PricedServiceProposal
 	for _, p := range proposals {
-		if p.Quality.Quality >= avgQuality && p.Quality.Bandwidth >= averageBandwidth && p.Location.IPType == "residential" {
+		if p.Quality.Quality >= avgQuality && p.Location.IPType == "residential" {
 			filtered = append(filtered, p)
 		}
 	}
