@@ -63,7 +63,7 @@ func (h *handshakeWaiter) Wait(ctx context.Context, statsFetch func() (*wgcfg.St
 		case <-stop:
 			return errors.New("stop received")
 		case <-ctx.Done():
-			return errors.New("cancel received")
+			return ctx.Err()
 		}
 	}
 }
