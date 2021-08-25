@@ -468,9 +468,12 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	// once we're registered, check some other information
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
+	balance, err := tequilapi.BalanceRefresh(id)
+	assert.NoError(t, err)
+
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, providerChannelAddress, idStatus.ChannelAddress)
-	assert.Equal(t, balanceAfterRegistration, idStatus.Balance)
+	assert.Equal(t, balanceAfterRegistration, balance.Balance)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }

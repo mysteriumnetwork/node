@@ -159,7 +159,21 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 	return id, err
 }
 
-// Identity returns identity status with current balance
+// BalanceRefresh forces a balance refresh if possible and returns the latest balance.
+func (client *Client) BalanceRefresh(identityAddress string) (b contract.BalanceDTO, err error) {
+	path := fmt.Sprintf("identities/%s/balance/refresh", identityAddress)
+
+	response, err := client.http.Put(path, nil)
+	if err != nil {
+		return b, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &b)
+	return b, err
+}
+
+// Identity returns identity status with cached balance
 func (client *Client) Identity(identityAddress string) (id contract.IdentityDTO, err error) {
 	path := fmt.Sprintf("identities/%s", identityAddress)
 
