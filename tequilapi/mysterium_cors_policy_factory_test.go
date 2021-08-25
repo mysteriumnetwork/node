@@ -34,8 +34,32 @@ func TestNewMysteriumCorsPolicy_ReturnsOnlyTrustedOrigins(t *testing.T) {
 			expectedAllowed: "http://localhost",
 		},
 		{
+			requested:       "http://localhost/",
+			expectedAllowed: "http://localhost/",
+		},
+		{
 			requested:       "http://localhost:8090",
 			expectedAllowed: "http://localhost:8090",
+		},
+		{
+			requested:       "http://localhost:8090/",
+			expectedAllowed: "http://localhost:8090/",
+		},
+		{
+			requested:       "http://127.0.0.1",
+			expectedAllowed: "http://127.0.0.1",
+		},
+		{
+			requested:       "http://127.0.0.1/",
+			expectedAllowed: "http://127.0.0.1/",
+		},
+		{
+			requested:       "http://127.0.0.1:8090",
+			expectedAllowed: "http://127.0.0.1:8090",
+		},
+		{
+			requested:       "http://127.0.0.1:8090/",
+			expectedAllowed: "http://127.0.0.1:8090/",
 		},
 		{
 			requested:       "http://localhost.evil",
