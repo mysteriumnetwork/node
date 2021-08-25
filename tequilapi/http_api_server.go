@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
@@ -75,8 +77,10 @@ type apiServer struct {
 // NewServer creates http api server for given address port and http handler
 func NewServer(
 	listener net.Listener,
+	nodeOptions node.Options,
 	handlers []func(e *gin.Engine) error,
 ) (APIServer, error) {
+	gin.SetMode(modeFromOptions(nodeOptions))
 	g := gin.New()
 	g.Use(gin.Recovery())
 	g.Use(cors.New(corsConfig))
@@ -96,6 +100,14 @@ func NewServer(
 	}
 
 	return &server, nil
+}
+
+func modeFromOptions(options node.Options) string {
+	if options.FlagTequilapiDebugMode {
+		return gin.DebugMode
+	}
+
+	return gin.ReleaseMode
 }
 
 // Stop method stops underlying http server

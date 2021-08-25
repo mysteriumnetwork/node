@@ -47,6 +47,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 
 	return tequilapi.NewServer(
 		listener,
+		nodeOptions,
 		[]func(engine *gin.Engine) error{
 			func(e *gin.Engine) error {
 				if err := tequilapi_endpoints.AddRoutesForSSE(e, di.StateKeeper, di.EventBus); err != nil {
