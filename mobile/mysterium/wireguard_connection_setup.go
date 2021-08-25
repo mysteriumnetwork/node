@@ -138,11 +138,11 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
 	}
 
-	if err := c.device.Start(c.privateKey, config, options.ChannelConn, options.Params.DNS); err != nil {
+	if err = c.device.Start(c.privateKey, config, options.ChannelConn, options.Params.DNS); err != nil {
 		return errors.Wrap(err, "could not start device")
 	}
 
-	if err := c.handshakeWaiter.Wait(c.device.Stats, c.opts.handshakeTimeout, c.done); err != nil {
+	if err = c.handshakeWaiter.Wait(ctx, c.device.Stats, c.opts.handshakeTimeout, c.done); err != nil {
 		return errors.Wrap(err, "failed to handshake")
 	}
 

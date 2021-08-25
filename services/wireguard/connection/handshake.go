@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -29,7 +30,7 @@ import (
 // HandshakeWaiter waits for handshake.
 type HandshakeWaiter interface {
 	// Wait waits until WireGuard does initial handshake.
-	Wait(statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error
+	Wait(ctx context.Context, statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error
 }
 
 // NewHandshakeWaiter returns handshake waiter instance.
@@ -40,7 +41,7 @@ func NewHandshakeWaiter() HandshakeWaiter {
 type handshakeWaiter struct {
 }
 
-func (h *handshakeWaiter) Wait(statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
+func (h *handshakeWaiter) Wait(ctx context.Context, statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
 	// We need to send any packet to initialize handshake process.
 	handshakePingConn, err := net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
 	if err == nil {
@@ -61,6 +62,8 @@ func (h *handshakeWaiter) Wait(statsFetch func() (*wgcfg.Stats, error), timeout 
 			return errors.New("failed to receive initial handshake")
 		case <-stop:
 			return errors.New("stop received")
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }
