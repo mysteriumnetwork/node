@@ -20,7 +20,7 @@ package endpoints
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/tequilapi/endpoints/assets"
 )
 
@@ -33,13 +33,14 @@ func NewDocsEndpoint() *DocsEndpoint {
 type DocsEndpoint struct{}
 
 // Index redirects root route to swagger docs.
-func (se *DocsEndpoint) Index(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	http.Redirect(resp, request, "/docs/", http.StatusMovedPermanently)
+func (se *DocsEndpoint) Index(c *gin.Context) {
+	c.Redirect(http.StatusMovedPermanently, "/docs")
 }
 
 // AddRoutesForDocs attaches documentation endpoints to router.
-func AddRoutesForDocs(router *httprouter.Router) {
+func AddRoutesForDocs(c *gin.Engine) error {
 	endpoint := NewDocsEndpoint()
-	router.GET("/", endpoint.Index)
-	router.ServeFiles("/docs/*filepath", assets.DocsAssets)
+	c.GET("/", endpoint.Index)
+	c.StaticFS("/docs", assets.DocsAssets)
+	return nil
 }

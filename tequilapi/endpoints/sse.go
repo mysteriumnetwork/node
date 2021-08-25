@@ -20,6 +20,8 @@ package endpoints
 import (
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/eventbus"
 )
@@ -30,11 +32,11 @@ type SSEHandler interface {
 }
 
 // AddRoutesForSSE adds route for sse
-func AddRoutesForSSE(router *httprouter.Router, stateProvider stateProvider, bus eventbus.EventBus) error {
+func AddRoutesForSSE(e *gin.Engine, stateProvider stateProvider, bus eventbus.EventBus) error {
 	sseHandler := NewSSEHandler(stateProvider)
 	if err := sseHandler.Subscribe(bus); err != nil {
 		return err
 	}
-	router.GET("/events/state", sseHandler.Sub)
+	e.GET("/events/state", sseHandler.Sub)
 	return nil
 }

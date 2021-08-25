@@ -22,7 +22,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/mysteriumnetwork/node/core/auth"
@@ -67,7 +68,10 @@ type authenticator interface {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *authenticationAPI) Authenticate(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+func (api *authenticationAPI) Authenticate(c *gin.Context) {
+	httpReq := c.Request
+	httpRes := c.Writer
+
 	req, err := toAuthRequest(httpReq)
 	if err != nil {
 		utils.SendError(httpRes, err, http.StatusBadRequest)
@@ -113,7 +117,10 @@ func (api *authenticationAPI) Authenticate(httpRes http.ResponseWriter, httpReq 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+func (api *authenticationAPI) Login(c *gin.Context) {
+	httpReq := c.Request
+	httpRes := c.Writer
+
 	req, err := toAuthRequest(httpReq)
 	if err != nil {
 		utils.SendError(httpRes, err, http.StatusBadRequest)
@@ -151,8 +158,8 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 // responses:
 //   200:
 //     description: Logged out successfully
-func (api *authenticationAPI) Logout(httpRes http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	http.SetCookie(httpRes, &http.Cookie{
+func (api *authenticationAPI) Logout(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     auth.JWTCookieName,
 		Value:    "",
 		Expires:  time.Unix(0, 0),
@@ -183,7 +190,10 @@ func (api *authenticationAPI) Logout(httpRes http.ResponseWriter, _ *http.Reques
 //     description: Unauthorized
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *authenticationAPI) ChangePassword(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+func (api *authenticationAPI) ChangePassword(c *gin.Context) {
+	httpReq := c.Request
+	httpRes := c.Writer
+
 	var req *contract.ChangePasswordRequest
 	var err error
 	req, err = toChangePasswordRequest(httpReq)
@@ -212,24 +222,23 @@ func toChangePasswordRequest(req *http.Request) (*contract.ChangePasswordRequest
 	return &cpReq, nil
 }
 
-// TequilapiAuthenticateEndpointPath used by UIServer to know which endpoint doesn't need auth
-const TequilapiAuthenticateEndpointPath = "/auth/authenticate"
-
-// TequilapiLoginEndpointPath used by UIServer to know which endpoint doesn't need auth
-const TequilapiLoginEndpointPath = "/auth/login"
-
 // AddRoutesForAuthentication registers /auth endpoints in Tequilapi
 func AddRoutesForAuthentication(
-	router *httprouter.Router,
 	auth authenticator,
 	jwtAuth jwtAuthenticator,
-) {
+) func(*gin.Engine) error {
 	api := &authenticationAPI{
 		authenticator:    auth,
 		jwtAuthenticator: jwtAuth,
 	}
-	router.PUT("/auth/password", api.ChangePassword)
-	router.POST(TequilapiAuthenticateEndpointPath, api.Authenticate)
-	router.POST(TequilapiLoginEndpointPath, api.Login)
-	router.DELETE("/auth/logout", api.Logout)
+	return func(e *gin.Engine) error {
+		g := e.Group("/auth")
+		{
+			g.PUT("/password", api.ChangePassword)
+			g.POST("/authenticate", api.Authenticate)
+			g.POST("/login", api.Login)
+			g.DELETE("/logout", api.Logout)
+		}
+		return nil
+	}
 }

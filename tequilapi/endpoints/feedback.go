@@ -21,7 +21,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
@@ -85,7 +86,10 @@ type ReportIssueError struct {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ReportIssueError"
-func (api *feedbackAPI) ReportIssue(httpRes http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *feedbackAPI) ReportIssue(c *gin.Context) {
+	httpReq := c.Request
+	httpRes := c.Writer
+
 	req := feedback.UserReport{}
 	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
@@ -111,9 +115,11 @@ func (api *feedbackAPI) ReportIssue(httpRes http.ResponseWriter, httpReq *http.R
 
 // AddRoutesForFeedback registers feedback routes
 func AddRoutesForFeedback(
-	router *httprouter.Router,
 	reporter *feedback.Reporter,
-) {
+) func(*gin.Engine) error {
 	api := newFeedbackAPI(reporter)
-	router.POST("/feedback/issue", api.ReportIssue)
+	return func(g *gin.Engine) error {
+		g.POST("/feedback/issue", api.ReportIssue)
+		return nil
+	}
 }

@@ -19,12 +19,14 @@ package endpoints
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -62,17 +64,20 @@ func TestCurrentIdentitySuccess(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
-		identityUrl,
+		"/identities/current",
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "current"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{
 		idm:      mockIdm,
 		selector: &selectorFake{},
 	}
-	endpoint.Current(resp, req, params)
+
+	g := gin.Default()
+	g.PUT("/identities/current", endpoint.Current)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
@@ -89,14 +94,17 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
-		identityUrl,
+		fmt.Sprintf("/identities/%s/unlock", "0x000000000000000000000000000000000000000a"),
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Unlock(resp, req, params)
+
+	g := gin.Default()
+	g.PUT("/identities/:id/unlock", endpoint.Unlock)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 
@@ -110,14 +118,16 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
-		identityUrl,
+		fmt.Sprintf("/identities/%s/unlock", "0x000000000000000000000000000000000000000a"),
 		bytes.NewBufferString(`{invalid json}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Unlock(resp, req, params)
+	g := gin.Default()
+	g.PUT("/identities/:id/unlock", endpoint.Unlock)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 }
@@ -126,15 +136,17 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
-		http.MethodPost,
-		identityUrl,
+		http.MethodPut,
+		fmt.Sprintf("/identities/%s/unlock", "0x000000000000000000000000000000000000000a"),
 		bytes.NewBufferString(`{}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.NoError(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Unlock(resp, req, params)
+	g := gin.Default()
+	g.PUT("/identities/:id/unlock", endpoint.Unlock)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -154,16 +166,18 @@ func TestUnlockFailure(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
-		identityUrl,
+		fmt.Sprintf("/identities/%s/unlock", "0x000000000000000000000000000000000000000a"),
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
 
 	mockIdm.MarkUnlockToFail()
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Unlock(resp, req, params)
+	g := gin.Default()
+	g.PUT("/identities/:id/unlock", endpoint.Unlock)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 
@@ -183,7 +197,10 @@ func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Create(resp, req, nil)
+	g := gin.Default()
+	g.POST("/identities", endpoint.Create)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
@@ -199,7 +216,10 @@ func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Create(resp, req, nil)
+	g := gin.Default()
+	g.POST("/identities", endpoint.Create)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -225,7 +245,10 @@ func TestCreateNewIdentity(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Create(resp, req, nil)
+	g := gin.Default()
+	g.POST("/identities", endpoint.Create)
+
+	g.ServeHTTP(resp, req)
 
 	assert.JSONEq(
 		t,
@@ -238,11 +261,15 @@ func TestCreateNewIdentity(t *testing.T) {
 
 func TestListIdentities(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
-	req := httptest.NewRequest("GET", "/irrelevant", nil)
+	path := "/identities"
+	req := httptest.NewRequest("GET", path, nil)
 	resp := httptest.NewRecorder()
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.List(resp, req, nil)
+	g := gin.Default()
+	g.GET(path, endpoint.List)
+
+	g.ServeHTTP(resp, req)
 
 	assert.JSONEq(
 		t,
@@ -257,11 +284,11 @@ func TestListIdentities(t *testing.T) {
 }
 
 func Test_ReferralTokenGet(t *testing.T) {
-	router := httprouter.New()
-
 	server := newTestTransactorServer(http.StatusAccepted, `{"token":"yay-free-myst"}`)
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
 	endpoint := &identitiesAPI{transactor: tr}
+
+	router := gin.Default()
 	router.GET("/identities/:id/referral", endpoint.GetReferralToken)
 
 	tokenRequest := `{"identity": "0x0"}`

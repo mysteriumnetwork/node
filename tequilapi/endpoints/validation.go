@@ -24,9 +24,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -44,7 +45,10 @@ type validationEndpoints struct {
 //    description: Validation success
 //  400:
 //	  description: validation failed
-func (e validationEndpoints) ValidateRPCChain2URLS(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (e validationEndpoints) ValidateRPCChain2URLS(c *gin.Context) {
+	req := c.Request
+	resp := c.Writer
+
 	var rpcURLS []string
 	err := json.NewDecoder(req.Body).Decode(&rpcURLS)
 	if err != nil {
@@ -78,7 +82,8 @@ func (e validationEndpoints) ValidateRPCChain2URLS(resp http.ResponseWriter, req
 }
 
 // AddRoutesForValidator register /validation endpoint
-func AddRoutesForValidator(router *httprouter.Router) {
+func AddRoutesForValidator(e *gin.Engine) error {
 	validatorEndpoints := &validationEndpoints{}
-	router.POST("/validation/validate-rpc-chain2-urls", validatorEndpoints.ValidateRPCChain2URLS)
+	e.POST("/validation/validate-rpc-chain2-urls", validatorEndpoints.ValidateRPCChain2URLS)
+	return nil
 }

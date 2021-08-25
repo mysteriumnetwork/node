@@ -20,7 +20,8 @@ package endpoints
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,8 +29,11 @@ import (
 type ApplicationStopper func()
 
 // AddRouteForStop adds stop route to given router
-func AddRouteForStop(router *httprouter.Router, stop ApplicationStopper) {
-	router.POST("/stop", newStopHandler(stop))
+func AddRouteForStop(stop ApplicationStopper) func(*gin.Engine) error {
+	return func(e *gin.Engine) error {
+		e.POST("/stop", newStopHandler(stop))
+		return nil
+	}
 }
 
 // swagger:operation POST /stop Client applicationStop
@@ -39,8 +43,11 @@ func AddRouteForStop(router *httprouter.Router, stop ApplicationStopper) {
 // responses:
 //   202:
 //     description: Request accepted, stopping
-func newStopHandler(stop ApplicationStopper) httprouter.Handle {
-	return func(response http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func newStopHandler(stop ApplicationStopper) func(*gin.Context) {
+	return func(c *gin.Context) {
+		req := c.Request
+		response := c.Writer
+
 		log.Info().Msg("Application stop requested")
 
 		go callStopWhenNotified(req.Context().Done(), stop)

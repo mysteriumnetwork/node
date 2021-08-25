@@ -29,7 +29,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/node/core/auth"
-	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 )
 
 func buildTransport() *http.Transport {
@@ -149,10 +148,10 @@ func isTequilapiURL(url string, endpoints ...string) bool {
 }
 
 func isTequilapiProtectedUrl(url string) bool {
-	if isTequilapiURL(url, endpoints.TequilapiAuthenticateEndpointPath) {
+	if isTequilapiURL(url, "/auth/authenticate") {
 		return false
 	}
-	if isTequilapiURL(url, endpoints.TequilapiLoginEndpointPath) {
+	if isTequilapiURL(url, "/auth/login") {
 		return false
 	}
 	return true

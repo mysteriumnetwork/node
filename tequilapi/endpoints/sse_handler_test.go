@@ -28,8 +28,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
@@ -95,7 +96,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	port := addr.(*net.TCPAddr).Port
 	defer listener.Close()
 
-	router := httprouter.New()
+	router := gin.Default()
 	router.GET("/whatever", h.Sub)
 	serveExit := make(chan error)
 	go func() {

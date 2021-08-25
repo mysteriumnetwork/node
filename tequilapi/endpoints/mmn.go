@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -61,7 +61,9 @@ func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *mmnAPI) GetNodeReport(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *mmnAPI) GetNodeReport(c *gin.Context) {
+	writer := c.Writer
+
 	report, err := api.mmn.GetReport()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
@@ -86,7 +88,8 @@ func (api *mmnAPI) GetNodeReport(writer http.ResponseWriter, httpReq *http.Reque
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *mmnAPI) GetApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *mmnAPI) GetApiKey(c *gin.Context) {
+	writer := c.Writer
 	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNAPIKey.Name)}
 	utils.WriteAsJSON(res, writer)
 }
@@ -114,7 +117,10 @@ func (api *mmnAPI) GetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 
-func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *mmnAPI) SetApiKey(c *gin.Context) {
+	httpReq := c.Request
+	writer := c.Writer
+
 	var req contract.MMNApiKeyRequest
 	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
@@ -172,7 +178,9 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *mmnAPI) ClearApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *mmnAPI) ClearApiKey(c *gin.Context) {
+	writer := c.Writer
+
 	api.config.RemoveUser(config.FlagMMNAPIKey.Name)
 	if err := api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
@@ -182,12 +190,17 @@ func (api *mmnAPI) ClearApiKey(writer http.ResponseWriter, httpReq *http.Request
 
 // AddRoutesForMMN registers /mmn endpoints in Tequilapi
 func AddRoutesForMMN(
-	router *httprouter.Router,
 	mmn *mmn.MMN,
-) {
+) func(*gin.Engine) error {
 	api := newMMNAPI(config.Current, mmn)
-	router.GET("/mmn/report", api.GetNodeReport)
-	router.GET("/mmn/api-key", api.GetApiKey)
-	router.POST("/mmn/api-key", api.SetApiKey)
-	router.DELETE("/mmn/api-key", api.ClearApiKey)
+	return func(e *gin.Engine) error {
+		g := e.Group("/mmn")
+		{
+			g.GET("/report", api.GetNodeReport)
+			g.GET("/api-key", api.GetApiKey)
+			g.POST("/api-key", api.SetApiKey)
+			g.DELETE("/api-key", api.ClearApiKey)
+		}
+		return nil
+	}
 }

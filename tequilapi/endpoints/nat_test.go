@@ -24,7 +24,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -58,8 +59,9 @@ func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "/nat/status", nil)
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
-	router := httprouter.New()
-	AddRoutesForNAT(router, provider, natProber)
+	router := gin.Default()
+	err = AddRoutesForNAT(provider, natProber)(router)
+	assert.NoError(t, err)
 
 	router.ServeHTTP(resp, req)
 
@@ -88,8 +90,9 @@ func Test_NATStatus_ReturnsTypeSuccessful_WithSuccessfulEvent(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "/nat/type", nil)
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
-	router := httprouter.New()
-	AddRoutesForNAT(router, provider, natProber)
+	router := gin.Default()
+	err = AddRoutesForNAT(provider, natProber)(router)
+	assert.NoError(t, err)
 
 	router.ServeHTTP(resp, req)
 

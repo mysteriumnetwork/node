@@ -21,7 +21,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -55,8 +56,8 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 //     description: NAT status ("not_finished"/"successful"/"failed") and optionally error if status is "failed"
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, resp)
+func (ne *NATEndpoint) NATStatus(c *gin.Context) {
+	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, c.Writer)
 }
 
 // NATStatusV2 provides NAT configuration info
@@ -69,8 +70,8 @@ func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ ht
 //     description: NAT status ("passed"/"failed"/"pending)
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatusV2(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().Nat.Status, resp)
+func (ne *NATEndpoint) NATStatusV2(c *gin.Context) {
+	utils.WriteAsJSON(ne.stateProvider.GetState().Nat.Status, c.Writer)
 }
 
 // NATType provides NAT type in terms of traversal capabilities
@@ -87,7 +88,10 @@ func (ne *NATEndpoint) NATStatusV2(resp http.ResponseWriter, _ *http.Request, _ 
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ne *NATEndpoint) NATType(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (ne *NATEndpoint) NATType(c *gin.Context) {
+	req := c.Request
+	resp := c.Writer
+
 	res, err := ne.natProber.Probe(req.Context())
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -100,11 +104,20 @@ func (ne *NATEndpoint) NATType(resp http.ResponseWriter, req *http.Request, _ ht
 }
 
 // AddRoutesForNAT adds nat routes to given router
-func AddRoutesForNAT(router *httprouter.Router, stateProvider stateProvider, natProber natProber) {
+func AddRoutesForNAT(stateProvider stateProvider, natProber natProber) func(*gin.Engine) error {
 	natEndpoint := NewNATEndpoint(stateProvider, natProber)
 
-	router.GET("/nat/status", natEndpoint.NATStatus)
-	router.GET("/nat/type", natEndpoint.NATType)
+	return func(e *gin.Engine) error {
+		v1Group := e.Group("/nat")
+		{
+			v1Group.GET("/status", natEndpoint.NATStatus)
+			v1Group.GET("/type", natEndpoint.NATType)
+		}
 
-	router.GET("/v2/nat/status", natEndpoint.NATStatusV2)
+		v2Group := e.Group("/v2/nat")
+		{
+			v2Group.GET("/status", natEndpoint.NATStatusV2)
+		}
+		return nil
+	}
 }

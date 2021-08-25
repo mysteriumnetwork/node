@@ -22,9 +22,42 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
+
+var alowedOriginPolicy = NewMysteriumCorsPolicy()
+
+var corsConfig = cors.Config{
+	AllowMethods: []string{
+		"GET",
+		"HEAD",
+		"POST",
+		"PUT",
+		"DELETE",
+		"CONNECT",
+		"OPTIONS",
+		"TRACE",
+		"PATCH",
+	},
+	AllowHeaders: []string{
+		"Origin",
+		"Content-Length",
+		"Content-Type",
+		"Cache-Control",
+		"X-XSRF-TOKEN",
+		"X-CSRF-TOKEN",
+	},
+	AllowCredentials: true,
+	AllowOriginFunc: func(origin string) bool {
+		return alowedOriginPolicy.IsOriginAllowed(origin)
+	},
+}
 
 // APIServer interface represents control methods for underlying http api server
 type APIServer interface {
@@ -36,18 +69,45 @@ type APIServer interface {
 
 type apiServer struct {
 	errorChannel chan error
-	handler      http.Handler
 	listener     net.Listener
+
+	gin *gin.Engine
 }
 
 // NewServer creates http api server for given address port and http handler
-func NewServer(listener net.Listener, handler http.Handler, corsPolicy CorsPolicy) APIServer {
+func NewServer(
+	listener net.Listener,
+	nodeOptions node.Options,
+	handlers []func(e *gin.Engine) error,
+) (APIServer, error) {
+	gin.SetMode(modeFromOptions(nodeOptions))
+	g := gin.New()
+	g.Use(gin.Recovery())
+	g.Use(cors.New(corsConfig))
+
+	for _, h := range handlers {
+		err := h(g)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	server := apiServer{
 		errorChannel: make(chan error, 1),
-		handler:      DisableCaching(ApplyCors(handler, corsPolicy)),
 		listener:     listener,
+
+		gin: g,
 	}
-	return &server
+
+	return &server, nil
+}
+
+func modeFromOptions(options node.Options) string {
+	if options.FlagTequilapiDebugMode {
+		return gin.DebugMode
+	}
+
+	return gin.ReleaseMode
 }
 
 // Stop method stops underlying http server
@@ -67,8 +127,7 @@ func (server *apiServer) Address() (string, error) {
 
 // StartServing starts http request serving
 func (server *apiServer) StartServing() {
-	go server.serve(server.handler)
-
+	go server.serve()
 	address, err := server.Address()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get tequila server address")
@@ -77,8 +136,8 @@ func (server *apiServer) StartServing() {
 	log.Info().Msgf("API started on: %s", address)
 }
 
-func (server *apiServer) serve(handler http.Handler) {
-	server.errorChannel <- http.Serve(server.listener, handler)
+func (server *apiServer) serve() {
+	server.errorChannel <- http.Serve(server.listener, server.gin)
 }
 
 func extractBoundAddress(listener net.Listener) (string, error) {

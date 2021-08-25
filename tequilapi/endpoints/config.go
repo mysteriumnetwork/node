@@ -22,7 +22,8 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/rs/zerolog/log"
@@ -65,7 +66,8 @@ func newConfigAPI(config configProvider) *configAPI {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *configAPI) GetConfig(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *configAPI) GetConfig(c *gin.Context) {
+	writer := c.Writer
 	res := configPayload{Data: api.config.GetConfig()}
 	utils.WriteAsJSON(res, writer)
 }
@@ -84,7 +86,8 @@ func (api *configAPI) GetConfig(writer http.ResponseWriter, httpReq *http.Reques
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *configAPI) GetDefaultConfig(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *configAPI) GetDefaultConfig(c *gin.Context) {
+	writer := c.Writer
 	res := configPayload{Data: api.config.GetDefaultConfig()}
 	utils.WriteAsJSON(res, writer)
 }
@@ -103,7 +106,8 @@ func (api *configAPI) GetDefaultConfig(writer http.ResponseWriter, httpReq *http
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *configAPI) GetUserConfig(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *configAPI) GetUserConfig(c *gin.Context) {
+	writer := c.Writer
 	res := configPayload{Data: api.config.GetUserConfig()}
 	utils.WriteAsJSON(res, writer)
 }
@@ -128,7 +132,10 @@ func (api *configAPI) GetUserConfig(writer http.ResponseWriter, httpReq *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *configAPI) SetUserConfig(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+func (api *configAPI) SetUserConfig(c *gin.Context) {
+	httpReq := c.Request
+	writer := c.Writer
+
 	var req configPayload
 	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
@@ -149,7 +156,7 @@ func (api *configAPI) SetUserConfig(writer http.ResponseWriter, httpReq *http.Re
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return
 	}
-	api.GetUserConfig(writer, nil, nil)
+	api.GetUserConfig(c)
 }
 
 func isNil(val interface{}) bool {
@@ -165,11 +172,15 @@ func isNil(val interface{}) bool {
 
 // AddRoutesForConfig registers /config endpoints in Tequilapi
 func AddRoutesForConfig(
-	router *httprouter.Router,
-) {
+	e *gin.Engine,
+) error {
 	api := newConfigAPI(config.Current)
-	router.GET("/config", api.GetConfig)
-	router.GET("/config/default", api.GetDefaultConfig)
-	router.GET("/config/user", api.GetUserConfig)
-	router.POST("/config/user", api.SetUserConfig)
+	g := e.Group("/config")
+	{
+		g.GET("", api.GetConfig)
+		g.GET("/default", api.GetDefaultConfig)
+		g.GET("/user", api.GetUserConfig)
+		g.POST("/user", api.SetUserConfig)
+	}
+	return nil
 }

@@ -56,12 +56,13 @@ var _ Openvpn = wrapper{}
 type Options struct {
 	Directories OptionsDirectory
 
-	TequilapiAddress string
-	TequilapiPort    int
-	TequilapiEnabled bool
-	BindAddress      string
-	UI               OptionsUI
-	FeedbackURL      string
+	TequilapiAddress       string
+	TequilapiPort          int
+	FlagTequilapiDebugMode bool
+	TequilapiEnabled       bool
+	BindAddress            string
+	UI                     OptionsUI
+	FeedbackURL            string
 
 	Keystore OptionsKeystore
 
@@ -110,11 +111,12 @@ func GetOptions() *Options {
 		},
 	}
 	return &Options{
-		Directories:      *GetOptionsDirectory(&network),
-		TequilapiAddress: config.GetString(config.FlagTequilapiAddress),
-		TequilapiPort:    config.GetInt(config.FlagTequilapiPort),
-		TequilapiEnabled: true,
-		BindAddress:      config.GetString(config.FlagBindAddress),
+		Directories:            *GetOptionsDirectory(&network),
+		TequilapiAddress:       config.GetString(config.FlagTequilapiAddress),
+		TequilapiPort:          config.GetInt(config.FlagTequilapiPort),
+		FlagTequilapiDebugMode: config.GetBool(config.FlagTequilapiDebugMode),
+		TequilapiEnabled:       true,
+		BindAddress:            config.GetString(config.FlagBindAddress),
 		UI: OptionsUI{
 			UIEnabled:     config.GetBool(config.FlagUIEnable),
 			UIBindAddress: config.GetString(config.FlagUIAddress),

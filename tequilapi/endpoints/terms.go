@@ -21,10 +21,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
+
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,8 +49,8 @@ func newTermsAPI(config configProvider) *termsAPI {
 //     description: Terms object
 //     schema:
 //       "$ref": "#/definitions/TermsResponse"
-func (api *termsAPI) GetTerms(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	utils.WriteAsJSON(contract.NewTermsResp(), w)
+func (api *termsAPI) GetTerms(c *gin.Context) {
+	c.JSON(http.StatusOK, contract.NewTermsResp())
 }
 
 // UpdateTerms accepts new terms and updates user config
@@ -74,7 +76,10 @@ func (api *termsAPI) GetTerms(w http.ResponseWriter, r *http.Request, params htt
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *termsAPI) UpdateTerms(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (api *termsAPI) UpdateTerms(c *gin.Context) {
+	r := c.Request
+	w := c.Writer
+
 	var req contract.TermsRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -96,10 +101,11 @@ func (api *termsAPI) UpdateTerms(w http.ResponseWriter, r *http.Request, params 
 }
 
 // AddRoutesForTerms registers /terms endpoints in Tequilapi
-func AddRoutesForTerms(
-	router *httprouter.Router,
-) {
+func AddRoutesForTerms(e *gin.Engine) error {
 	api := newTermsAPI(config.Current)
-	router.GET("/terms", api.GetTerms)
-	router.POST("/terms", api.UpdateTerms)
+
+	g := e.Group("/terms")
+	g.GET("", api.GetTerms)
+	g.POST("", api.UpdateTerms)
+	return nil
 }

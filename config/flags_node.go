@@ -177,6 +177,12 @@ var (
 		Usage: "Port for listening incoming API requests",
 		Value: 4050,
 	}
+	// FlagTequilapiDebugMode debug mode for tequilapi.
+	FlagTequilapiDebugMode = cli.BoolFlag{
+		Name:  "tequilapi.debug",
+		Usage: "Starts tequilapi in debug mode",
+		Value: false,
+	}
 	// FlagTequilapiUsername username for API authentication.
 	FlagTequilapiUsername = cli.StringFlag{
 		Name:  "tequilapi.auth.username",

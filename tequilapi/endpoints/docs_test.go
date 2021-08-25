@@ -22,14 +22,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_Docs(t *testing.T) {
 	// given
-	router := httprouter.New()
-	AddRoutesForDocs(router)
+	router := gin.Default()
+	err := AddRoutesForDocs(router)
+	assert.NoError(t, err)
 
 	// when
 	req := httptest.NewRequest("GET", "/", nil)
@@ -38,7 +40,7 @@ func Test_Docs(t *testing.T) {
 
 	// then
 	assert.Equal(t, 301, resp.Code)
-	assert.Equal(t, "/docs/", resp.Header().Get("Location"))
+	assert.Equal(t, "/docs", resp.Header().Get("Location"))
 
 	// when
 	req, _ = http.NewRequest("GET", "/docs", nil)

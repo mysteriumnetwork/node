@@ -27,7 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
@@ -120,13 +121,14 @@ var fakeOptionsParser = map[string]services.ServiceOptionsParser{
 }
 
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
-	router := httprouter.New()
-	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
+	router := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
 		priceToAdd: market.Price{
 			PricePerHour: big.NewInt(1),
 			PricePerGiB:  big.NewInt(2),
 		},
-	})
+	})(router)
+	assert.NoError(t, err)
 	tests := []struct {
 		method         string
 		path           string
@@ -264,11 +266,10 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 }
 
 func Test_ServiceStartInvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
+	path := "/services"
 	req := httptest.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
+		http.MethodPost,
+		path,
 		strings.NewReader(`{
 			"type": "openvpn",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -277,7 +278,11 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 	)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -293,11 +298,9 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
 	req := httptest.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
+		http.MethodPost,
+		"/services",
 		strings.NewReader(`{
 			"type": "openvpn",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -306,7 +309,11 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 	)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -322,11 +329,9 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidOptions(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
 	req := httptest.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
+		http.MethodPost,
+		"/services",
 		strings.NewReader(`{
 			"type": "errorprotocol",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -335,7 +340,11 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 	)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -351,11 +360,9 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 }
 
 func Test_ServiceStartAlreadyRunning(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
 	req := httptest.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
+		http.MethodPost,
+		"/services",
 		strings.NewReader(`{
 			"type": "testprotocol",
 			"provider_id": "0xproviderid",
@@ -364,7 +371,11 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 	)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusConflict, resp.Code)
 	assert.JSONEq(
@@ -375,28 +386,36 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 }
 
 func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
-	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
+	req := httptest.NewRequest(http.MethodGet, "/services/1", nil)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceGet(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 }
 
 func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
-		priceToAdd: market.Price{
-			PricePerHour: big.NewInt(1),
-			PricePerGiB:  big.NewInt(2),
-		},
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
+	req := httptest.NewRequest(http.MethodGet, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", nil)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceGet(resp, req, httprouter.Params{{Key: "id", Value: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"}})
+	g := gin.Default()
+	err := AddRoutesForService(
+		&mockServiceManager{},
+		fakeOptionsParser,
+		&mockProposalRepository{
+			priceToAdd: market.Price{
+				PricePerHour: big.NewInt(1),
+				PricePerGiB:  big.NewInt(2),
+			},
+		},
+	)(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
@@ -434,12 +453,14 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 	)
 }
 func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
-	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
+	req := httptest.NewRequest(http.MethodPost, "/services", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	assert.JSONEq(
@@ -452,12 +473,14 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 }
 
 func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
-	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
+	req := httptest.NewRequest(http.MethodPost, "/services", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(t,
@@ -473,16 +496,9 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 }
 
 func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
-		priceToAdd: market.Price{
-			PricePerHour: big.NewInt(1),
-			PricePerGiB:  big.NewInt(2),
-		},
-	})
-
 	req := httptest.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
+		http.MethodPost,
+		"/services",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -493,7 +509,16 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 	)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
+		priceToAdd: market.Price{
+			PricePerHour: big.NewInt(1),
+			PricePerGiB:  big.NewInt(2),
+		},
+	})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 	assert.JSONEq(
@@ -550,11 +575,9 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 }
 
 func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})
-
 	req := httptest.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
+		http.MethodPost,
+		"/services",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -565,7 +588,11 @@ func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
 	)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+	g := gin.Default()
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	assert.JSONEq(

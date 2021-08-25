@@ -18,11 +18,13 @@
 package endpoints
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,11 +41,17 @@ func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 	metadata.BuildCommit = "abc123"
 	metadata.BuildNumber = "travis build #"
 
+	g := gin.Default()
 	handlerFunc := HealthCheckEndpointFactory(
 		newMockTimer([]time.Time{tick1, tick2}).Now,
 		func() int { return 1 },
 	).HealthCheck
-	handlerFunc(resp, req, httprouter.Params{})
+	g.GET("/healthcheck", handlerFunc)
+
+	req, err := http.NewRequest("GET", "/healthcheck", nil)
+	assert.NoError(t, err)
+
+	g.ServeHTTP(resp, req)
 
 	assert.JSONEq(
 		t,

@@ -18,19 +18,22 @@
 package endpoints
 
 import (
-	"net/http"
 	"net/http/pprof"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 )
 
 // AddRoutesForPProf adds pprof http handlers to given router
-func AddRoutesForPProf(router *httprouter.Router) {
-	router.GET("/debug/pprof/", pprofHandler)
-	router.GET("/debug/pprof/:profile", pprofHandler)
+func AddRoutesForPProf(e *gin.Engine) {
+	e.GET("/debug/pprof/", pprofHandler)
+	e.GET("/debug/pprof/:profile", pprofHandler)
 }
 
-func pprofHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func pprofHandler(c *gin.Context) {
+	params := c.Params
+	w := c.Writer
+	r := c.Request
+
 	switch params.ByName("profile") {
 	case "cmdline":
 		pprof.Cmdline(w, r)

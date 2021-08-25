@@ -21,7 +21,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
@@ -61,7 +62,9 @@ func NewExchangeEndpoint(mystex mystexchange) *exchangeEndpoint {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *exchangeEndpoint) ExchangeMyst(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (e *exchangeEndpoint) ExchangeMyst(c *gin.Context) {
+	params := c.Params
+	writer := c.Writer
 	currency := strings.ToUpper(params.ByName("currency"))
 
 	rates, err := e.me.GetMystExchangeRate()
@@ -86,7 +89,13 @@ func (e *exchangeEndpoint) ExchangeMyst(writer http.ResponseWriter, request *htt
 }
 
 // AddRoutesForCurrencyExchange attaches exchange endpoints to router.
-func AddRoutesForCurrencyExchange(router *httprouter.Router, mystex mystexchange) {
+func AddRoutesForCurrencyExchange(mystex mystexchange) func(*gin.Engine) error {
 	e := NewExchangeEndpoint(mystex)
-	router.GET("/exchange/myst/:currency", e.ExchangeMyst)
+	return func(g *gin.Engine) error {
+		ex := g.Group("/exchange")
+		{
+			ex.GET("/myst/:currency", e.ExchangeMyst)
+		}
+		return nil
+	}
 }

@@ -19,7 +19,15 @@ package tequilapi
 
 import (
 	"net"
+	"os"
 	"testing"
+	"time"
+
+	"github.com/mysteriumnetwork/node/core/node"
+
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -34,7 +42,11 @@ type tequilapiTestSuite struct {
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.Nil(testSuite.T(), err)
-	testSuite.server = NewServer(listener, NewAPIRouter(), RegexpCorsPolicy{})
+	testSuite.server, err = NewServer(listener, *node.GetOptions(), []func(e *gin.Engine) error{func(e *gin.Engine) error {
+		e.GET("/healthcheck", endpoints.HealthCheckEndpointFactory(time.Now, os.Getpid).HealthCheck)
+		return nil
+	}})
+	assert.NoError(testSuite.T(), err)
 
 	testSuite.server.StartServing()
 	address, err := testSuite.server.Address()

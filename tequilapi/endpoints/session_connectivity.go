@@ -18,10 +18,10 @@
 package endpoints
 
 import (
-	"net/http"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -52,7 +52,8 @@ type sessionConnectivityEndpoint struct {
 //     description: List of connectivity statuses
 //     schema:
 //       "$ref": "#/definitions/ConnectivityStatus"
-func (e *sessionConnectivityEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (e *sessionConnectivityEndpoint) List(c *gin.Context) {
+	resp := c.Writer
 	r := sessionConnectivityStatusCollection{
 		Entries: []*sessionConnectivityStatus{},
 	}
@@ -71,9 +72,12 @@ func (e *sessionConnectivityEndpoint) List(resp http.ResponseWriter, req *http.R
 }
 
 // AddRoutesForConnectivityStatus attaches connectivity statuses endpoints to router.
-func AddRoutesForConnectivityStatus(router *httprouter.Router, statusStorage connectivity.StatusStorage) {
+func AddRoutesForConnectivityStatus(statusStorage connectivity.StatusStorage) func(*gin.Engine) error {
 	e := &sessionConnectivityEndpoint{
 		statusStorage: statusStorage,
 	}
-	router.GET("/sessions-connectivity-status", e.List)
+	return func(g *gin.Engine) error {
+		g.GET("/sessions-connectivity-status", e.List)
+		return nil
+	}
 }
