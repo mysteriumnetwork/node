@@ -192,7 +192,7 @@ func TestChannel_Send_Timeout(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, err = consumer.Send(ctx, ctx, "timeout", &Message{Data: []byte("ping")})
+		_, err = consumer.Send(ctx, context.Background(), "timeout", &Message{Data: []byte("ping")})
 		if !errors.Is(err, ErrSendTimeout) {
 			t.Fatalf("expect timeout err, got: %v", err)
 		}
@@ -203,7 +203,7 @@ func TestChannel_Send_Timeout(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, err = consumer.Send(ctx, ctx, "timeout", &Message{Data: []byte("ping")})
+		_, err = consumer.Send(ctx, context.Background(), "timeout", &Message{Data: []byte("ping")})
 		if !errors.Is(err, ErrSendTimeout) {
 			t.Fatalf("expect timeout err, got: %v", err)
 		}
@@ -235,7 +235,7 @@ func TestChannel_Send_To_When_Peer_Starts_Later(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	_, err = consumer.Send(ctx, ctx, "timeout", &Message{Data: []byte("ping")})
+	_, err = consumer.Send(ctx, context.Background(), "timeout", &Message{Data: []byte("ping")})
 	require.NoError(t, err)
 }
 
@@ -256,7 +256,7 @@ func TestChannel_Detect_And_Update_Peer_Addr(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = consumer.Send(ctx, ctx, "ping", &Message{Data: []byte("pingasssas")})
+	_, err = consumer.Send(ctx, context.Background(), "ping", &Message{Data: []byte("pingasssas")})
 }
 
 func BenchmarkChannel_Send(b *testing.B) {
