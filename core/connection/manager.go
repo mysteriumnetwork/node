@@ -199,8 +199,10 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	tracer := trace.NewTracer("Consumer whole Connect")
 	defer func() {
-		traceResult := tracer.Finish(m.eventBus, string(sessionID))
-		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
+		if sessionID != "" {
+			traceResult := tracer.Finish(m.eventBus, string(sessionID))
+			log.Debug().Msgf("Consumer connection trace: %s", traceResult)
+		}
 	}()
 
 	// make sure cache is cleared when connect terminates at any stage as part of disconnect
@@ -248,14 +250,14 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
-	sessionID, err = m.initSession(tracer, prc)
+	sessionID, err = m.initSession(m.currentCtx(), tracer, prc)
 	if err != nil {
 		return err
 	}
 
 	err = m.startConnection(m.currentCtx(), m.activeConnection, m.activeConnection.Start, m.connectOptions, tracer)
 	if err != nil {
-		return m.handleStartError(sessionID, err)
+		return m.handleStartError(m.currentCtx(), sessionID, err)
 	}
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
@@ -272,14 +274,14 @@ func (m *connectionManager) autoReconnect() (err error) {
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
-	sessionID, err = m.initSession(tracer, m.priceFromProposal(m.connectOptions.Proposal))
+	sessionID, err = m.initSession(m.currentCtx(), tracer, m.priceFromProposal(m.connectOptions.Proposal))
 	if err != nil {
 		return err
 	}
 
 	err = m.startConnection(m.currentCtx(), m.activeConnection, m.activeConnection.Reconnect, m.connectOptions, tracer)
 	if err != nil {
-		return m.handleStartError(sessionID, err)
+		return m.handleStartError(m.currentCtx(), sessionID, err)
 	}
 
 	return nil
@@ -292,8 +294,9 @@ func (m *connectionManager) priceFromProposal(proposal proposal.PricedServicePro
 	}
 }
 
-func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) (sessionID session.ID, err error) {
-	err = m.createP2PChannel(m.connectOptions, tracer)
+func (m *connectionManager) initSession(ctx context.Context, tracer *trace.Tracer, prc market.Price) (sessionID session.ID, err error) {
+
+	err = m.createP2PChannel(ctx, m.connectOptions, tracer)
 	if err != nil {
 		return sessionID, fmt.Errorf("could not create p2p channel during connect: %w", err)
 	}
@@ -306,10 +309,10 @@ func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) 
 		return sessionID, err
 	}
 
-	sessionDTO, err := m.createP2PSession(m.activeConnection, m.connectOptions, tracer, prc)
+	sessionDTO, err := m.createP2PSession(ctx, m.activeConnection, m.connectOptions, tracer, prc)
 	sessionID = session.ID(sessionDTO.GetID())
 	if err != nil {
-		m.sendSessionStatus(m.channel, m.connectOptions.ConsumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
+		m.sendSessionStatus(ctx, m.channel, m.connectOptions.ConsumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
 		return sessionID, err
 	}
 
@@ -328,12 +331,12 @@ func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) 
 	return sessionID, nil
 }
 
-func (m *connectionManager) handleStartError(sessionID session.ID, err error) error {
+func (m *connectionManager) handleStartError(ctx context.Context, sessionID session.ID, err error) error {
 	if errors.Is(err, context.Canceled) {
 		return ErrConnectionCancelled
 	}
 	m.addCleanupAfterDisconnect(func() error {
-		return m.sendSessionStatus(m.channel, m.connectOptions.ConsumerID, sessionID, connectivity.StatusConnectionFailed, err)
+		return m.sendSessionStatus(ctx, m.channel, m.connectOptions.ConsumerID, sessionID, connectivity.StatusConnectionFailed, err)
 	})
 	m.publishStateEvent(connectionstate.StateConnectionFailed)
 
@@ -349,7 +352,7 @@ func (m *connectionManager) clearIPCache() {
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
-func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
+func (m *connectionManager) checkSessionIP(ctx context.Context, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
 	for i := 1; i <= m.config.IPCheck.MaxAttempts; i++ {
 		// Skip check if not connected. This may happen when context was canceled via Disconnect.
 		if m.Status().State != connectionstate.Connected {
@@ -359,13 +362,13 @@ func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID ident
 		newPublicIP := m.getPublicIP()
 		// If ip is changed notify peer that connection is successful.
 		if originalPublicIP != newPublicIP {
-			m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusConnectionOk, nil)
+			m.sendSessionStatus(ctx, channel, consumerID, sessionID, connectivity.StatusConnectionOk, nil)
 			return
 		}
 
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
 		if i == m.config.IPCheck.MaxAttempts {
-			m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
+			m.sendSessionStatus(ctx, channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
 			m.publishStateEvent(connectionstate.StateIPNotChanged)
 			return
 		}
@@ -375,7 +378,7 @@ func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID ident
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
-func (m *connectionManager) sendSessionStatus(channel p2p.ChannelSender, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
+func (m *connectionManager) sendSessionStatus(ctx context.Context, channel p2p.ChannelSender, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
 	var errDetailsMsg string
 	if errDetails != nil {
 		errDetailsMsg = errDetails.Error()
@@ -390,9 +393,9 @@ func (m *connectionManager) sendSessionStatus(channel p2p.ChannelSender, consume
 
 	log.Debug().Msgf("Sending session status P2P message to %q: %s", p2p.TopicSessionStatus, sessionStatus.String())
 
-	ctx, cancel := context.WithTimeout(m.currentCtx(), 20*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(m.currentCtx(), 20*time.Second)
 	defer cancel()
-	_, err := channel.Send(ctx, p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
+	_, err := channel.Send(timeoutCtx, ctx, p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
 	if err != nil {
 		return fmt.Errorf("could not send p2p session status message: %w", err)
 	}
@@ -467,7 +470,7 @@ func (m *connectionManager) cleanAfterDisconnect() {
 	m.cleanupAfterDisconnect = nil
 }
 
-func (m *connectionManager) createP2PChannel(opts ConnectOptions, tracer *trace.Tracer) error {
+func (m *connectionManager) createP2PChannel(ctx context.Context, opts ConnectOptions, tracer *trace.Tracer) error {
 	trace := tracer.StartStage("Consumer P2P channel creation")
 	defer tracer.EndStage(trace)
 
@@ -480,7 +483,7 @@ func (m *connectionManager) createP2PChannel(opts ConnectOptions, tracer *trace.
 	defer cancel()
 
 	// TODO register all handlers before channel read/write loops
-	channel, err := m.p2pDialer.Dial(timeoutCtx, opts.ConsumerID, opts.ProviderID, opts.Proposal.ServiceType, contactDef, tracer)
+	channel, err := m.p2pDialer.Dial(timeoutCtx, ctx, opts.ConsumerID, opts.ProviderID, opts.Proposal.ServiceType, contactDef, tracer)
 	if err != nil {
 		return fmt.Errorf("p2p dialer failed: %w", err)
 	}
@@ -507,7 +510,7 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, tracer *trace.Tracer, requestedPrice market.Price) (*pb.SessionResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, opts ConnectOptions, tracer *trace.Tracer, requestedPrice market.Price) (*pb.SessionResponse, error) {
 	trace := tracer.StartStage("Consumer session creation")
 	defer tracer.EndStage(trace)
 
@@ -538,9 +541,9 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 		Config:     config,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
-	ctx, cancel := context.WithTimeout(m.currentCtx(), 20*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(m.currentCtx(), 20*time.Second)
 	defer cancel()
-	res, err := m.channel.Send(ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
+	res, err := m.channel.Send(timeoutCtx, ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
 		return nil, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
@@ -559,9 +562,9 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 			SessionID:  sessionResponse.GetID(),
 		}
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionAcknowledge, pc.String())
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		_, err := channel.Send(ctx, p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
+		_, err := channel.Send(timeoutCtx, ctx, p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
 		if err != nil {
 			log.Warn().Err(err).Msg("Acknowledge failed")
 		}
@@ -576,9 +579,9 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 		}
 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		_, err := m.channel.Send(ctx, p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
+		_, err := m.channel.Send(timeoutCtx, context.Background(), p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
 		if err != nil {
 			return fmt.Errorf("could not send session destroy request: %w", err)
 		}
@@ -646,7 +649,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	// Clear IP cache so session IP check can report that IP has really changed.
 	m.clearIPCache()
 
-	go m.checkSessionIP(m.channel, connectOptions.ConsumerID, connectOptions.SessionID, originalPublicIP)
+	go m.checkSessionIP(ctx, m.channel, connectOptions.ConsumerID, connectOptions.SessionID, originalPublicIP)
 
 	return nil
 }
@@ -738,8 +741,8 @@ func (m *connectionManager) Disconnect() error {
 	return nil
 }
 
-func (m *connectionManager) CheckChannel(ctx context.Context) error {
-	if err := m.sendKeepAlivePing(ctx, m.channel, m.Status().SessionID); err != nil {
+func (m *connectionManager) CheckChannel(timeoutCtx context.Context, ctx context.Context) error {
+	if err := m.sendKeepAlivePing(timeoutCtx, ctx, m.channel, m.Status().SessionID); err != nil {
 		return fmt.Errorf("keep alive ping failed: %w", err)
 	}
 	return nil
@@ -874,8 +877,8 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 			log.Debug().Msgf("Stopping p2p keepalive: %v", m.currentCtx().Err())
 			return
 		case <-time.After(m.config.KeepAlive.SendInterval):
-			ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
-			if err := m.sendKeepAlivePing(ctx, channel, sessionID); err != nil {
+			timeoutCtx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
+			if err := m.sendKeepAlivePing(timeoutCtx, m.currentCtx(), channel, sessionID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
 				if errCount == m.config.KeepAlive.MaxSendErrCount {
@@ -896,13 +899,13 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 	}
 }
 
-func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.Channel, sessionID session.ID) error {
+func (m *connectionManager) sendKeepAlivePing(timeoutCtx context.Context, ctx context.Context, channel p2p.Channel, sessionID session.ID) error {
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
 
 	start := time.Now()
-	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	_, err := channel.Send(timeoutCtx, ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
 	if err != nil {
 		return err
 	}

@@ -47,7 +47,7 @@ const maxBrokerConnectAttempts = 25
 type Dialer interface {
 	// Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 	// and create p2p channel which is ready for communication.
-	Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition, tracer *trace.Tracer) (Channel, error)
+	Dial(timeoutCtx context.Context, ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition, tracer *trace.Tracer) (Channel, error)
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
@@ -76,7 +76,7 @@ type dialer struct {
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
-func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition, tracer *trace.Tracer) (Channel, error) {
+func (m *dialer) Dial(timeoutCtx context.Context, ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition, tracer *trace.Tracer) (Channel, error) {
 	config := &p2pConnectConfig{tracer: tracer}
 
 	// Send initial exchange with signed consumer public key.
@@ -131,8 +131,10 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 	select {
 	case <-peerReady:
 		log.Debug().Msg("Received handlers ready message from provider")
-	case <-ctx.Done():
+	case <-timeoutCtx.Done():
 		return nil, errors.New("timeout while performing configuration exchange")
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 
 	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)

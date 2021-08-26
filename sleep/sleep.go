@@ -56,7 +56,7 @@ type connectionManager interface {
 	// Status queries current status of connection
 	Status() connectionstate.Status
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
-	CheckChannel(context.Context) error
+	CheckChannel(context.Context, context.Context) error
 	// Reconnect reconnects current session
 	Reconnect()
 }
@@ -80,9 +80,9 @@ func (n *Notifier) handleSleepEvent(e Event) {
 		if n.connectionManager.Status().State != connectionstate.Connected {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		if err := n.connectionManager.CheckChannel(ctx); err != nil {
+		if err := n.connectionManager.CheckChannel(timeoutCtx, context.Background()); err != nil {
 			log.Info().Msgf("Channel dead - reconnecting: %s", err)
 			n.connectionManager.Reconnect()
 		} else {

@@ -60,12 +60,12 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 
 		publishedConsumerMsg := &pb.PingPong{Value: "Consumer BigZ"}
 		msg := ProtoMessage(publishedConsumerMsg)
-		_, err := consumer.Send(context.Background(), "ping.pong", msg)
+		_, err := consumer.Send(context.Background(), context.Background(), "ping.pong", msg)
 		assert.NoError(t, err)
 
 		publishedProviderMsg := &pb.PingPong{Value: "Provider SmallZ"}
 		msg = ProtoMessage(publishedProviderMsg)
-		_, err = provider.Send(context.Background(), "ping.pong", msg)
+		_, err = provider.Send(context.Background(), context.Background(), "ping.pong", msg)
 		assert.NoError(t, err)
 
 		select {
@@ -95,7 +95,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		})
 
 		msg := ProtoMessage(&pb.PingPong{Value: "ping"})
-		res, err := consumer.Send(context.Background(), "testreq", msg)
+		res, err := consumer.Send(context.Background(), context.Background(), "testreq", msg)
 		assert.NoError(t, err)
 
 		var resMsg pb.PingPong
@@ -114,7 +114,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
 			go func() {
-				_, err := consumer.Send(context.Background(), "concurrent", &Message{Data: []byte{}})
+				_, err := consumer.Send(context.Background(), context.Background(), "concurrent", &Message{Data: []byte{}})
 				assert.NoError(t, err)
 			}()
 		}
@@ -135,13 +135,13 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		slowStarted := make(chan struct{})
 		go func() {
 			slowStarted <- struct{}{}
-			consumer.Send(context.Background(), "slow", &Message{})
+			consumer.Send(context.Background(), context.Background(), "slow", &Message{})
 		}()
 
 		fastFinished := make(chan struct{})
 		go func() {
 			<-slowStarted
-			consumer.Send(context.Background(), "fast", &Message{})
+			consumer.Send(context.Background(), context.Background(), "fast", &Message{})
 			fastFinished <- struct{}{}
 		}()
 
@@ -157,7 +157,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 			return c.Error(errors.New("I don't like you"))
 		})
 
-		_, err := consumer.Send(context.Background(), "get-error", &Message{Data: []byte("hello")})
+		_, err := consumer.Send(context.Background(), context.Background(), "get-error", &Message{Data: []byte("hello")})
 		assert.EqualError(t, err, "public peer error: I don't like you")
 	})
 
@@ -166,12 +166,12 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 			return errors.New("I don't like you")
 		})
 
-		_, err := consumer.Send(context.Background(), "get-error", &Message{Data: []byte("hello")})
+		_, err := consumer.Send(context.Background(), context.Background(), "get-error", &Message{Data: []byte("hello")})
 		assert.EqualError(t, err, "peer error: I don't like you")
 	})
 
 	t.Run("Test peer returns handler not found error", func(t *testing.T) {
-		_, err := consumer.Send(context.Background(), "ping", &Message{Data: []byte("hello")})
+		_, err := consumer.Send(context.Background(), context.Background(), "ping", &Message{Data: []byte("hello")})
 		if !errors.Is(err, ErrHandlerNotFound) {
 			t.Fatalf("expect handler not found err, got %v", err)
 		}
@@ -192,7 +192,7 @@ func TestChannel_Send_Timeout(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, err = consumer.Send(ctx, "timeout", &Message{Data: []byte("ping")})
+		_, err = consumer.Send(ctx, ctx, "timeout", &Message{Data: []byte("ping")})
 		if !errors.Is(err, ErrSendTimeout) {
 			t.Fatalf("expect timeout err, got: %v", err)
 		}
@@ -203,7 +203,7 @@ func TestChannel_Send_Timeout(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, err = consumer.Send(ctx, "timeout", &Message{Data: []byte("ping")})
+		_, err = consumer.Send(ctx, ctx, "timeout", &Message{Data: []byte("ping")})
 		if !errors.Is(err, ErrSendTimeout) {
 			t.Fatalf("expect timeout err, got: %v", err)
 		}
@@ -235,7 +235,7 @@ func TestChannel_Send_To_When_Peer_Starts_Later(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	_, err = consumer.Send(ctx, "timeout", &Message{Data: []byte("ping")})
+	_, err = consumer.Send(ctx, ctx, "timeout", &Message{Data: []byte("ping")})
 	require.NoError(t, err)
 }
 
@@ -256,7 +256,7 @@ func TestChannel_Detect_And_Update_Peer_Addr(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = consumer.Send(ctx, "ping", &Message{Data: []byte("pingasssas")})
+	_, err = consumer.Send(ctx, ctx, "ping", &Message{Data: []byte("pingasssas")})
 }
 
 func BenchmarkChannel_Send(b *testing.B) {
@@ -272,7 +272,7 @@ func BenchmarkChannel_Send(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		res, err := consumer.Send(context.Background(), "bench", &Message{Data: []byte("Catch this!")})
+		res, err := consumer.Send(context.Background(), context.Background(), "bench", &Message{Data: []byte("Catch this!")})
 		require.NoError(b, err)
 		require.NotNil(b, res)
 	}

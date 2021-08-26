@@ -74,7 +74,7 @@ func (cm *mockConnectionManager) Disconnect() error {
 	return cm.onDisconnectReturn
 }
 
-func (cm *mockConnectionManager) CheckChannel(context.Context) error {
+func (cm *mockConnectionManager) CheckChannel(context.Context, context.Context) error {
 	return cm.onCheckChannelReturn
 }
 

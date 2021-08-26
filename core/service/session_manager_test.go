@@ -77,7 +77,7 @@ type mockP2PChannel struct {
 	tracer *trace.Tracer
 }
 
-func (m *mockP2PChannel) Send(_ context.Context, _ string, _ *p2p.Message) (*p2p.Message, error) {
+func (m *mockP2PChannel) Send(_ context.Context, _ context.Context, _ string, _ *p2p.Message) (*p2p.Message, error) {
 	return nil, nil
 }
 

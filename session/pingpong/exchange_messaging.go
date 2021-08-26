@@ -69,6 +69,6 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	_, err := es.ch.Send(ctx, p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
+	_, err := es.ch.Send(ctx, context.Background(), p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
 	return err
 }

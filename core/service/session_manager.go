@@ -399,7 +399,7 @@ func (manager *SessionManager) sendKeepAlivePing(channel p2p.Channel, sessionID 
 	}
 
 	start := time.Now()
-	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	_, err := channel.Send(ctx, context.Background(), p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
 	manager.publisher.Publish(quality.AppTopicProviderPingP2P, quality.PingEvent{
 		SessionID: string(sessionID),
 		Duration:  time.Now().Sub(start),

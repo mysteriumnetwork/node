@@ -102,13 +102,13 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 
 			// Consumer starts dialing provider.
 			channelDialer := NewDialer(mockBroker, signerFactory, verifierFactory, test.ipResolver, portPool, nil)
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			consumerChannel, err := channelDialer.Dial(ctx, identity.FromAddress("0x2"), providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}}, trace.NewTracer("Dial"))
+			consumerChannel, err := channelDialer.Dial(timeoutCtx, context.Background(), identity.FromAddress("0x2"), providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}}, trace.NewTracer("Dial"))
 			assert.NoError(t, err)
 			defer consumerChannel.Close()
 
-			res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
+			res, err := consumerChannel.Send(context.Background(), context.Background(), "test", &Message{Data: []byte("ping")})
 			assert.NoError(t, err)
 			assert.Equal(t, "pong", string(res.Data))
 		})

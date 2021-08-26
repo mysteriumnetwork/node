@@ -57,7 +57,7 @@ const (
 // ChannelSender is used to send messages.
 type ChannelSender interface {
 	// Send sends message to given topic. Peer listening to topic will receive message.
-	Send(ctx context.Context, topic string, msg *Message) (*Message, error)
+	Send(timeoutCtx context.Context, ctx context.Context, topic string, msg *Message) (*Message, error)
 }
 
 // ChannelHandler is used to handle messages.
@@ -482,8 +482,8 @@ func (c *channel) Conn() *net.UDPConn {
 }
 
 // Send sends message to given topic. Peer listening to topic will receive message.
-func (c *channel) Send(ctx context.Context, topic string, msg *Message) (*Message, error) {
-	reply, err := c.sendRequest(ctx, topic, msg)
+func (c *channel) Send(timeoutCtx context.Context, ctx context.Context, topic string, msg *Message) (*Message, error) {
+	reply, err := c.sendRequest(timeoutCtx, ctx, topic, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ func (c *channel) Handle(topic string, handler HandlerFunc) {
 }
 
 // sendRequest sends message to send queue and waits for response.
-func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*Message, error) {
+func (c *channel) sendRequest(timeoutCtx context.Context, ctx context.Context, topic string, m *Message) (*Message, error) {
 	s := c.addStream()
 	defer c.deleteStream(s.id)
 
@@ -508,8 +508,10 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 
 	// Wait for response.
 	select {
-	case <-ctx.Done():
+	case <-timeoutCtx.Done():
 		return nil, fmt.Errorf("timeout waiting for reply to %q: %w", topic, ErrSendTimeout)
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	case res := <-s.resCh:
 		if res.statusCode != statusCodeOK {
 			if res.statusCode == statusCodePublicErr {

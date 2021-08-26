@@ -664,7 +664,7 @@ type mockP2PDialer struct {
 	ch *mockP2PChannel
 }
 
-func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition, tracer *trace.Tracer) (p2p.Channel, error) {
+func (m mockP2PDialer) Dial(timeoutCtx context.Context, ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition, tracer *trace.Tracer) (p2p.Channel, error) {
 	return m.ch, nil
 }
 
@@ -683,7 +683,7 @@ func (m *mockP2PChannel) getSentMsg() proto.Message {
 	return m.status
 }
 
-func (m *mockP2PChannel) Send(_ context.Context, topic string, msg *p2p.Message) (*p2p.Message, error) {
+func (m *mockP2PChannel) Send(_ context.Context, _ context.Context, topic string, msg *p2p.Message) (*p2p.Message, error) {
 	switch topic {
 	case p2p.TopicSessionCreate:
 		res := &pb.SessionResponse{
