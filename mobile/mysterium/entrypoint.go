@@ -328,7 +328,9 @@ type GetLocationResponse struct {
 
 // GetLocation return current location including country and IP.
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
-	c := requests.NewHTTPClientWithTransport(http.DefaultTransport.(*http.Transport), 30*time.Second)
+	tr := http.DefaultTransport.(*http.Transport)
+	tr.DisableKeepAlives = true
+	c := requests.NewHTTPClientWithTransport(tr, 30*time.Second)
 	resolver := location.NewOracleResolver(c, DefaultNodeOptions().LocationDetectorURL)
 	loc, err := resolver.DetectLocation()
 	// TODO this is temporary workaround to show correct location on Android.
