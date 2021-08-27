@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -359,6 +360,15 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 		ProviderID:  status.Proposal.ProviderID,
 		ServiceType: status.Proposal.ServiceType,
 	}
+}
+
+// GetNATType return current NAT type after a probe.
+func (mb *MobileNode) GetNATType() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	natType, err := mb.natProber.Probe(ctx)
+	return string(natType), err
 }
 
 // StatisticsChangeCallback represents statistics callback.
