@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -322,15 +323,22 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 	})
 
 	// then
+	var tmpEvent event.State
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Sessions[0].DataReceived != 0
+		tmpEvent = keeper.GetState()
+		keeper.lock.Lock()
+		defer keeper.lock.Unlock()
+		return tmpEvent.Sessions[0].DataReceived != 0
 	}, 2*time.Second, 10*time.Millisecond)
+	tmpEvent = keeper.GetState()
+	keeper.lock.Lock()
+	defer keeper.lock.Unlock()
 	assert.Equal(
 		t,
 		[]session.History{
 			{SessionID: nodeSession.ID("1"), DataSent: 2, DataReceived: 1},
 		},
-		keeper.GetState().Sessions,
+		tmpEvent.Sessions,
 	)
 }
 
