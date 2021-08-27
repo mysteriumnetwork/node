@@ -42,6 +42,7 @@ func (c *cliApp) identities(args []string) (err error) {
 		"Available actions:",
 		"  " + usageListIdentities,
 		"  " + usageGetIdentity,
+		"  " + usageGetBalance,
 		"  " + usageNewIdentity,
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
@@ -67,6 +68,8 @@ func (c *cliApp) identities(args []string) (err error) {
 		return c.listIdentities(actionArgs)
 	case "get":
 		return c.getIdentity(actionArgs)
+	case "balance":
+		return c.getBalance(actionArgs)
 	case "new":
 		return c.newIdentity(actionArgs)
 	case "unlock":
@@ -108,6 +111,27 @@ func (c *cliApp) listIdentities(args []string) (err error) {
 	for _, id := range ids {
 		clio.Status("+", id.Address)
 	}
+	return nil
+}
+
+const usageGetBalance = "balance <identity>"
+
+func (c *cliApp) getBalance(actionArgs []string) (err error) {
+	if len(actionArgs) != 1 {
+		clio.Info("Usage: " + usageGetBalance)
+		return errWrongArgumentCount
+	}
+
+	address := actionArgs[0]
+	balance, err := c.tequilapi.BalanceRefresh(address)
+	if err != nil {
+		return err
+	}
+	if balance.Balance == nil {
+		balance.Balance = new(big.Int)
+	}
+
+	clio.Info(fmt.Sprintf("Balance: %s", money.New(balance.Balance)))
 	return nil
 }
 
