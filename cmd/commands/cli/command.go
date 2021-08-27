@@ -631,6 +631,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			"identities",
 			readline.PcItem("list"),
 			readline.PcItem("get", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("balance", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("new"),
 			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
