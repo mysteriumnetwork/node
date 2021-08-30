@@ -73,7 +73,7 @@ var Testnet3Definition = NetworkDefinition{
 		ChainID:            5,
 		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
 		EtherClientRPC: []string{
-			"https://goerli.infura.io/v3/e37e62a5c0c44334967779adf83415c4",
+			"https://goerli1.mysterium.network/",
 		},
 	},
 	Chain2: ChainDefinition{
@@ -83,8 +83,8 @@ var Testnet3Definition = NetworkDefinition{
 		ChainID:            80001,
 		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
 		EtherClientRPC: []string{
-			"https://polygon-mumbai.infura.io/v3/e37e62a5c0c44334967779adf83415c4",
-			"https://rpc-mumbai.maticvigil.com/v1/8b19c8a6bfbeaee32af34d8df479b1c9558571a5",
+			"https://mumbai1.mysterium.network/",
+			"https://mumbai2.mysterium.network/",
 		},
 	},
 	MMNAddress:      "https://my.mysterium.network/",
