@@ -74,7 +74,7 @@ func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
 
 // CreateOrder creates a payment order.
 func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) ([]byte, error) {
-	order, err := mb.pilvytis.CreateOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
+	order, err := mb.pilvytisOrderIssuer.CreatePaymentOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ type GetOrderRequest struct {
 
 // GetOrder gets an order by ID.
 func (mb *MobileNode) GetOrder(req *GetOrderRequest) ([]byte, error) {
-	order, err := mb.pilvytis.GetOrder(identity.FromAddress(req.IdentityAddress), uint64(req.ID))
+	order, err := mb.pilvytis.GetPaymentOrder(identity.FromAddress(req.IdentityAddress), uint64(req.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ type ListOrdersRequest struct {
 
 // ListOrders lists all payment orders.
 func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]byte, error) {
-	orders, err := mb.pilvytis.ListOrders(identity.FromAddress(req.IdentityAddress))
+	orders, err := mb.pilvytis.GetPaymentOrders(identity.FromAddress(req.IdentityAddress))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]byte, error) {
 
 // Currencies lists supported payment currencies.
 func (mb *MobileNode) Currencies() ([]byte, error) {
-	currencies, err := mb.pilvytis.Currencies()
+	currencies, err := mb.pilvytis.GetPaymentOrderCurrencies()
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (mb *MobileNode) Currencies() ([]byte, error) {
 
 // ExchangeRate returns MYST rate in quote currency.
 func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
-	return mb.pilvytis.ExchangeRate(quote)
+	return mb.pilvytis.GetMystExchangeRateFor(quote)
 }
 
 // OrderUpdatedCallbackPayload is the payload of OrderUpdatedCallback.

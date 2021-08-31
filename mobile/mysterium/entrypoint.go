@@ -77,7 +77,8 @@ type MobileNode struct {
 	identityRegistry          registry.IdentityRegistry
 	identityChannelCalculator *pingpong.AddressProvider
 	consumerBalanceTracker    *pingpong.ConsumerBalanceTracker
-	pilvytis                  *pilvytis.Service
+	pilvytis                  *pilvytis.API
+	pilvytisOrderIssuer       *pilvytis.OrderIssuer
 	chainID                   int64
 	startTime                 time.Time
 	sessionStorage            SessionStorage
@@ -294,7 +295,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.NATProber,
 			time.Duration(options.CacheTTLSeconds)*time.Second,
 		),
-		pilvytis:       di.Pilvytis,
+		pilvytis:       di.PilvytisAPI,
 		startTime:      time.Now(),
 		chainID:        nodeOptions.OptionsNetwork.ChainID,
 		sessionStorage: di.SessionStorage,

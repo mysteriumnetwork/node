@@ -32,21 +32,26 @@ import (
 )
 
 type api interface {
-	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
 	GetPaymentOrder(id identity.Identity, oid uint64) (*pilvytis.OrderResponse, error)
 	GetPaymentOrders(id identity.Identity) ([]pilvytis.OrderResponse, error)
 	GetPaymentOrderCurrencies() ([]string, error)
 	GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error)
 }
 
+type paymentsIssuer interface {
+	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
+}
+
 type pilvytisEndpoint struct {
 	api api
+	pt  paymentsIssuer
 }
 
 // NewPilvytisEndpoint returns pilvytis endpoints.
-func NewPilvytisEndpoint(pil api) *pilvytisEndpoint {
+func NewPilvytisEndpoint(pil api, pt paymentsIssuer) *pilvytisEndpoint {
 	return &pilvytisEndpoint{
 		api: pil,
+		pt:  pt,
 	}
 }
 
@@ -87,8 +92,9 @@ func (e *pilvytisEndpoint) CreatePaymentOrder(c *gin.Context) {
 		return
 	}
 
-	resp, err := e.api.CreatePaymentOrder(
-		identity.FromAddress(params.ByName("id")),
+	rid := identity.FromAddress(params.ByName("id"))
+	resp, err := e.pt.CreatePaymentOrder(
+		rid,
 		req.MystAmount,
 		req.PayCurrency,
 		req.LightningNetwork)
@@ -244,8 +250,8 @@ func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
 }
 
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.
-func AddRoutesForPilvytis(pilvytis api) func(*gin.Engine) error {
-	pil := NewPilvytisEndpoint(pilvytis)
+func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer) func(*gin.Engine) error {
+	pil := NewPilvytisEndpoint(pilvytis, pt)
 	return func(e *gin.Engine) error {
 		idGroup := e.Group("/identities")
 		{

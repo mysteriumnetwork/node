@@ -18,9 +18,11 @@
 package pilvytis
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -120,8 +122,8 @@ type orderRequest struct {
 	ChainID          int64   `json:"chain_id"`
 }
 
-// CreatePaymentOrder creates a new payment order in the API service.
-func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
+// createPaymentOrder creates a new payment order in the API service.
+func (a *API) createPaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
 	ch, err := a.channelCalculator.GetChannelAddress(chainID, id)
@@ -206,6 +208,19 @@ func (a *API) GetMystExchangeRate() (map[string]float64, error) {
 
 	var resp map[string]float64
 	return resp, a.sendRequestAndParseResp(req, &resp)
+}
+
+// GetMystExchangeRateFor returns the exchange rate for myst to for a given currency currencies.
+func (a *API) GetMystExchangeRateFor(curr string) (float64, error) {
+	rates, err := a.GetMystExchangeRate()
+	if err != nil {
+		return 0, err
+	}
+	rate, ok := rates[strings.ToUpper(curr)]
+	if !ok {
+		return 0, errors.New("currency not supported")
+	}
+	return rate, nil
 }
 
 func (a *API) sendRequestAndParseResp(req *http.Request, resp interface{}) error {

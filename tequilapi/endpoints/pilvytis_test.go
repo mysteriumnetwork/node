@@ -41,7 +41,12 @@ type mockPilvytis struct {
 	resp       pilvytis.OrderResponse
 }
 
-func (mock *mockPilvytis) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (*pilvytis.OrderResponse, error) {
+type mockPilvytisIssuer struct {
+	identity string
+	resp     pilvytis.OrderResponse
+}
+
+func (mock *mockPilvytisIssuer) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (*pilvytis.OrderResponse, error) {
 	if i.Address != mock.identity {
 		return nil, errors.New("wrong identity")
 	}
@@ -111,7 +116,11 @@ func TestCreatePaymentOrder(t *testing.T) {
 		identity: identity,
 		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
 	}
-	handler := NewPilvytisEndpoint(mock).CreatePaymentOrder
+	mockIssuer := &mockPilvytisIssuer{
+		identity: identity,
+		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
+	}
+	handler := NewPilvytisEndpoint(mock, mockIssuer).CreatePaymentOrder
 
 	mb, err := json.Marshal(reqBody)
 	assert.NoError(t, err)
@@ -157,7 +166,11 @@ func TestGetPaymentOrder(t *testing.T) {
 		identity: identity,
 		resp:     newMockPilvytisResp(orderID, identity, "BTC", "BTC", 1),
 	}
-	handler := NewPilvytisEndpoint(mock).GetPaymentOrder
+	mockIssuer := &mockPilvytisIssuer{
+		identity: identity,
+		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
+	}
+	handler := NewPilvytisEndpoint(mock, mockIssuer).GetPaymentOrder
 
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
@@ -199,7 +212,11 @@ func TestGetPaymentOrders(t *testing.T) {
 		identity: identity,
 		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
 	}
-	handler := NewPilvytisEndpoint(mock).GetPaymentOrders
+	mockIssuer := &mockPilvytisIssuer{
+		identity: identity,
+		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
+	}
+	handler := NewPilvytisEndpoint(mock, mockIssuer).GetPaymentOrders
 
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
@@ -236,7 +253,7 @@ func TestGetPaymentOrders(t *testing.T) {
 
 func TestGetCurrency(t *testing.T) {
 	mock := &mockPilvytis{currencies: []string{"BTC"}}
-	handler := NewPilvytisEndpoint(mock).GetPaymentOrderCurrencies
+	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}).GetPaymentOrderCurrencies
 
 	resp := httptest.NewRecorder()
 	url := "/payment-order-currencies"
@@ -260,7 +277,7 @@ func TestGetCurrency(t *testing.T) {
 
 func TestGetPaymentOrderOptions(t *testing.T) {
 	mock := &mockPilvytis{}
-	handler := NewPilvytisEndpoint(mock).GetPaymentOrderOptions
+	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}).GetPaymentOrderOptions
 
 	resp := httptest.NewRecorder()
 	url := "/payment-order-options"
