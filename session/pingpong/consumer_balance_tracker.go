@@ -281,6 +281,8 @@ func (cbt *ConsumerBalanceTracker) periodicSync(stop <-chan struct{}, chainID in
 		select {
 		case <-cbt.stop:
 			return
+		case <-stop:
+			return
 		case <-time.After(syncPeriod):
 			_ = cbt.ForceBalanceUpdate(chainID, id)
 		}
