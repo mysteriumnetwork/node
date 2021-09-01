@@ -31,8 +31,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var alowedOriginPolicy = NewMysteriumCorsPolicy()
-
 var corsConfig = cors.Config{
 	AllowMethods: []string{
 		"GET",
@@ -54,8 +52,8 @@ var corsConfig = cors.Config{
 		"X-CSRF-TOKEN",
 	},
 	AllowCredentials: true,
-	AllowOriginFunc: func(origin string) bool {
-		return alowedOriginPolicy.IsOriginAllowed(origin)
+	AllowOriginFunc: func(_ string) bool {
+		return true
 	},
 }
 
