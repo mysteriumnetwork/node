@@ -68,14 +68,14 @@ var (
 	// FlagPaymentsFastBalancePollInterval determines how often we resync balance on chain after on chain events.
 	FlagPaymentsFastBalancePollInterval = cli.DurationFlag{
 		Name:   "payments.balance-short-poll.interval",
-		Value:  time.Second * 30,
+		Value:  time.Minute,
 		Usage:  "The duration we'll wait before trying to fetch new balance.",
 		Hidden: true,
 	}
 	// FlagPaymentsFastBalancePollTimeout determines how long we try to resync balance on chain after on chain events.
 	FlagPaymentsFastBalancePollTimeout = cli.DurationFlag{
 		Name:   "payments.balance-short-poll.timeout",
-		Value:  time.Minute * 3,
+		Value:  time.Minute * 10,
 		Usage:  "The duration we'll wait before giving up trying to fetch new balance.",
 		Hidden: true,
 	}

@@ -183,9 +183,12 @@ type Dependencies struct {
 	AddressProvider          *pingpong.AddressProvider
 	HermesStatusChecker      *pingpong.HermesStatusChecker
 
-	MMN             *mmn.MMN
-	PilvytisAPI     *pilvytis.API
-	Pilvytis        *pilvytis.Service
+	MMN *mmn.MMN
+
+	PilvytisAPI         *pilvytis.API
+	PilvytisTracker     *pilvytis.StatusTracker
+	PilvytisOrderIssuer *pilvytis.OrderIssuer
+
 	ResidentCountry *identity.ResidentCountry
 
 	PayoutAddressStorage *payout.AddressStorage
@@ -422,8 +425,8 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
 	}
-	if di.Pilvytis != nil {
-		di.Pilvytis.Stop()
+	if di.PilvytisTracker != nil {
+		di.PilvytisTracker.Stop()
 	}
 	if di.BrokerConnection != nil {
 		di.BrokerConnection.Close()
@@ -909,9 +912,11 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 
 func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory, di.LocationResolver, di.AddressProvider)
-	statusTracker := pilvytis.NewStatusTracker(di.PilvytisAPI, di.IdentityManager, di.EventBus, 30*time.Second)
-	di.Pilvytis = pilvytis.NewService(di.PilvytisAPI, di.IdentityManager, statusTracker)
-	di.Pilvytis.Start()
+	di.PilvytisTracker = pilvytis.NewStatusTracker(di.PilvytisAPI, di.IdentityManager, di.EventBus, 30*time.Second)
+	di.PilvytisOrderIssuer = pilvytis.NewOrderIssuer(di.PilvytisAPI, di.PilvytisTracker)
+
+	go di.PilvytisTracker.Track()
+	di.PilvytisTracker.SubscribeAsync(di.EventBus)
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
