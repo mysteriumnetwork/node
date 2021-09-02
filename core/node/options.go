@@ -143,7 +143,6 @@ func GetOptions() *Options {
 			IPType:        config.GetString(config.FlagLocationIPType),
 		},
 		Transactor: OptionsTransactor{
-			Identity:                        config.GetString(config.FlagTransactorIdentity),
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),

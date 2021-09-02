@@ -31,12 +31,6 @@ var (
 		Usage: "Transactor URL address",
 		Value: metadata.DefaultNetwork.TransactorAddress,
 	}
-	// FlagTransactorIdentity is the identity of the transactor which is used.
-	FlagTransactorIdentity = cli.StringFlag{
-		Name:  "transactor.identity-address",
-		Usage: "the identity of the in use transactor",
-		Value: metadata.DefaultNetwork.TransactorIdentity,
-	}
 	// FlagTransactorProviderMaxRegistrationAttempts determines the number of registration attempts that the provider will attempt before giving up.
 	FlagTransactorProviderMaxRegistrationAttempts = cli.IntFlag{
 		Name:  "transactor.provider.max-registration-attempts",
@@ -56,7 +50,6 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
 		&FlagTransactorAddress,
-		&FlagTransactorIdentity,
 		&FlagTransactorProviderMaxRegistrationAttempts,
 		&FlagTransactorProviderRegistrationRetryDelay,
 	)
@@ -64,7 +57,6 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 
 // ParseFlagsTransactor function fills in transactor options from CLI context
 func ParseFlagsTransactor(ctx *cli.Context) {
-	Current.ParseStringFlag(ctx, FlagTransactorIdentity)
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)

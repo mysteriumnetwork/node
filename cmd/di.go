@@ -311,7 +311,7 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	}
 
 	keeper := client.NewMultiChainAddressKeeper(addresses)
-	di.AddressProvider = pingpong.NewAddressProvider(keeper, common.HexToAddress(nodeOptions.Transactor.Identity))
+	di.AddressProvider = pingpong.NewAddressProvider(keeper)
 }
 
 func (di *Dependencies) bootstrapP2P() {

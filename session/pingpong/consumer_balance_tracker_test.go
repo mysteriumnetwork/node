@@ -429,9 +429,6 @@ type mockAddressProvider struct {
 	addrToReturn common.Address
 }
 
-func (ma *mockAddressProvider) GetTransactorAddress() common.Address {
-	return ma.transactor
-}
 func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
 	return ma.addrToReturn, nil
 }
