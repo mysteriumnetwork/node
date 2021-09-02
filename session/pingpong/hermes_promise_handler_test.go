@@ -46,6 +46,7 @@ func TestHermesPromiseHandler_RequestPromise(t *testing.T) {
 		queue: make(chan enqueuedRequest),
 		stop:  make(chan struct{}),
 	}
+	aph.transactorFees = make(map[int64]registry.FeesResponse)
 	err := aph.Subscribe(bus)
 	assert.NoError(t, err)
 	bus.Publish(event.AppTopicNode, event.Payload{
@@ -88,6 +89,7 @@ func TestHermesPromiseHandler_RequestPromise_BubblesErrors(t *testing.T) {
 		queue: make(chan enqueuedRequest),
 		stop:  make(chan struct{}),
 	}
+	aph.transactorFees = make(map[int64]registry.FeesResponse)
 	err := aph.Subscribe(bus)
 	assert.NoError(t, err)
 	bus.Publish(event.AppTopicNode, event.Payload{

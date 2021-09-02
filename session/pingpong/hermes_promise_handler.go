@@ -75,20 +75,21 @@ type HermesPromiseHandlerDeps struct {
 
 // HermesPromiseHandler handles the hermes promises for ongoing sessions.
 type HermesPromiseHandler struct {
-	deps          HermesPromiseHandlerDeps
-	queue         chan enqueuedRequest
-	stop          chan struct{}
-	stopOnce      sync.Once
-	startOnce     sync.Once
-	transactorFee registry.FeesResponse
+	deps           HermesPromiseHandlerDeps
+	queue          chan enqueuedRequest
+	stop           chan struct{}
+	stopOnce       sync.Once
+	startOnce      sync.Once
+	transactorFees map[int64]registry.FeesResponse
 }
 
 // NewHermesPromiseHandler returns a new instance of hermes promise handler.
 func NewHermesPromiseHandler(deps HermesPromiseHandlerDeps) *HermesPromiseHandler {
 	return &HermesPromiseHandler{
-		deps:  deps,
-		queue: make(chan enqueuedRequest, 100),
-		stop:  make(chan struct{}),
+		deps:           deps,
+		queue:          make(chan enqueuedRequest, 100),
+		stop:           make(chan struct{}),
+		transactorFees: make(map[int64]registry.FeesResponse),
 	}
 }
 
@@ -148,23 +149,22 @@ func (aph *HermesPromiseHandler) PayAndSettle(r []byte, em crypto.ExchangeMessag
 		}()
 		return er.errChan
 	}
-	log.Info().Msg("caller created")
 	er.requestFunc = hermesCaller.PayAndSettle
 
-	log.Info().Msg("queuing")
 	aph.queue <- er
-	log.Info().Msg("queued")
 	return er.errChan
 }
 
-func (aph *HermesPromiseHandler) updateFee() {
-	fees, err := aph.deps.FeeProvider.FetchSettleFees(config.GetInt64(config.FlagChainID))
-	if err != nil {
-		log.Warn().Err(err).Msg("could not fetch fees, ignoring")
-		return
+func (aph *HermesPromiseHandler) updateFees() {
+	chains := []int64{config.GetInt64(config.FlagChain1ChainID), config.GetInt64(config.FlagChain2ChainID)}
+	for _, v := range chains {
+		fees, err := aph.deps.FeeProvider.FetchSettleFees(v)
+		if err != nil {
+			log.Warn().Err(err).Msg("could not fetch fees, ignoring")
+			continue
+		}
+		aph.transactorFees[v] = fees
 	}
-
-	aph.transactorFee = fees
 }
 
 func (aph *HermesPromiseHandler) handleRequests() {
@@ -204,7 +204,7 @@ func (aph *HermesPromiseHandler) handleNodeEvents(e event.Payload) {
 	if e.Status == event.StatusStarted {
 		aph.startOnce.Do(
 			func() {
-				aph.updateFee()
+				aph.updateFees()
 				aph.handleRequests()
 			},
 		)
@@ -217,8 +217,14 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	providerID := er.providerID
 	hermesID := common.HexToAddress(er.em.HermesID)
-	if !aph.transactorFee.IsValid() {
-		aph.updateFee()
+	fee, ok := aph.transactorFees[er.em.ChainID]
+	if !ok {
+		er.errChan <- fmt.Errorf("no fees for chain %v", er.em.ChainID)
+		return
+	}
+
+	if !fee.IsValid() {
+		aph.updateFees()
 	}
 
 	details := rRecoveryDetails{
@@ -240,7 +246,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	request := RequestPromise{
 		ExchangeMessage: er.em,
-		TransactorFee:   aph.transactorFee.Fee,
+		TransactorFee:   fee.Fee,
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
