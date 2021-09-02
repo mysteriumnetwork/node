@@ -1045,7 +1045,10 @@ func (di *Dependencies) AllowURLAccess(servers ...string) error {
 		return err
 	}
 
-	if config.GetBool(config.FlagKeepConnectedOnFail) {
+	// Doesn't work as expected because some services share IP address with
+	// each other and with location oracle which is supposed to be routed
+	// through VPN tunnel.
+	if false && config.GetBool(config.FlagKeepConnectedOnFail) {
 		if err := router.AllowURLAccess(servers...); err != nil {
 			return err
 		}
