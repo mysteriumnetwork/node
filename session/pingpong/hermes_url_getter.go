@@ -35,7 +35,6 @@ type HermesURLGetter struct {
 }
 
 type addressProvider interface {
-	GetTransactorAddress() common.Address
 	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
 	GetArbitraryChannelAddress(hermes, registry, channel common.Address, id identity.Identity) (common.Address, error)
 	GetChannelImplementation(chainID int64) (common.Address, error)

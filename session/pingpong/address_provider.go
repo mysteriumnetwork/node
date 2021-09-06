@@ -27,14 +27,12 @@ import (
 // AddressProvider can calculate channel addresses as well as provide SC addresses for various chains.
 type AddressProvider struct {
 	*client.MultiChainAddressKeeper
-	transactorAddress common.Address
 }
 
 // NewAddressProvider returns a new instance of AddressProvider.
-func NewAddressProvider(multichainAddressKeeper *client.MultiChainAddressKeeper, transactorAddress common.Address) *AddressProvider {
+func NewAddressProvider(multichainAddressKeeper *client.MultiChainAddressKeeper) *AddressProvider {
 	return &AddressProvider{
 		MultiChainAddressKeeper: multichainAddressKeeper,
-		transactorAddress:       transactorAddress,
 	}
 }
 
@@ -61,9 +59,4 @@ func (ap *AddressProvider) GetChannelAddress(chainID int64, id identity.Identity
 func (ap *AddressProvider) GetArbitraryChannelAddress(hermes, registry, channel common.Address, id identity.Identity) (common.Address, error) {
 	addr, err := crypto.GenerateChannelAddress(id.Address, hermes.Hex(), registry.Hex(), channel.Hex())
 	return common.HexToAddress(addr), err
-}
-
-// GetTransactorAddress returns the transactor address.
-func (ap *AddressProvider) GetTransactorAddress() common.Address {
-	return ap.transactorAddress
 }
