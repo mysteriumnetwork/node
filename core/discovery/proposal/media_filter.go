@@ -25,12 +25,22 @@ func mediaStreamingFilter(proposals []PricedServiceProposal) []PricedServiceProp
 	var totalBandwidth, averageBandwidth float64
 	var totalQuality, avgQuality float64
 
+	count := 0
+
 	for _, p := range proposals {
+		if p.Quality.Bandwidth == 0 && p.Quality.Quality == 0 {
+			// No quality data available, just skip
+			continue
+		}
 		totalBandwidth += p.Quality.Bandwidth
 		totalQuality += p.Quality.Quality
+		count++
 	}
-	averageBandwidth = totalBandwidth / float64(len(proposals))
-	avgQuality = avgQualityCeiling(totalQuality / float64(len(proposals)))
+
+	if count != 0 {
+		averageBandwidth = totalBandwidth / float64(count)
+		avgQuality = avgQualityCeiling(totalQuality / float64(count))
+	}
 
 	var filtered []PricedServiceProposal
 	for _, p := range proposals {
