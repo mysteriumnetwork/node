@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/utils/validateutil"
 )
 
@@ -69,7 +70,7 @@ type NewProposalOpts struct {
 func NewProposal(providerID, serviceType string, opts NewProposalOpts) ServiceProposal {
 	p := ServiceProposal{
 		Format:         proposalFormat,
-		Compatibility:  0,
+		Compatibility:  compat.Compatibility,
 		ProviderID:     providerID,
 		ServiceType:    serviceType,
 		Location:       Location{},
