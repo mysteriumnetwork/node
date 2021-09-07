@@ -561,8 +561,11 @@ func (it *InvoiceTracker) handleHermesError(err error) error {
 		)
 		return err
 	default:
-		log.Err(err).Msgf("unknown hermes error encountered")
-		return err
+		if it.incrementHermesFailureCount() > it.deps.MaxHermesFailureCount {
+			return err
+		}
+		log.Warn().Err(err).Msg("unknown hermes error encountered, will retry")
+		return nil
 	}
 }
 
