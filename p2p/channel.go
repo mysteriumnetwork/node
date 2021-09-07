@@ -18,12 +18,10 @@
 package p2p
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"net"
-	"net/textproto"
 	"os"
 	"strings"
 	"sync"
@@ -115,11 +113,11 @@ func (p *peer) updateAddr(addr *net.UDPAddr) {
 
 // transport wraps network primitives for sending and receiving packets.
 type transport struct {
-	// textReader is used to read p2p text protocol data.
-	textReader *textproto.Reader
+	// wireReader is used to read p2p message envelopes.
+	wireReader wireReader
 
-	// textWriter is used to marshal messages to underlying text protocol.
-	textWriter *textproto.Writer
+	// wireWriter is used to marshal messages to underlying p2p protocol.
+	wireWriter wireWriter
 
 	// session is KCP session which wraps UDP connection and adds reliability and ordered messages support.
 	session *kcp.UDPSession
@@ -212,8 +210,8 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 	log.Debug().Msgf("Creating p2p channel with local addr: %s, UDP session addr: %s, proxy addr: %s, remote peer addr: x.x.x.x:%d", localAddr.String(), udpSession.LocalAddr().String(), proxyConn.LocalAddr().String(), peerAddr.Port)
 
 	tr := transport{
-		textReader: textproto.NewReader(bufio.NewReader(udpSession)),
-		textWriter: textproto.NewWriter(bufio.NewWriter(udpSession)),
+		wireReader: newTextWireReader(udpSession),
+		wireWriter: newTextWireWriter(udpSession),
 		session:    udpSession,
 		remoteConn: remoteConn,
 		proxyConn:  proxyConn,
@@ -334,9 +332,9 @@ func (c *channel) localReadLoop() {
 		}
 
 		var msg transportMsg
-		if err := msg.readFrom(c.tr.textReader); err != nil {
+		if err := msg.readFrom(c.tr.wireReader); err != nil {
 			if !errPipeClosed(err) && !errNetClose(err) {
-				log.Err(err).Msg("Read from textproto reader failed")
+				log.Err(err).Msg("Read from wireproto reader failed")
 			}
 			return
 		}
@@ -371,9 +369,9 @@ func (c *channel) localSendLoop() {
 				fmt.Printf("send to %s: %+v\n", c.tr.session.RemoteAddr(), msg)
 			}
 
-			if err := msg.writeTo(c.tr.textWriter); err != nil {
+			if err := msg.writeTo(c.tr.wireWriter); err != nil {
 				if !errPipeClosed(err) && !errNetClose(err) {
-					log.Err(err).Msg("Write to textproto writer failed")
+					log.Err(err).Msg("Write to wireproto writer failed")
 				}
 				return
 			}
