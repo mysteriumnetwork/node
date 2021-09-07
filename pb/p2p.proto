@@ -25,3 +25,11 @@ message P2PKeepAlivePing {
 message P2PChannelHandlersReady {
     string value = 1;
 }
+
+message P2PChannelEnvelope {
+	uint64 ID = 1;
+	uint64 statusCode = 2;
+	string topic = 3;
+	string msg = 4;
+	bytes data = 5;
+}

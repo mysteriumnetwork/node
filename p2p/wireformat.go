@@ -19,12 +19,20 @@ package p2p
 
 import (
 	"bufio"
-	"fmt"
 	"bytes"
-	"strconv"
+	"encoding/binary"
+	"errors"
+	"fmt"
 	"io"
 	"net/textproto"
+	"strconv"
+
+	"google.golang.org/protobuf/proto"
+
+	"github.com/mysteriumnetwork/node/pb"
 )
+
+const maxTransportMsgLen = 128 * 1024
 
 func init() {
 	// This is needed to initialise global common headers map state internally
@@ -101,4 +109,104 @@ func (w *textWireWriter) writeMsg(m *transportMsg) error {
 	dotWriter.Write(header.Bytes())
 	dotWriter.Write(m.data)
 	return dotWriter.Close()
+}
+
+type protobufWireReader struct {
+	r      *bufio.Reader
+	closed bool
+}
+
+func newProtobufWireReader(c io.Reader) *protobufWireReader {
+	return &protobufWireReader{
+		r: bufio.NewReader(c),
+	}
+}
+
+func (r *protobufWireReader) readMsg(m *transportMsg) error {
+	if r.closed {
+		return io.EOF
+	}
+
+	msgLen, err := binary.ReadUvarint(r.r)
+	if err != nil {
+		r.closed = true
+		return err
+	}
+
+	if msgLen > maxTransportMsgLen {
+		r.closed = true
+		return io.EOF
+	}
+
+	msgBytes := make([]byte, msgLen)
+	_, err = io.ReadFull(r.r, msgBytes)
+	if err != nil {
+		r.closed = true
+		return err
+	}
+
+	var pbMsg pb.P2PChannelEnvelope
+	err = proto.Unmarshal(msgBytes, &pbMsg)
+	if err != nil {
+		return err
+	}
+
+	m.id = pbMsg.ID
+	m.statusCode = pbMsg.StatusCode
+	m.topic = pbMsg.Topic
+	m.msg = pbMsg.Msg
+	m.data = pbMsg.Data
+
+	return nil
+}
+
+type protobufWireWriter struct {
+	w      *bufio.Writer
+}
+
+func newProtobufWireWriter(c io.Writer) *protobufWireWriter {
+	return &protobufWireWriter{
+		w: bufio.NewWriter(c),
+	}
+}
+
+func (w *protobufWireWriter) writeMsg(m *transportMsg) error {
+	pbMsg := pb.P2PChannelEnvelope{
+		ID: m.id,
+		StatusCode: m.statusCode,
+		Topic: m.topic,
+		Msg: m.msg,
+		Data: m.data,
+	}
+
+	msgBytes, err := proto.Marshal(&pbMsg)
+	if err != nil {
+		return err
+	}
+
+	msgLen := len(msgBytes)
+	if msgLen > maxTransportMsgLen {
+		return errors.New("can't marshal: message too long")
+	}
+
+	lenBuf := make([]byte, binary.MaxVarintLen64)
+	lenBufLen := binary.PutUvarint(lenBuf, uint64(msgLen))
+	lenBuf = lenBuf[:lenBufLen]
+
+	_, err = w.w.Write(lenBuf)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.w.Write(msgBytes)
+	if err != nil {
+		return err
+	}
+
+	err = w.w.Flush()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
