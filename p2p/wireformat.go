@@ -27,8 +27,10 @@ import (
 	"net/textproto"
 	"strconv"
 
+	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/pb"
 )
 
@@ -55,6 +57,24 @@ const (
 	headerStatusCode     = "Status-Code"
 	headerMsg            = "Message"
 )
+
+func newCompatibleWireReader(c io.Reader, peerCompatibility int) wireReader {
+	if compat.FeaturePBP2P(peerCompatibility) {
+		log.Debug().Msg("Using protobufWireReader")
+		return newProtobufWireReader(c)
+	}
+	log.Debug().Msg("Using textWireReader")
+	return newTextWireReader(c)
+}
+
+func newCompatibleWireWriter(c io.Writer, peerCompatibility int) wireWriter {
+	if compat.FeaturePBP2P(peerCompatibility) {
+		log.Debug().Msg("Using protobufWireWriter")
+		return newProtobufWireWriter(c)
+	}
+	log.Debug().Msg("Using textWireWriter")
+	return newTextWireWriter(c)
+}
 
 type textWireReader textproto.Reader
 
@@ -161,7 +181,7 @@ func (r *protobufWireReader) readMsg(m *transportMsg) error {
 }
 
 type protobufWireWriter struct {
-	w      *bufio.Writer
+	w *bufio.Writer
 }
 
 func newProtobufWireWriter(c io.Writer) *protobufWireWriter {
@@ -172,11 +192,11 @@ func newProtobufWireWriter(c io.Writer) *protobufWireWriter {
 
 func (w *protobufWireWriter) writeMsg(m *transportMsg) error {
 	pbMsg := pb.P2PChannelEnvelope{
-		ID: m.id,
+		ID:         m.id,
 		StatusCode: m.statusCode,
-		Topic: m.topic,
-		Msg: m.msg,
-		Data: m.data,
+		Topic:      m.topic,
+		Msg:        m.msg,
+		Data:       m.data,
 	}
 
 	msgBytes, err := proto.Marshal(&pbMsg)

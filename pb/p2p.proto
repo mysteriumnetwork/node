@@ -16,6 +16,7 @@ message P2PConfigExchangeMsg {
 message P2PConnectConfig {
     string publicIP = 1;
     repeated int32 ports = 2;
+    int32 compatibility = 3;
 }
 
 message P2PKeepAlivePing {

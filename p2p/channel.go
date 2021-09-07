@@ -183,7 +183,7 @@ type channel struct {
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
 // and starts listening for connections.
-func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey) (*channel, error) {
+func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey, peerCompatibility int) (*channel, error) {
 	peerAddr := remoteConn.RemoteAddr().(*net.UDPAddr)
 	localAddr := remoteConn.LocalAddr().(*net.UDPAddr)
 	remoteConn, err := reopenConn(remoteConn)
@@ -210,8 +210,8 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 	log.Debug().Msgf("Creating p2p channel with local addr: %s, UDP session addr: %s, proxy addr: %s, remote peer addr: x.x.x.x:%d", localAddr.String(), udpSession.LocalAddr().String(), proxyConn.LocalAddr().String(), peerAddr.Port)
 
 	tr := transport{
-		wireReader: newTextWireReader(udpSession),
-		wireWriter: newTextWireWriter(udpSession),
+		wireReader: newCompatibleWireReader(udpSession, peerCompatibility),
+		wireWriter: newCompatibleWireWriter(udpSession, peerCompatibility),
 		session:    udpSession,
 		remoteConn: remoteConn,
 		proxyConn:  proxyConn,
