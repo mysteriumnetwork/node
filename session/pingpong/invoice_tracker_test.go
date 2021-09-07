@@ -687,8 +687,13 @@ func TestInvoiceTracker_handleHermesError(t *testing.T) {
 			err:                   ErrHermesHashlockMissmatch,
 		},
 		{
-			name:                  "returns unknown error",
-			wantErr:               errors.New("unknown error"),
+			name:    "returns unknown error if failures exceeded",
+			wantErr: errors.New("unknown error"),
+			err:     errors.New("unknown error"),
+		},
+		{
+			name:                  "returns nil on unknown error if failures not exceeded",
+			wantErr:               nil,
 			maxHermesFailureCount: 100,
 			err:                   errors.New("unknown error"),
 		},
