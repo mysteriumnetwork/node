@@ -653,7 +653,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("create", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("get", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("get-all", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
-			readline.PcItem("currencies"),
+			readline.PcItem("gateways"),
 		),
 		readline.PcItem("healthcheck"),
 		readline.PcItem("nat"),

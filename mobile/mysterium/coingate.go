@@ -22,8 +22,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 )
@@ -151,7 +149,7 @@ func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
 
 // OrderUpdatedCallbackPayload is the payload of OrderUpdatedCallback.
 type OrderUpdatedCallbackPayload struct {
-	OrderID     int64
+	OrderID     string
 	Status      string
 	PayAmount   float64
 	PayCurrency string
@@ -166,13 +164,8 @@ type OrderUpdatedCallback interface {
 func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
 	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderUpdated, func(e pilvytis.AppEventOrderUpdated) {
 		payload := OrderUpdatedCallbackPayload{}
-		id, err := shrinkUint64(e.ID)
-		if err != nil {
-			log.Err(err).Send()
-			return
-		}
-		payload.OrderID = id
-		payload.Status = string(e.Status)
+		payload.OrderID = e.ID
+		payload.Status = e.Status.Status()
 		if e.PayAmount != nil {
 			payload.PayAmount = *e.PayAmount
 		}

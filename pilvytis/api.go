@@ -18,6 +18,7 @@
 package pilvytis
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -47,10 +48,10 @@ type locationProvider interface {
 }
 
 const (
-	orderEndpoint        = "payment/orders"
-	currencyEndpoint     = "payment/currencies"
-	orderOptionsEndpoint = "payment/order-options"
-	exchangeEndpoint     = "payment/exchange-rate"
+	orderEndpoint        = "api/v1/payment/orders"
+	currencyEndpoint     = "api/v1/payment/currencies"
+	orderOptionsEndpoint = "api/v1/payment/order-options"
+	exchangeEndpoint     = "api/v1/payment/exchange-rate"
 )
 
 type addressProvider interface {
@@ -59,6 +60,10 @@ type addressProvider interface {
 
 // NewAPI returns a new API instance.
 func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, lp locationProvider, cc addressProvider) *API {
+	if strings.HasSuffix(url, "/") {
+		url = strings.TrimSuffix(url, "/")
+	}
+
 	return &API{
 		req:               hc,
 		signer:            signer,
@@ -90,6 +95,12 @@ func (o OrderStatus) Incomplete() bool {
 		return true
 	}
 	return false
+}
+
+// Status returns a current status.
+// Its part of StatusProvider interface.
+func (o OrderStatus) Status() string {
+	return string(o)
 }
 
 // OrderResponse is returned from the pilvytis order endpoints.
@@ -221,6 +232,135 @@ func (a *API) GetMystExchangeRateFor(curr string) (float64, error) {
 		return 0, errors.New("currency not supported")
 	}
 	return rate, nil
+}
+
+// GatewaysResponse holds data about payment gateways.
+type GatewaysResponse struct {
+	Name         string              `json:"name"`
+	OrderOptions PaymentOrderOptions `json:"order_options"`
+	Currencies   []string            `json:"currencies"`
+}
+
+// GetPaymentGateways returns a slice of supported gateways.
+func (a *API) GetPaymentGateways() ([]GatewaysResponse, error) {
+	req, err := requests.NewGetRequest(a.url, "api/v2/payment/gateways", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []GatewaysResponse
+	return resp, a.sendRequestAndParseResp(req, &resp)
+}
+
+// PaymentOrderResponse is a response for a payment order.
+type PaymentOrderResponse struct {
+	ID     string             `json:"id"`
+	Status PaymentOrderStatus `json:"status"`
+
+	Identity       string `json:"identity"`
+	ChainID        int64  `json:"chain_id"`
+	ChannelAddress string `json:"channel_address"`
+
+	GatewayName string `json:"gateway_name"`
+
+	ReceiveMYST float64 `json:"receive_myst"`
+	PayAmount   float64 `json:"pay_amount"`
+	PayCurrency string  `json:"pay_currency"`
+
+	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
+}
+
+// PaymentOrderStatus defines a status for a payment order.
+type PaymentOrderStatus string
+
+const (
+	// PaymentOrderStatusInitial defines a status for any payment orders not sent to the
+	// payment service provider.
+	PaymentOrderStatusInitial PaymentOrderStatus = "initial"
+	// PaymentOrderStatusNew defines a status for any payment orders sent to the
+	// payment service provider.
+	PaymentOrderStatusNew PaymentOrderStatus = "new"
+	// PaymentOrderStatusPaid defines a status for any payment orders paid and processed by the
+	// payment service provider.
+	PaymentOrderStatusPaid PaymentOrderStatus = "paid"
+	// PaymentOrderStatusFailed defines a status for any payment orders sent to the
+	// payment service provider which have failed.
+	PaymentOrderStatusFailed PaymentOrderStatus = "failed"
+)
+
+// Incomplete tells if the order is incomplete and its status needs to be tracked for updates.
+func (p PaymentOrderStatus) Incomplete() bool {
+	switch p {
+	case PaymentOrderStatusPaid, PaymentOrderStatusFailed:
+		return false
+	default:
+		return true
+	}
+}
+
+// Status returns a current status.
+// Its part of StatusProvider interface.
+func (p PaymentOrderStatus) Status() string {
+	return string(p)
+}
+
+// GetPaymentGatewayOrders returns a list of payment orders from the API service made by a given identity.
+func (a *API) GetPaymentGatewayOrders(id identity.Identity) ([]PaymentOrderResponse, error) {
+	req, err := requests.NewSignedGetRequest(a.url, "api/v2/payment/orders", a.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []PaymentOrderResponse
+	return resp, a.sendRequestAndParseResp(req, &resp)
+}
+
+// GetPaymentGatewayOrder returns a payment order by ID from the API
+// service that belongs to a given identity.
+func (a *API) GetPaymentGatewayOrder(id identity.Identity, oid string) (*PaymentOrderResponse, error) {
+	req, err := requests.NewSignedGetRequest(a.url, fmt.Sprintf("api/v2/payment/orders/%s", oid), a.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	var resp PaymentOrderResponse
+	return &resp, a.sendRequestAndParseResp(req, &resp)
+}
+
+type paymentOrderRequest struct {
+	ChannelAddress string  `json:"channel_address"`
+	MystAmount     float64 `json:"myst_amount"`
+	PayCurrency    string  `json:"pay_currency"`
+	ChainID        int64   `json:"chain_id"`
+
+	GatewayCallerData json.RawMessage `json:"gateway_caller_data"`
+}
+
+// createPaymentOrder creates a new payment order in the API service.
+func (a *API) createPaymentGatewayOrder(id identity.Identity, gateway string, mystAmount float64, payCurrency string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
+	chainID := config.Current.GetInt64(config.FlagChainID.Name)
+
+	ch, err := a.channelCalculator.GetChannelAddress(chainID, id)
+	if err != nil {
+		return nil, fmt.Errorf("could get channel address: %w", err)
+	}
+
+	payload := paymentOrderRequest{
+		ChannelAddress:    ch.Hex(),
+		MystAmount:        mystAmount,
+		PayCurrency:       payCurrency,
+		ChainID:           chainID,
+		GatewayCallerData: callerData,
+	}
+
+	path := fmt.Sprintf("api/v2/payment/%s/orders", gateway)
+	req, err := requests.NewSignedPostRequest(a.url, path, payload, a.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	var resp PaymentOrderResponse
+	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 func (a *API) sendRequestAndParseResp(req *http.Request, resp interface{}) error {

@@ -39,11 +39,13 @@ type mockPilvytis struct {
 	currencies []string
 	identity   string
 	resp       pilvytis.OrderResponse
+	respgw     pilvytis.PaymentOrderResponse
 }
 
 type mockPilvytisIssuer struct {
 	identity string
 	resp     pilvytis.OrderResponse
+	respgw   pilvytis.PaymentOrderResponse
 }
 
 func (mock *mockPilvytisIssuer) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (*pilvytis.OrderResponse, error) {
@@ -52,6 +54,14 @@ func (mock *mockPilvytisIssuer) CreatePaymentOrder(i identity.Identity, mystAmou
 	}
 
 	return &mock.resp, nil
+}
+
+func (mock *mockPilvytisIssuer) CreatePaymentGatewayOrder(id identity.Identity, gw string, mystAmount float64, payCurrency string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error) {
+	if id.Address != mock.identity {
+		return nil, errors.New("wrong identity")
+	}
+
+	return &mock.respgw, nil
 }
 
 func (mock *mockPilvytis) GetPaymentOrder(i identity.Identity, oid uint64) (*pilvytis.OrderResponse, error) {
@@ -83,6 +93,18 @@ func (mock *mockPilvytis) GetPaymentOrderOptions() (*pilvytis.PaymentOrderOption
 			100,
 		},
 	}, nil
+}
+
+func (mock *mockPilvytis) GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.PaymentOrderResponse, error) {
+	return nil, nil
+}
+
+func (mock *mockPilvytis) GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.PaymentOrderResponse, error) {
+	return nil, nil
+}
+
+func (mock *mockPilvytis) GetPaymentGateways() ([]pilvytis.GatewaysResponse, error) {
+	return nil, nil
 }
 
 func newMockPilvytisResp(id int, identity, priceC, payC string, recvAmount float64) pilvytis.OrderResponse {

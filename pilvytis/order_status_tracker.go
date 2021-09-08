@@ -30,6 +30,7 @@ import (
 
 type orderProvider interface {
 	GetPaymentOrders(id identity.Identity) ([]OrderResponse, error)
+	GetPaymentGatewayOrders(id identity.Identity) ([]PaymentOrderResponse, error)
 }
 
 type identityProvider interface {
@@ -42,7 +43,7 @@ type StatusTracker struct {
 	api              orderProvider
 	identityProvider identityProvider
 	eventBus         eventbus.Publisher
-	orders           map[string]map[uint64]OrderSummary
+	orders           map[string]map[string]OrderSummary
 	failedSyncs      map[identity.Identity]struct{}
 
 	updateInterval time.Duration
@@ -57,7 +58,7 @@ func NewStatusTracker(api orderProvider, identityProvider identityProvider, even
 		api:              api,
 		identityProvider: identityProvider,
 		eventBus:         eventBus,
-		orders:           make(map[string]map[uint64]OrderSummary),
+		orders:           make(map[string]map[string]OrderSummary),
 		failedSyncs:      make(map[identity.Identity]struct{}),
 		forceSync:        make(chan identity.Identity),
 		updateInterval:   updateInterval,
@@ -146,14 +147,14 @@ func (t *StatusTracker) refreshAndUpdate(id identity.Identity) {
 	t.compareAndUpdate(id, newOrders)
 }
 
-func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[uint64]OrderSummary) {
+func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[string]OrderSummary) {
 	old, ok := t.orders[id.Address]
 	if !ok {
 		t.orders[id.Address] = newOrders
 		return
 	}
 
-	updated := make(map[uint64]OrderSummary)
+	updated := make(map[string]OrderSummary)
 	for _, no := range newOrders {
 		old, ok := old[no.ID]
 		if !ok {
@@ -176,20 +177,36 @@ func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[uin
 	t.orders[id.Address] = updated
 }
 
-func (t *StatusTracker) refresh(id identity.Identity) (map[uint64]OrderSummary, error) {
+func (t *StatusTracker) refresh(id identity.Identity) (map[string]OrderSummary, error) {
 	orders, err := t.api.GetPaymentOrders(id)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[uint64]OrderSummary)
+	result := make(map[string]OrderSummary)
 	for _, o := range orders {
-		result[o.ID] = OrderSummary{
-			ID:              o.ID,
+		id := fmt.Sprint(o.ID)
+		result[id] = OrderSummary{
+			ID:              fmt.Sprint(id),
 			IdentityAddress: o.Identity,
 			Status:          o.Status,
 			PayAmount:       o.PayAmount,
 			PayCurrency:     o.PayCurrency,
+		}
+	}
+
+	gwOrders, err := t.api.GetPaymentGatewayOrders(id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, o := range gwOrders {
+		result[o.ID] = OrderSummary{
+			ID:              o.ID,
+			IdentityAddress: o.Identity,
+			Status:          o.Status,
+			PayAmount:       &o.PayAmount,
+			PayCurrency:     &o.PayCurrency,
 		}
 	}
 
@@ -231,11 +248,19 @@ func floatEqual(f1, f2 *float64) bool {
 
 // OrderSummary is a subset of an OrderResponse stored by the StatusTracker.
 type OrderSummary struct {
-	ID              uint64
+	ID              string
 	IdentityAddress string
-	Status          OrderStatus
+	Status          CompletionProvider
 	PayAmount       *float64
 	PayCurrency     *string
+}
+
+// CompletionProvider is a temporary interface to make
+// any order work with the tracker.
+// TODO: Remove after legacy payments are removed.
+type CompletionProvider interface {
+	Incomplete() bool
+	Status() string
 }
 
 func (o OrderSummary) String() string {

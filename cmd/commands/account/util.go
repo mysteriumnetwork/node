@@ -21,9 +21,19 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
-	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
+
+func findGateway(name string, gws []contract.GatewaysResponse) (*contract.GatewaysResponse, bool) {
+	for _, gw := range gws {
+		if gw.Name == name {
+			return &gw, true
+		}
+	}
+	return nil, false
+}
 
 func contains(needle string, stack []string) bool {
 	for _, s := range stack {
@@ -34,23 +44,9 @@ func contains(needle string, stack []string) bool {
 	return false
 }
 
-func printOrder(o contract.OrderResponse) {
-	strUnknown := func(s *string) string {
-		if s == nil {
-			return "unknown"
-		}
-		return *s
-	}
-
-	fUnknown := func(f *float64) string {
-		if f == nil {
-			return "unknown"
-		}
-		return fmt.Sprint(*f)
-	}
-
-	clio.Info(fmt.Sprintf("Order ID '%d' is in state: '%s'", o.ID, o.Status))
-	clio.Info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
-	clio.Info(fmt.Sprintf("Receive %s amount: %f", config.GetString(config.FlagDefaultCurrency), o.MystAmount))
-	clio.Info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
+func printOrder(o contract.PaymentOrderResponse) {
+	clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", o.ID, o.Status))
+	clio.Info(fmt.Sprintf("Pay: %f %s", o.PayAmount, o.PayCurrency))
+	clio.Info(fmt.Sprintf("Receive: %s", money.New(crypto.FloatToBigMyst(o.ReceiveMYST)).String()))
+	clio.Info("Data:", string(o.PublicGatewayData))
 }
