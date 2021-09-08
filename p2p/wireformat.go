@@ -37,7 +37,7 @@ import (
 const maxTransportMsgLen = 128 * 1024
 
 func init() {
-	// This is needed to initialise global common headers map state internally
+	// This is needed to initialize global common headers map state internally
 	// before reading header values so race detector doesn't fail unit tests
 	// when multiple goroutines reads conn data headers.
 	textproto.CanonicalMIMEHeaderKey("")
