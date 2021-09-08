@@ -75,35 +75,35 @@ func TestTransportMessagePiping(t *testing.T) {
 	conn2 := newProtobufWireReader(&out)
 
 	msgs := []*transportMsg{
-		&transportMsg{
+		{
 			id:         1,
 			statusCode: 1,
 			topic:      "topic1",
 			msg:        "msg1",
 			data:       []byte("data1"),
 		},
-		&transportMsg{
+		{
 			id:         2,
 			statusCode: 2,
 			topic:      "topic2",
 			msg:        "msg2",
 			data:       []byte("data2"),
 		},
-		&transportMsg{
+		{
 			id:         3,
 			statusCode: 3,
 			topic:      "topic3",
 			msg:        "msg3",
 			data:       []byte("data3"),
 		},
-		&transportMsg{
+		{
 			id:         4,
 			statusCode: 4,
 			topic:      "topic4",
 			msg:        "msg4",
 			data:       []byte("data4"),
 		},
-		&transportMsg{
+		{
 			id:         5,
 			statusCode: 5,
 			topic:      "topic5",
