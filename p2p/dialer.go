@@ -36,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/trace"
@@ -135,7 +136,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, errors.New("timeout while performing configuration exchange")
 	}
 
-	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
+	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
 	if err != nil {
 		return nil, fmt.Errorf("could not create p2p channel during dial: %w", err)
 	}
@@ -211,6 +212,7 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	log.Debug().Msgf("Consumer %s received provider %s with config: %v", consumerID.Address, providerID.Address, peerConnConfig)
 
 	config.publicKey = pubKey
+	config.compatibility = int(peerConnConfig.Compatibility)
 	config.privateKey = privateKey
 	config.peerPubKey = peerPubKey
 	config.peerPublicIP = peerConnConfig.PublicIP
@@ -223,8 +225,9 @@ func (m *dialer) ackConfigExchange(config *p2pConnectConfig, ctx context.Context
 	defer config.tracer.EndStage(trace)
 
 	connConfig := &pb.P2PConnectConfig{
-		PublicIP: config.publicIP,
-		Ports:    intToInt32Slice(config.publicPorts),
+		PublicIP:      config.publicIP,
+		Ports:         intToInt32Slice(config.publicPorts),
+		Compatibility: compat.Compatibility,
 	}
 	connConfigCiphertext, err := encryptConnConfigMsg(connConfig, config.privateKey, config.peerPubKey)
 	if err != nil {

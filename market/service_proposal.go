@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/utils/validateutil"
 )
 
@@ -69,7 +70,7 @@ type NewProposalOpts struct {
 func NewProposal(providerID, serviceType string, opts NewProposalOpts) ServiceProposal {
 	p := ServiceProposal{
 		Format:         proposalFormat,
-		Compatibility:  0,
+		Compatibility:  compat.Compatibility,
 		ProviderID:     providerID,
 		ServiceType:    serviceType,
 		Location:       Location{},
@@ -117,6 +118,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		Format         string           `json:"format"`
 		ProviderID     string           `json:"provider_id"`
 		ServiceType    string           `json:"service_type"`
+		Compatibility  int              `json:"compatibility"`
 		Location       Location         `json:"location"`
 		Contacts       *json.RawMessage `json:"contacts"`
 		AccessPolicies *[]AccessPolicy  `json:"access_policies,omitempty"`
@@ -130,6 +132,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	proposal.Format = jsonData.Format
 	proposal.ProviderID = jsonData.ProviderID
 	proposal.ServiceType = jsonData.ServiceType
+	proposal.Compatibility = jsonData.Compatibility
 	proposal.Location = jsonData.Location
 
 	// run contact unserializer

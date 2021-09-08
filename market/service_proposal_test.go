@@ -50,7 +50,7 @@ func Test_ServiceProposal_Serialize(t *testing.T) {
 	assert.Nil(t, err)
 
 	expectedJSON := `{
-      "compatibility": 0,
+      "compatibility": 1,
 	  "format": "service-proposal/v3",
 	  "service_type": "mock_service",
 	  "provider_id": "node",

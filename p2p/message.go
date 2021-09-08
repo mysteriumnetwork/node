@@ -18,21 +18,9 @@
 package p2p
 
 import (
-	"bytes"
-	"fmt"
-	"net/textproto"
-	"strconv"
-
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
-
-func init() {
-	// This is needed to initialise global common headers map state internally
-	// before reading header values so race detector doesn't fail unit tests
-	// when multiple goroutines reads conn data headers.
-	textproto.CanonicalMIMEHeaderKey("")
-}
 
 const (
 	// TopicKeepAlive is keep alive endpoint.
@@ -76,11 +64,6 @@ func ProtoMessage(m proto.Message) *Message {
 }
 
 const (
-	headerFieldRequestID = "Request-ID"
-	headerFieldTopic     = "Topic"
-	headerStatusCode     = "Status-Code"
-	headerMsg            = "Message"
-
 	statusCodeOK                 = 1
 	statusCodePublicErr          = 2
 	statusCodeInternalErr        = 3
@@ -99,45 +82,10 @@ type transportMsg struct {
 	data []byte
 }
 
-func (m *transportMsg) readFrom(conn *textproto.Reader) error {
-	// Read header.
-	header, err := conn.ReadMIMEHeader()
-	if err != nil {
-		return fmt.Errorf("could not read mime header: %w", err)
-	}
-	id, err := strconv.ParseUint(header.Get(headerFieldRequestID), 10, 64)
-	if err != nil {
-		return fmt.Errorf("could not parse request id: %w", err)
-	}
-	m.id = id
-	statusCode, err := strconv.ParseUint(header.Get(headerStatusCode), 10, 64)
-	if err != nil {
-		return fmt.Errorf("could not parse status code: %w", err)
-	}
-	m.statusCode = statusCode
-	m.topic = header.Get(headerFieldTopic)
-	m.msg = header.Get(headerMsg)
-
-	// Read data.
-	data, err := conn.ReadDotBytes()
-	if err != nil {
-		return fmt.Errorf("could not read dot bytes: %w", err)
-	}
-	if len(data) > 0 {
-		m.data = data[:len(data)-1]
-	}
-	return nil
+func (m *transportMsg) readFrom(conn wireReader) error {
+	return conn.readMsg(m)
 }
 
-func (m *transportMsg) writeTo(conn *textproto.Writer) error {
-	w := conn.DotWriter()
-	var header bytes.Buffer
-	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerFieldRequestID, m.id))
-	header.WriteString(fmt.Sprintf("%s:%s\r\n", headerFieldTopic, m.topic))
-	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerStatusCode, m.statusCode))
-	header.WriteString(fmt.Sprintf("%s:%s\r\n", headerMsg, m.msg))
-	header.WriteByte('\n')
-	w.Write(header.Bytes())
-	w.Write(m.data)
-	return w.Close()
+func (m *transportMsg) writeTo(conn wireWriter) error {
+	return conn.writeMsg(m)
 }

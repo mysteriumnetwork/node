@@ -283,7 +283,7 @@ func reopenChannel(c *channel) (*channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	ch, err := newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+	ch, err := newChannel(punchedConn, c.privateKey, c.peer.publicKey, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func reopenChannelWithNewLocalAddr(c *channel) (*channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	ch, err := newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+	ch, err := newChannel(punchedConn, c.privateKey, c.peer.publicKey, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -331,13 +331,13 @@ func createTestChannels() (Channel, Channel, error) {
 		return nil, nil, err
 	}
 
-	provider, err := newChannel(providerConn, providerPrivateKey, consumerPublicKey)
+	provider, err := newChannel(providerConn, providerPrivateKey, consumerPublicKey, 1)
 	if err != nil {
 		return nil, nil, err
 	}
 	provider.launchReadSendLoops()
 
-	consumer, err := newChannel(consumerConn, consumerPrivateKey, providerPublicKey)
+	consumer, err := newChannel(consumerConn, consumerPrivateKey, providerPublicKey, 1)
 	if err != nil {
 		return nil, nil, err
 	}

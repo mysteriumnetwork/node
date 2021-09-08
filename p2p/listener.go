@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/p2p/nat"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/trace"
@@ -79,6 +80,7 @@ type listener struct {
 type p2pConnectConfig struct {
 	publicIP         string
 	peerPublicIP     string
+	compatibility    int
 	peerPorts        []int
 	localPorts       []int
 	publicPorts      []int
@@ -181,7 +183,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		}
 
 		traceAck := config.tracer.StartStage("Provider P2P dial ack")
-		channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
+		channel, err := newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
 		if err != nil {
 			log.Err(err).Msg("Could not create channel")
 			return
@@ -266,8 +268,9 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	m.setPendingConfig(p2pConnConfig)
 
 	config := pb.P2PConnectConfig{
-		PublicIP: publicIP,
-		Ports:    intToInt32Slice(p2pConnConfig.publicPorts),
+		PublicIP:      publicIP,
+		Ports:         intToInt32Slice(p2pConnConfig.publicPorts),
+		Compatibility: compat.Compatibility,
 	}
 	configCiphertext, err := encryptConnConfigMsg(&config, privateKey, peerPubKey)
 	if err != nil {
@@ -353,6 +356,7 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	return &p2pConnectConfig{
 		peerPublicIP:     peerConfig.PublicIP,
 		peerPorts:        int32ToIntSlice(peerConfig.Ports),
+		compatibility:    int(peerConfig.Compatibility),
 		localPorts:       config.localPorts,
 		publicKey:        config.publicKey,
 		privateKey:       config.privateKey,
