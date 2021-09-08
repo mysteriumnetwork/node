@@ -58,7 +58,7 @@ func roundTrip(t *testing.T) {
 		t.Fatalf("Can't read data from conn2: %v", err)
 	}
 
-	if bytes.Compare(msg.data, msg2.data) != 0 {
+	if !bytes.Equal(msg.data, msg2.data) {
 		t.Fatalf("Data wasn't properly recovered: original %x != recovered %x", msg.data, msg2.data)
 	}
 }
