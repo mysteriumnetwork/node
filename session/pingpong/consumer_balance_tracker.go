@@ -144,7 +144,7 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 }
 
 func (cbt *ConsumerBalanceTracker) handleOrderUpdatedEvent(ev pevent.AppEventOrderUpdated) {
-	if ev.Status.Incomplete() {
+	if !ev.Status.Paid() {
 		return
 	}
 

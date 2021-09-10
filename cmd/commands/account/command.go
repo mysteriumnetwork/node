@@ -18,8 +18,10 @@
 package account
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -46,6 +48,16 @@ var (
 	flagCurrency = cli.StringFlag{
 		Name:  "currency",
 		Usage: "Currency you want to use when paying for your top up",
+	}
+
+	flagGateway = cli.StringFlag{
+		Name:  "gateway",
+		Usage: "Gateway to use",
+	}
+
+	flagGwData = cli.StringFlag{
+		Name:  "data",
+		Usage: "Data required to use the gateway",
 	}
 
 	flagLastTopup = cli.BoolFlag{
@@ -98,7 +110,7 @@ func NewCommand() *cli.Command {
 			{
 				Name:  "topup",
 				Usage: "Create a new top up for your account",
-				Flags: []cli.Flag{&flagAmount, &flagCurrency},
+				Flags: []cli.Flag{&flagAmount, &flagCurrency, &flagGateway, &flagGwData},
 				Action: func(ctx *cli.Context) error {
 					cmd.topup(ctx)
 					return nil
@@ -180,43 +192,78 @@ func (c *command) topup(ctx *cli.Context) {
 		return
 	}
 
-	currencies, err := c.tequilapi.OrderCurrencies()
+	gws, err := c.tequilapi.PaymentOrderGateways()
 	if err != nil {
-		clio.Error("Could not get a list of supported currencies")
+		clio.Info("Failed to get enabled gateways and their information")
+	}
+
+	gatewayName := ctx.String(flagGateway.Name)
+
+	gw, ok := findGateway(gatewayName, gws)
+	if !ok {
+		clio.Error("Can't continue, no such gateway:", gatewayName)
 		return
 	}
 
-	currency := ctx.String(flagCurrency.Name)
-	if !contains(currency, currencies) {
-		clio.Warn("Given currency cannot be used")
-		clio.Info("Supported currencies are:", strings.Join(currencies, ", "))
-		return
-	}
+	amount := ctx.String(flagAmount.Name)
 
-	amount := ctx.Float64(flagAmount.Name)
-	if amount <= 0 {
+	amountF, err := strconv.ParseFloat(amount, 64)
+	if amountF <= 0 {
 		clio.Warn("Top up amount is required and must be greater than 0")
 		return
 	}
 
-	options, err := c.tequilapi.PaymentOptions()
-	if err != nil {
-		clio.Info("Failed to get payment options, wont check minimum possible amount to topup")
-	}
-
-	if options.Minimum != 0 && amount <= options.Minimum {
-		msg := fmt.Sprintf(
-			"Top up amount must be greater than %v%s",
-			options.Minimum,
-			c.cfg.GetStringByFlag(config.FlagDefaultCurrency))
-		clio.Warn(msg)
+	if gw.OrderOptions.Minimum != 0 && amountF <= gw.OrderOptions.Minimum {
+		clio.Error(
+			fmt.Sprintf(
+				"top up amount must be greater than %v%s",
+				gw.OrderOptions.Minimum,
+				config.GetString(config.FlagDefaultCurrency)))
 		return
 	}
 
-	resp, err := c.tequilapi.OrderCreate(identity.FromAddress(id.Address), contract.OrderRequest{
-		MystAmount:       amount,
-		PayCurrency:      currency,
-		LightningNetwork: false,
+	currency := ctx.String(flagCurrency.Name)
+	if !contains(currency, gw.Currencies) {
+		clio.Warn("Given currency cannot be used")
+		clio.Info("Supported currencies are:", strings.Join(gw.Currencies, ", "))
+		return
+	}
+
+	callerData := json.RawMessage("{}")
+	if gwData := ctx.String(flagGwData.Name); len(gwData) > 0 {
+		data := map[string]interface{}{}
+		parts := strings.Split(gwData, ",")
+		for _, part := range parts {
+			kv := strings.Split(part, "=")
+			if len(kv) != 2 {
+				clio.Error("gateway data wrong, example: lightning_network=true,custom_id=123")
+				return
+			}
+
+			if b, err := strconv.ParseBool(kv[1]); err == nil {
+				data[kv[0]] = b
+				continue
+			}
+
+			if b, err := strconv.ParseFloat(kv[1], 64); err == nil {
+				data[kv[0]] = b
+				continue
+			}
+
+			data[kv[0]] = kv[1]
+		}
+
+		callerData, err = json.Marshal(data)
+		if err != nil {
+			clio.Error("failed to make caller data")
+			return
+		}
+	}
+
+	resp, err := c.tequilapi.OrderCreate(identity.FromAddress(id.Address), gatewayName, contract.PaymentOrderRequest{
+		MystAmount:  amount,
+		PayCurrency: currency,
+		CallerData:  callerData,
 	})
 	if err != nil {
 		clio.Error("Failed to create an top up request, make sure your requested amount is equal or more than 0.0001 BTC")

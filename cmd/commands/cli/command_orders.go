@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -35,7 +36,7 @@ func (c *cliApp) order(args []string) (err error) {
 	var usage = strings.Join([]string{
 		"Usage: order <action> [args]",
 		"Available actions:",
-		"  " + usageOrderCurrencies,
+		"  " + usageOrderGateways,
 		"  " + usageOrderCreate,
 		"  " + usageOrderGet,
 		"  " + usageOrderGetAll,
@@ -56,35 +57,40 @@ func (c *cliApp) order(args []string) (err error) {
 		return c.orderGet(actionArgs)
 	case "get-all":
 		return c.orderGetAll(actionArgs)
-	case "currencies":
-		return c.currencies(actionArgs)
+	case "gateways":
+		return c.gateways(actionArgs)
 	default:
 		fmt.Println(usage)
 		return errUnknownSubCommand(args[0])
 	}
 }
 
-const usageOrderCurrencies = "currencies"
+const usageOrderGateways = "gateways"
 
-func (c *cliApp) currencies(args []string) (err error) {
+func (c *cliApp) gateways(args []string) (err error) {
 	if len(args) > 0 {
-		clio.Info("Usage: " + usageOrderCurrencies)
+		clio.Info("Usage: " + usageOrderGateways)
 		return
 	}
 
-	resp, err := c.tequilapi.OrderCurrencies()
+	resp, err := c.tequilapi.PaymentOrderGateways()
 	if err != nil {
 		return fmt.Errorf("could not get currencies: %w", err)
 	}
 
-	clio.Info(fmt.Sprintf("Supported currencies: %s", strings.Join(resp, ", ")))
+	for _, gw := range resp {
+		clio.Info("Gateway:", gw.Name)
+		clio.Info("Suggested minimum order:", gw.OrderOptions.Minimum)
+		clio.Info("Supported currencies:", strings.Join(gw.Currencies, ", "))
+	}
+
 	return nil
 }
 
-const usageOrderCreate = "create <identity> <amount> <pay currency> [use lightning network]"
+const usageOrderCreate = "create <identity> <amount> <pay currency> <gateway> [gw data: use_network=true,order=123]"
 
 func (c *cliApp) orderCreate(args []string) (err error) {
-	if len(args) > 4 || len(args) < 3 {
+	if len(args) > 6 || len(args) < 4 {
 		clio.Info("Usage: " + usageOrderCreate)
 		return errWrongArgumentCount
 	}
@@ -97,35 +103,73 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 		return errors.New("top up amount is required and must be greater than 0")
 	}
 
-	options, err := c.tequilapi.PaymentOptions()
+	gws, err := c.tequilapi.PaymentOrderGateways()
 	if err != nil {
-		clio.Info("Failed to get payment options, wont check minimum possible amount to topup")
+		clio.Info("Failed to get enabled gateways and their information")
+		return
 	}
 
-	if options.Minimum != 0 && f <= options.Minimum {
+	if len(gws) == 0 {
+		clio.Warn("No payment gateways are enabled, can't create new orders")
+		return
+	}
+
+	gatewayName := args[3]
+	gw, ok := findGateway(gatewayName, gws)
+	if !ok {
+		clio.Error("Can't continue, no such gateway:", gatewayName)
+		return
+	}
+	if gw.OrderOptions.Minimum != 0 && f <= gw.OrderOptions.Minimum {
 		return fmt.Errorf(
 			"top up amount must be greater than %v%s",
-			options.Minimum,
+			gw.OrderOptions.Minimum,
 			config.GetString(config.FlagDefaultCurrency))
 	}
 
-	ln := false
-	if len(args) == 4 {
-		b, err := strconv.ParseBool(args[3])
-		if err != nil {
-			return fmt.Errorf("[use lightning network]: only true/false allowed: %w", err)
+	callerData := json.RawMessage("{}")
+	if len(args) == 5 {
+		data := map[string]interface{}{}
+		parts := strings.Split(args[4], ",")
+		for _, part := range parts {
+			kv := strings.Split(part, "=")
+			if len(kv) != 2 {
+				clio.Error("gateway data wrong, example: lightning_network=true,custom_id=\"123 11\"")
+				return
+			}
+
+			if b, err := strconv.ParseBool(kv[1]); err == nil {
+				data[kv[0]] = b
+				continue
+			}
+
+			if b, err := strconv.ParseFloat(kv[1], 64); err == nil {
+				data[kv[0]] = b
+				continue
+			}
+
+			data[kv[0]] = kv[1]
 		}
-		ln = b
+
+		callerData, err = json.Marshal(data)
+		if err != nil {
+			clio.Error("failed to make caller data")
+			return
+		}
 	}
 
-	resp, err := c.tequilapi.OrderCreate(identity.FromAddress(args[0]), contract.OrderRequest{
-		MystAmount:       f,
-		PayCurrency:      args[2],
-		LightningNetwork: ln,
-	})
+	resp, err := c.tequilapi.OrderCreate(
+		identity.FromAddress(args[0]),
+		gatewayName,
+		contract.PaymentOrderRequest{
+			MystAmount:  args[1],
+			PayCurrency: args[2],
+			CallerData:  callerData,
+		})
 	if err != nil {
 		return fmt.Errorf("could not create an order: %w", err)
 	}
+
 	printOrder(resp, c.config)
 	return nil
 }
@@ -138,11 +182,7 @@ func (c *cliApp) orderGet(args []string) (err error) {
 		return
 	}
 
-	u, err := strconv.ParseUint(args[1], 10, 64)
-	if err != nil {
-		return fmt.Errorf("could not parse orderID: %w", err)
-	}
-	resp, err := c.tequilapi.OrderGet(identity.FromAddress(args[0]), u)
+	resp, err := c.tequilapi.OrderGet(identity.FromAddress(args[0]), args[1])
 	if err != nil {
 		return fmt.Errorf("could not get an order: %w", err)
 	}
@@ -169,7 +209,7 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 	}
 
 	for _, r := range resp {
-		clio.Info(fmt.Sprintf("Order ID '%d' is in state: '%s'", r.ID, r.Status))
+		clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", r.ID, r.Status))
 	}
 	clio.Info(
 		fmt.Sprintf("To explore additional order information use: '%s'", usageOrderGet),
@@ -177,25 +217,18 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 	return nil
 }
 
-func printOrder(o contract.OrderResponse, rc *remote.Config) {
-	strUnknown := func(s *string) string {
-		if s == nil {
-			return "unknown"
-		}
-		return *s
-	}
+func printOrder(o contract.PaymentOrderResponse, rc *remote.Config) {
+	clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", o.ID, o.Status))
+	clio.Info(fmt.Sprintf("Pay: %s %s", o.PayAmount, o.PayCurrency))
+	clio.Info(fmt.Sprintf("Receive MYST: %s", o.ReceiveMYST))
+	clio.Info("Data:", string(o.PublicGatewayData))
+}
 
-	fUnknown := func(f *float64) string {
-		if f == nil {
-			return "unknown"
+func findGateway(name string, gws []contract.GatewaysResponse) (*contract.GatewaysResponse, bool) {
+	for _, gw := range gws {
+		if gw.Name == name {
+			return &gw, true
 		}
-		return fmt.Sprint(*f)
 	}
-
-	clio.Info(fmt.Sprintf("Order ID '%d' is in state: '%s'", o.ID, o.Status))
-	clio.Info(fmt.Sprintf("Price: %s %s", fUnknown(o.PriceAmount), o.PriceCurrency))
-	clio.Info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
-	clio.Info(fmt.Sprintf("Receive: %s %s", fUnknown(o.ReceiveAmount), o.ReceiveCurrency))
-	clio.Info(fmt.Sprintf("Receive %s amount: %f", rc.GetStringByFlag(config.FlagDefaultCurrency), o.MystAmount))
-	clio.Info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
+	return nil, false
 }

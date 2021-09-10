@@ -89,7 +89,7 @@ var Testnet3Definition = NetworkDefinition{
 	},
 	MMNAddress:      "https://my.mysterium.network/",
 	MMNAPIAddress:   "https://my.mysterium.network/api/v1",
-	PilvytisAddress: "https://testnet3-pilvytis.mysterium.network/api/v1",
+	PilvytisAddress: "https://testnet3-pilvytis.mysterium.network",
 	DNSMap: map[string][]string{
 		"testnet3-discovery.mysterium.network":  {"167.233.11.60"},
 		"testnet3-trust.mysterium.network":      {"167.233.11.60"},

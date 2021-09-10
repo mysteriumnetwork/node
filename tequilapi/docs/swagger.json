@@ -821,6 +821,7 @@
         ],
         "summary": "Get all orders for identity",
         "operationId": "getOrders",
+        "deprecated": true,
         "parameters": [
           {
             "type": "string",
@@ -855,6 +856,7 @@
         ],
         "summary": "Create order",
         "operationId": "createOrder",
+        "deprecated": true,
         "parameters": [
           {
             "type": "string",
@@ -896,6 +898,7 @@
         ],
         "summary": "Get order",
         "operationId": "getOrder",
+        "deprecated": true,
         "parameters": [
           {
             "type": "string",
@@ -1113,6 +1116,54 @@
         }
       }
     },
+    "/identities/{id}/{gw}/payment-order": {
+      "post": {
+        "description": "Takes the given data and tries to create a new payment order in the pilvytis service.",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Create order",
+        "operationId": "createPaymentGatewayOrder",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to create an order",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Gateway for which a payment order is created",
+            "name": "gw",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Required data to create a new order",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order object",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/location": {
       "get": {
         "description": "Returns original locations",
@@ -1288,6 +1339,7 @@
         ],
         "summary": "Get all possible currencies for payments",
         "operationId": "getOrdersCurrencies",
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Array of order objects",
@@ -1315,6 +1367,7 @@
         ],
         "summary": "Get payment order options",
         "operationId": "GetPaymentOrderOptions",
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "PaymentOrderOptions object",
@@ -2233,6 +2286,82 @@
         }
       }
     },
+    "/v2/identities/{id}/payment-order": {
+      "get": {
+        "description": "Gets all orders for a given identity from the pilvytis service",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get all orders for identity",
+        "operationId": "getPaymentGatewayOrders",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get orders",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of order objects",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PaymentOrderResponse"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/v2/identities/{id}/payment-order/{order_id}": {
+      "get": {
+        "description": "Gets an order for a given identity and order id combo from the pilvytis service",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get order",
+        "operationId": "getPaymentGatewayOrder",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get an order",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Order id",
+            "name": "order_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order object",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/v2/nat/status": {
       "get": {
         "description": "NAT status returns the last known NAT traversal status",
@@ -2243,6 +2372,33 @@
             "description": "NAT status (\"passed\"/\"failed\"/\"pending)",
             "schema": {
               "$ref": "#/definitions/NATStatusDTO"
+            }
+          }
+        }
+      }
+    },
+    "/v2/payment-order-gateways": {
+      "get": {
+        "description": "Returns gateway configuration including supported currencies, minimum amounts, etc.",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get payment gateway configuration.",
+        "operationId": "getPaymentGateways",
+        "responses": {
+          "200": {
+            "description": "Array of gateway objects",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/GatewaysResponse"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -2718,6 +2874,27 @@
         "name": {
           "type": "string",
           "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "GatewaysResponse": {
+      "type": "object",
+      "title": "GatewaysResponse holds payment gateway details.",
+      "properties": {
+        "currencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Currencies"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "order_options": {
+          "$ref": "#/definitions/PaymentOrderOptions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3242,6 +3419,76 @@
             "format": "double"
           },
           "x-go-name": "Suggested"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "PaymentOrderRequest": {
+      "description": "PaymentOrderRequest holds order request details",
+      "type": "object",
+      "properties": {
+        "gateway_caller_data": {
+          "type": "object",
+          "x-go-name": "CallerData",
+          "example": {}
+        },
+        "myst_amount": {
+          "type": "string",
+          "x-go-name": "MystAmount",
+          "example": "3.14"
+        },
+        "pay_currency": {
+          "type": "string",
+          "x-go-name": "PayCurrency",
+          "example": "EUR"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "PaymentOrderResponse": {
+      "type": "object",
+      "title": "PaymentOrderResponse holds payment gateway order details.",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ChainID"
+        },
+        "channel_address": {
+          "type": "string",
+          "x-go-name": "ChannelAddress"
+        },
+        "gateway_name": {
+          "type": "string",
+          "x-go-name": "GatewayName"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "identity": {
+          "type": "string",
+          "x-go-name": "Identity"
+        },
+        "pay_amount": {
+          "type": "string",
+          "x-go-name": "PayAmount"
+        },
+        "pay_currency": {
+          "type": "string",
+          "x-go-name": "PayCurrency"
+        },
+        "public_gateway_data": {
+          "type": "object",
+          "x-go-name": "PublicGatewayData"
+        },
+        "receive_myst": {
+          "type": "string",
+          "x-go-name": "ReceiveMYST"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

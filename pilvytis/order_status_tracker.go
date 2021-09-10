@@ -19,7 +19,6 @@ package pilvytis
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 
 type orderProvider interface {
 	GetPaymentOrders(id identity.Identity) ([]OrderResponse, error)
+	GetPaymentGatewayOrders(id identity.Identity) ([]PaymentOrderResponse, error)
 }
 
 type identityProvider interface {
@@ -42,7 +42,7 @@ type StatusTracker struct {
 	api              orderProvider
 	identityProvider identityProvider
 	eventBus         eventbus.Publisher
-	orders           map[string]map[uint64]OrderSummary
+	orders           map[string]map[string]OrderSummary
 	failedSyncs      map[identity.Identity]struct{}
 
 	updateInterval time.Duration
@@ -57,7 +57,7 @@ func NewStatusTracker(api orderProvider, identityProvider identityProvider, even
 		api:              api,
 		identityProvider: identityProvider,
 		eventBus:         eventBus,
-		orders:           make(map[string]map[uint64]OrderSummary),
+		orders:           make(map[string]map[string]OrderSummary),
 		failedSyncs:      make(map[identity.Identity]struct{}),
 		forceSync:        make(chan identity.Identity),
 		updateInterval:   updateInterval,
@@ -143,17 +143,21 @@ func (t *StatusTracker) refreshAndUpdate(id identity.Identity) {
 		return
 	}
 
+	if len(newOrders) == 0 {
+		return
+	}
+
 	t.compareAndUpdate(id, newOrders)
 }
 
-func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[uint64]OrderSummary) {
+func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[string]OrderSummary) {
 	old, ok := t.orders[id.Address]
-	if !ok {
+	if !ok || len(old) == 0 {
 		t.orders[id.Address] = newOrders
 		return
 	}
 
-	updated := make(map[uint64]OrderSummary)
+	updated := make(map[string]OrderSummary)
 	for _, no := range newOrders {
 		old, ok := old[no.ID]
 		if !ok {
@@ -176,14 +180,40 @@ func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[uin
 	t.orders[id.Address] = updated
 }
 
-func (t *StatusTracker) refresh(id identity.Identity) (map[uint64]OrderSummary, error) {
+func (t *StatusTracker) refresh(id identity.Identity) (map[string]OrderSummary, error) {
 	orders, err := t.api.GetPaymentOrders(id)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[uint64]OrderSummary)
+	result := make(map[string]OrderSummary)
 	for _, o := range orders {
+		am := 0.0
+		if o.PayAmount != nil {
+			am = *o.PayAmount
+		}
+
+		currency := ""
+		if o.PayCurrency != nil {
+			currency = *o.PayCurrency
+		}
+
+		id := fmt.Sprint(o.ID)
+		result[id] = OrderSummary{
+			ID:              id,
+			IdentityAddress: o.Identity,
+			Status:          o.Status,
+			PayAmount:       fmt.Sprint(am),
+			PayCurrency:     currency,
+		}
+	}
+
+	gwOrders, err := t.api.GetPaymentGatewayOrders(id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, o := range gwOrders {
 		result[o.ID] = OrderSummary{
 			ID:              o.ID,
 			IdentityAddress: o.Identity,
@@ -203,11 +233,11 @@ func applyChanges(order OrderSummary, newOrder OrderSummary) (OrderSummary, bool
 		order.Status = newOrder.Status
 		changed = true
 	}
-	if !floatEqual(order.PayAmount, newOrder.PayAmount) {
+	if order.PayAmount != newOrder.PayAmount {
 		order.PayAmount = newOrder.PayAmount
 		changed = true
 	}
-	if !strEqual(order.PayCurrency, newOrder.PayCurrency) {
+	if order.PayCurrency != newOrder.PayCurrency {
 		order.PayCurrency = newOrder.PayCurrency
 		changed = true
 	}
@@ -215,37 +245,24 @@ func applyChanges(order OrderSummary, newOrder OrderSummary) (OrderSummary, bool
 	return order, changed
 }
 
-func strEqual(s1, s2 *string) bool {
-	if s1 != nil && s2 != nil {
-		return *s1 == *s2
-	}
-	return s1 == nil && s2 == nil
-}
-
-func floatEqual(f1, f2 *float64) bool {
-	if f1 != nil && f2 != nil {
-		return *f1 == *f2
-	}
-	return f1 == nil && f2 == nil
-}
-
 // OrderSummary is a subset of an OrderResponse stored by the StatusTracker.
 type OrderSummary struct {
-	ID              uint64
+	ID              string
 	IdentityAddress string
-	Status          OrderStatus
-	PayAmount       *float64
-	PayCurrency     *string
+	Status          CompletionProvider
+	PayAmount       string
+	PayCurrency     string
+}
+
+// CompletionProvider is a temporary interface to make
+// any order work with the tracker.
+// TODO: Remove after legacy payments are removed.
+type CompletionProvider interface {
+	Incomplete() bool
+	Status() string
+	Paid() bool
 }
 
 func (o OrderSummary) String() string {
-	amt := "<nil>"
-	if o.PayAmount != nil {
-		amt = strconv.FormatFloat(*o.PayAmount, 'f', -1, 64)
-	}
-	cur := "<nil>"
-	if o.PayCurrency != nil {
-		cur = *o.PayCurrency
-	}
-	return fmt.Sprintf("ID: %v, IdentityAddress: %v, Status: %v, PayAmount: %v, PayCurrency: %v", o.ID, o.IdentityAddress, o.Status, amt, cur)
+	return fmt.Sprintf("ID: %v, IdentityAddress: %v, Status: %v, PayAmount: %v, PayCurrency: %v", o.ID, o.IdentityAddress, o.Status, o.PayAmount, o.PayCurrency)
 }

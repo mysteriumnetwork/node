@@ -17,7 +17,11 @@
 
 package contract
 
-import "github.com/mysteriumnetwork/node/pilvytis"
+import (
+	"encoding/json"
+
+	"github.com/mysteriumnetwork/node/pilvytis"
+)
 
 // OrderRequest holds order request details
 // swagger:model OrderRequest
@@ -104,4 +108,83 @@ func ToPaymentOrderOptions(poo *pilvytis.PaymentOrderOptions) *PaymentOrderOptio
 		Minimum:   poo.Minimum,
 		Suggested: poo.Suggested,
 	}
+}
+
+// PaymentOrderResponse holds payment gateway order details.
+// swagger:model PaymentOrderResponse
+type PaymentOrderResponse struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+
+	Identity       string `json:"identity"`
+	ChainID        int64  `json:"chain_id"`
+	ChannelAddress string `json:"channel_address"`
+
+	GatewayName string `json:"gateway_name"`
+
+	ReceiveMYST string `json:"receive_myst"`
+	PayAmount   string `json:"pay_amount"`
+	PayCurrency string `json:"pay_currency"`
+
+	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
+}
+
+// NewPaymentOrderResponse creates an instance of PaymentOrderResponse
+func NewPaymentOrderResponse(r *pilvytis.PaymentOrderResponse) PaymentOrderResponse {
+	return PaymentOrderResponse{
+		ID:                r.ID,
+		Status:            string(r.Status),
+		Identity:          r.Identity,
+		ChainID:           r.ChainID,
+		ChannelAddress:    r.ChannelAddress,
+		GatewayName:       r.GatewayName,
+		ReceiveMYST:       r.ReceiveMYST,
+		PayAmount:         r.PayAmount,
+		PayCurrency:       r.PayCurrency,
+		PublicGatewayData: r.PublicGatewayData,
+	}
+}
+
+// NewPaymentOrdersResponse creates a slice of orders response
+func NewPaymentOrdersResponse(r []pilvytis.PaymentOrderResponse) []PaymentOrderResponse {
+	result := make([]PaymentOrderResponse, len(r))
+	for i := range r {
+		result[i] = NewPaymentOrderResponse(&r[i])
+	}
+	return result
+}
+
+// GatewaysResponse holds payment gateway details.
+// swagger:model GatewaysResponse
+type GatewaysResponse struct {
+	Name         string              `json:"name"`
+	OrderOptions PaymentOrderOptions `json:"order_options"`
+	Currencies   []string            `json:"currencies"`
+}
+
+// ToGatewaysReponse converts a pilvytis gateway response to contract.
+func ToGatewaysReponse(g []pilvytis.GatewaysResponse) []GatewaysResponse {
+	result := make([]GatewaysResponse, len(g))
+	for i, v := range g {
+		entry := GatewaysResponse{
+			Name:         v.Name,
+			OrderOptions: *ToPaymentOrderOptions(&v.OrderOptions),
+			Currencies:   v.Currencies,
+		}
+		result[i] = entry
+	}
+	return result
+}
+
+// PaymentOrderRequest holds order request details
+// swagger:model PaymentOrderRequest
+type PaymentOrderRequest struct {
+	// example: 3.14
+	MystAmount string `json:"myst_amount"`
+
+	// example: EUR
+	PayCurrency string `json:"pay_currency"`
+
+	// example: {}
+	CallerData json.RawMessage `json:"gateway_caller_data"`
 }
