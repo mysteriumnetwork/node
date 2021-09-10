@@ -188,19 +188,23 @@ func (t *StatusTracker) refresh(id identity.Identity) (map[string]OrderSummary, 
 
 	result := make(map[string]OrderSummary)
 	for _, o := range orders {
-		if o.PayAmount == nil {
-			zero := 0.0
-			o.PayAmount = &zero
+		am := 0.0
+		if o.PayAmount != nil {
+			am = *o.PayAmount
+		}
+
+		currency := ""
+		if o.PayCurrency != nil {
+			currency = *o.PayCurrency
 		}
 
 		id := fmt.Sprint(o.ID)
-		am := fmt.Sprint(o.PayAmount)
 		result[id] = OrderSummary{
 			ID:              id,
 			IdentityAddress: o.Identity,
 			Status:          o.Status,
-			PayAmount:       &am,
-			PayCurrency:     o.PayCurrency,
+			PayAmount:       fmt.Sprint(am),
+			PayCurrency:     currency,
 		}
 	}
 
@@ -214,8 +218,8 @@ func (t *StatusTracker) refresh(id identity.Identity) (map[string]OrderSummary, 
 			ID:              o.ID,
 			IdentityAddress: o.Identity,
 			Status:          o.Status,
-			PayAmount:       &o.PayAmount,
-			PayCurrency:     &o.PayCurrency,
+			PayAmount:       o.PayAmount,
+			PayCurrency:     o.PayCurrency,
 		}
 	}
 
@@ -229,11 +233,11 @@ func applyChanges(order OrderSummary, newOrder OrderSummary) (OrderSummary, bool
 		order.Status = newOrder.Status
 		changed = true
 	}
-	if !strEqual(order.PayAmount, newOrder.PayAmount) {
+	if order.PayAmount != newOrder.PayAmount {
 		order.PayAmount = newOrder.PayAmount
 		changed = true
 	}
-	if !strEqual(order.PayCurrency, newOrder.PayCurrency) {
+	if order.PayCurrency != newOrder.PayCurrency {
 		order.PayCurrency = newOrder.PayCurrency
 		changed = true
 	}
@@ -241,27 +245,13 @@ func applyChanges(order OrderSummary, newOrder OrderSummary) (OrderSummary, bool
 	return order, changed
 }
 
-func strEqual(s1, s2 *string) bool {
-	if s1 != nil && s2 != nil {
-		return *s1 == *s2
-	}
-	return s1 == nil && s2 == nil
-}
-
-func floatEqual(f1, f2 *float64) bool {
-	if f1 != nil && f2 != nil {
-		return *f1 == *f2
-	}
-	return f1 == nil && f2 == nil
-}
-
 // OrderSummary is a subset of an OrderResponse stored by the StatusTracker.
 type OrderSummary struct {
 	ID              string
 	IdentityAddress string
 	Status          CompletionProvider
-	PayAmount       *string
-	PayCurrency     *string
+	PayAmount       string
+	PayCurrency     string
 }
 
 // CompletionProvider is a temporary interface to make
@@ -274,13 +264,5 @@ type CompletionProvider interface {
 }
 
 func (o OrderSummary) String() string {
-	amt := "<nil>"
-	if o.PayAmount != nil {
-		amt = *o.PayAmount
-	}
-	cur := "<nil>"
-	if o.PayCurrency != nil {
-		cur = *o.PayCurrency
-	}
-	return fmt.Sprintf("ID: %v, IdentityAddress: %v, Status: %v, PayAmount: %v, PayCurrency: %v", o.ID, o.IdentityAddress, o.Status, amt, cur)
+	return fmt.Sprintf("ID: %v, IdentityAddress: %v, Status: %v, PayAmount: %v, PayCurrency: %v", o.ID, o.IdentityAddress, o.Status, o.PayAmount, o.PayCurrency)
 }

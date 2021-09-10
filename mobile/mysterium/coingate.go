@@ -166,12 +166,8 @@ func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
 		payload := OrderUpdatedCallbackPayload{}
 		payload.OrderID = e.ID
 		payload.Status = e.Status.Status()
-		if e.PayAmount != nil {
-			payload.PayAmount = *e.PayAmount
-		}
-		if e.PayCurrency != nil {
-			payload.PayCurrency = *e.PayCurrency
-		}
+		payload.PayAmount = e.PayAmount
+		payload.PayCurrency = e.PayCurrency
 		cb.OnUpdate(&payload)
 	})
 }
