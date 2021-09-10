@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 const userConfigFilename = "user-config.toml"
@@ -72,4 +73,9 @@ func dirExists(dir string) error {
 		return fmt.Errorf("directory expected: %s", dir)
 	}
 	return nil
+}
+
+func setUserConfig(key, value string) error {
+	config.Current.SetUser(key, value)
+	return config.Current.SaveUserConfig()
 }
