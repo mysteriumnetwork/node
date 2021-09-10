@@ -143,12 +143,16 @@ func (t *StatusTracker) refreshAndUpdate(id identity.Identity) {
 		return
 	}
 
+	if len(newOrders) == 0 {
+		return
+	}
+
 	t.compareAndUpdate(id, newOrders)
 }
 
 func (t *StatusTracker) compareAndUpdate(id identity.Identity, newOrders map[string]OrderSummary) {
 	old, ok := t.orders[id.Address]
-	if !ok {
+	if !ok || len(old) == 0 {
 		t.orders[id.Address] = newOrders
 		return
 	}
