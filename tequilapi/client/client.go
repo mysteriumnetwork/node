@@ -805,3 +805,24 @@ func (client *Client) FetchConfig() (map[string]interface{}, error) {
 	config := data.(map[string]interface{})
 	return config, err
 }
+
+// SetConfig - set user config.
+func (client *Client) SetConfig(data map[string]interface{}) error {
+	req := struct {
+		Data map[string]interface{} `json:"data"`
+	}{
+		Data: data,
+	}
+	resp, err := client.http.Post("config/user", req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("failed to set user config with status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
