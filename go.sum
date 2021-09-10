@@ -862,6 +862,8 @@ github.com/mysteriumnetwork/metrics v0.0.16 h1:y53fWR01noylQT+gYCfaz5wuuZrR3IJjH
 github.com/mysteriumnetwork/metrics v0.0.16/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v1.0.1-0.20210811132623-3405991f1ff1 h1:T7z1ixBWz5YacQydpvHFQmW/T+FBQfeMyGrXMcT2re0=
 github.com/mysteriumnetwork/payments v1.0.1-0.20210811132623-3405991f1ff1/go.mod h1:aC+9Bez+lFp19Fs8plh51HnblVJC0CDzHnnEzyidhpQ=
+github.com/mysteriumnetwork/payments v1.0.1-0.20210830103812-542195527561 h1:/6pTiTbEVa7AZA8QgFo2AOuW/2HGReMjEaonlIecf4c=
+github.com/mysteriumnetwork/payments v1.0.1-0.20210830103812-542195527561/go.mod h1:aC+9Bez+lFp19Fs8plh51HnblVJC0CDzHnnEzyidhpQ=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
 github.com/nats-io/jwt v1.2.2 h1:w3GMTO969dFg+UOKTmmyuu7IGdusK+7Ytlt//OYH/uU=
