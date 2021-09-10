@@ -266,6 +266,7 @@ type OrderSummary struct {
 type CompletionProvider interface {
 	Incomplete() bool
 	Status() string
+	Paid() bool
 }
 
 func (o OrderSummary) String() string {

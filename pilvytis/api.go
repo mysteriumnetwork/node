@@ -103,6 +103,11 @@ func (o OrderStatus) Status() string {
 	return string(o)
 }
 
+// Paid tells if the order has been paid for.
+func (o OrderStatus) Paid() bool {
+	return o == OrderStatusPaid
+}
+
 // OrderResponse is returned from the pilvytis order endpoints.
 type OrderResponse struct {
 	ID       uint64      `json:"id"`
@@ -296,6 +301,11 @@ func (p PaymentOrderStatus) Incomplete() bool {
 	default:
 		return true
 	}
+}
+
+// Paid tells if the order has been paid for.
+func (p PaymentOrderStatus) Paid() bool {
+	return p == PaymentOrderStatusPaid
 }
 
 // Status returns a current status.
