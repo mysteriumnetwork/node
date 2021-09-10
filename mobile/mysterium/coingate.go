@@ -151,7 +151,7 @@ func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
 type OrderUpdatedCallbackPayload struct {
 	OrderID     string
 	Status      string
-	PayAmount   float64
+	PayAmount   string
 	PayCurrency string
 }
 

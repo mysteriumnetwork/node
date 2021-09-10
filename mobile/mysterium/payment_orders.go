@@ -98,7 +98,7 @@ func (mb *MobileNode) GetGateways() ([]byte, error) {
 type CreatePaymentGatewayOrderReq struct {
 	IdentityAddress string
 	Gateway         string
-	MystAmount      float64
+	MystAmount      string
 	PayCurrency     string
 	// GatewayCallerData is marshaled json that is accepting by the payment gateway.
 	GatewayCallerData []byte

@@ -21,9 +21,7 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 func findGateway(name string, gws []contract.GatewaysResponse) (*contract.GatewaysResponse, bool) {
@@ -46,7 +44,7 @@ func contains(needle string, stack []string) bool {
 
 func printOrder(o contract.PaymentOrderResponse) {
 	clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", o.ID, o.Status))
-	clio.Info(fmt.Sprintf("Pay: %f %s", o.PayAmount, o.PayCurrency))
-	clio.Info(fmt.Sprintf("Receive: %s", money.New(crypto.FloatToBigMyst(o.ReceiveMYST)).String()))
+	clio.Info(fmt.Sprintf("Pay: %s %s", o.PayAmount, o.PayCurrency))
+	clio.Info(fmt.Sprintf("Receive MYST: %s", o.ReceiveMYST))
 	clio.Info("Data:", string(o.PublicGatewayData))
 }

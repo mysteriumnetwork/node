@@ -47,7 +47,7 @@ type api interface {
 
 type paymentsIssuer interface {
 	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
-	CreatePaymentGatewayOrder(id identity.Identity, gw string, mystAmount float64, payCurrency string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error)
+	CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error)
 }
 
 type pilvytisEndpoint struct {

@@ -205,13 +205,15 @@ func (c *command) topup(ctx *cli.Context) {
 		return
 	}
 
-	amount := ctx.Float64(flagAmount.Name)
-	if amount <= 0 {
+	amount := ctx.String(flagAmount.Name)
+
+	amountF, err := strconv.ParseFloat(amount, 64)
+	if amountF <= 0 {
 		clio.Warn("Top up amount is required and must be greater than 0")
 		return
 	}
 
-	if gw.OrderOptions.Minimum != 0 && amount <= gw.OrderOptions.Minimum {
+	if gw.OrderOptions.Minimum != 0 && amountF <= gw.OrderOptions.Minimum {
 		clio.Error(
 			fmt.Sprintf(
 				"top up amount must be greater than %v%s",

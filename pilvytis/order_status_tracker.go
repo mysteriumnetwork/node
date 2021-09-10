@@ -19,7 +19,6 @@ package pilvytis
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -185,12 +184,18 @@ func (t *StatusTracker) refresh(id identity.Identity) (map[string]OrderSummary, 
 
 	result := make(map[string]OrderSummary)
 	for _, o := range orders {
+		if o.PayAmount == nil {
+			zero := 0.0
+			o.PayAmount = &zero
+		}
+
 		id := fmt.Sprint(o.ID)
+		am := fmt.Sprint(o.PayAmount)
 		result[id] = OrderSummary{
-			ID:              fmt.Sprint(id),
+			ID:              id,
 			IdentityAddress: o.Identity,
 			Status:          o.Status,
-			PayAmount:       o.PayAmount,
+			PayAmount:       &am,
 			PayCurrency:     o.PayCurrency,
 		}
 	}
@@ -220,7 +225,7 @@ func applyChanges(order OrderSummary, newOrder OrderSummary) (OrderSummary, bool
 		order.Status = newOrder.Status
 		changed = true
 	}
-	if !floatEqual(order.PayAmount, newOrder.PayAmount) {
+	if !strEqual(order.PayAmount, newOrder.PayAmount) {
 		order.PayAmount = newOrder.PayAmount
 		changed = true
 	}
@@ -251,7 +256,7 @@ type OrderSummary struct {
 	ID              string
 	IdentityAddress string
 	Status          CompletionProvider
-	PayAmount       *float64
+	PayAmount       *string
 	PayCurrency     *string
 }
 
@@ -266,7 +271,7 @@ type CompletionProvider interface {
 func (o OrderSummary) String() string {
 	amt := "<nil>"
 	if o.PayAmount != nil {
-		amt = strconv.FormatFloat(*o.PayAmount, 'f', -1, 64)
+		amt = *o.PayAmount
 	}
 	cur := "<nil>"
 	if o.PayCurrency != nil {

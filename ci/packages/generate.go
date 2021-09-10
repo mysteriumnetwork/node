@@ -29,7 +29,7 @@ import (
 
 // Generate recreates dynamic project parts which changes time to time.
 func Generate() {
-	mg.Deps(GenerateProtobuf, GenerateSwagger)
+	mg.Deps(GenerateSwagger)
 
 	// Doc generation should occur after swagger generation
 	mg.Deps(GenerateDocs)

@@ -3433,10 +3433,9 @@
           "example": {}
         },
         "myst_amount": {
-          "type": "number",
-          "format": "double",
+          "type": "string",
           "x-go-name": "MystAmount",
-          "example": 3.14
+          "example": "3.14"
         },
         "pay_currency": {
           "type": "string",
@@ -3472,8 +3471,7 @@
           "x-go-name": "Identity"
         },
         "pay_amount": {
-          "type": "number",
-          "format": "double",
+          "type": "string",
           "x-go-name": "PayAmount"
         },
         "pay_currency": {
@@ -3485,8 +3483,7 @@
           "x-go-name": "PublicGatewayData"
         },
         "receive_myst": {
-          "type": "number",
-          "format": "double",
+          "type": "string",
           "x-go-name": "ReceiveMYST"
         },
         "status": {

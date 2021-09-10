@@ -25,8 +25,6 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config/remote"
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -164,7 +162,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 		identity.FromAddress(args[0]),
 		gatewayName,
 		contract.PaymentOrderRequest{
-			MystAmount:  f,
+			MystAmount:  args[1],
 			PayCurrency: args[2],
 			CallerData:  callerData,
 		})
@@ -221,8 +219,8 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 
 func printOrder(o contract.PaymentOrderResponse, rc *remote.Config) {
 	clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", o.ID, o.Status))
-	clio.Info(fmt.Sprintf("Pay: %f %s", o.PayAmount, o.PayCurrency))
-	clio.Info(fmt.Sprintf("Receive: %s", money.New(crypto.FloatToBigMyst(o.ReceiveMYST)).String()))
+	clio.Info(fmt.Sprintf("Pay: %s %s", o.PayAmount, o.PayCurrency))
+	clio.Info(fmt.Sprintf("Receive MYST: %s", o.ReceiveMYST))
 	clio.Info("Data:", string(o.PublicGatewayData))
 }
 

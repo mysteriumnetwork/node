@@ -122,9 +122,9 @@ type PaymentOrderResponse struct {
 
 	GatewayName string `json:"gateway_name"`
 
-	ReceiveMYST float64 `json:"receive_myst"`
-	PayAmount   float64 `json:"pay_amount"`
-	PayCurrency string  `json:"pay_currency"`
+	ReceiveMYST string `json:"receive_myst"`
+	PayAmount   string `json:"pay_amount"`
+	PayCurrency string `json:"pay_currency"`
 
 	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
 }
@@ -180,7 +180,7 @@ func ToGatewaysReponse(g []pilvytis.GatewaysResponse) []GatewaysResponse {
 // swagger:model PaymentOrderRequest
 type PaymentOrderRequest struct {
 	// example: 3.14
-	MystAmount float64 `json:"myst_amount"`
+	MystAmount string `json:"myst_amount"`
 
 	// example: EUR
 	PayCurrency string `json:"pay_currency"`
