@@ -347,6 +347,11 @@ func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
 	}, nil
 }
 
+// SetUserConfig sets a user values in the configuration file
+func (mb *MobileNode) SetUserConfig(key, value string) error {
+	return setUserConfig(key, value)
+}
+
 // GetStatusResponse represents status response.
 type GetStatusResponse struct {
 	State       string

@@ -22,11 +22,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
-
-	"github.com/urfave/cli/v2"
 )
 
 // CommandName is the name which is used to call this command
@@ -47,13 +47,17 @@ func NewCommand() *cli.Command {
 		},
 		Subcommands: []*cli.Command{
 			{
-
 				Name:  "show",
 				Usage: "Show current node config",
 				Action: func(ctx *cli.Context) error {
 					cmd.show()
 					return nil
 				},
+			},
+			{
+				Name:   "set",
+				Usage:  "Set node config value",
+				Action: cmd.set,
 			},
 		},
 	}
@@ -79,6 +83,23 @@ func (c *command) show() {
 	}
 
 	printMapOrdered(dest)
+}
+
+func (c *command) set(ctx *cli.Context) error {
+	if ctx.Args().Len() != 2 {
+		clio.Error("Exactly 2 arguments required, got:", ctx.Args().Len())
+		return fmt.Errorf("wrong number of arguments")
+	}
+
+	config := map[string]interface{}{ctx.Args().Get(0): ctx.Args().Get(1)}
+
+	err := c.tc.SetConfig(config)
+	if err != nil {
+		clio.Error("Failed to set user config", err)
+		return err
+	}
+
+	return nil
 }
 
 // Orders keys alphabetically and prints a given map.
