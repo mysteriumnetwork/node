@@ -542,6 +542,28 @@ func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 	}, resp)
 }
 
+// swagger:operation GET /transactor/chains Chains
+// ---
+// summary: Returns available chain map
+// responses:
+//   200:
+//     description: Chain map
+func (te *transactorEndpoint) AvailableChains(c *gin.Context) {
+	chains := registry.Chains()
+	result := map[int64]string{}
+
+	for _, id := range []int64{
+		config.FlagChain1ChainID.Value,
+		config.FlagChain2ChainID.Value,
+	} {
+		if name, ok := chains[id]; ok {
+			result[id] = name
+		}
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
@@ -569,6 +591,7 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
 			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
+			transGroup.GET("/chains", te.AvailableChains)
 		}
 		return nil
 	}

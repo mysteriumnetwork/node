@@ -2059,6 +2059,17 @@
         }
       }
     },
+    "/transactor/chains": {
+      "get": {
+        "summary": "Returns available chain map",
+        "operationId": "Chains",
+        "responses": {
+          "200": {
+            "description": "Chain map"
+          }
+        }
+      }
+    },
     "/transactor/fees": {
       "get": {
         "description": "Returns fees applied by Transactor",
