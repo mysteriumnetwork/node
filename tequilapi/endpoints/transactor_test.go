@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -339,6 +341,78 @@ func Test_AvailableChains(t *testing.T) {
 	assert.Equal(t, "Ethereum Testnet Görli", chainMap[5])
 }
 
+func Test_Withdrawal(t *testing.T) {
+	// given
+	router := gin.Default()
+
+	settler := &mockSettler{
+		feeToReturn: 11,
+	}
+	err := AddRoutesForTransactor(nil, nil, settler, nil, nil)(router)
+	assert.NoError(t, err)
+
+	// when
+	body, err := json.Marshal(contract.WithdrawRequest{
+		HermesID:    "ignored",
+		ProviderID:  "ignored",
+		Beneficiary: "ignored",
+	})
+	assert.NoError(t, err)
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/withdraw",
+		bytes.NewBuffer(body),
+	)
+	assert.NoError(t, err)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// then
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.NotEqual(t, 0, settler.capturedWithdrawChainID)
+
+	// when
+	body, err = json.Marshal(contract.WithdrawRequest{
+		HermesID:    "ignored",
+		ProviderID:  "ignored",
+		Beneficiary: "ignored",
+		ChainID:     5,
+	})
+	assert.NoError(t, err)
+	req, err = http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/withdraw",
+		bytes.NewBuffer(body),
+	)
+	assert.NoError(t, err)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// then
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, int64(5), settler.capturedWithdrawChainID)
+
+	// when
+	body, err = json.Marshal(contract.WithdrawRequest{
+		HermesID:    "ignored",
+		ProviderID:  "ignored",
+		Beneficiary: "ignored",
+		ChainID:     -1,
+	})
+	assert.NoError(t, err)
+	req, err = http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/withdraw",
+		bytes.NewBuffer(body),
+	)
+	assert.NoError(t, err)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// then
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
 func newTestTransactorServer(mockStatus int, mockResponse string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(mockStatus)
@@ -373,6 +447,8 @@ type mockSettler struct {
 
 	feeToReturn      uint16
 	feeErrorToReturn error
+
+	capturedWithdrawChainID int64
 }
 
 func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ common.Address) error {
@@ -388,6 +464,7 @@ func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 }
 
 func (ms *mockSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	ms.capturedWithdrawChainID = chainID
 	return nil
 }
 

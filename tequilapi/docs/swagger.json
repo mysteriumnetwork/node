@@ -4188,6 +4188,11 @@
           "type": "string",
           "x-go-name": "Beneficiary"
         },
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ChainID"
+        },
         "hermes_id": {
           "type": "string",
           "x-go-name": "HermesID"

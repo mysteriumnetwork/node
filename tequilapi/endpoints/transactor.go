@@ -427,6 +427,15 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
+	if req.ChainID != 0 {
+		if _, ok := registry.Chains()[req.ChainID]; !ok {
+			utils.SendError(resp, errors.New("Unsupported chain"), http.StatusBadRequest)
+			return
+		}
+
+		chainID = req.ChainID
+	}
+
 	err = te.promiseSettler.Withdraw(chainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
