@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-contrib/cors"
+
 	"github.com/mysteriumnetwork/node/tequilapi/middlewares"
 
 	"github.com/mysteriumnetwork/node/core/node"
@@ -31,6 +33,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
+
+var corsConfig = cors.Config{
+	AllowWildcard: true,
+	AllowOrigins:  []string{"http://localhost:*"},
+}
 
 // APIServer interface represents control methods for underlying http api server
 type APIServer interface {
@@ -57,6 +64,7 @@ func NewServer(
 	g := gin.New()
 	g.Use(middlewares.ApplyCacheConfigMiddleware)
 	g.Use(gin.Recovery())
+	g.Use(cors.New(corsConfig))
 
 	for _, h := range handlers {
 		err := h(g)
