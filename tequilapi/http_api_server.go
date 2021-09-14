@@ -55,10 +55,6 @@ func NewServer(
 ) (APIServer, error) {
 	gin.SetMode(modeFromOptions(nodeOptions))
 	g := gin.New()
-	g.Use(middlewares.ApplyCORSMiddleware(middlewares.RegexpCorsPolicy{
-		DefaultTrustedOrigin:  "https://mysterium.network",
-		AllowedOriginSuffixes: []string{"wallet(-dev)?\\.mysterium\\.network$", "localhost(:\\d+)?$"},
-	}))
 	g.Use(middlewares.ApplyCacheConfigMiddleware)
 	g.Use(gin.Recovery())
 

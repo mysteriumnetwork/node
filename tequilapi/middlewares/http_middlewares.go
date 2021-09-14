@@ -18,52 +18,10 @@
 package middlewares
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
-
-// CorsPolicy resolves allowed origin
-type CorsPolicy interface {
-	AllowedOrigin(requestOrigin string) string
-}
-
-// ApplyCORSMiddleware handles Access-Control-Allow-Origin header for tequilAPI
-func ApplyCORSMiddleware(policy CorsPolicy) func(ctx *gin.Context) {
-	return func(ctx *gin.Context) {
-		if isPreflightCorsRequest(ctx) {
-			generatePreflightResponse(ctx, policy)
-			return
-		}
-
-		allowCorsActions(ctx, policy)
-	}
-}
-
-func allowCorsActions(ctx *gin.Context, policy CorsPolicy) {
-	requestOrigin := ctx.Request.Header.Get("Origin")
-	allowedOrigin := policy.AllowedOrigin(requestOrigin)
-
-	ctx.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
-	ctx.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-}
-
-func isPreflightCorsRequest(ctx *gin.Context) bool {
-	isOptionsMethod := ctx.Request.Method == http.MethodOptions
-	containsAccessControlRequestMethod := ctx.Request.Header.Get("Access-Control-Request-Method") != ""
-	containsOriginHeader := ctx.Request.Header.Get("Origin") != ""
-	return isOptionsMethod && containsOriginHeader && containsAccessControlRequestMethod
-}
-
-func generatePreflightResponse(ctx *gin.Context, policy CorsPolicy) {
-	allowCorsActions(ctx, policy)
-	//allow all headers which were defined in preflight request
-	for _, headerValue := range ctx.Request.Header["Access-Control-Request-Headers"] {
-		ctx.Writer.Header().Add("Access-Control-Allow-Headers", headerValue)
-	}
-	ctx.Writer.WriteHeader(http.StatusNoContent)
-}
 
 // ApplyCacheConfigMiddleware forces no caching policy via "Cache-control" header
 func ApplyCacheConfigMiddleware(ctx *gin.Context) {
