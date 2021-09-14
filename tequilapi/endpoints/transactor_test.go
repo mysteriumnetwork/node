@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"math/big"
 	"net/http"
@@ -314,6 +315,28 @@ func Test_SettleHistory(t *testing.T) {
 			mockStorage.calledWithFilter,
 		)
 	})
+}
+
+func Test_AvailableChains(t *testing.T) {
+	// given
+	router := gin.Default()
+	err := AddRoutesForTransactor(nil, nil, nil, nil, nil)(router)
+	assert.NoError(t, err)
+
+	// when
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/transactor/chains",
+		nil,
+	)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// then
+	var chainMap map[int]string
+	err = json.NewDecoder(resp.Body).Decode(&chainMap)
+	assert.NoError(t, err)
+	assert.Equal(t, "Ethereum Testnet Görli", chainMap[5])
 }
 
 func newTestTransactorServer(mockStatus int, mockResponse string) *httptest.Server {
