@@ -1,0 +1,106 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package middlewares
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/stretchr/testify/assert"
+)
+
+var testCorsPolicy = RegexpCorsPolicy{
+	DefaultTrustedOrigin:  "https://mysterium.network",
+	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
+}
+
+func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
+	req.Header.Add("Origin", "https://wallet.mysterium.network")
+	assert.NoError(t, err)
+
+	respRecorder := httptest.NewRecorder()
+
+	g := gin.Default()
+	g.Use(ApplyCORSMiddleware(testCorsPolicy))
+	g.Use(ApplyCacheConfigMiddleware)
+	g.ServeHTTP(respRecorder, req)
+
+	assert.Equal(t, "https://wallet.mysterium.network", respRecorder.Header().Get("Access-Control-Allow-Origin"))
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+}
+
+func TestPreflightCorsCheckIsHandled(t *testing.T) {
+	req, err := http.NewRequest(http.MethodOptions, "/not-important", nil)
+	assert.NoError(t, err)
+	req.Header.Add("Origin", "Original site")
+	req.Header.Add("Access-Control-Request-Method", "POST")
+	req.Header.Add("Access-Control-Request-Headers", "origin, x-requested-with")
+
+	respRecorder := httptest.NewRecorder()
+
+	g := gin.Default()
+	g.Use(ApplyCORSMiddleware(testCorsPolicy))
+	g.Use(ApplyCacheConfigMiddleware)
+	g.ServeHTTP(respRecorder, req)
+
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+	assert.Equal(t, "origin, x-requested-with", respRecorder.Header().Get("Access-Control-Allow-Headers"))
+	assert.Equal(t, 0, respRecorder.Body.Len())
+}
+
+func TestDeleteCorsPreflightCheckIsHandledCorrectly(t *testing.T) {
+	req, err := http.NewRequest(http.MethodOptions, "/not-important", nil)
+	assert.NoError(t, err)
+	req.Header.Add("Origin", "Original site")
+	req.Header.Add("Access-Control-Request-Method", "DELETE")
+
+	respRecorder := httptest.NewRecorder()
+
+	g := gin.Default()
+	g.Use(ApplyCORSMiddleware(testCorsPolicy))
+	g.Use(ApplyCacheConfigMiddleware)
+	g.ServeHTTP(respRecorder, req)
+
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+	assert.Equal(t, 0, respRecorder.Body.Len())
+
+}
+
+func TestCacheControlHeadersAreAddedToResponse(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
+	assert.NoError(t, err)
+	respRecorder := httptest.NewRecorder()
+
+	g := gin.Default()
+	g.Use(ApplyCORSMiddleware(testCorsPolicy))
+	g.Use(ApplyCacheConfigMiddleware)
+	g.ServeHTTP(respRecorder, req)
+
+	assert.Equal(
+		t,
+		"no-cache, no-store, must-revalidate",
+		respRecorder.Header().Get("Cache-Control"),
+	)
+
+}

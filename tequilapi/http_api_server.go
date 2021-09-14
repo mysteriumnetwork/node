@@ -22,40 +22,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/tequilapi/middlewares"
+
 	"github.com/mysteriumnetwork/node/core/node"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
-
-var corsConfig = cors.Config{
-	AllowMethods: []string{
-		"GET",
-		"HEAD",
-		"POST",
-		"PUT",
-		"DELETE",
-		"CONNECT",
-		"OPTIONS",
-		"TRACE",
-		"PATCH",
-	},
-	AllowHeaders: []string{
-		"Origin",
-		"Content-Length",
-		"Content-Type",
-		"Cache-Control",
-		"X-XSRF-TOKEN",
-		"X-CSRF-TOKEN",
-	},
-	AllowCredentials: true,
-	AllowOriginFunc: func(_ string) bool {
-		return true
-	},
-}
 
 // APIServer interface represents control methods for underlying http api server
 type APIServer interface {
@@ -80,8 +55,12 @@ func NewServer(
 ) (APIServer, error) {
 	gin.SetMode(modeFromOptions(nodeOptions))
 	g := gin.New()
+	g.Use(middlewares.ApplyCORSMiddleware(middlewares.RegexpCorsPolicy{
+		DefaultTrustedOrigin:  "https://mysterium.network",
+		AllowedOriginSuffixes: []string{"wallet(-dev)?\\.mysterium\\.network$", "localhost(:\\d+)?$"},
+	}))
+	g.Use(middlewares.ApplyCacheConfigMiddleware)
 	g.Use(gin.Recovery())
-	g.Use(cors.New(corsConfig))
 
 	for _, h := range handlers {
 		err := h(g)
