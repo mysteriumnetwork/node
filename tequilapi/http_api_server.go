@@ -22,9 +22,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-contrib/cors"
+
+	"github.com/mysteriumnetwork/node/tequilapi/middlewares"
+
 	"github.com/mysteriumnetwork/node/core/node"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/pkg/errors"
@@ -32,29 +35,8 @@ import (
 )
 
 var corsConfig = cors.Config{
-	AllowMethods: []string{
-		"GET",
-		"HEAD",
-		"POST",
-		"PUT",
-		"DELETE",
-		"CONNECT",
-		"OPTIONS",
-		"TRACE",
-		"PATCH",
-	},
-	AllowHeaders: []string{
-		"Origin",
-		"Content-Length",
-		"Content-Type",
-		"Cache-Control",
-		"X-XSRF-TOKEN",
-		"X-CSRF-TOKEN",
-	},
-	AllowCredentials: true,
-	AllowOriginFunc: func(_ string) bool {
-		return true
-	},
+	AllowWildcard: true,
+	AllowOrigins:  []string{"http://localhost:*"},
 }
 
 // APIServer interface represents control methods for underlying http api server
@@ -80,6 +62,7 @@ func NewServer(
 ) (APIServer, error) {
 	gin.SetMode(modeFromOptions(nodeOptions))
 	g := gin.New()
+	g.Use(middlewares.ApplyCacheConfigMiddleware)
 	g.Use(gin.Recovery())
 	g.Use(cors.New(corsConfig))
 

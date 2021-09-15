@@ -50,6 +50,7 @@ func buildReverseProxy(tequilapiAddress string, tequilapiPort int) *httputil.Rev
 			req.URL.Host = tequilapiAddress + ":" + strconv.Itoa(tequilapiPort)
 			req.URL.Path = strings.Replace(req.URL.Path, tequilapiUrlPrefix, "", 1)
 			req.URL.Path = strings.TrimRight(req.URL.Path, "/")
+			req.Header.Del("Origin")
 		},
 		ModifyResponse: func(res *http.Response) error {
 			// remove TequilAPI CORS headers
