@@ -561,13 +561,15 @@ func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 	}, resp)
 }
 
-// swagger:operation GET /transactor/chains Chains
+// swagger:operation GET /transactor/chains-summary Chains
 // ---
 // summary: Returns available chain map
 // responses:
 //   200:
-//     description: Chain map
-func (te *transactorEndpoint) AvailableChains(c *gin.Context) {
+//     description: Chain Summary
+//     schema:
+//       "$ref": "#/definitions/ChainSummary"
+func (te *transactorEndpoint) ChainSummary(c *gin.Context) {
 	chains := registry.Chains()
 	result := map[int64]string{}
 
@@ -580,7 +582,10 @@ func (te *transactorEndpoint) AvailableChains(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, &contract.ChainSummary{
+		Chains:       result,
+		CurrentChain: config.GetInt64(config.FlagChainID),
+	})
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
@@ -610,7 +615,7 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
 			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
-			transGroup.GET("/chains", te.AvailableChains)
+			transGroup.GET("/chain-summary", te.ChainSummary)
 		}
 		return nil
 	}

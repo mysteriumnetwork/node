@@ -237,3 +237,10 @@ type BeneficiaryTxStatus struct {
 type TokenRewardAmount struct {
 	Amount *big.Int `json:"amount"`
 }
+
+// ChainSummary represents a response for token rewards.
+// swagger:model ChainSummary
+type ChainSummary struct {
+	Chains       map[int64]string `json:"chains"`
+	CurrentChain int64            `json:"current_chain"`
+}

@@ -327,21 +327,23 @@ func Test_AvailableChains(t *testing.T) {
 	router := gin.Default()
 	err := AddRoutesForTransactor(nil, nil, nil, nil, nil)(router)
 	assert.NoError(t, err)
+	config.Current.SetUser(config.FlagChainID.Name, config.FlagChainID.Value)
 
 	// when
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/transactor/chains",
+		"/transactor/chain-summary",
 		nil,
 	)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
 	// then
-	var chainMap map[int]string
-	err = json.NewDecoder(resp.Body).Decode(&chainMap)
+	var chainSummary contract.ChainSummary
+	err = json.NewDecoder(resp.Body).Decode(&chainSummary)
 	assert.NoError(t, err)
-	assert.Equal(t, "Ethereum Testnet Görli", chainMap[5])
+	assert.Equal(t, "Ethereum Testnet Görli", chainSummary.Chains[5])
+	assert.Equal(t, config.FlagChainID.Value, chainSummary.CurrentChain)
 }
 
 func Test_Withdrawal(t *testing.T) {
