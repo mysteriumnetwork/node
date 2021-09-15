@@ -56,7 +56,7 @@ type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
-	Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
+	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
 }
 
 type addressProvider interface {
@@ -426,17 +426,27 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 		return
 	}
 
-	chainID := config.GetInt64(config.FlagChainID)
-	if req.ChainID != 0 {
-		if _, ok := registry.Chains()[req.ChainID]; !ok {
-			utils.SendError(resp, errors.New("Unsupported chain"), http.StatusBadRequest)
+	fromChainID := config.GetInt64(config.FlagChainID)
+	if req.FromChainID != 0 {
+		if _, ok := registry.Chains()[req.FromChainID]; !ok {
+			utils.SendError(resp, errors.New("Unsupported from_chain_id"), http.StatusBadRequest)
 			return
 		}
 
-		chainID = req.ChainID
+		fromChainID = req.FromChainID
 	}
 
-	err = te.promiseSettler.Withdraw(chainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
+	var toChainID int64
+	if req.ToChainID != 0 {
+		if _, ok := registry.Chains()[req.ToChainID]; !ok {
+			utils.SendError(resp, errors.New("Unsupported to_chain_id"), http.StatusBadRequest)
+			return
+		}
+
+		toChainID = req.ToChainID
+	}
+
+	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

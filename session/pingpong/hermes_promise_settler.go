@@ -106,7 +106,7 @@ type HermesPromiseSettler interface {
 	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
-	Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
+	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
 }
 
 // hermesPromiseSettler is responsible for settling the hermes promises.
@@ -459,7 +459,13 @@ func (aps *hermesPromiseSettler) updatePromiseWithLatestFee(hermesID common.Addr
 	return updatedPromise, nil
 }
 
-func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (aps *hermesPromiseSettler) Withdraw(
+	fromChainID int64,
+	toChainID int64,
+	providerID identity.Identity,
+	hermesID,
+	beneficiary common.Address,
+) error {
 	if aps.isSettling(providerID) {
 		return errors.New("provider already has settlement in progress")
 	}
@@ -468,15 +474,19 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	log.Info().Msgf("Marked provider %v as requesting settlement", providerID)
 	defer aps.setSettling(providerID, false)
 
-	if chainID != aps.config.L2ChainID {
-		return fmt.Errorf("can only withdraw from chain with ID %v, requested with %v", aps.config.L2ChainID, chainID)
+	if toChainID == 0 {
+		toChainID = aps.config.L1ChainID
 	}
 
-	registry, err := aps.addressProvider.GetRegistryAddress(chainID)
+	if fromChainID != aps.config.L2ChainID {
+		return fmt.Errorf("can only withdraw from chain with ID %v, requested with %v", aps.config.L2ChainID, fromChainID)
+	}
+
+	registry, err := aps.addressProvider.GetRegistryAddress(fromChainID)
 	if err != nil {
 		return err
 	}
-	channel, err := aps.addressProvider.GetChannelImplementation(chainID)
+	channel, err := aps.addressProvider.GetChannelImplementation(fromChainID)
 	if err != nil {
 		return err
 	}
@@ -492,7 +502,7 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	}
 
 	// 0. check if previous withdrawal attempt exists
-	promiseFromStorage, err := aps.promiseStorage.Get(aps.config.L1ChainID, chid)
+	promiseFromStorage, err := aps.promiseStorage.Get(toChainID, chid)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			log.Info().Msg("no previous promise, will do a new attempt")
@@ -518,7 +528,7 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	}
 
 	// 1. calculate amount to withdraw - check balance on consumer channel
-	amountToWithdraw, err := aps.getWithdrawalAmountViaHermes(chainID, hermesID, providerID.ToCommonAddress())
+	amountToWithdraw, err := aps.getWithdrawalAmountViaHermes(fromChainID, hermesID, providerID.ToCommonAddress())
 	if err != nil {
 		return err
 	}
@@ -530,7 +540,7 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	}
 
 	// 2. issue a self promise
-	msg, err := aps.issueSelfPromise(chainID, amountToWithdraw, providerID, consumerChannelAddress, hermesID)
+	msg, err := aps.issueSelfPromise(fromChainID, amountToWithdraw, providerID, consumerChannelAddress, hermesID)
 	if err != nil {
 		return err
 	}
@@ -543,7 +553,7 @@ func (aps *hermesPromiseSettler) Withdraw(chainID int64, providerID identity.Ide
 	}
 
 	// 4. fetch the promise from storage
-	promiseFromStorage, err = aps.promiseStorage.Get(aps.config.L1ChainID, chid)
+	promiseFromStorage, err = aps.promiseStorage.Get(toChainID, chid)
 	if err != nil {
 		return err
 	}

@@ -4188,10 +4188,10 @@
           "type": "string",
           "x-go-name": "Beneficiary"
         },
-        "chain_id": {
+        "from_chain_id": {
           "type": "integer",
           "format": "int64",
-          "x-go-name": "ChainID"
+          "x-go-name": "FromChainID"
         },
         "hermes_id": {
           "type": "string",
@@ -4200,6 +4200,11 @@
         "provider_id": {
           "type": "string",
           "x-go-name": "ProviderID"
+        },
+        "to_chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ToChainID"
         }
       },
       "x-go-name": "WithdrawRequest",

@@ -200,7 +200,8 @@ type WithdrawRequest struct {
 	HermesID    string `json:"hermes_id"`
 	ProviderID  string `json:"provider_id"`
 	Beneficiary string `json:"beneficiary"`
-	ChainID     int64  `json:"chain_id"`
+	FromChainID int64  `json:"from_chain_id"`
+	ToChainID   int64  `json:"to_chain_id"`
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.

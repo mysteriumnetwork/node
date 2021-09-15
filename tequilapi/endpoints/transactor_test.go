@@ -21,11 +21,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/mysteriumnetwork/node/config"
 
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
@@ -351,66 +354,76 @@ func Test_Withdrawal(t *testing.T) {
 	err := AddRoutesForTransactor(nil, nil, settler, nil, nil)(router)
 	assert.NoError(t, err)
 
-	// when
-	body, err := json.Marshal(contract.WithdrawRequest{
-		HermesID:    "ignored",
-		ProviderID:  "ignored",
-		Beneficiary: "ignored",
-	})
-	assert.NoError(t, err)
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"/transactor/settle/withdraw",
-		bytes.NewBuffer(body),
-	)
-	assert.NoError(t, err)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
+	config.Current.SetUser(config.FlagChainID.Name, config.FlagChainID.Value)
+	// expect
+	for _, data := range []struct {
+		fromChainID         int64
+		toChainID           int64
+		expectedToChainID   int64
+		expectedFromChainID int64
+	}{
+		{fromChainID: 5, toChainID: config.FlagChainID.Value, expectedFromChainID: 5, expectedToChainID: config.FlagChainID.Value},
+		{fromChainID: 0, toChainID: 0, expectedFromChainID: config.FlagChainID.Value, expectedToChainID: 0},
+		{fromChainID: 5, toChainID: 0, expectedFromChainID: 5, expectedToChainID: 0},
+	} {
+		t.Run(fmt.Sprintf("succeed withdrawal with fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
+			// when
+			body, err := json.Marshal(contract.WithdrawRequest{
+				HermesID:    "ignored",
+				ProviderID:  "ignored",
+				Beneficiary: "ignored",
+				ToChainID:   data.toChainID,
+				FromChainID: data.fromChainID,
+			})
+			assert.NoError(t, err)
+			req, err := http.NewRequest(
+				http.MethodPost,
+				"/transactor/settle/withdraw",
+				bytes.NewBuffer(body),
+			)
+			assert.NoError(t, err)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
 
-	// then
-	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.NotEqual(t, 0, settler.capturedWithdrawChainID)
+			// then
+			assert.Equal(t, http.StatusOK, resp.Code)
+			assert.Equal(t, data.expectedToChainID, settler.capturedToChainID)
+			assert.Equal(t, data.expectedFromChainID, settler.capturedFromChainID)
+		})
+	}
 
-	// when
-	body, err = json.Marshal(contract.WithdrawRequest{
-		HermesID:    "ignored",
-		ProviderID:  "ignored",
-		Beneficiary: "ignored",
-		ChainID:     5,
-	})
-	assert.NoError(t, err)
-	req, err = http.NewRequest(
-		http.MethodPost,
-		"/transactor/settle/withdraw",
-		bytes.NewBuffer(body),
-	)
-	assert.NoError(t, err)
-	resp = httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
+	// expect
+	for _, data := range []struct {
+		fromChainID int64
+		toChainID   int64
+	}{
+		{fromChainID: -1, toChainID: 0},
+		{fromChainID: 0, toChainID: -1},
+		{fromChainID: -1, toChainID: -1},
+	} {
+		t.Run(fmt.Sprintf("fail withdrawal with unsuported fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
+			// when
+			body, err := json.Marshal(contract.WithdrawRequest{
+				HermesID:    "ignored",
+				ProviderID:  "ignored",
+				Beneficiary: "ignored",
+				ToChainID:   data.toChainID,
+				FromChainID: data.fromChainID,
+			})
+			assert.NoError(t, err)
+			req, err := http.NewRequest(
+				http.MethodPost,
+				"/transactor/settle/withdraw",
+				bytes.NewBuffer(body),
+			)
+			assert.NoError(t, err)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
 
-	// then
-	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.Equal(t, int64(5), settler.capturedWithdrawChainID)
-
-	// when
-	body, err = json.Marshal(contract.WithdrawRequest{
-		HermesID:    "ignored",
-		ProviderID:  "ignored",
-		Beneficiary: "ignored",
-		ChainID:     -1,
-	})
-	assert.NoError(t, err)
-	req, err = http.NewRequest(
-		http.MethodPost,
-		"/transactor/settle/withdraw",
-		bytes.NewBuffer(body),
-	)
-	assert.NoError(t, err)
-	resp = httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	// then
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
+			// then
+			assert.Equal(t, http.StatusBadRequest, resp.Code)
+		})
+	}
 }
 
 func newTestTransactorServer(mockStatus int, mockResponse string) *httptest.Server {
@@ -448,7 +461,8 @@ type mockSettler struct {
 	feeToReturn      uint16
 	feeErrorToReturn error
 
-	capturedWithdrawChainID int64
+	capturedToChainID   int64
+	capturedFromChainID int64
 }
 
 func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ common.Address) error {
@@ -463,8 +477,9 @@ func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 
-func (ms *mockSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
-	ms.capturedWithdrawChainID = chainID
+func (ms *mockSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	ms.capturedToChainID = toChainID
+	ms.capturedFromChainID = fromChainID
 	return nil
 }
 
