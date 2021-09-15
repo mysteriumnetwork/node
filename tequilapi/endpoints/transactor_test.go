@@ -21,11 +21,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/mysteriumnetwork/node/config"
+
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/gin-gonic/gin"
 
@@ -322,21 +327,105 @@ func Test_AvailableChains(t *testing.T) {
 	router := gin.Default()
 	err := AddRoutesForTransactor(nil, nil, nil, nil, nil)(router)
 	assert.NoError(t, err)
+	config.Current.SetUser(config.FlagChainID.Name, config.FlagChainID.Value)
 
 	// when
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/transactor/chains",
+		"/transactor/chain-summary",
 		nil,
 	)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
 	// then
-	var chainMap map[int]string
-	err = json.NewDecoder(resp.Body).Decode(&chainMap)
+	var chainSummary contract.ChainSummary
+	err = json.NewDecoder(resp.Body).Decode(&chainSummary)
 	assert.NoError(t, err)
-	assert.Equal(t, "Ethereum Testnet Görli", chainMap[5])
+	assert.Equal(t, "Ethereum Testnet Görli", chainSummary.Chains[5])
+	assert.Equal(t, config.FlagChainID.Value, chainSummary.CurrentChain)
+}
+
+func Test_Withdrawal(t *testing.T) {
+	// given
+	router := gin.Default()
+
+	settler := &mockSettler{
+		feeToReturn: 11,
+	}
+	err := AddRoutesForTransactor(nil, nil, settler, nil, nil)(router)
+	assert.NoError(t, err)
+
+	config.Current.SetUser(config.FlagChainID.Name, config.FlagChainID.Value)
+	// expect
+	for _, data := range []struct {
+		fromChainID         int64
+		toChainID           int64
+		expectedToChainID   int64
+		expectedFromChainID int64
+	}{
+		{fromChainID: 5, toChainID: config.FlagChainID.Value, expectedFromChainID: 5, expectedToChainID: config.FlagChainID.Value},
+		{fromChainID: 0, toChainID: 0, expectedFromChainID: config.FlagChainID.Value, expectedToChainID: 0},
+		{fromChainID: 5, toChainID: 0, expectedFromChainID: 5, expectedToChainID: 0},
+	} {
+		t.Run(fmt.Sprintf("succeed withdrawal with fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
+			// when
+			body, err := json.Marshal(contract.WithdrawRequest{
+				HermesID:    "ignored",
+				ProviderID:  "ignored",
+				Beneficiary: "ignored",
+				ToChainID:   data.toChainID,
+				FromChainID: data.fromChainID,
+			})
+			assert.NoError(t, err)
+			req, err := http.NewRequest(
+				http.MethodPost,
+				"/transactor/settle/withdraw",
+				bytes.NewBuffer(body),
+			)
+			assert.NoError(t, err)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			// then
+			assert.Equal(t, http.StatusOK, resp.Code)
+			assert.Equal(t, data.expectedToChainID, settler.capturedToChainID)
+			assert.Equal(t, data.expectedFromChainID, settler.capturedFromChainID)
+		})
+	}
+
+	// expect
+	for _, data := range []struct {
+		fromChainID int64
+		toChainID   int64
+	}{
+		{fromChainID: -1, toChainID: 0},
+		{fromChainID: 0, toChainID: -1},
+		{fromChainID: -1, toChainID: -1},
+	} {
+		t.Run(fmt.Sprintf("fail withdrawal with unsuported fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
+			// when
+			body, err := json.Marshal(contract.WithdrawRequest{
+				HermesID:    "ignored",
+				ProviderID:  "ignored",
+				Beneficiary: "ignored",
+				ToChainID:   data.toChainID,
+				FromChainID: data.fromChainID,
+			})
+			assert.NoError(t, err)
+			req, err := http.NewRequest(
+				http.MethodPost,
+				"/transactor/settle/withdraw",
+				bytes.NewBuffer(body),
+			)
+			assert.NoError(t, err)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			// then
+			assert.Equal(t, http.StatusBadRequest, resp.Code)
+		})
+	}
 }
 
 func newTestTransactorServer(mockStatus int, mockResponse string) *httptest.Server {
@@ -373,6 +462,9 @@ type mockSettler struct {
 
 	feeToReturn      uint16
 	feeErrorToReturn error
+
+	capturedToChainID   int64
+	capturedFromChainID int64
 }
 
 func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ common.Address) error {
@@ -387,7 +479,9 @@ func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 
-func (ms *mockSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (ms *mockSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	ms.capturedToChainID = toChainID
+	ms.capturedFromChainID = fromChainID
 	return nil
 }
 

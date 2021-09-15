@@ -200,6 +200,8 @@ type WithdrawRequest struct {
 	HermesID    string `json:"hermes_id"`
 	ProviderID  string `json:"provider_id"`
 	Beneficiary string `json:"beneficiary"`
+	FromChainID int64  `json:"from_chain_id"`
+	ToChainID   int64  `json:"to_chain_id"`
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
@@ -234,4 +236,11 @@ type BeneficiaryTxStatus struct {
 // swagger:model TokenRewardAmount
 type TokenRewardAmount struct {
 	Amount *big.Int `json:"amount"`
+}
+
+// ChainSummary represents a response for token rewards.
+// swagger:model ChainSummary
+type ChainSummary struct {
+	Chains       map[int64]string `json:"chains"`
+	CurrentChain int64            `json:"current_chain"`
 }

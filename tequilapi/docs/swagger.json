@@ -2059,13 +2059,16 @@
         }
       }
     },
-    "/transactor/chains": {
+    "/transactor/chains-summary": {
       "get": {
         "summary": "Returns available chain map",
         "operationId": "Chains",
         "responses": {
           "200": {
-            "description": "Chain map"
+            "description": "Chain Summary",
+            "schema": {
+              "$ref": "#/definitions/ChainSummary"
+            }
           }
         }
       }
@@ -2525,6 +2528,21 @@
           "type": "string",
           "x-go-name": "Commit",
           "example": "\u003cunknown\u003e"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ChainSummary": {
+      "type": "object",
+      "title": "ChainSummary represents a response for token rewards.",
+      "properties": {
+        "chains": {
+          "x-go-name": "Chains"
+        },
+        "current_chain": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "CurrentChain"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4188,6 +4206,11 @@
           "type": "string",
           "x-go-name": "Beneficiary"
         },
+        "from_chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "FromChainID"
+        },
         "hermes_id": {
           "type": "string",
           "x-go-name": "HermesID"
@@ -4195,6 +4218,11 @@
         "provider_id": {
           "type": "string",
           "x-go-name": "ProviderID"
+        },
+        "to_chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ToChainID"
         }
       },
       "x-go-name": "WithdrawRequest",

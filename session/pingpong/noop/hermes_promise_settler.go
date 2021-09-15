@@ -47,6 +47,6 @@ func (n *NoopHermesPromiseSettler) GetHermesFee(chainID int64, _ common.Address)
 }
 
 // Withdraw does absolutely nothing.
-func (n *NoopHermesPromiseSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (n *NoopHermesPromiseSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
 	return nil
 }

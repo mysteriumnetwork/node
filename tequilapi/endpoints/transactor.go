@@ -56,7 +56,7 @@ type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
-	Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
+	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
 }
 
 type addressProvider interface {
@@ -426,8 +426,27 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 		return
 	}
 
-	chainID := config.GetInt64(config.FlagChainID)
-	err = te.promiseSettler.Withdraw(chainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
+	fromChainID := config.GetInt64(config.FlagChainID)
+	if req.FromChainID != 0 {
+		if _, ok := registry.Chains()[req.FromChainID]; !ok {
+			utils.SendError(resp, errors.New("Unsupported from_chain_id"), http.StatusBadRequest)
+			return
+		}
+
+		fromChainID = req.FromChainID
+	}
+
+	var toChainID int64
+	if req.ToChainID != 0 {
+		if _, ok := registry.Chains()[req.ToChainID]; !ok {
+			utils.SendError(resp, errors.New("Unsupported to_chain_id"), http.StatusBadRequest)
+			return
+		}
+
+		toChainID = req.ToChainID
+	}
+
+	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -542,13 +561,15 @@ func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 	}, resp)
 }
 
-// swagger:operation GET /transactor/chains Chains
+// swagger:operation GET /transactor/chains-summary Chains
 // ---
 // summary: Returns available chain map
 // responses:
 //   200:
-//     description: Chain map
-func (te *transactorEndpoint) AvailableChains(c *gin.Context) {
+//     description: Chain Summary
+//     schema:
+//       "$ref": "#/definitions/ChainSummary"
+func (te *transactorEndpoint) ChainSummary(c *gin.Context) {
 	chains := registry.Chains()
 	result := map[int64]string{}
 
@@ -561,7 +582,10 @@ func (te *transactorEndpoint) AvailableChains(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, &contract.ChainSummary{
+		Chains:       result,
+		CurrentChain: config.GetInt64(config.FlagChainID),
+	})
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
@@ -591,7 +615,7 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
 			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
-			transGroup.GET("/chains", te.AvailableChains)
+			transGroup.GET("/chain-summary", te.ChainSummary)
 		}
 		return nil
 	}
