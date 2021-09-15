@@ -83,6 +83,7 @@ func (t *Tracer) EndStage(key string) {
 	s, ok := t.findStage(key)
 	if !ok {
 		log.Error().Msgf("Stage %s was not started", key)
+		return
 	}
 
 	s.end = time.Now()
