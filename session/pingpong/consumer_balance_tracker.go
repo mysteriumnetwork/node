@@ -64,6 +64,7 @@ type ConsumerBalanceTracker struct {
 
 	fullBalanceUpdateThrottle map[string]struct{}
 	fullBalanceUpdateLock     sync.Mutex
+	balanceSyncer             *balanceSyncer
 
 	cfg ConsumerBalanceTrackerConfig
 }
@@ -108,6 +109,7 @@ func NewConsumerBalanceTracker(
 		stop:                                 make(chan struct{}),
 		cfg:                                  cfg,
 		fullBalanceUpdateThrottle:            make(map[string]struct{}),
+		balanceSyncer:                        newBalanceSyncer(),
 	}
 }
 
@@ -140,7 +142,25 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
+	err = bus.SubscribeAsync(event.AppTopicSettlementComplete, cbt.handleSettlementComplete)
+	if err != nil {
+		return err
+	}
+	err = bus.SubscribeAsync(event.AppTopicWithdrawalRequested, cbt.handleWithdrawalRequested)
+	if err != nil {
+		return err
+	}
 	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, cbt.handleUnlockEvent)
+}
+
+// settlements increase balance on the chain they are settled on.
+func (cbt *ConsumerBalanceTracker) handleSettlementComplete(ev event.AppEventSettlementComplete) {
+	go cbt.aggressiveSync(ev.ChainID, ev.ProviderID, cbt.cfg.FastSync.Timeout, cbt.cfg.FastSync.Interval)
+}
+
+// withdrawals decrease balance on the from chain.
+func (cbt *ConsumerBalanceTracker) handleWithdrawalRequested(ev event.AppEventWithdrawalRequested) {
+	go cbt.aggressiveSync(ev.FromChain, ev.ProviderID, cbt.cfg.FastSync.Timeout, cbt.cfg.FastSync.Interval)
 }
 
 func (cbt *ConsumerBalanceTracker) handleOrderUpdatedEvent(ev pevent.AppEventOrderUpdated) {
@@ -160,19 +180,11 @@ func (cbt *ConsumerBalanceTracker) aggressiveSync(chainID int64, id identity.Ide
 		return
 	}
 
-	stop := make(chan struct{})
+	cbt.startJob(chainID, id, timeout, frequency)
+}
 
-	go func() {
-		defer close(stop)
-		select {
-		case <-cbt.stop:
-			return
-		case <-time.After(timeout):
-			return
-		}
-	}()
-
-	cbt.periodicSync(stop, chainID, id, frequency)
+func (cbt *ConsumerBalanceTracker) formJobSyncKey(chainID int64, id identity.Identity, timeout, frequency time.Duration) string {
+	return fmt.Sprintf("%v%v%v%v", chainID, id.ToCommonAddress().Hex(), timeout, frequency)
 }
 
 // NeedsForceSync returns true if balance needs to be force synced.
@@ -273,14 +285,38 @@ func (cbt *ConsumerBalanceTracker) lifetimeBCSync(chainID int64, id identity.Ide
 		return
 	}
 
-	cbt.periodicSync(cbt.stop, chainID, id, cbt.cfg.LongSync.Interval)
+	// 100 years should be close enough to never
+	timeout := time.Hour * 24 * 365 * 100
+	cbt.startJob(chainID, id, timeout, cbt.cfg.LongSync.Interval)
+}
+
+func (cbt *ConsumerBalanceTracker) startJob(chainID int64, id identity.Identity, timeout, frequency time.Duration) {
+	job, exists := cbt.balanceSyncer.PeriodiclySyncBalance(
+		cbt.formJobSyncKey(chainID, id, timeout, frequency),
+		func(stop <-chan struct{}) {
+			cbt.periodicSync(stop, chainID, id, frequency)
+		},
+		timeout,
+	)
+
+	if exists {
+		return
+	}
+
+	go func() {
+		select {
+		case <-cbt.stop:
+			job.Stop()
+			return
+		case <-job.Done():
+			return
+		}
+	}()
 }
 
 func (cbt *ConsumerBalanceTracker) periodicSync(stop <-chan struct{}, chainID int64, id identity.Identity, syncPeriod time.Duration) {
 	for {
 		select {
-		case <-cbt.stop:
-			return
 		case <-stop:
 			return
 		case <-time.After(syncPeriod):

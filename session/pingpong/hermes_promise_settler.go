@@ -124,6 +124,7 @@ type hermesPromiseSettler struct {
 	addressProvider            addressProvider
 	paySettler                 paySettler
 	promiseStorage             promiseStorage
+	publisher                  eventbus.Publisher
 	// TODO: Consider adding chain ID to this as well.
 	currentState map[identity.Identity]settlementState
 	settleQueue  chan receivedPromise
@@ -144,7 +145,7 @@ type HermesPromiseSettlerConfig struct {
 }
 
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
-func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
+func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
 	return &hermesPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		ks:                         ks,
@@ -158,7 +159,7 @@ func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorag
 		addressProvider:            addressProvider,
 		promiseStorage:             promiseStorage,
 		paySettler:                 paySettler,
-
+		publisher:                  publisher,
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
 		stop:        make(chan struct{}),
@@ -558,6 +559,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 		return err
 	}
 
+	aps.publisher.Publish(event.AppTopicWithdrawalRequested, event.AppEventWithdrawalRequested{
+		ProviderID: providerID,
+		HermesID:   hermesID,
+		FromChain:  fromChainID,
+		ToChain:    toChainID,
+	})
+
 	decodedR, err := hex.DecodeString(promiseFromStorage.R)
 	if err != nil {
 		return fmt.Errorf("could not decode R %w", err)
@@ -876,6 +884,13 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					log.Error().Err(err).Msg("Could not store settlement history")
 				}
 				log.Info().Msgf("Settling complete for provider %v", provider)
+
+				aps.publisher.Publish(event.AppTopicSettlementComplete, event.AppEventSettlementComplete{
+					ProviderID: provider,
+					HermesID:   hermesID,
+					TxHash:     res.Hash,
+					ChainID:    promise.ChainID,
+				})
 				return
 			}
 		}

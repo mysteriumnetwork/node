@@ -59,6 +59,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		mrsp,
 		ks,
 		&settlementHistoryStorageMock{},
+		&mockPublisher{},
 		cfg)
 
 	settler.currentState[mockID] = settlementState{}
@@ -133,6 +134,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		mrsp,
 		ks,
 		&settlementHistoryStorageMock{},
+		&mockPublisher{},
 		cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
@@ -169,7 +171,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	}
 	ks := identity.NewMockKeystore()
 	fac := &mockHermesCallerFactory{}
-	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
@@ -264,6 +266,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		mrsp,
 		ks,
 		&settlementHistoryStorageMock{},
+		&mockPublisher{},
 		cfg)
 
 	settler.handleNodeStart()
@@ -324,6 +327,10 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 			Number: big.NewInt(0),
 		},
 	}
+
+	publisher := &mockPublisher{
+		publicationChan: make(chan testEvent, 10),
+	}
 	promiseSettler := hermesPromiseSettler{
 		currentState: make(map[identity.Identity]settlementState),
 		transactor: &mockTransactor{
@@ -343,6 +350,7 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 			SettlementCheckTimeout: time.Millisecond * 50,
 		},
 		settlementHistoryStorage: &settlementHistoryStorageMock{},
+		publisher:                publisher,
 	}
 
 	mockPromise := crypto.Promise{
@@ -356,6 +364,10 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 
 	err := promiseSettler.settle(mockSettler, identity.Identity{Address: "0x92fE1c838b08dB4c072DDa805FB4292d9b76B5E7"}, common.HexToAddress("0x07b5fD382b5e375F202184052BeF2C50b3B1404F"), mockPromise, common.Address{}, settled)
 	assert.NoError(t, err)
+	ev := <-publisher.publicationChan
+	assert.Equal(t, event.AppTopicSettlementComplete, ev.name)
+	_, ok := ev.value.(event.AppEventSettlementComplete)
+	assert.True(t, ok)
 }
 
 func TestPromiseSettlerState_needsSettling(t *testing.T) {
