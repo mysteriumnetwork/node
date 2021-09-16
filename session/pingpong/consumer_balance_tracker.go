@@ -140,7 +140,25 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
+	err = bus.SubscribeAsync(event.AppTopicSettlementComplete, cbt.handleSettlementComplete)
+	if err != nil {
+		return err
+	}
+	err = bus.SubscribeAsync(event.AppTopicWithdrawalRequested, cbt.handleWithdrawalRequested)
+	if err != nil {
+		return err
+	}
 	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, cbt.handleUnlockEvent)
+}
+
+// settlements increase balance on the chain they are settled on.
+func (cbt *ConsumerBalanceTracker) handleSettlementComplete(ev event.AppEventSettlementComplete) {
+	go cbt.aggressiveSync(ev.ChainID, ev.ProviderID, cbt.cfg.FastSync.Timeout, cbt.cfg.FastSync.Interval)
+}
+
+// withdrawals decrease balance on the from chain.
+func (cbt *ConsumerBalanceTracker) handleWithdrawalRequested(ev event.AppEventWithdrawalRequested) {
+	go cbt.aggressiveSync(ev.FromChain, ev.ProviderID, cbt.cfg.FastSync.Timeout, cbt.cfg.FastSync.Interval)
 }
 
 func (cbt *ConsumerBalanceTracker) handleOrderUpdatedEvent(ev pevent.AppEventOrderUpdated) {

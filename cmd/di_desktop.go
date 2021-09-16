@@ -175,6 +175,7 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.IdentityRegistry,
 		di.Keystore,
 		di.SettlementHistoryStorage,
+		di.EventBus,
 		pingpong.HermesPromiseSettlerConfig{
 			Threshold:               nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			SettlementCheckTimeout:  nodeOptions.Payments.SettlementTimeout,

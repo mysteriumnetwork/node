@@ -36,6 +36,10 @@ const (
 	AppTopicInvoicePaid = "invoice_paid"
 	// AppTopicSettlementRequest forces the settlement of promises for given provider/hermes.
 	AppTopicSettlementRequest = "settlement_request"
+	// AppTopicSettlementComplete topic for events related to completed settlement.
+	AppTopicSettlementComplete = "provider_settlement_complete"
+	// AppTopicWithdrawalRequested topic for succesfull withdrawal requests.
+	AppTopicWithdrawalRequested = "provider_withdrawal_requested"
 )
 
 // AppEventSettlementRequest represents the payload that is sent on the AppTopicSettlementRequest topic.
@@ -88,4 +92,19 @@ type AppEventGrandTotalChanged struct {
 	ChainID    int64
 	HermesID   common.Address
 	ConsumerID identity.Identity
+}
+
+// AppEventSettlementComplete represent a completed settlement.
+type AppEventSettlementComplete struct {
+	ProviderID identity.Identity
+	TxHash     string
+	HermesID   common.Address
+	ChainID    int64
+}
+
+// AppEventWithdrawalRequested represents a request for withdrawal.
+type AppEventWithdrawalRequested struct {
+	ProviderID         identity.Identity
+	HermesID           common.Address
+	FromChain, ToChain int64
 }
