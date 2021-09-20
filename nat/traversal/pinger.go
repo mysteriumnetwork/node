@@ -388,6 +388,8 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
 
+	defer conn.Close()
+
 	if err := router.ProtectUDPConn(conn); err != nil {
 		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
 	}
@@ -411,10 +413,9 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 	raddr, err := p.pingReceiver(ctx, conn)
 	pingReceived <- struct{}{}
 	if err != nil {
-		conn.Close()
 		return nil, fmt.Errorf("ping receiver error: %w", err)
 	}
-
+	// need to dial same connection further
 	conn.Close()
 
 	newConn, err := net.DialUDP("udp4", laddr, raddr)
