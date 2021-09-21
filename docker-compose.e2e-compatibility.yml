@@ -49,7 +49,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:matic-rc3
+    image: mysteriumnetwork/discovery:2.2.0
     depends_on:
       - db
       - http-mock

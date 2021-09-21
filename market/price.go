@@ -27,7 +27,8 @@ type LatestPrices struct {
 	Defaults           *PriceHistory            `json:"defaults"`
 	PerCountry         map[string]*PriceHistory `json:"per_country"`
 	CurrentValidUntil  time.Time                `json:"current_valid_until"`
-	PreviousValidUNtil time.Time                `json:"previous_valid_until"`
+	PreviousValidUntil time.Time                `json:"previous_valid_until"`
+	CurrentServerTime  time.Time                `json:"current_server_time,omitempty"`
 }
 
 // PriceHistory represents the current and previous price.

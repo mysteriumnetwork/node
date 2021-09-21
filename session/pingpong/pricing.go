@@ -62,7 +62,7 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 					},
 				},
 			},
-			CurrentValidUntil: time.Now().Add(-time.Hour * 1000),
+			CurrentValidUntil: time.Now().Truncate(0).UTC().Add(-time.Hour * 1000),
 		},
 		discoAPI: discoAPI,
 	}
@@ -135,12 +135,13 @@ func (p *Pricer) Subscribe(bus eventbus.Subscriber) error {
 }
 
 func (p *Pricer) getPricing() market.LatestPrices {
-	if time.Now().UTC().After(p.lastLoad.CurrentValidUntil) {
+	p.mut.Lock()
+	lastLoad := p.lastLoad
+	p.mut.Unlock()
+
+	if time.Now().Truncate(0).UTC().After(lastLoad.CurrentValidUntil) {
 		p.loadPricing()
 	}
-
-	p.mut.Lock()
-	defer p.mut.Unlock()
 
 	return p.lastLoad
 }
@@ -148,6 +149,8 @@ func (p *Pricer) getPricing() market.LatestPrices {
 func (p *Pricer) loadPricing() {
 	p.mut.Lock()
 	defer p.mut.Unlock()
+
+	now := time.Now().Truncate(0).UTC()
 	prices, err := p.discoAPI.GetPricing()
 	if err != nil {
 		log.Err(err).Msg("could not load pricing")
@@ -157,7 +160,15 @@ func (p *Pricer) loadPricing() {
 		log.Info().Msg("pricing info empty")
 		return
 	}
-	log.Info().Msg("pricing info loaded")
+
+	// shift clock skew
+	delta := now.Sub(prices.CurrentServerTime)
+	prices.CurrentValidUntil = prices.CurrentValidUntil.Add(delta)
+	prices.PreviousValidUntil = prices.PreviousValidUntil.Add(delta)
+	// equalize
+	prices.CurrentServerTime = now
+
+	log.Info().Msgf("pricing info loaded. expires @ %v", prices.CurrentValidUntil)
 	p.lastLoad = prices
 }
 
