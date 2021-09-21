@@ -1,0 +1,25 @@
+syntax = "proto3";
+package pb;
+
+option go_package = ".;pb";
+
+
+message Location {
+    string country = 1;
+    uint32 ip_type = 2;
+}
+
+message Quality {
+    float quality = 1;
+    float latency = 2;
+    float bandwidth = 3;
+}
+
+message Proposal {
+    int32 compatibility = 2;
+    bytes provider_id = 3;
+    string service_type = 4;
+    Location location = 5;
+    repeated string contacts = 6;
+    Quality quality = 7;
+}

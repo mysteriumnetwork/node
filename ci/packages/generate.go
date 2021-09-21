@@ -48,6 +48,9 @@ func GenerateProtobuf() error {
 	if err := sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/session.proto"); err != nil {
 		return err
 	}
+	if err := sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/proposal.proto"); err != nil {
+		return err
+	}
 	return sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/payment.proto")
 }
 
