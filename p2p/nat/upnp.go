@@ -72,6 +72,9 @@ func (up *upnpPort) PreparePorts() (ports []int, release func(), start StartPort
 	}
 
 	if !portMappingOk {
+		for _, r := range portsRelease {
+			r()
+		}
 		return nil, nil, nil, fmt.Errorf("failed to map port via UPnP")
 	}
 
@@ -80,6 +83,9 @@ func (up *upnpPort) PreparePorts() (ports []int, release func(), start StartPort
 	}
 
 	if err := checkAllPorts(ports); err != nil {
+		for _, r := range portsRelease {
+			r()
+		}
 		log.Debug().Err(err).Msgf("Failed to check UPnP ports %d globally", ports)
 		return nil, nil, nil, err
 	}
