@@ -586,8 +586,6 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 //     description: Bad Request error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-//   404:
-//     description: Not Found
 //   500:
 //     description: Internal server error
 //     schema:
