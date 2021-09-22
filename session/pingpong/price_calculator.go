@@ -21,9 +21,10 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/rs/zerolog/log"
 )
 
 // CalculatePaymentAmount calculates the required payment amount.
@@ -48,6 +49,7 @@ func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTrans
 	bc, _ := dataComponent.Int(nil)
 
 	total := new(big.Int).Add(tc, bc)
-	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v ", total, timeComponent, dataComponent)
+	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v. Transferred: %v, duration: %v. Price %v",
+		total, timeComponent, dataComponent, bytesTransferred.sum(), timePassed.Seconds(), price.String())
 	return total
 }
