@@ -18,44 +18,178 @@
 package router
 
 import (
+	"fmt"
 	"net"
-	"net/url"
+	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
-
-	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
-// AllowURLAccess adds exception to route traffic directly for specified URL (host part is usually taken).
-func AllowURLAccess(urls ...string) error {
-	for _, u := range urls {
-		parsed, err := url.Parse(u)
-		if err != nil {
-			log.Info().Err(err).Msgf("Failed to parse URL: %s", u)
-		}
+var gwCheckInterval = 5 * time.Second
 
-		addresses, err := net.LookupHost(parsed.Hostname())
-		if err != nil {
-			log.Info().Err(err).Msgf("Excluding URL from the routes: %s", parsed.Hostname())
-		}
+type manager struct {
+	mu   sync.Mutex
+	once sync.Once
 
-		for _, a := range addresses {
-			ipv4 := net.ParseIP(a)
-			err := netutil.ExcludeRoute(ipv4)
-			log.Info().Err(err).Msgf("Excluding URL address from the routes: %s -> %s", u, ipv4)
-		}
+	rules     []rule
+	currentGW net.IP
 
+	routingTable router
+
+	stop chan struct{}
+}
+
+type router interface {
+	discoverGateway() (net.IP, error)
+	excludeRule(ip, gw net.IP) error
+	deleteRule(ip, gw net.IP) error
+}
+
+type rule struct {
+	ip    net.IP
+	usage int
+}
+
+// NewManager creates a new instance of service that maintain routing table to match current state.
+func NewManager() *manager {
+	return &manager{
+		stop: make(chan struct{}),
+
+		routingTable: &routingTable{},
 	}
+}
+
+func (m *manager) ExcludeIP(ip net.IP) error {
+	m.ensureStarted()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	new := true
+
+	for i, rule := range m.rules {
+		if rule.ip.Equal(ip) {
+			m.rules[i].usage++
+
+			new = false
+
+			break
+		}
+	}
+
+	if !new {
+		return nil
+	}
+
+	if err := m.routingTable.excludeRule(ip, m.currentGW); err != nil {
+		return fmt.Errorf("failed to exclude rule: %w", err)
+	}
+
+	m.rules = append(m.rules, rule{
+		ip:    ip,
+		usage: 1,
+	})
+
 	return nil
 }
 
-// AllowIPAccess adds IP based exception to route traffic directly.
-func AllowIPAccess(ip string) error {
-	ipv4 := net.ParseIP(ip)
-	err := netutil.ExcludeRoute(ipv4)
-	if err != nil {
-		log.Info().Err(err).Msgf("Excluding IP address from the routes: %s", ipv4)
+func (m *manager) ensureStarted() {
+	m.once.Do(func() {
+		m.forceCheckGW()
+
+		go m.start()
+	})
+}
+
+func (m *manager) start() {
+	for {
+		select {
+		case <-time.After(gwCheckInterval):
+			m.checkGW()
+		case <-m.stop:
+			return
+		}
+	}
+}
+
+func (m *manager) Stop() {
+	if err := m.Clean(); err != nil {
+		log.Error().Err(err).Msg("Failed to clean routing rules")
 	}
 
+	close(m.stop)
+}
+
+func (m *manager) Clean() (lastErr error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if err := m.clean(); err != nil {
+		return fmt.Errorf("failed to clean routes: %w", err)
+	}
+
+	m.rules = nil
+
 	return nil
+}
+
+func (m *manager) clean() (lastErr error) {
+	for _, rule := range m.rules {
+		err := m.routingTable.deleteRule(rule.ip, m.currentGW)
+		if err != nil {
+			lastErr = err
+			log.Error().Err(err).Msgf("Failed to delete route: %+v", rule)
+		}
+	}
+
+	return lastErr
+}
+
+func (m *manager) apply(gw net.IP) (lastErr error) {
+	for _, rule := range m.rules {
+		err := m.routingTable.excludeRule(rule.ip, gw)
+		if err != nil {
+			lastErr = err
+			log.Error().Err(err).Msgf("Failed to delete route: %+v", rule)
+		}
+	}
+
+	m.currentGW = gw
+
+	return lastErr
+}
+
+func (m *manager) forceCheckGW() {
+	var currentGW net.IP
+
+	for currentGW == nil {
+		m.checkGW()
+
+		m.mu.Lock()
+		currentGW = m.currentGW
+		m.mu.Unlock()
+	}
+}
+
+func (m *manager) checkGW() {
+	gw, err := m.routingTable.discoverGateway()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to detect system default gateway, keeping old value")
+		return
+	}
+
+	if !m.currentGW.Equal(gw) {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+
+		log.Info().Msgf("Default gateway changed to %s, reconfiguring routes.", gw)
+
+		if err := m.clean(); err != nil {
+			log.Error().Err(err).Msg("Failed to clean routing rules")
+		}
+
+		if err := m.apply(gw); err != nil {
+			log.Error().Err(err).Msg("Failed to apply new routing rules")
+		}
+	}
 }

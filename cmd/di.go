@@ -447,6 +447,8 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}
 
+	router.Clean()
+
 	return nil
 }
 
