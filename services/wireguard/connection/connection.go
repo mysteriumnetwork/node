@@ -35,7 +35,6 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 type startConn func(conf wgcfg.DeviceConfig) (wg.ConnectionEndpoint, error)
@@ -235,6 +234,4 @@ func (c *Connection) Stop() {
 		close(c.stateCh)
 		close(c.done)
 	})
-
-	netutil.ClearStaleRoutes()
 }
