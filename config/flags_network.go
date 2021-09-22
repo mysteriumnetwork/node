@@ -96,6 +96,12 @@ var (
 		Usage: "Do not disconnect consumer on session fail to prevent traffic leaks",
 		Value: false,
 	}
+	// FlagAutoReconnect restore connection automatically once it failed.
+	FlagAutoReconnect = cli.BoolFlag{
+		Name:  "auto-reconnect",
+		Usage: "Restore connection automatically once it failed",
+		Value: false,
+	}
 	// FlagSTUNservers list of STUN server to be used to detect NAT type.
 	FlagSTUNservers = cli.StringSliceFlag{
 		Name:  "stun-servers",
@@ -145,6 +151,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagTestnet3,
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
+		&FlagAutoReconnect,
 		&FlagSTUNservers,
 		&FlagLocalServiceDiscovery,
 		&FlagUDPListenPorts,
@@ -167,6 +174,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
+	Current.ParseBoolFlag(ctx, FlagAutoReconnect)
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
 	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
 	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
