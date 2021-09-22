@@ -295,6 +295,30 @@ type ConsumerData struct {
 	IsOffchain       bool          `json:"IsOffchain"`
 }
 
+func (cd *ConsumerData) fillZerosIfBigIntNull() *ConsumerData {
+	if cd.Balance == nil {
+		cd.Balance = big.NewInt(0)
+	}
+
+	if cd.Settled == nil {
+		cd.Settled = big.NewInt(0)
+	}
+
+	if cd.Stake == nil {
+		cd.Stake = big.NewInt(0)
+	}
+
+	if cd.LatestPromise.Amount == nil {
+		cd.LatestPromise.Amount = big.NewInt(0)
+	}
+
+	if cd.LatestPromise.Fee == nil {
+		cd.LatestPromise.Fee = big.NewInt(0)
+	}
+
+	return cd
+}
+
 // LatestPromise represents the latest promise
 type LatestPromise struct {
 	ChainID   int64    `json:"ChainID"`
