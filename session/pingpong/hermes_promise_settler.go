@@ -529,19 +529,20 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 
 	// 1. calculate amount to withdraw - check balance on consumer channel
-	amountToWithdraw, err := aps.getWithdrawalAmountViaHermes(fromChainID, hermesID, providerID.ToCommonAddress())
+	data, err := aps.getHermesData(fromChainID, hermesID, providerID.ToCommonAddress())
 	if err != nil {
 		return err
 	}
 
-	// TODO: check if amount > fee
+	amountToWithdraw := new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
+
 	err = aps.validateWithdrawalAmount(amountToWithdraw)
 	if err != nil {
 		return err
 	}
 
 	// 2. issue a self promise
-	msg, err := aps.issueSelfPromise(fromChainID, amountToWithdraw, providerID, consumerChannelAddress, hermesID)
+	msg, err := aps.issueSelfPromise(fromChainID, amountToWithdraw, data.LatestPromise.Amount, providerID, consumerChannelAddress, hermesID)
 	if err != nil {
 		return err
 	}
@@ -682,13 +683,13 @@ func (aps *hermesPromiseSettler) payAndSettle(
 	return <-errCh
 }
 
-func (aps *hermesPromiseSettler) issueSelfPromise(chainID int64, amount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
+func (aps *hermesPromiseSettler) issueSelfPromise(chainID int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
 	r := aps.generateR()
 	agreementID := aps.generateAgreementID()
 	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, 1)
 	invoice.Provider = providerID.ToCommonAddress().Hex()
 
-	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), chainID, amount, big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
+	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), chainID, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could not create promise: %w", err)
 	}
@@ -721,7 +722,7 @@ func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
 	return new(big.Int).SetBytes(agreementID)
 }
 
-func (aps *hermesPromiseSettler) getWithdrawalAmountViaHermes(chainID int64, hermesID, identity common.Address) (*big.Int, error) {
+func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {
 	caller, err := aps.getHermesCaller(chainID, hermesID)
 	if err != nil {
 		return nil, err
@@ -733,12 +734,10 @@ func (aps *hermesPromiseSettler) getWithdrawalAmountViaHermes(chainID int64, her
 	}
 
 	if data.Balance.Cmp(big.NewInt(0)) <= 0 {
-		return nil, fmt.Errorf("Nothing to withdraw. Balance in channel %v is %v", data.ChannelID, data.Balance)
+		return nil, fmt.Errorf("nothing to withdraw. Balance in channel %v is %v", data.ChannelID, data.Balance)
 	}
 
-	log.Info().Msgf("withdrawal amount is %v in channel %v on chain %v", data.Balance.String(), data.ChannelID, chainID)
-
-	return data.Balance, nil
+	return data.fillZerosIfBigIntNull(), nil
 }
 
 func (aps *hermesPromiseSettler) settle(
