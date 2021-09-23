@@ -21,6 +21,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/node/nat"
@@ -32,17 +34,23 @@ import (
 type NATEndpoint struct {
 	stateProvider stateProvider
 	natProber     natProber
+	natTracker    nodeStatusProvider
 }
 
 type natProber interface {
 	Probe(context.Context) (nat.NATType, error)
 }
 
+type nodeStatusProvider interface {
+	Status() node.MonitoringStatus
+}
+
 // NewNATEndpoint creates and returns nat endpoint
-func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoint {
+func NewNATEndpoint(stateProvider stateProvider, natProber natProber, natTracker nodeStatusProvider) *NATEndpoint {
 	return &NATEndpoint{
 		stateProvider: stateProvider,
 		natProber:     natProber,
+		natTracker:    natTracker,
 	}
 }
 
@@ -60,18 +68,18 @@ func (ne *NATEndpoint) NATStatus(c *gin.Context) {
 	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, c.Writer)
 }
 
-// NATStatusV2 provides NAT configuration info
-// swagger:operation GET /v2/nat/status NAT
+// NodeStatus Status provides Node proposal status
+// swagger:operation GET /node/monitoring-status NODE
 // ---
-// summary: Shows NAT status
-// description: NAT status returns the last known NAT traversal status
+// summary: Provides Node proposal status
+// description: Node Status as seen by monitoring agent
 // responses:
 //   200:
-//     description: NAT status ("passed"/"failed"/"pending)
+//     description: Node status ("passed"/"failed"/"pending)
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatusV2(c *gin.Context) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().Nat.Status, c.Writer)
+func (ne *NATEndpoint) NodeStatus(c *gin.Context) {
+	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.natTracker.Status()}, c.Writer)
 }
 
 // NATType provides NAT type in terms of traversal capabilities
@@ -104,8 +112,8 @@ func (ne *NATEndpoint) NATType(c *gin.Context) {
 }
 
 // AddRoutesForNAT adds nat routes to given router
-func AddRoutesForNAT(stateProvider stateProvider, natProber natProber) func(*gin.Engine) error {
-	natEndpoint := NewNATEndpoint(stateProvider, natProber)
+func AddRoutesForNAT(stateProvider stateProvider, natProber natProber, natTracker nodeStatusProvider) func(*gin.Engine) error {
+	natEndpoint := NewNATEndpoint(stateProvider, natProber, natTracker)
 
 	return func(e *gin.Engine) error {
 		v1Group := e.Group("/nat")
@@ -114,9 +122,9 @@ func AddRoutesForNAT(stateProvider stateProvider, natProber natProber) func(*gin
 			v1Group.GET("/type", natEndpoint.NATType)
 		}
 
-		v2Group := e.Group("/v2/nat")
+		nodeGroup := e.Group("/node")
 		{
-			v2Group.GET("/status", natEndpoint.NATStatusV2)
+			nodeGroup.GET("/monitoring-status", natEndpoint.NodeStatus)
 		}
 		return nil
 	}
