@@ -133,11 +133,6 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	expectJSON := `
 {
   "payload": {
-	"nat": {
-		"status": {
-			"status": ""
-		}
-	},
     "nat_status": {
       "status": ""
     },
@@ -176,11 +171,6 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	expectJSON = `
 {
   "payload": {
-	"nat": {
-		"status": {
-			"status": ""
-		}
-	},
     "nat_status": {
       "status": "mass panic",
       "error": "cookie prices rise drastically"
@@ -227,11 +217,6 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	expectJSON = `
 {
   "payload": {
-    "nat": {
-      "status": {
-        "status": ""
-      }
-    },
     "nat_status": {
       "status": ""
     },
