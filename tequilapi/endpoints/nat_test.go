@@ -24,6 +24,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/gin-gonic/gin"
 
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
@@ -39,6 +41,14 @@ type mockNATProber struct {
 
 func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
 	return m.returnRes, m.returnErr
+}
+
+type mockNodeStatusTracker struct {
+	status node.MonitoringStatus
+}
+
+func (nodeStatusTracker *mockNodeStatusTracker) Status() node.MonitoringStatus {
+	return nodeStatusTracker.status
 }
 
 func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
@@ -60,7 +70,7 @@ func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 	router := gin.Default()
-	err = AddRoutesForNAT(provider, natProber)(router)
+	err = AddRoutesForNAT(provider, natProber, &mockNodeStatusTracker{})(router)
 	assert.NoError(t, err)
 
 	router.ServeHTTP(resp, req)
@@ -91,11 +101,48 @@ func Test_NATStatus_ReturnsTypeSuccessful_WithSuccessfulEvent(t *testing.T) {
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 	router := gin.Default()
-	err = AddRoutesForNAT(provider, natProber)(router)
+	err = AddRoutesForNAT(provider, natProber, &mockNodeStatusTracker{})(router)
 	assert.NoError(t, err)
 
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(t, string(expectedJSON), resp.Body.String())
+}
+
+func Test_NodeStatus(t *testing.T) {
+	// given:
+	mockStatusTracker := &mockNodeStatusTracker{}
+
+	router := gin.Default()
+	err := AddRoutesForNAT(&mockStateProvider{stateToReturn: stateEvent.State{}}, &mockNATProber{}, mockStatusTracker)(router)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodGet, "/node/monitoring-status", nil)
+	assert.Nil(t, err)
+
+	// when:
+	resp := httptest.NewRecorder()
+	mockStatusTracker.status = node.Pending
+	router.ServeHTTP(resp, req)
+
+	// then:
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	result, err := json.Marshal(contract.NodeStatusResponse{Status: node.Pending})
+	assert.NoError(t, err)
+	assert.JSONEq(t, string(result), resp.Body.String())
+
+	// when:
+	resp = httptest.NewRecorder()
+	mockStatusTracker.status = node.Passed
+	router.ServeHTTP(resp, req)
+
+	// then:
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	result, err = json.Marshal(contract.NodeStatusResponse{Status: node.Passed})
+	assert.NoError(t, err)
+	assert.JSONEq(t, string(result), resp.Body.String())
+
 }

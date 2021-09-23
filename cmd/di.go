@@ -192,7 +192,7 @@ type Dependencies struct {
 	ResidentCountry *identity.ResidentCountry
 
 	PayoutAddressStorage *payout.AddressStorage
-	NATStatusV2Keeper    *nat.StatusTrackerV2
+	NodeStatusTracker    *node.MonitoringStatusTracker
 }
 
 // Bootstrap initiates all container dependencies
@@ -592,14 +592,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
-	sessionProviderFunc := func(providerID string) (results []nat.Session) {
+	sessionProviderFunc := func(providerID string) (results []node.Session) {
 		for _, session := range di.QualityClient.ProviderSessions(providerID) {
-			results = append(results, nat.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
+			results = append(results, node.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
 		}
 		return results
 	}
 
-	di.NATStatusV2Keeper = nat.NewStatusTrackerV2(
+	di.NodeStatusTracker = node.NewMonitoringStatusTracker(
 		sessionProviderFunc,
 		di.IdentityManager,
 		di.EventBus,
