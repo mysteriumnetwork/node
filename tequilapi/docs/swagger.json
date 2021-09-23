@@ -1331,6 +1331,21 @@
         }
       }
     },
+    "/node/monitoring-status": {
+      "get": {
+        "description": "Node Status as seen by monitoring agent",
+        "summary": "Provides Node proposal status",
+        "operationId": "NODE",
+        "responses": {
+          "200": {
+            "description": "Node status (\"passed\"/\"failed\"/\"pending)",
+            "schema": {
+              "$ref": "#/definitions/NATStatusDTO"
+            }
+          }
+        }
+      }
+    },
     "/payment-order-currencies": {
       "get": {
         "description": "Gets all possible currencies that can be used for payments",
@@ -2376,21 +2391,6 @@
         }
       }
     },
-    "/v2/nat/status": {
-      "get": {
-        "description": "NAT status returns the last known NAT traversal status",
-        "summary": "Shows NAT status",
-        "operationId": "NAT",
-        "responses": {
-          "200": {
-            "description": "NAT status (\"passed\"/\"failed\"/\"pending)",
-            "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
-            }
-          }
-        }
-      }
-    },
     "/v2/payment-order-gateways": {
       "get": {
         "description": "Returns gateway configuration including supported currencies, minimum amounts, etc.",
@@ -3238,6 +3238,11 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "MonitoringStatus": {
+      "description": "MonitoringStatus enum",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
+    },
     "NATStatusDTO": {
       "description": "NATStatusDTO gives information about NAT traversal success or failure",
       "type": "object",
@@ -3268,6 +3273,16 @@
         },
         "type": {
           "$ref": "#/definitions/NATType"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "NodeStatusResponse": {
+      "description": "NodeStatusResponse a node status reflects monitoring agent POV on node availability",
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/MonitoringStatus"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
