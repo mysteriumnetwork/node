@@ -15,35 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package node
 
 import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/node"
-
 	"github.com/mysteriumnetwork/node/core"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-// NATStatusV2 enum
-// TODO: V2 suffix should be removed once previous tracker is removed
-type NATStatusV2 string
+// MonitoringStatus enum
+type MonitoringStatus string
 
 const (
 	// Passed enum
-	Passed NATStatusV2 = "passed"
+	Passed MonitoringStatus = "passed"
 	// Failed enum
-	Failed NATStatusV2 = "failed"
+	Failed MonitoringStatus = "failed"
 	// Pending enum
-	Pending NATStatusV2 = "pending"
+	Pending MonitoringStatus = "pending"
 )
-
-// AppTopicNATStatusUpdate nat status update topic for event bus
-const AppTopicNATStatusUpdate = "AppTopicNATStatusUpdate"
 
 type currentIdentity interface {
 	GetUnlockedIdentity() (identity.Identity, bool)
@@ -63,15 +56,10 @@ type Session struct {
 	MonitoringFailed bool
 }
 
-// V2NatStatusEvent nat status event
-type V2NatStatusEvent struct {
-	Status NATStatusV2
-}
-
-// StatusTrackerV2 tracks NAT status for service
-type StatusTrackerV2 struct {
+// MonitoringStatusTracker tracks NAT status for service
+type MonitoringStatusTracker struct {
 	lock   sync.Mutex
-	status NATStatusV2
+	status MonitoringStatus
 
 	publisher publisher
 
@@ -81,68 +69,40 @@ type StatusTrackerV2 struct {
 	pollInterval time.Duration
 }
 
-// NewStatusTrackerV2 constructor
-func NewStatusTrackerV2(
+// NewMonitoringStatusTracker constructor
+func NewMonitoringStatusTracker(
 	providerSessions ProviderSessions,
 	currentIdentity currentIdentity,
 	publisher publisher,
-	options node.OptionsNATStatusTrackerV2,
-) *StatusTrackerV2 {
+	options OptionsNATStatusTrackerV2,
+) *MonitoringStatusTracker {
 	validatedInterval := options.PollInterval
 	if validatedInterval < time.Minute {
 		validatedInterval = time.Minute
 	}
-	keeper := &StatusTrackerV2{
+	keeper := &MonitoringStatusTracker{
 		providerSessions: providerSessions,
 		currentIdentity:  currentIdentity,
 		publisher:        publisher,
 		pollInterval:     validatedInterval,
 	}
-	// consumers don't need service NAT status
-	if !config.GetBool(config.FlagConsumer) {
-		keeper.startPolling()
-	}
 	return keeper
 }
 
-func (k *StatusTrackerV2) startPolling() {
-	go func() {
-		for {
-			k.updateAndAnnounce()
-			time.Sleep(k.pollInterval)
-		}
-	}()
-}
-
-func (k *StatusTrackerV2) updateAndAnnounce() {
+// Status retrieves and resolved monitoring status from quality oracle
+func (k *MonitoringStatusTracker) Status() MonitoringStatus {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	id, ok := k.currentIdentity.GetUnlockedIdentity()
-	prevStatus := k.status
+
 	if ok {
-		k.status = resolveNATStatus(k.providerSessions(id.Address))
-	} else {
-		k.status = Pending
+		return resolveMonitoringStatus(k.providerSessions(id.Address))
 	}
-	if prevStatus != k.status {
-		k.publisher.Publish(AppTopicNATStatusUpdate, V2NatStatusEvent{Status: k.status})
-	}
-}
 
-// StatusForce force update status and return current result
-func (k *StatusTrackerV2) StatusForce() NATStatusV2 {
-	k.updateAndAnnounce()
 	return k.status
 }
 
-// Status return current status
-func (k *StatusTrackerV2) Status() NATStatusV2 {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-	return k.status
-}
-
-func resolveNATStatus(sessions []Session) NATStatusV2 {
+func resolveMonitoringStatus(sessions []Session) MonitoringStatus {
 	wgSession, ok := findWireGuard(sessions)
 	if !ok {
 		return Pending
