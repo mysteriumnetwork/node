@@ -175,7 +175,7 @@ var (
 	FlagTequilapiAllowedHostnames = cli.StringFlag{
 		Name:  "tequilapi.allowed-hostnames",
 		Usage: "Comma separated list of allowed domains. Prepend value with dot for wildcard mask",
-		Value: ".localhost",
+		Value: ".localhost, localhost, .localdomain",
 	}
 	// FlagTequilapiPort port for listening for incoming API requests.
 	FlagTequilapiPort = cli.IntFlag{

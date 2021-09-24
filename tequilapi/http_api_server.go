@@ -65,6 +65,7 @@ func NewServer(
 	g.Use(middlewares.ApplyCacheConfigMiddleware)
 	g.Use(gin.Recovery())
 	g.Use(cors.New(corsConfig))
+	g.Use(middlewares.NewHostFilter())
 
 	for _, h := range handlers {
 		err := h(g)
