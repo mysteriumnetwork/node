@@ -232,7 +232,10 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 
 func (it *InvoiceTracker) generateAgreementID() {
 	agreementID := make([]byte, 32)
-	crand.Read(agreementID)
+	_, err := crand.Read(agreementID)
+	if err != nil {
+		panic(err)
+	}
 	it.agreementID = new(big.Int).SetBytes(agreementID)
 }
 
