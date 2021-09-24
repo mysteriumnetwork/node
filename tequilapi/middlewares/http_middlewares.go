@@ -25,6 +25,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/utils/domain"
 )
 
 // ApplyCacheConfigMiddleware forces no caching policy via "Cache-control" header
@@ -32,38 +33,12 @@ func ApplyCacheConfigMiddleware(ctx *gin.Context) {
 	ctx.Writer.Header().Set("Cache-control", strings.Join([]string{"no-cache", "no-store", "must-revalidate"}, ", "))
 }
 
-func normalizeHostname(hostname string) string {
-	return strings.ToLower(
-		strings.TrimRight(
-			strings.TrimSpace(hostname),
-			".",
-		),
-	)
-}
-
 // NewHostFilter returns instance of middleware allowing only requests
 // with allowed domains in Host header
 func NewHostFilter() func(*gin.Context) {
-	domainList := strings.Split(config.GetString(config.FlagTequilapiAllowedHostnames), ",")
-	exactList := make(map[string]struct{})
-	suffixList := make(map[string]struct{})
-	for _, domain := range domainList {
-		domain = strings.TrimSpace(domain)
-		normalized := normalizeHostname(domain)
-		if strings.Index(domain, ".") == 0 {
-			// suffix pattern
-			suffixList[strings.TrimLeft(normalized, ".")] = struct{}{}
-		} else {
-			// exact domain name
-			exactList[normalized] = struct{}{}
-		}
-	}
+	whitelist := domain.NewWhitelist(
+		strings.Split(config.GetString(config.FlagTequilapiAllowedHostnames), ","))
 	return func(c *gin.Context) {
-		// handle special case of root suffix (".")
-		if _, found := suffixList[""] ; found {
-			return
-		}
-
 		host := c.Request.Host
 		if host == "" {
 			return
@@ -79,18 +54,8 @@ func NewHostFilter() func(*gin.Context) {
 			return
 		}
 
-		hostname = normalizeHostname(hostname)
-
-		// check for exact match
-		if _, found := exactList[hostname]; found {
+		if whitelist.Match(hostname) {
 			return
-		}
-
-		// check for suffix match
-		for needle := strings.Split(hostname, ".")[1:] ; len(needle) > 0 ; needle = needle[1:] {
-			if _, found := suffixList[strings.Join(needle, ".")] ; found {
-				return
-			}
 		}
 
 		c.AbortWithStatus(http.StatusForbidden)
