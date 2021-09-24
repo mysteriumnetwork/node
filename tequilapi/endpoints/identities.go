@@ -586,8 +586,6 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 //     description: Bad Request error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-//   404:
-//     description: Not Found
 //   500:
 //     description: Internal server error
 //     schema:
@@ -600,7 +598,7 @@ func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
 	addr, err := ia.addressStorage.Address(id)
 	if err != nil {
 		if errors.Is(err, payout.ErrNotFound) {
-			utils.SendError(w, err, http.StatusNotFound)
+			utils.WriteAsJSON(contract.PayoutAddressRequest{}, w)
 			return
 		}
 		utils.SendError(w, err, http.StatusInternalServerError)

@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/spf13/cast"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -110,6 +112,10 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 	resp := c.Writer
 
 	chainID := config.GetInt64(config.FlagChainID)
+	if qcid, err := cast.ToInt64E(c.Query("chain_id")); err == nil {
+		chainID = qcid
+	}
+
 	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
