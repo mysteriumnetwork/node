@@ -18,9 +18,6 @@
 package node
 
 import (
-	"sync"
-	"time"
-
 	"github.com/mysteriumnetwork/node/core"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -42,10 +39,6 @@ type currentIdentity interface {
 	GetUnlockedIdentity() (identity.Identity, bool)
 }
 
-type publisher interface {
-	Publish(topic string, data interface{})
-}
-
 // ProviderSessions should return provider session monitoring state
 type ProviderSessions func(providerID string) []Session
 
@@ -56,50 +49,33 @@ type Session struct {
 	MonitoringFailed bool
 }
 
-// MonitoringStatusTracker tracks NAT status for service
+// MonitoringStatusTracker tracks node status for service
 type MonitoringStatusTracker struct {
-	lock   sync.Mutex
-	status MonitoringStatus
-
-	publisher publisher
-
 	providerSessions ProviderSessions
 	currentIdentity  currentIdentity
-
-	pollInterval time.Duration
 }
 
 // NewMonitoringStatusTracker constructor
 func NewMonitoringStatusTracker(
 	providerSessions ProviderSessions,
 	currentIdentity currentIdentity,
-	publisher publisher,
-	options OptionsNATStatusTrackerV2,
 ) *MonitoringStatusTracker {
-	validatedInterval := options.PollInterval
-	if validatedInterval < time.Minute {
-		validatedInterval = time.Minute
-	}
 	keeper := &MonitoringStatusTracker{
 		providerSessions: providerSessions,
 		currentIdentity:  currentIdentity,
-		publisher:        publisher,
-		pollInterval:     validatedInterval,
 	}
 	return keeper
 }
 
 // Status retrieves and resolved monitoring status from quality oracle
 func (k *MonitoringStatusTracker) Status() MonitoringStatus {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	id, ok := k.currentIdentity.GetUnlockedIdentity()
 
 	if ok {
 		return resolveMonitoringStatus(k.providerSessions(id.Address))
 	}
 
-	return k.status
+	return Pending
 }
 
 func resolveMonitoringStatus(sessions []Session) MonitoringStatus {

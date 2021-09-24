@@ -34,7 +34,6 @@ import (
 type NATEndpoint struct {
 	stateProvider stateProvider
 	natProber     natProber
-	natTracker    nodeStatusProvider
 }
 
 type natProber interface {
@@ -46,11 +45,10 @@ type nodeStatusProvider interface {
 }
 
 // NewNATEndpoint creates and returns nat endpoint
-func NewNATEndpoint(stateProvider stateProvider, natProber natProber, natTracker nodeStatusProvider) *NATEndpoint {
+func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoint {
 	return &NATEndpoint{
 		stateProvider: stateProvider,
 		natProber:     natProber,
-		natTracker:    natTracker,
 	}
 }
 
@@ -66,20 +64,6 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber, natTracker
 //       "$ref": "#/definitions/NATStatusDTO"
 func (ne *NATEndpoint) NATStatus(c *gin.Context) {
 	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, c.Writer)
-}
-
-// NodeStatus Status provides Node proposal status
-// swagger:operation GET /node/monitoring-status NODE
-// ---
-// summary: Provides Node proposal status
-// description: Node Status as seen by monitoring agent
-// responses:
-//   200:
-//     description: Node status ("passed"/"failed"/"pending)
-//     schema:
-//       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NodeStatus(c *gin.Context) {
-	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.natTracker.Status()}, c.Writer)
 }
 
 // NATType provides NAT type in terms of traversal capabilities
@@ -112,19 +96,14 @@ func (ne *NATEndpoint) NATType(c *gin.Context) {
 }
 
 // AddRoutesForNAT adds nat routes to given router
-func AddRoutesForNAT(stateProvider stateProvider, natProber natProber, natTracker nodeStatusProvider) func(*gin.Engine) error {
-	natEndpoint := NewNATEndpoint(stateProvider, natProber, natTracker)
+func AddRoutesForNAT(stateProvider stateProvider, natProber natProber) func(*gin.Engine) error {
+	natEndpoint := NewNATEndpoint(stateProvider, natProber)
 
 	return func(e *gin.Engine) error {
 		v1Group := e.Group("/nat")
 		{
 			v1Group.GET("/status", natEndpoint.NATStatus)
 			v1Group.GET("/type", natEndpoint.NATType)
-		}
-
-		nodeGroup := e.Group("/node")
-		{
-			nodeGroup.GET("/monitoring-status", natEndpoint.NodeStatus)
 		}
 		return nil
 	}
