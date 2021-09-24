@@ -19,10 +19,11 @@ package port
 
 import (
 	"math/rand"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/utils/random"
 )
 
 // Pool hands out ports for service use
@@ -42,7 +43,7 @@ func NewFixedRangePool(r Range) *Pool {
 	return &Pool{
 		start:    r.Start,
 		capacity: r.Capacity(),
-		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:     random.NewTimeSeededRand(),
 	}
 }
 
