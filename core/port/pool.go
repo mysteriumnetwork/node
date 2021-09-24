@@ -48,26 +48,16 @@ func NewFixedRangePool(r Range) *Pool {
 }
 
 // Acquire returns an unused port in pool's range
-func (pool *Pool) Acquire() (port Port, err error) {
-	p := pool.randomPort()
-	available, err := available(p)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not acquire port")
-	}
-	if !available {
-		p, err = pool.seekAvailablePort()
-	}
+func (pool *Pool) Acquire() (Port, error) {
+	p, err := pool.seekAvailablePort()
 	log.Info().Err(err).Msgf("Supplying port %d", p)
-	return Port(p), errors.Wrap(err, "could not acquire port")
-}
-
-func (pool *Pool) randomPort() int {
-	return pool.start + pool.rand.Intn(pool.capacity)
+	return Port(p), err
 }
 
 func (pool *Pool) seekAvailablePort() (int, error) {
+	randomOffset := pool.rand.Intn(pool.capacity)
 	for i := 0; i < pool.capacity; i++ {
-		p := pool.start + i
+		p := pool.start + (randomOffset+i)%pool.capacity
 		available, err := available(p)
 		if available || err != nil {
 			return p, err
