@@ -582,16 +582,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapPilvytis(nodeOptions)
 
-	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
-	if err != nil {
-		return err
-	}
-
-	sleepNotifier := sleep.NewNotifier(di.ConnectionManager, di.EventBus)
-	sleepNotifier.Subscribe()
-
-	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
-
 	sessionProviderFunc := func(providerID string) (results []node.Session) {
 		for _, session := range di.QualityClient.ProviderSessions(providerID) {
 			results = append(results, node.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
@@ -602,9 +592,17 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.NodeStatusTracker = node.NewMonitoringStatusTracker(
 		sessionProviderFunc,
 		di.IdentityManager,
-		di.EventBus,
-		nodeOptions.NATStatusTrackerV2,
 	)
+
+	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
+	if err != nil {
+		return err
+	}
+
+	sleepNotifier := sleep.NewNotifier(di.ConnectionManager, di.EventBus)
+	sleepNotifier.Subscribe()
+
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
 	return nil
 }
