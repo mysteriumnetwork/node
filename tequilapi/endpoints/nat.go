@@ -21,6 +21,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/node/nat"
@@ -36,6 +38,10 @@ type NATEndpoint struct {
 
 type natProber interface {
 	Probe(context.Context) (nat.NATType, error)
+}
+
+type nodeStatusProvider interface {
+	Status() node.MonitoringStatus
 }
 
 // NewNATEndpoint creates and returns nat endpoint
@@ -58,20 +64,6 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 //       "$ref": "#/definitions/NATStatusDTO"
 func (ne *NATEndpoint) NATStatus(c *gin.Context) {
 	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, c.Writer)
-}
-
-// NATStatusV2 provides NAT configuration info
-// swagger:operation GET /v2/nat/status NAT
-// ---
-// summary: Shows NAT status
-// description: NAT status returns the last known NAT traversal status
-// responses:
-//   200:
-//     description: NAT status ("passed"/"failed"/"pending)
-//     schema:
-//       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatusV2(c *gin.Context) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().Nat.Status, c.Writer)
 }
 
 // NATType provides NAT type in terms of traversal capabilities
@@ -112,11 +104,6 @@ func AddRoutesForNAT(stateProvider stateProvider, natProber natProber) func(*gin
 		{
 			v1Group.GET("/status", natEndpoint.NATStatus)
 			v1Group.GET("/type", natEndpoint.NATType)
-		}
-
-		v2Group := e.Group("/v2/nat")
-		{
-			v2Group.GET("/status", natEndpoint.NATStatusV2)
 		}
 		return nil
 	}

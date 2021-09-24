@@ -83,8 +83,6 @@ type Options struct {
 
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
-
-	NATStatusTrackerV2 OptionsNATStatusTrackerV2
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -187,9 +185,6 @@ func GetOptions() *Options {
 		},
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
-		NATStatusTrackerV2: OptionsNATStatusTrackerV2{
-			PollInterval: config.GetDuration(config.FlagNATStatusPollInterval),
-		},
 	}
 }
 
