@@ -248,8 +248,8 @@ func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
 		parsedResponse,
 	)
 	assert.NotEqual(t, session.NewFilter(), ssm.calledWithFilter)
-	assert.Equal(t, time.Now().Add(-30*24*time.Hour).Day(), ssm.calledWithFilter.StartedFrom.Day())
-	assert.Equal(t, time.Now().Day(), ssm.calledWithFilter.StartedTo.Day())
+	assert.Equal(t, time.Now().UTC().Add(-30*24*time.Hour).Day(), ssm.calledWithFilter.StartedFrom.Day())
+	assert.Equal(t, time.Now().UTC().Day(), ssm.calledWithFilter.StartedTo.Day())
 }
 
 type sessionStorageMock struct {

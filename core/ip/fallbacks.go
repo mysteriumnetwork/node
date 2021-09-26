@@ -20,12 +20,11 @@ package ip
 import (
 	"errors"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/utils/random"
 )
 
 // IPFallbackAddresses represents the various services we can use to fetch our public IP.
@@ -42,11 +41,12 @@ var IPFallbackAddresses = []string{
 	"http://whatismyip.akamai.com/",
 }
 
+var rng = random.NewTimeSeededRand()
+
 func shuffleStringSlice(slice []string) []string {
 	tmp := make([]string, len(slice))
 	copy(tmp, slice)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(tmp), func(i, j int) {
+	rng.Shuffle(len(tmp), func(i, j int) {
 		tmp[i], tmp[j] = tmp[j], tmp[i]
 	})
 	return tmp

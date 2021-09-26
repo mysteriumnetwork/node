@@ -19,11 +19,11 @@ package pingpong
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -130,9 +130,6 @@ type hermesPromiseSettler struct {
 	settleQueue  chan receivedPromise
 	stop         chan struct{}
 	once         sync.Once
-
-	rnd     *rand.Rand
-	rndLock sync.Mutex
 }
 
 // HermesPromiseSettlerConfig configures the hermes promise settler accordingly.
@@ -164,7 +161,6 @@ func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorag
 		settleQueue: make(chan receivedPromise, 5),
 		stop:        make(chan struct{}),
 		transactor:  transactor,
-		rnd:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -705,20 +701,20 @@ func (aps *hermesPromiseSettler) issueSelfPromise(chainID int64, amount, previou
 }
 
 func (aps *hermesPromiseSettler) generateR() []byte {
-	aps.rndLock.Lock()
-	defer aps.rndLock.Unlock()
-
 	r := make([]byte, 32)
-	aps.rnd.Read(r)
+	_, err := rand.Read(r)
+	if err != nil {
+		panic(err)
+	}
 	return r
 }
 
 func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
-	aps.rndLock.Lock()
-	defer aps.rndLock.Unlock()
-
 	agreementID := make([]byte, 32)
-	aps.rnd.Read(agreementID)
+	_, err := rand.Read(agreementID)
+	if err != nil {
+		panic(err)
+	}
 	return new(big.Int).SetBytes(agreementID)
 }
 
