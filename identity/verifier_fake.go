@@ -22,7 +22,7 @@ package identity
 type VerifierFake struct{}
 
 // Verify given message and signature by returning true on success
-func (verifier *VerifierFake) Verify(message []byte, signature Signature) bool {
+func (verifier *VerifierFake) Verify(message []byte, signature Signature) (bool, Identity) {
 	signatureExpected := messageFakeHash(message)
-	return signature.EqualsTo(SignatureBytes(signatureExpected))
+	return signature.EqualsTo(SignatureBytes(signatureExpected)), Identity{}
 }
