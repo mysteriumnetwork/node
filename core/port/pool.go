@@ -68,14 +68,26 @@ func (pool *Pool) seekAvailablePort() (int, error) {
 
 // AcquireMultiple returns n unused ports from pool's range.
 func (pool *Pool) AcquireMultiple(n int) (ports []Port, err error) {
-	for i := 0; i < n; i++ {
-		p, err := pool.Acquire()
-		if err != nil {
-			return ports, err
-		}
-
-		ports = append(ports, p)
+	if n > pool.capacity {
+		return nil, errors.New("requested more ports than pool capacity")
 	}
 
-	return ports, nil
+	portSet := make(map[Port]struct{})
+	for i := 0; i < 10*n && len(portSet) < n; i++ {
+		p, err := pool.Acquire()
+		if err != nil {
+			continue
+		}
+
+		portSet[p] = struct{}{}
+
+		if len(portSet) == n {
+			for port := range portSet {
+				ports = append(ports, port)
+			}
+			return ports, nil
+		}
+	}
+
+	return nil, errors.New("too many collisions")
 }
