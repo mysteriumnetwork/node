@@ -92,15 +92,16 @@ func packSignedMsg(signer identity.SignerFactory, signerID identity.Identity, ms
 }
 
 // unpackSignedMsg verifies and unmarshal bytes to signed message.
-func unpackSignedMsg(verifier identity.Verifier, b []byte) (*pb.P2PSignedMsg, error) {
+func unpackSignedMsg(verifier identity.Verifier, b []byte) (*pb.P2PSignedMsg, identity.Identity, error) {
 	var signedMsg pb.P2PSignedMsg
 	if err := proto.Unmarshal(b, &signedMsg); err != nil {
-		return nil, err
+		return nil, identity.Identity{}, err
 	}
-	if ok := verifier.Verify(signedMsg.Data, identity.SignatureBytes(signedMsg.Signature)); !ok {
-		return nil, errors.New("message signature is invalid")
+	ok, id := verifier.Verify(signedMsg.Data, identity.SignatureBytes(signedMsg.Signature))
+	if !ok {
+		return nil, id, errors.New("message signature is invalid")
 	}
-	return &signedMsg, nil
+	return &signedMsg, id, nil
 }
 
 // encryptConnConfigMsg encrypts proto message and returns bytes.

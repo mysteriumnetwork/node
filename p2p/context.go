@@ -36,6 +36,7 @@ type defaultContext struct {
 	req         *Message
 	res         *Message
 	publicError error
+	peerID      identity.Identity
 }
 
 func (d *defaultContext) Request() *Message {

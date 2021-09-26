@@ -142,6 +142,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 	}
 	channel.setTracer(tracer)
 	channel.setServiceConn(conn2)
+	channel.setPeerID(providerID)
 	channel.launchReadSendLoops()
 	config.tracer.EndStage(traceAck)
 
@@ -193,7 +194,7 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	}
 
 	// Parse provider response with public key and encrypted and signed connection config.
-	exchangeMsgReplySignedMsg, err := unpackSignedMsg(m.verifierFactory(providerID), exchangeMsgBrokerReply)
+	exchangeMsgReplySignedMsg, _, err := unpackSignedMsg(m.verifierFactory(providerID), exchangeMsgBrokerReply)
 	if err != nil {
 		return nil, fmt.Errorf("could not unpack peer signed message: %w", err)
 	}
