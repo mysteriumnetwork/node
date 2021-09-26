@@ -412,7 +412,12 @@ func (c *channel) handleRequest(msg *transportMsg) {
 		return
 	}
 
-	ctx := defaultContext{req: &Message{Data: msg.data}}
+	ctx := defaultContext{
+		req: &Message{
+			Data: msg.data,
+		},
+		peerID: c.peerID,
+	}
 	err := handler(&ctx)
 	if err != nil {
 		log.Err(err).Msgf("Handler %q internal error", msg.topic)

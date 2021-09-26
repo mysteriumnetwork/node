@@ -362,7 +362,7 @@ func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel)
 			return err
 		}
 
-		log.Debug().Msgf("Received p2p keepalive ping with SessionID=%s", ping.SessionID)
+		log.Debug().Msgf("Received p2p keepalive ping with SessionID=%s from %s", ping.SessionID, c.PeerID().ToCommonAddress())
 		return c.OK()
 	})
 
