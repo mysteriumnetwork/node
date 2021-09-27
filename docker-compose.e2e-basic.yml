@@ -335,6 +335,7 @@ services:
       --firewall.protected.networks=""
       --broker-address=broker
       --tequilapi.address=0.0.0.0
+      --tequilapi.allowed-hostnames=.
       --api.address=http://discovery:8080/api/v3
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
@@ -396,6 +397,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
+      --tequilapi.allowed-hostnames=.
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
@@ -445,6 +447,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
+      --tequilapi.allowed-hostnames=.
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
@@ -494,6 +497,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
+      --tequilapi.allowed-hostnames=.
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
@@ -543,6 +547,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
+      --tequilapi.allowed-hostnames=.
       --api.address=http://discovery:8080/api/v3
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545

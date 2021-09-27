@@ -171,6 +171,12 @@ var (
 		Usage: "IP address to bind API to",
 		Value: "127.0.0.1",
 	}
+	// FlagTequilapiAllowedHostnames Restrict hostnames in requests' Host header to following domains.
+	FlagTequilapiAllowedHostnames = cli.StringFlag{
+		Name:  "tequilapi.allowed-hostnames",
+		Usage: "Comma separated list of allowed domains. Prepend value with dot for wildcard mask",
+		Value: ".localhost, localhost, .localdomain",
+	}
 	// FlagTequilapiPort port for listening for incoming API requests.
 	FlagTequilapiPort = cli.IntFlag{
 		Name:  "tequilapi.port",
@@ -322,6 +328,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagQualityType,
 		&FlagQualityAddress,
 		&FlagTequilapiAddress,
+		&FlagTequilapiAllowedHostnames,
 		&FlagTequilapiPort,
 		&FlagTequilapiUsername,
 		&FlagTequilapiPassword,
@@ -377,6 +384,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
 	Current.ParseStringFlag(ctx, FlagQualityType)
 	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
+	Current.ParseStringFlag(ctx, FlagTequilapiAllowedHostnames)
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
 	Current.ParseStringFlag(ctx, FlagTequilapiUsername)
 	Current.ParseStringFlag(ctx, FlagTequilapiPassword)
