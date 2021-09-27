@@ -18,11 +18,13 @@
 package port
 
 import (
+	"fmt"
 	"math/rand"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/utils/random"
 )
 
 // Pool hands out ports for service use
@@ -42,31 +44,21 @@ func NewFixedRangePool(r Range) *Pool {
 	return &Pool{
 		start:    r.Start,
 		capacity: r.Capacity(),
-		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:     random.NewTimeSeededRand(),
 	}
 }
 
 // Acquire returns an unused port in pool's range
-func (pool *Pool) Acquire() (port Port, err error) {
-	p := pool.randomPort()
-	available, err := available(p)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not acquire port")
-	}
-	if !available {
-		p, err = pool.seekAvailablePort()
-	}
+func (pool *Pool) Acquire() (Port, error) {
+	p, err := pool.seekAvailablePort()
 	log.Info().Err(err).Msgf("Supplying port %d", p)
-	return Port(p), errors.Wrap(err, "could not acquire port")
-}
-
-func (pool *Pool) randomPort() int {
-	return pool.start + pool.rand.Intn(pool.capacity)
+	return Port(p), err
 }
 
 func (pool *Pool) seekAvailablePort() (int, error) {
+	randomOffset := pool.rand.Intn(pool.capacity)
 	for i := 0; i < pool.capacity; i++ {
-		p := pool.start + i
+		p := pool.start + (randomOffset+i)%pool.capacity
 		available, err := available(p)
 		if available || err != nil {
 			return p, err
@@ -77,14 +69,26 @@ func (pool *Pool) seekAvailablePort() (int, error) {
 
 // AcquireMultiple returns n unused ports from pool's range.
 func (pool *Pool) AcquireMultiple(n int) (ports []Port, err error) {
-	for i := 0; i < n; i++ {
-		p, err := pool.Acquire()
-		if err != nil {
-			return ports, err
-		}
-
-		ports = append(ports, p)
+	if n > pool.capacity {
+		return nil, fmt.Errorf("requested more ports (%d) than pool capacity (%d)", n, pool.capacity)
 	}
 
-	return ports, nil
+	portSet := make(map[Port]struct{})
+	for i := 0; i < 10*n && len(portSet) < n; i++ {
+		p, err := pool.Acquire()
+		if err != nil {
+			continue
+		}
+
+		portSet[p] = struct{}{}
+
+		if len(portSet) == n {
+			for port := range portSet {
+				ports = append(ports, port)
+			}
+			return ports, nil
+		}
+	}
+
+	return nil, errors.New("too many collisions")
 }

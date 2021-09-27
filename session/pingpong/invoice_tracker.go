@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -128,9 +127,6 @@ type InvoiceTracker struct {
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
 
-	rnd     *rand.Rand
-	rndLock sync.Mutex
-
 	criticalInvoiceErrors chan error
 	lastInvoiceSent       time.Duration
 	invoiceDebounceRate   time.Duration
@@ -180,7 +176,6 @@ func NewInvoiceTracker(
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		maxNotSentExchangeMessages:     calculateMaxNotSentExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		invoicesSent:                   make(map[string]sentInvoice),
-		rnd:                            rand.New(rand.NewSource(time.Now().UnixNano())),
 		promiseErrors:                  make(chan error),
 		criticalInvoiceErrors:          make(chan error),
 		invoiceChannel:                 make(chan bool),
@@ -236,10 +231,11 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 }
 
 func (it *InvoiceTracker) generateAgreementID() {
-	it.rndLock.Lock()
-	defer it.rndLock.Unlock()
 	agreementID := make([]byte, 32)
-	it.rnd.Read(agreementID)
+	_, err := crand.Read(agreementID)
+	if err != nil {
+		panic(err)
+	}
 	it.agreementID = new(big.Int).SetBytes(agreementID)
 }
 
