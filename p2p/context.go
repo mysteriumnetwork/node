@@ -17,6 +17,10 @@
 
 package p2p
 
+import (
+	"github.com/mysteriumnetwork/node/identity"
+)
+
 // Context represents request context.
 type Context interface {
 	// Request returns message with data bytes.
@@ -30,12 +34,16 @@ type Context interface {
 
 	// Ok indicates that request was handled successfully
 	OK() error
+
+	// PeerID returns peer identity used to authenticate P2P channel
+	PeerID() identity.Identity
 }
 
 type defaultContext struct {
 	req         *Message
 	res         *Message
 	publicError error
+	peerID      identity.Identity
 }
 
 func (d *defaultContext) Request() *Message {
@@ -54,4 +62,8 @@ func (d *defaultContext) OkWithReply(msg *Message) error {
 
 func (d *defaultContext) OK() error {
 	return nil
+}
+
+func (d *defaultContext) PeerID() identity.Identity {
+	return d.peerID
 }

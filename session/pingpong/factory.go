@@ -133,6 +133,13 @@ func invoiceReceiver(channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
 		if err := c.Request().UnmarshalProto(&msg); err != nil {
 			return err
 		}
+		if identity.FromAddress(msg.Provider) != c.PeerID() {
+			return fmt.Errorf("wrong provider identity in invoice. Expected: %s, got: %s",
+				c.PeerID().ToCommonAddress(),
+				identity.FromAddress(msg.GetProvider()).ToCommonAddress(),
+			)
+		}
+
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentInvoice, msg.String())
 
 		agreementID, ok := new(big.Int).SetString(msg.GetAgreementID(), bigIntBase)

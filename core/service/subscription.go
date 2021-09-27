@@ -36,6 +36,13 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel) {
 		if err := c.Request().UnmarshalProto(&request); err != nil {
 			return err
 		}
+		if identity.FromAddress(request.GetConsumer().GetId()) != c.PeerID() {
+			return fmt.Errorf("wrong consumer identity in session create request. Expected: %s, got: %s",
+				c.PeerID().ToCommonAddress(),
+				identity.FromAddress(request.GetConsumer().GetId()),
+			)
+		}
+
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, request.String())
 
 		response, err := mng.Start(&request)
@@ -53,6 +60,13 @@ func subscribeSessionStatus(ch p2p.ChannelHandler, statusStorage connectivity.St
 		if err := c.Request().UnmarshalProto(&ss); err != nil {
 			return err
 		}
+		if identity.FromAddress(ss.GetConsumerID()) != c.PeerID() {
+			return fmt.Errorf("wrong consumer identity in session status request. Expected: %s, got: %s",
+				c.PeerID().ToCommonAddress(),
+				identity.FromAddress(ss.GetConsumerID()),
+			)
+		}
+
 		log.Debug().Msgf("Received P2P session status message for %q: %s", p2p.TopicSessionStatus, ss.String())
 
 		entry := connectivity.StatusEntry{
@@ -74,6 +88,13 @@ func subscribeSessionDestroy(mng *SessionManager, ch p2p.ChannelHandler) {
 		if err := c.Request().UnmarshalProto(&si); err != nil {
 			return err
 		}
+		if identity.FromAddress(si.GetConsumerID()) != c.PeerID() {
+			return fmt.Errorf("wrong consumer identity in session destroy request. Expected: %s, got: %s",
+				c.PeerID().ToCommonAddress(),
+				identity.FromAddress(si.GetConsumerID()),
+			)
+		}
+
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionDestroy, si.String())
 
 		go func() {
@@ -96,6 +117,13 @@ func subscribeSessionAcknowledge(mng *SessionManager, ch p2p.ChannelHandler) {
 		if err := c.Request().UnmarshalProto(&si); err != nil {
 			return err
 		}
+		if identity.FromAddress(si.GetConsumerID()) != c.PeerID() {
+			return fmt.Errorf("wrong consumer identity in session acknowledge request. Expected: %s, got: %s",
+				c.PeerID().ToCommonAddress(),
+				identity.FromAddress(si.GetConsumerID()),
+			)
+		}
+
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionAcknowledge, si.String())
 		consumerID := identity.FromAddress(si.GetConsumerID())
 		sessionID := si.GetSessionID()

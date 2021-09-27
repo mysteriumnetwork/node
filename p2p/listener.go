@@ -90,6 +90,7 @@ type p2pConnectConfig struct {
 	tracer           *trace.Tracer
 	upnpPortsRelease func()
 	start            nat.StartPorts
+	peerID           identity.Identity
 }
 
 func (c *p2pConnectConfig) peerIP() string {
@@ -190,6 +191,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		}
 		channel.setTracer(config.tracer)
 		channel.setServiceConn(conn2)
+		channel.setPeerID(config.peerID)
 		channel.setUpnpPortsRelease(config.upnpPortsRelease)
 
 		channelHandlers(channel)
@@ -233,7 +235,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	}
 
 	// Get initial peer exchange with it's public key.
-	signedMsg, err := unpackSignedMsg(m.verifier, msg.Data)
+	signedMsg, peerID, err := unpackSignedMsg(m.verifier, msg.Data)
 	if err != nil {
 		return fmt.Errorf("could not unpack signed msg: %w", err)
 	}
@@ -264,6 +266,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 		peerPublicIP:     "",
 		peerPorts:        nil,
 		start:            start,
+		peerID:           peerID,
 	}
 	m.setPendingConfig(p2pConnConfig)
 
@@ -327,7 +330,7 @@ func (m *listener) prepareLocalPorts(id string, tracer *trace.Tracer) (string, [
 }
 
 func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConfig, error) {
-	signedMsg, err := unpackSignedMsg(m.verifier, msg.Data)
+	signedMsg, peerID, err := unpackSignedMsg(m.verifier, msg.Data)
 	if err != nil {
 		return nil, fmt.Errorf("could not unpack signed msg: %w", err)
 	}
@@ -344,6 +347,9 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	config, ok := m.pendingConfig(peerPubKey)
 	if !ok {
 		return nil, fmt.Errorf("pending config not found for key %s", peerPubKey.Hex())
+	}
+	if peerID != config.peerID {
+		return nil, fmt.Errorf("acknowledged config signed by unexpected identity: %s", peerID.ToCommonAddress())
 	}
 
 	peerConfig, err := decryptConnConfigMsg(peerExchangeMsg.ConfigCiphertext, config.privateKey, peerPubKey)
@@ -365,6 +371,7 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 		tracer:           config.tracer,
 		upnpPortsRelease: config.upnpPortsRelease,
 		start:            config.start,
+		peerID:           config.peerID,
 	}, nil
 }
 

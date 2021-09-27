@@ -22,7 +22,7 @@ type VerifierFactory func(id Identity) Verifier
 
 // Verifier checks message's sanity
 type Verifier interface {
-	Verify(message []byte, signature Signature) bool
+	Verify(message []byte, signature Signature) (bool, Identity)
 }
 
 // NewVerifierSigned constructs Verifier which:
@@ -44,9 +44,9 @@ type verifierSigned struct {
 	extractor Extractor
 }
 
-func (verifier *verifierSigned) Verify(message []byte, signature Signature) bool {
-	_, err := verifier.extractor.Extract(message, signature)
-	return err == nil
+func (verifier *verifierSigned) Verify(message []byte, signature Signature) (bool, Identity) {
+	identity, err := verifier.extractor.Extract(message, signature)
+	return err == nil, identity
 }
 
 type verifierIdentity struct {
@@ -54,11 +54,11 @@ type verifierIdentity struct {
 	peerID    Identity
 }
 
-func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bool {
+func (verifier *verifierIdentity) Verify(message []byte, signature Signature) (bool, Identity) {
 	identity, err := verifier.extractor.Extract(message, signature)
 	if err != nil {
-		return false
+		return false, identity
 	}
 
-	return identity == verifier.peerID
+	return identity == verifier.peerID, identity
 }

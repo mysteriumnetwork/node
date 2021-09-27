@@ -31,6 +31,7 @@ import (
 	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/trace"
 )
@@ -146,6 +147,9 @@ type channel struct {
 	// performing initial NAT hole punching or manual conn. It is here just because it's more easy
 	// to pass it to services as p2p channel will be available anyway.
 	serviceConn *net.UDPConn
+
+	// peer identity authenticated by its signature in initial exchange
+	peerID identity.Identity
 
 	// topicHandlers is similar to HTTP Server handlers and is responsible for handling peer requests.
 	topicHandlers map[string]HandlerFunc
@@ -408,7 +412,12 @@ func (c *channel) handleRequest(msg *transportMsg) {
 		return
 	}
 
-	ctx := defaultContext{req: &Message{Data: msg.data}}
+	ctx := defaultContext{
+		req: &Message{
+			Data: msg.data,
+		},
+		peerID: c.peerID,
+	}
 	err := handler(&ctx)
 	if err != nil {
 		log.Err(err).Msgf("Handler %q internal error", msg.topic)
@@ -552,6 +561,13 @@ func (c *channel) setServiceConn(conn *net.UDPConn) {
 
 	log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", conn.LocalAddr().(*net.UDPAddr).Port, conn.RemoteAddr().(*net.UDPAddr).Port)
 	c.serviceConn = conn
+}
+
+func (c *channel) setPeerID(id identity.Identity) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.peerID = id
 }
 
 func (c *channel) setUpnpPortsRelease(release func()) {

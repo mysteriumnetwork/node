@@ -58,5 +58,6 @@ func Test_UnlockAndSignAndVerify(t *testing.T) {
 	)
 
 	verifier := NewVerifierIdentity(FromAddress(idAddress))
-	assert.True(t, verifier.Verify([]byte("Boop!"), signature))
+	res, _ := verifier.Verify([]byte("Boop!"), signature)
+	assert.True(t, res)
 }
