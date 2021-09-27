@@ -36,7 +36,8 @@ import (
 
 var corsConfig = cors.Config{
 	AllowWildcard: true,
-	AllowOrigins:  []string{"http://localhost:*"},
+	AllowOrigins:  []string{"http://localhost:*", "http://127.0.0.1:*"},
+	AllowHeaders:  []string{"cache-control"},
 }
 
 // APIServer interface represents control methods for underlying http api server
