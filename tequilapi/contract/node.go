@@ -15,11 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package contract
 
-import "time"
+import (
+	"github.com/mysteriumnetwork/node/core/node"
+)
 
-// OptionsNATStatusTrackerV2 options
-type OptionsNATStatusTrackerV2 struct {
-	PollInterval time.Duration
+// NodeStatusResponse a node status reflects monitoring agent POV on node availability
+// swagger:model NodeStatusResponse
+type NodeStatusResponse struct {
+	Status node.MonitoringStatus `json:"status"`
 }

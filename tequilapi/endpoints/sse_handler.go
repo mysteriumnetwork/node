@@ -213,8 +213,7 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NAT contract.Nat `json:"nat"`
-	// Deprecated: will be replaced by NAT
+	// Deprecated: TODO REMOVE
 	NATStatus     contract.NATStatusDTO        `json:"nat_status"`
 	Services      []contract.ServiceInfoDTO    `json:"service_info"`
 	Sessions      []contract.SessionDTO        `json:"sessions"`
@@ -261,7 +260,6 @@ func mapState(event stateEvent.State) stateRes {
 	}
 
 	res := stateRes{
-		NAT:           event.Nat,
 		NATStatus:     event.NATStatus,
 		Services:      event.Services,
 		Sessions:      sessionsRes,
