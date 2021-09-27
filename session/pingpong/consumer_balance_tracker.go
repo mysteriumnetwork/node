@@ -216,7 +216,7 @@ func (cbt *ConsumerBalanceTracker) GetBalance(chainID int64, id identity.Identit
 }
 
 func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after *big.Int) {
-	if before == after {
+	if before == nil || after == nil || before.Cmp(after) == 0 {
 		return
 	}
 
