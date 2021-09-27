@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 
@@ -35,8 +36,10 @@ import (
 )
 
 var corsConfig = cors.Config{
-	AllowWildcard: true,
-	AllowOrigins:  []string{"http://localhost:*"},
+	MaxAge: 30 * 24 * time.Hour,
+	AllowOriginFunc: func(_ string) bool {
+		return false
+	},
 }
 
 // APIServer interface represents control methods for underlying http api server
