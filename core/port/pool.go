@@ -18,6 +18,7 @@
 package port
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/pkg/errors"
@@ -69,7 +70,7 @@ func (pool *Pool) seekAvailablePort() (int, error) {
 // AcquireMultiple returns n unused ports from pool's range.
 func (pool *Pool) AcquireMultiple(n int) (ports []Port, err error) {
 	if n > pool.capacity {
-		return nil, errors.New("requested more ports than pool capacity")
+		return nil, fmt.Errorf("requested more ports (%d) than pool capacity (%d)", n, pool.capacity)
 	}
 
 	portSet := make(map[Port]struct{})
