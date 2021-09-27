@@ -33,11 +33,11 @@ func TestJob(t *testing.T) {
 	}
 	f := func(stop <-chan struct{}) {
 		for {
+			actualWork()
 			select {
 			case <-stop:
 				return
 			case <-time.After(time.Millisecond):
-				actualWork()
 			}
 		}
 	}
