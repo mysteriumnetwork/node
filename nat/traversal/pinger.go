@@ -42,19 +42,23 @@ const StageName = "hole_punching"
 const (
 	bufferLen = 2048 * 1024
 
-	maxTTL   = 128
-	msgOK    = "OK"
-	msgOKACK = "OK_ACK"
-	msgPing  = "continuously pinging to "
+	maxTTL            = 128
+	msgOK             = "OK"
+	msgOKACK          = "OK_ACK"
+	msgPing           = "continuously pinging to "
+	sendRetryInterval = 5 * time.Millisecond
+	sendRetries       = 10
+	recvErrLimit      = 10
 )
 
-var errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
+// ErrTooFew indicates there were too few successful ping
+// responses to build requested number of connections
+var ErrTooFew = errors.New("too few connections were built")
 
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	PingProviderPeer(ctx context.Context, localIP, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	PingConsumerPeer(ctx context.Context, id string, remoteIP string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
-	Stop()
 }
 
 // PingConfig represents NAT pinger config.
@@ -76,8 +80,6 @@ func DefaultPingConfig() *PingConfig {
 // Pinger represents NAT pinger structure
 type Pinger struct {
 	pingConfig     *PingConfig
-	stop           chan struct{}
-	once           sync.Once
 	eventPublisher eventbus.Publisher
 }
 
@@ -90,16 +92,24 @@ type PortSupplier interface {
 func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 	return &Pinger{
 		pingConfig:     pingConfig,
-		stop:           make(chan struct{}),
 		eventPublisher: publisher,
 	}
 }
 
-// Stop stops pinger loop
-func (p *Pinger) Stop() {
-	p.once.Do(func() {
-		close(p.stop)
-	})
+func drainPingResponses(responses <-chan pingResponse) {
+	for response := range responses {
+		log.Warn().Err(response.err).Msgf("Sanitizing ping response on %#v", response)
+		if response.conn != nil {
+			response.conn.Close()
+			log.Warn().Msgf("Collected dangling socket: %s", response.conn.LocalAddr().String())
+		}
+	}
+}
+
+func cleanupConnections(responses []pingResponse) {
+	for _, response := range responses {
+		response.conn.Close()
+	}
 }
 
 // PingConsumerPeer pings remote peer with a defined configuration
@@ -122,43 +132,53 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, remoteIP strin
 
 	pingsCh := make(chan pingResponse, n)
 	go func() {
+		var wg sync.WaitGroup
 		for res := range ch {
 			if res.err != nil {
-				log.Warn().Err(res.err).Msg("One of the pings has error")
+				if !errors.Is(res.err, context.Canceled) {
+					log.Warn().Err(res.err).Msg("One of the pings has error")
+				}
 				continue
 			}
 
 			if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
+				res.conn.Close()
 				log.Warn().Err(res.err).Msg("Failed to set connection TTL")
 				continue
 			}
 
 			sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
 
-			if err := p.sendConnACK(ctx, res.conn); err != nil {
-				if !errors.Is(err, context.Canceled) {
-					log.Warn().Err(err).Msg("Failed to send conn ACK to consumer")
+			wg.Add(1)
+			go func(ping pingResponse) {
+				defer wg.Done()
+				if err := p.sendConnACK(ctx, ping.conn); err != nil {
+					if !errors.Is(err, context.Canceled) {
+						log.Warn().Err(err).Msg("Failed to send conn ACK to consumer")
+					}
+					ping.conn.Close()
+				} else {
+					pingsCh <- ping
 				}
-			} else {
-				pingsCh <- res
-			}
+			}(res)
 		}
+		wg.Wait()
+		close(pingsCh)
 	}()
 
 	var pings []pingResponse
-	for {
-		select {
-		case <-ctx.Done():
-			p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, ctx.Err()))
-			return nil, fmt.Errorf("ping failed: %w", ctx.Err())
-		case ping := <-pingsCh:
-			pings = append(pings, ping)
-			if len(pings) == n {
-				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, StageName))
-				return sortedConns(pings), nil
-			}
+	for ping := range pingsCh {
+		pings = append(pings, ping)
+		if len(pings) == n {
+			p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, StageName))
+			go drainPingResponses(pingsCh)
+			return sortedConns(pings), nil
 		}
 	}
+
+	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, ErrTooFew))
+	cleanupConnections(pings)
+	return nil, ErrTooFew
 }
 
 // PingProviderPeer pings remote peer with a defined configuration
@@ -176,15 +196,19 @@ func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string,
 		return nil, err
 	}
 
-	pingsCh := make(chan pingResponse, n)
+	pingsCh := make(chan pingResponse, len(localPorts))
 	go func() {
+		var wg sync.WaitGroup
 		for res := range ch {
 			if res.err != nil {
-				log.Warn().Err(res.err).Msg("One of the pings has error")
+				if !errors.Is(res.err, context.Canceled) {
+					log.Warn().Err(res.err).Msg("One of the pings has error")
+				}
 				continue
 			}
 
 			if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
+				res.conn.Close()
 				log.Warn().Err(res.err).Msg("Failed to set connection TTL")
 				continue
 			}
@@ -192,31 +216,36 @@ func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string,
 			sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
 
 			// Wait for peer to notify that it uses this connection too.
+			wg.Add(1)
 			go func(ping pingResponse) {
+				defer wg.Done()
 				if err := waitMsg(ctx, ping.conn, msgOK); err != nil {
 					if !errors.Is(err, context.Canceled) {
 						log.Err(err).Msg("Failed to wait for conn OK from provider")
 					}
+					ping.conn.Close()
 					return
 				}
-				sendMsg(ping.conn, msgOKACK)
 				pingsCh <- ping
 			}(res)
 		}
+		wg.Wait()
+		close(pingsCh)
 	}()
 
 	var pings []pingResponse
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("ping failed: %w", ctx.Err())
-		case ping := <-pingsCh:
-			pings = append(pings, ping)
-			if len(pings) == n {
-				return sortedConns(pings), nil
-			}
+	for ping := range pingsCh {
+		pings = append(pings, ping)
+		sendMsg(ping.conn, msgOKACK)
+		if len(pings) == n {
+			go drainPingResponses(pingsCh)
+			return sortedConns(pings), nil
 		}
 	}
+
+	cleanupConnections(pings)
+	return nil, ErrTooFew
+
 }
 
 // sendConnACK notifies peer that we are using this connection
@@ -250,36 +279,43 @@ func sortedConns(pings []pingResponse) []*net.UDPConn {
 
 // waitMsg waits until conn receives given message or timeouts.
 func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
-	ok := make(chan struct{}, 1)
-	go func() {
-		buf := make([]byte, 1024)
-		for {
-			n, err := conn.Read(buf)
-			if err != nil {
-				return
-			}
-			v := string(buf[:n])
-			if v == msg {
-				ok <- struct{}{}
-				return
-			}
+	var (
+		n   int
+		err error
+	)
+	buf := make([]byte, 1024)
+	for errCount := 0; errCount < recvErrLimit; errCount++ {
+		n, err = readFromConnWithContext(ctx, conn, buf)
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
-	}()
-
-	select {
-	case <-ok:
-		return nil
-	case <-ctx.Done():
-		conn.Close()
-		return fmt.Errorf("timeout waiting for %q msg: %w", msg, ctx.Err())
+		// process returned data unconditionally as io.Reader dictates to
+		v := string(buf[:n])
+		if v == msg {
+			return nil
+		}
+		if err != nil {
+			log.Error().Err(err).Msgf("got error in waitMsg, trying to recover. %d attempts left",
+				recvErrLimit-errCount)
+			continue
+		}
 	}
+	return fmt.Errorf("too many recv errors, last one: %w", err)
 }
 
 func sendMsg(conn *net.UDPConn, msg string) {
-	conn.Write([]byte(msg))
+	for i := 0; i < sendRetries; i++ {
+		_, err := conn.Write([]byte(msg))
+		if err != nil {
+			log.Error().Err(err).Msg("pinger message send failed")
+			time.Sleep(sendRetryInterval)
+		} else {
+			return
+		}
+	}
 }
 
-func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, pingReceived <-chan struct{}) error {
+func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int) error {
 	err := ipv4.NewConn(conn).SetTTL(ttl)
 	if err != nil {
 		return fmt.Errorf("pinger setting ttl failed: %w", err)
@@ -289,15 +325,13 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-p.stop:
-			return nil
-		case <-pingReceived:
-			return nil
-
 		case <-time.After(p.pingConfig.Interval):
 			log.Trace().Msgf("Pinging %s from %s... with ttl %d", remoteAddr, conn.LocalAddr(), ttl)
 
 			_, err := conn.WriteToUDP([]byte(msgPing+remoteAddr.String()), remoteAddr)
+			if ctx.Err() != nil {
+				return nil
+			}
 			if err != nil {
 				return fmt.Errorf("pinging request failed: %w", err)
 			}
@@ -305,36 +339,64 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 	}
 }
 
+func readFromConnWithContext(ctx context.Context, conn net.Conn, buf []byte) (n int, err error) {
+	readDone := make(chan struct{})
+	go func() {
+		n, err = conn.Read(buf)
+		close(readDone)
+	}()
+
+	select {
+	case <-ctx.Done():
+		conn.SetReadDeadline(time.Unix(0, 0))
+		<-readDone
+		conn.SetReadDeadline(time.Time{})
+		return 0, ctx.Err()
+	case <-readDone:
+		return
+	}
+}
+
+func readFromUDPWithContext(ctx context.Context, conn *net.UDPConn, buf []byte) (n int, from *net.UDPAddr, err error) {
+	readDone := make(chan struct{})
+	go func() {
+		n, from, err = conn.ReadFromUDP(buf)
+		close(readDone)
+	}()
+
+	select {
+	case <-ctx.Done():
+		conn.SetReadDeadline(time.Unix(0, 0))
+		<-readDone
+		conn.SetReadDeadline(time.Time{})
+		return 0, nil, ctx.Err()
+	case <-readDone:
+		return
+	}
+}
+
 func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPAddr, error) {
 	buf := make([]byte, bufferLen)
 
 	for {
-		select {
-		case <-ctx.Done():
-			return nil, errNATPunchAttemptStopped
-		case <-p.stop:
-			return nil, errNATPunchAttemptStopped
-		default:
-			// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
-			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-			n, raddr, err := conn.ReadFromUDP(buf)
-			// Reset read deadline.
-			conn.SetReadDeadline(time.Time{})
-
-			if err != nil || n == 0 {
-				log.Debug().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", raddr)
-				continue
-			}
-
-			msg := string(buf[:n])
-			log.Debug().Msgf("Remote peer data received: %s, len: %d, from: %s", msg, n, raddr)
-
-			if msg == msgOK || strings.HasPrefix(msg, msgPing) {
-				return raddr, nil
-			}
-
-			log.Debug().Err(err).Msgf("Unexpected message: %s - attempting to continue", msg)
+		n, raddr, err := readFromUDPWithContext(ctx, conn, buf)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
+
+		if err != nil || n == 0 {
+			log.Debug().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", raddr)
+			continue
+		}
+
+		msg := string(buf[:n])
+		log.Debug().Msgf("Remote peer data received: %s, len: %d, from: %s", msg, n, raddr)
+
+		if msg == msgOK || strings.HasPrefix(msg, msgPing) {
+			return raddr, nil
+		}
+
+		log.Debug().Err(err).Msgf("Unexpected message: %s - attempting to continue", msg)
 	}
 }
 
@@ -401,9 +463,9 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 		return nil, fmt.Errorf("failed to resolve remote address: %w", err)
 	}
 
-	pingReceived := make(chan struct{}, 1)
+	ctx1, cl := context.WithCancel(ctx)
 	go func() {
-		err := p.ping(ctx, conn, remoteAddr, ttl, pingReceived)
+		err := p.ping(ctx1, conn, remoteAddr, ttl)
 		if err != nil {
 			log.Warn().Err(err).Msg("Error while pinging")
 		}
@@ -411,7 +473,7 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 
 	laddr := conn.LocalAddr().(*net.UDPAddr)
 	raddr, err := p.pingReceiver(ctx, conn)
-	pingReceived <- struct{}{}
+	cl()
 	if err != nil {
 		return nil, fmt.Errorf("ping receiver error: %w", err)
 	}
@@ -424,6 +486,7 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 	}
 
 	if err := router.ProtectUDPConn(newConn); err != nil {
+		newConn.Close()
 		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
 	}
 
