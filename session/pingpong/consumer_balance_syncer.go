@@ -39,7 +39,8 @@ func (bs *balanceSyncer) PeriodiclySyncBalance(jobKey string, toRun func(stop <-
 	defer bs.lock.Unlock()
 
 	if v, ok := bs.jobs[jobKey]; ok {
-		bs.jobs[jobKey] = v.Restart()
+		v = v.Restart()
+		bs.jobs[jobKey] = v
 		return v, true
 	}
 
