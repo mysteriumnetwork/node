@@ -91,10 +91,17 @@ func (m *client) UpdateBeneficiary(data *UpdateBeneficiaryRequest) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("got a non ok response code: %d", resp.StatusCode)
+	}
+
 	var respBody struct {
 		Success bool   `json:"success"`
 		Message string `json:"message"`
@@ -121,9 +128,15 @@ func (m *client) GetBeneficiary(identityStr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return "", fmt.Errorf("got a non ok response code: %d", resp.StatusCode)
 	}
 
 	var benef struct {
