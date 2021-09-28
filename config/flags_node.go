@@ -237,6 +237,11 @@ var (
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
 	}
+	// FlagLauncherVersion is used for reporting the version of a Launcher.
+	FlagLauncherVersion = cli.StringFlag{
+		Name:  "launcher.ver",
+		Usage: "Report the version of a launcher for statistics",
+	}
 
 	// FlagP2PListenPorts sets manual ports for p2p connections.
 	// TODO: remove the deprecated flag once all users stop to use it.
@@ -331,6 +336,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagUIPort,
 		&FlagUserMode,
 		&FlagVendorID,
+		&FlagLauncherVersion,
 		&FlagP2PListenPorts,
 		&FlagConsumer,
 		&FlagDefaultCurrency,
@@ -386,6 +392,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)
+	Current.ParseStringFlag(ctx, FlagLauncherVersion)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 	Current.ParseBoolFlag(ctx, FlagConsumer)
 	Current.ParseStringFlag(ctx, FlagDefaultCurrency)

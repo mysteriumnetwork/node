@@ -97,14 +97,23 @@ func (m *MMN) handleServiceStart(e servicestate.AppEventServiceStatus) {
 }
 
 func (m *MMN) register() error {
+	launcherInfo := strings.Split(config.GetString(config.FlagLauncherVersion), "/")
+	launcherVersion := launcherInfo[0]
+	hostOSType := ""
+	if len(launcherInfo) > 0 {
+		hostOSType = launcherInfo[1]
+	}
+
 	return m.client.RegisterNode(&NodeInformationDto{
-		LocalIP:     m.lastIP,
-		Identity:    m.lastIdentity,
-		APIKey:      config.GetString(config.FlagMMNAPIKey),
-		VendorID:    config.GetString(config.FlagVendorID),
-		Arch:        runtime.GOOS + docker() + "/" + runtime.GOARCH,
-		OS:          getOS(),
-		NodeVersion: metadata.VersionAsString(),
+		LocalIP:         m.lastIP,
+		Identity:        m.lastIdentity,
+		APIKey:          config.GetString(config.FlagMMNAPIKey),
+		VendorID:        config.GetString(config.FlagVendorID),
+		Arch:            runtime.GOOS + docker() + "/" + runtime.GOARCH,
+		OS:              getOS(),
+		NodeVersion:     metadata.VersionAsString(),
+		LauncherVersion: launcherVersion,
+		HostOSType:      hostOSType,
 	})
 }
 
