@@ -255,10 +255,8 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 		bus: bus,
 	}
 	bc := mockConsumerBalanceChecker{
-		channelToReturn: client.ConsumerChannel{
-			Balance: initialBalance,
-			Settled: big.NewInt(0),
-		},
+		errToReturn:         errors.New("No contract deployed"),
+		mystBalanceToReturn: initialBalance,
 	}
 	cfg := defaultCfg
 	cfg.LongSync.Interval = time.Millisecond * 300
@@ -311,6 +309,46 @@ func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
 
 	b := cbt.ForceBalanceUpdate(1, id1)
 	assert.Equal(t, initialBalance, b)
+}
+
+func TestConsumerBalanceTracker_InprogressUnregisteredBalanceReturnedWhenNoBounty(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	var grandTotalPromised = new(big.Int)
+	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
+		bus: bus,
+	}
+	bc := mockConsumerBalanceChecker{
+		errToReturn:         errors.New("No contract deployed"),
+		mystBalanceToReturn: initialBalance,
+	}
+	cfg := defaultCfg
+	cfg.LongSync.Interval = time.Millisecond * 300
+	calc := mockAddressProvider{}
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
+		statusToReturn: registry.TransactorStatusResponse{
+			Status:       registry.TransactorRegistrationEntryStatusCreated,
+			ChainID:      1,
+			BountyAmount: big.NewInt(0),
+		},
+	}, &mockRegistrationStatusProvider{
+		map[string]mockRegistrationStatus{
+			fmt.Sprintf("%d%s", 1, id1.Address): {
+				status: registry.InProgress,
+			},
+		},
+	}, &calc, cfg)
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id1,
+	})
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(1, id1).Cmp(initialBalance) == 0
+	}, defaultWaitTime, defaultWaitInterval)
 }
 
 type mockConsumerBalanceChecker struct {
