@@ -33,11 +33,11 @@ func TestJob(t *testing.T) {
 	}
 	f := func(stop <-chan struct{}) {
 		for {
+			actualWork()
 			select {
 			case <-stop:
 				return
 			case <-time.After(time.Millisecond):
-				actualWork()
 			}
 		}
 	}
@@ -55,8 +55,8 @@ func TestJob(t *testing.T) {
 	// assert work was done
 	assert.Greater(t, loaded, uint64(0))
 
-	j = j.Restart()
-	<-j.Done()
+	nj := j.Restart()
+	<-nj.Done()
 
 	// assert more work was done
 	current := atomic.LoadUint64(&ops)
