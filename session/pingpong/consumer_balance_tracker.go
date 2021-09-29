@@ -257,25 +257,22 @@ func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGran
 	cbt.updateGrandTotal(ev.ChainID, ev.ConsumerID, ev.Current)
 }
 
-func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, id identity.Identity) *big.Int {
+func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, id identity.Identity) (*big.Int, error) {
 	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id)
 	if err != nil {
-		log.Error().Err(err).Msg("could not compute channel address")
-		return new(big.Int)
+		return new(big.Int), err
 	}
 
 	myst, err := cbt.addressProvider.GetMystAddress(chainID)
 	if err != nil {
-		log.Error().Err(err).Msg("could not get myst address")
-		return new(big.Int)
+		return new(big.Int), err
 	}
 
 	balance, err := cbt.consumerBalanceChecker.GetMystBalance(chainID, myst, addr)
 	if err != nil {
-		log.Error().Err(err).Msg("could not get myst balance on consumer channel")
-		return new(big.Int)
+		return new(big.Int), err
 	}
-	return balance
+	return balance, nil
 }
 
 func (cbt *ConsumerBalanceTracker) lifetimeBCSync(chainID int64, id identity.Identity) {
@@ -464,9 +461,18 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, myst)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get consumer channel")
-		// This indicates we're not registered, check for unregistered balance.
-		unregisteredBalance := cbt.getUnregisteredChannelBalance(chainID, id)
-		// We'll also launch a goroutine to listen for external top up.
+		if client.IsErrConnectionFailed(err) {
+			log.Debug().Msg("tried to get consumer channel and got a connection error, will return last known balance")
+			return fallback.BCBalance
+		}
+
+		// If error was not for connection it indicates we're not registered, check for unregistered balance.
+		unregisteredBalance, err := cbt.getUnregisteredChannelBalance(chainID, id)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get unregistered balance")
+			return fallback.BCBalance
+		}
+
 		cbt.setBalance(chainID, id, ConsumerBalance{
 			BCBalance:          unregisteredBalance,
 			BCSettled:          new(big.Int),
@@ -481,7 +487,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	hermes, err := cbt.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get active hermes address")
-		return new(big.Int)
+		return fallback.BCBalance
 	}
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, hermes)
@@ -557,7 +563,12 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 
 	if data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
 		// if we've got no bounty, get myst balance from BC and use that as bounty
-		b := cbt.getUnregisteredChannelBalance(chainID, id)
+		b, err := cbt.getUnregisteredChannelBalance(chainID, id)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get unregistered balance")
+			return
+		}
+
 		data.BountyAmount = b
 	}
 
