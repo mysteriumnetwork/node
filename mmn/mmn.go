@@ -100,7 +100,7 @@ func (m *MMN) register() error {
 	launcherInfo := strings.Split(config.GetString(config.FlagLauncherVersion), "/")
 	launcherVersion := launcherInfo[0]
 	hostOSType := ""
-	if len(launcherInfo) > 0 {
+	if len(launcherInfo) > 1 {
 		hostOSType = launcherInfo[1]
 	}
 
