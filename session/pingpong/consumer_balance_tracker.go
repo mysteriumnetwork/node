@@ -46,11 +46,21 @@ func newBalanceKey(chainID int64, id identity.Identity) balanceKey {
 	return balanceKey(fmt.Sprintf("%v_%v", id.Address, chainID))
 }
 
+type balances struct {
+	sync.Mutex
+	valuesMap map[balanceKey]ConsumerBalance
+}
+
+type transactorBounties struct {
+	sync.Mutex
+	valuesMap map[balanceKey]*big.Int
+}
+
 // ConsumerBalanceTracker keeps track of consumer balances.
 // TODO: this needs to take into account the saved state.
 type ConsumerBalanceTracker struct {
-	balancesLock sync.Mutex
-	balances     map[balanceKey]ConsumerBalance
+	balances           balances
+	transactorBounties transactorBounties
 
 	addressProvider                      addressProvider
 	registry                             registrationStatusProvider
@@ -98,7 +108,8 @@ func NewConsumerBalanceTracker(
 	cfg ConsumerBalanceTrackerConfig,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
-		balances:                             make(map[balanceKey]ConsumerBalance),
+		balances:                             balances{valuesMap: make(map[balanceKey]ConsumerBalance)},
+		transactorBounties:                   transactorBounties{valuesMap: make(map[balanceKey]*big.Int)},
 		consumerBalanceChecker:               consumerBalanceChecker,
 		bus:                                  publisher,
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
@@ -460,17 +471,26 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, myst)
 	if err != nil {
+		// This indicates we're not registered, check for transactor bounty first and then unregistered balance.
 		log.Error().Err(err).Msg("Could not get consumer channel")
 		if client.IsErrConnectionFailed(err) {
 			log.Debug().Msg("tried to get consumer channel and got a connection error, will return last known balance")
 			return fallback.BCBalance
 		}
 
-		// If error was not for connection it indicates we're not registered, check for unregistered balance.
-		unregisteredBalance, err := cbt.getUnregisteredChannelBalance(chainID, id)
-		if err != nil {
-			log.Error().Err(err).Msg("could not get unregistered balance")
-			return fallback.BCBalance
+		var unregisteredBalance *big.Int
+		// If registration is in progress, check transactor for bounty amount.
+		bountyAmount, ok := cbt.getTransactorBounty(chainID, id)
+		if ok {
+			// if bounty from transactor is 0 it will be the unregistered balance of the channel.
+			unregisteredBalance = bountyAmount
+		} else {
+			// If error was not for connection it indicates we're not registered, check for unregistered balance.
+			unregisteredBalance, err = cbt.getUnregisteredChannelBalance(chainID, id)
+			if err != nil {
+				log.Error().Err(err).Msg("could not get unregistered balance")
+				return fallback.BCBalance
+			}
 		}
 
 		cbt.setBalance(chainID, id, ConsumerBalance{
@@ -523,6 +543,7 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEve
 	case registry.InProgress:
 		cbt.alignWithTransactor(event.ChainID, event.ID)
 	case registry.Registered:
+		cbt.removeTransactorBounty(event.ChainID, event.ID)
 		cbt.ForceBalanceUpdate(event.ChainID, event.ID)
 	}
 }
@@ -530,13 +551,10 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEve
 func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identity.Identity) {
 	balance, ok := cbt.getBalance(chainID, id)
 	if ok {
-		// do not override existing values with transactor data
-		return
-	}
-
-	// do not override existing balances with transactor data
-	if balance.BCBalance.Cmp(big.NewInt(0)) != 0 {
-		return
+		// do not override existing values with transactor data if it is not 0
+		if balance.BCBalance.Cmp(big.NewInt(0)) != 0 {
+			return
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -550,15 +568,32 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 		}
 	}()
 
+	bountyAmount := cbt.getTransactorBalance(ctx, chainID, id)
+	if bountyAmount == nil {
+		return
+	}
+
+	c := ConsumerBalance{
+		BCBalance:          bountyAmount,
+		BCSettled:          new(big.Int),
+		GrandTotalPromised: new(big.Int),
+	}
+
+	cbt.setBalance(chainID, id, c)
+	cbt.setTransactorBounty(chainID, id, bountyAmount)
+	go cbt.publishChangeEvent(id, balance.GetBalance(), c.GetBalance())
+}
+
+func (cbt *ConsumerBalanceTracker) getTransactorBalance(ctx context.Context, chainID int64, id identity.Identity) *big.Int {
 	data, err := cbt.identityRegistrationStatus(ctx, id, chainID)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("could not fetch registration status from transactor: %w", err))
-		return
+		return nil
 	}
 
 	if data.Status != registry.TransactorRegistrationEntryStatusCreated &&
 		data.Status != registry.TransactorRegistrationEntryStatusPriceIncreased {
-		return
+		return nil
 	}
 
 	if data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
@@ -566,20 +601,14 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 		b, err := cbt.getUnregisteredChannelBalance(chainID, id)
 		if err != nil {
 			log.Error().Err(err).Msg("could not get unregistered balance")
-			return
+			return nil
 		}
 
 		data.BountyAmount = b
 	}
 
-	c := ConsumerBalance{
-		BCBalance:          data.BountyAmount,
-		BCSettled:          new(big.Int),
-		GrandTotalPromised: new(big.Int),
-	}
 	log.Debug().Msgf("Loaded transactor state, current balance: %v MYST", data.BountyAmount)
-	cbt.setBalance(chainID, id, c)
-	go cbt.publishChangeEvent(id, balance.GetBalance(), c.GetBalance())
+	return data.BountyAmount
 }
 
 func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, identity identity.Identity) error {
@@ -641,10 +670,10 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 }
 
 func (cbt *ConsumerBalanceTracker) getBalance(chainID int64, id identity.Identity) (ConsumerBalance, bool) {
-	cbt.balancesLock.Lock()
-	defer cbt.balancesLock.Unlock()
+	cbt.balances.Lock()
+	defer cbt.balances.Unlock()
 
-	if v, ok := cbt.balances[newBalanceKey(chainID, id)]; ok {
+	if v, ok := cbt.balances.valuesMap[newBalanceKey(chainID, id)]; ok {
 		return v, true
 	}
 
@@ -656,10 +685,35 @@ func (cbt *ConsumerBalanceTracker) getBalance(chainID int64, id identity.Identit
 }
 
 func (cbt *ConsumerBalanceTracker) setBalance(chainID int64, id identity.Identity, balance ConsumerBalance) {
-	cbt.balancesLock.Lock()
-	defer cbt.balancesLock.Unlock()
+	cbt.balances.Lock()
+	defer cbt.balances.Unlock()
 
-	cbt.balances[newBalanceKey(chainID, id)] = balance
+	cbt.balances.valuesMap[newBalanceKey(chainID, id)] = balance
+}
+
+func (cbt *ConsumerBalanceTracker) getTransactorBounty(chainID int64, id identity.Identity) (*big.Int, bool) {
+	cbt.transactorBounties.Lock()
+	defer cbt.transactorBounties.Unlock()
+
+	if v, ok := cbt.transactorBounties.valuesMap[newBalanceKey(chainID, id)]; ok {
+		return v, true
+	}
+
+	return nil, false
+}
+
+func (cbt *ConsumerBalanceTracker) setTransactorBounty(chainID int64, id identity.Identity, bountyAmount *big.Int) {
+	cbt.transactorBounties.Lock()
+	defer cbt.transactorBounties.Unlock()
+
+	cbt.transactorBounties.valuesMap[newBalanceKey(chainID, id)] = bountyAmount
+}
+
+func (cbt *ConsumerBalanceTracker) removeTransactorBounty(chainID int64, id identity.Identity) {
+	cbt.transactorBounties.Lock()
+	defer cbt.transactorBounties.Unlock()
+
+	delete(cbt.transactorBounties.valuesMap, newBalanceKey(chainID, id))
 }
 
 func (cbt *ConsumerBalanceTracker) updateGrandTotal(chainID int64, id identity.Identity, current *big.Int) {
