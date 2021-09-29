@@ -283,6 +283,10 @@ func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, c
 		return nil, nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
 	}
 
+	if err := router.ExcludeIP(net.ParseIP(config.peerIP())); err != nil {
+		return nil, nil, fmt.Errorf("failed to exclude peer IP from default routes: %w", err)
+	}
+
 	log.Debug().Msg("Skipping provider ping")
 
 	ip := defaultInterfaceAddress()
