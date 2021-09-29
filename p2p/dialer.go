@@ -105,6 +105,14 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("could not exchange config: %w", err)
 	}
 
+	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
+		return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
+	}
+
+	if err := router.ExcludeIP(net.ParseIP(config.peerIP())); err != nil {
+		return nil, fmt.Errorf("failed to exclude peer IP from default routes: %w", err)
+	}
+
 	config.publicIP, config.localPorts, err = m.prepareLocalPorts(config)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare ports: %w", err)
@@ -278,14 +286,6 @@ func (m *dialer) prepareLocalPorts(config *p2pConnectConfig) (string, []int, err
 func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (*net.UDPConn, *net.UDPConn, error) {
 	trace := config.tracer.StartStage("Consumer P2P dial (upnp)")
 	defer config.tracer.EndStage(trace)
-
-	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
-		return nil, nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
-	}
-
-	if err := router.ExcludeIP(net.ParseIP(config.peerIP())); err != nil {
-		return nil, nil, fmt.Errorf("failed to exclude peer IP from default routes: %w", err)
-	}
 
 	log.Debug().Msg("Skipping provider ping")
 
