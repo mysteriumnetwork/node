@@ -26,7 +26,6 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 
-	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/actionstack"
@@ -64,6 +63,13 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 		return err
 	}
 
+	if config.Peer.Endpoint != nil {
+		if err := netutil.AddDefaultRoute(config.IfaceName); err != nil {
+			rollback.Run()
+			return fmt.Errorf("could not add default route for %s: %w", config.IfaceName, err)
+		}
+	}
+
 	return nil
 }
 
@@ -81,17 +87,6 @@ func (c *client) configureDevice(config wgcfg.DeviceConfig) (err error) {
 	}
 
 	c.devAPI.Up()
-
-	// For consumer mode we need to exclude provider's IP from VPN tunnel
-	// and add default routes to forward all traffic via VPN tunnel.
-	if config.Peer.Endpoint != nil {
-		if err := router.ExcludeIP(config.Peer.Endpoint.IP); err != nil {
-			return fmt.Errorf("could not exclude route %s: %w", config.Peer.Endpoint.IP.String(), err)
-		}
-		if err := netutil.AddDefaultRoute(config.IfaceName); err != nil {
-			return fmt.Errorf("could not add default route for %s: %w", config.IfaceName, err)
-		}
-	}
 
 	if err := c.dnsManager.Set(dns.Config{
 		ScriptDir: config.DNSScriptDir,
