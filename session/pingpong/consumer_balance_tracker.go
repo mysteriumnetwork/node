@@ -472,7 +472,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, myst)
 	if err != nil {
 		// This indicates we're not registered, check for transactor bounty first and then unregistered balance.
-		log.Error().Err(err).Msg("Could not get consumer channel")
+		log.Warn().Err(err).Msg("Could not get consumer channel")
 		if client.IsErrConnectionFailed(err) {
 			log.Debug().Msg("tried to get consumer channel and got a connection error, will return last known balance")
 			return fallback.BCBalance
@@ -634,7 +634,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 	toRetry := func() error {
 		d, err := cbt.consumerInfoGetter.GetConsumerData(chainID, identity.Address)
 		if err != nil {
-			if err != ErrHermesNotFound {
+			if !errors.Is(err, ErrHermesNotFound) {
 				return err
 			}
 			log.Debug().Msgf("No previous invoice grand total, assuming zero")
