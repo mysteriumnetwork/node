@@ -21,6 +21,8 @@ import (
 	"context"
 	"net"
 	"time"
+
+	"github.com/mysteriumnetwork/node/requests/resolver"
 )
 
 // DialContext specifies the dial function for creating unencrypted TCP connections.
@@ -30,7 +32,7 @@ type DialContext func(ctx context.Context, network, addr string) (net.Conn, erro
 type Dialer struct {
 	// ResolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
-	ResolveContext ResolveContext
+	ResolveContext resolver.ResolveContext
 
 	// Dialer specifies the dial function for creating unencrypted TCP connections.
 	Dialer DialContext

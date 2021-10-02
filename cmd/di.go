@@ -74,6 +74,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/requests/resolver"
 	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -646,7 +647,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	for host, hostIPs := range dnsMap {
 		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
 	}
-	resolver := requests.NewResolverMap(dnsMap)
+	resolver := resolver.NewResolverMap(dnsMap)
 
 	dialer := requests.NewDialerSwarm(options.BindAddress, options.SwarmDialerDNSHeadstart)
 	dialer.ResolveContext = resolver
