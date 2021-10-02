@@ -105,12 +105,12 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("could not exchange config: %w", err)
 	}
 
-	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
-		return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
-	}
-
 	if err := router.ExcludeIP(net.ParseIP(config.peerIP())); err != nil {
 		return nil, fmt.Errorf("failed to exclude peer IP from default routes: %w", err)
+	}
+
+	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
+		return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
 	}
 
 	config.publicIP, config.localPorts, err = m.prepareLocalPorts(config)
