@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package router
+package network
 
 import (
 	"fmt"
@@ -27,18 +27,26 @@ import (
 	"github.com/jackpal/gateway"
 )
 
-type routingTable struct{}
+// RoutingTable implements a set of platform specific tool for creating, deleting
+// and observe routing tables rules for a different needs.
+type RoutingTable struct{}
 
-func (t *routingTable) discoverGateway() (net.IP, error) {
+// DiscoverGateway returns system default gateway.
+func (t *RoutingTable) DiscoverGateway() (net.IP, error) {
 	return gateway.DiscoverGateway()
 }
 
-func (t *routingTable) excludeRule(ip, gw net.IP) error {
+// ExcludeRule adds a single IP address to be excluded from the main tunnelled traffic.
+// Traffic sent to the IP address will be directed to the system default gaitway
+// instead of tunnel.
+func (t *RoutingTable) ExcludeRule(ip, gw net.IP) error {
 	out, err := exec.Command("powershell", "-Command", "route add "+ip.String()+"/32 "+gw.String()).CombinedOutput()
 	return fmt.Errorf("%s: %w", string(out), err)
 }
 
-func (t *routingTable) deleteRule(ip, gw net.IP) error {
+// DeleteRule removes excluded routing table rule to return it back to routing
+// thought the tunnel.
+func (t *RoutingTable) DeleteRule(ip, gw net.IP) error {
 	out, err := exec.Command("powershell", "-Command", "route delete "+ip.String()+"/32").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to delete route: %w, %s", err, string(out))

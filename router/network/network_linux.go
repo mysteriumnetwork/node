@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package router
+package network
 
 import (
 	"net"
@@ -27,16 +27,24 @@ import (
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-type routingTable struct{}
+// RoutingTable implements a set of platform specific tool for creating, deleting
+// and observe routing tables rules for a different needs.
+type RoutingTable struct{}
 
-func (t *routingTable) discoverGateway() (net.IP, error) {
+// DiscoverGateway returns system default gateway.
+func (t *RoutingTable) DiscoverGateway() (net.IP, error) {
 	return gateway.DiscoverGateway()
 }
 
-func (t *routingTable) excludeRule(ip, gw net.IP) error {
+// ExcludeRule adds a single IP address to be excluded from the main tunnelled traffic.
+// Traffic sent to the IP address will be directed to the system default gaitway
+// instead of tunnel.
+func (t *RoutingTable) ExcludeRule(ip, gw net.IP) error {
 	return cmdutil.SudoExec("ip", "route", "add", ip.String(), "via", gw.String())
 }
 
-func (t *routingTable) deleteRule(ip, gw net.IP) error {
+// DeleteRule removes excluded routing table rule to return it back to routing
+// thought the tunnel.
+func (t *RoutingTable) DeleteRule(ip, gw net.IP) error {
 	return cmdutil.SudoExec("ip", "route", "delete", ip.String(), "via", gw.String())
 }
