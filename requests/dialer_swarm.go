@@ -285,7 +285,7 @@ func (wd *dialerWithDNSCache) DialContext(ctx context.Context, network, addr str
 
 			addrs, err := net.DefaultResolver.LookupHost(lookupCtx, addrHost)
 			if err != nil {
-				log.Warn().Msgf("Failed to lookup host: %s", addrHost)
+				log.Warn().Err(err).Msgf("Failed to lookup host: %q", addrHost)
 				return
 			}
 
