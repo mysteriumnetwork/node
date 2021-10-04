@@ -161,7 +161,7 @@ type mockRoutingTable struct {
 	mu sync.Mutex
 }
 
-func (t *mockRoutingTable) excludeRule(ip, gw net.IP) error {
+func (t *mockRoutingTable) ExcludeRule(ip, gw net.IP) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -178,7 +178,7 @@ func (t *mockRoutingTable) excludeRule(ip, gw net.IP) error {
 	return nil
 }
 
-func (t *mockRoutingTable) deleteRule(ip, gw net.IP) error {
+func (t *mockRoutingTable) DeleteRule(ip, gw net.IP) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -195,7 +195,7 @@ func (t *mockRoutingTable) deleteRule(ip, gw net.IP) error {
 	return nil
 }
 
-func (t *mockRoutingTable) discoverGateway() (net.IP, error) {
+func (t *mockRoutingTable) DiscoverGateway() (net.IP, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

@@ -20,14 +20,30 @@ package router
 import (
 	"net"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/context"
+
+	"github.com/mysteriumnetwork/node/requests/resolver"
 )
 
-var defaultRouter = NewManager()
+var (
+	once          sync.Once
+	defaultRouter *manager
+)
+
+func ensureRouterStarted() {
+	once.Do(func() {
+		defaultRouter = NewManager()
+	})
+}
 
 // ExcludeURL adds exception to route traffic directly for specified URL (host part is usually taken).
 func ExcludeURL(urls ...string) error {
+	ensureRouterStarted()
+
 	for _, u := range urls {
 		parsed, err := url.Parse(u)
 		if err != nil {
@@ -35,10 +51,16 @@ func ExcludeURL(urls ...string) error {
 			continue
 		}
 
-		addresses, err := net.LookupHost(parsed.Hostname())
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to exclude URL from routes: %s", parsed.Hostname())
-			continue
+		addresses := resolver.FetchDNSFromCache(parsed.Hostname())
+		if len(addresses) == 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			addresses, err = net.DefaultResolver.LookupHost(ctx, parsed.Hostname())
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to exclude URL from routes: %s", parsed.Hostname())
+				continue
+			}
 		}
 
 		for _, a := range addresses {
@@ -51,8 +73,43 @@ func ExcludeURL(urls ...string) error {
 	return nil
 }
 
+// RemoveExcludedURL removes exception to route traffic directly for specified URL (host part is usually taken).
+func RemoveExcludedURL(urls ...string) error {
+	ensureRouterStarted()
+
+	for _, u := range urls {
+		parsed, err := url.Parse(u)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to parse URL: %s", u)
+			continue
+		}
+
+		addresses := resolver.FetchDNSFromCache(parsed.Hostname())
+		if len(addresses) == 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			addresses, err = net.DefaultResolver.LookupHost(ctx, parsed.Hostname())
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to exclude URL from routes: %s", parsed.Hostname())
+				continue
+			}
+		}
+
+		for _, a := range addresses {
+			ipv4 := net.ParseIP(a)
+			err := defaultRouter.RemoveExcludedIP(ipv4)
+			log.Info().Err(err).Msgf("Excluding URL address from the routes: %s -> %s", u, ipv4)
+		}
+	}
+
+	return nil
+}
+
 // ExcludeIP adds IP based exception to route traffic directly.
 func ExcludeIP(ip net.IP) error {
+	ensureRouterStarted()
+
 	err := defaultRouter.ExcludeIP(ip)
 	if err != nil {
 		log.Info().Err(err).Msgf("Excluding IP address from the routes: %s", ip)
@@ -63,9 +120,22 @@ func ExcludeIP(ip net.IP) error {
 
 // Clean removes all previously added routing rules.
 func Clean() error {
+	ensureRouterStarted()
+
 	err := defaultRouter.Clean()
 	if err != nil {
 		log.Info().Err(err).Msgf("Failed to clean")
+	}
+
+	return nil
+}
+
+func RemoveExcludedIP(ip net.IP) error {
+	ensureRouterStarted()
+
+	err := defaultRouter.RemoveExcludedIP(ip)
+	if err != nil {
+		log.Info().Err(err).Msgf("Removing excluded IP address from the routes: %s", ip)
 	}
 
 	return nil

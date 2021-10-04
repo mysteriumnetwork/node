@@ -24,6 +24,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/router/network"
 )
 
 var gwCheckInterval = 5 * time.Second
@@ -41,9 +44,9 @@ type manager struct {
 }
 
 type router interface {
-	discoverGateway() (net.IP, error)
-	excludeRule(ip, gw net.IP) error
-	deleteRule(ip, gw net.IP) error
+	DiscoverGateway() (net.IP, error)
+	ExcludeRule(ip, gw net.IP) error
+	DeleteRule(ip, gw net.IP) error
 }
 
 type rule struct {
@@ -53,10 +56,16 @@ type rule struct {
 
 // NewManager creates a new instance of service that maintain routing table to match current state.
 func NewManager() *manager {
+	var r router = &network.RoutingTable{}
+
+	if config.GetBool(config.FlagUserMode) {
+		r = &network.RoutingTableRemote{}
+	}
+
 	return &manager{
 		stop: make(chan struct{}),
 
-		routingTable: &routingTable{},
+		routingTable: r,
 	}
 }
 
@@ -81,7 +90,7 @@ func (m *manager) ExcludeIP(ip net.IP) error {
 		return nil
 	}
 
-	if err := m.routingTable.excludeRule(ip, m.currentGW); err != nil {
+	if err := m.routingTable.ExcludeRule(ip, m.currentGW); err != nil {
 		return fmt.Errorf("failed to exclude rule: %w", err)
 	}
 
@@ -89,6 +98,29 @@ func (m *manager) ExcludeIP(ip net.IP) error {
 		ip:    ip,
 		usage: 1,
 	})
+
+	return nil
+}
+
+func (m *manager) RemoveExcludedIP(ip net.IP) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for i, rule := range m.rules {
+		if rule.ip.Equal(ip) {
+			m.rules[i].usage--
+
+			if m.rules[i].usage == 0 {
+				m.rules = append(m.rules[:i], m.rules[i+1:]...)
+
+				if err := m.routingTable.DeleteRule(ip, m.currentGW); err != nil {
+					return fmt.Errorf("failed to remove excluded rule: %w", err)
+				}
+			}
+
+			break
+		}
+	}
 
 	return nil
 }
@@ -135,7 +167,7 @@ func (m *manager) Clean() (lastErr error) {
 
 func (m *manager) clean() (lastErr error) {
 	for _, rule := range m.rules {
-		err := m.routingTable.deleteRule(rule.ip, m.currentGW)
+		err := m.routingTable.DeleteRule(rule.ip, m.currentGW)
 		if err != nil {
 			lastErr = err
 			log.Error().Err(err).Msgf("Failed to delete route: %+v", rule)
@@ -147,7 +179,7 @@ func (m *manager) clean() (lastErr error) {
 
 func (m *manager) apply(gw net.IP) (lastErr error) {
 	for _, rule := range m.rules {
-		err := m.routingTable.excludeRule(rule.ip, gw)
+		err := m.routingTable.ExcludeRule(rule.ip, gw)
 		if err != nil {
 			lastErr = err
 			log.Error().Err(err).Msgf("Failed to delete route: %+v", rule)
@@ -172,13 +204,13 @@ func (m *manager) forceCheckGW() {
 }
 
 func (m *manager) checkGW() {
-	gw, err := m.routingTable.discoverGateway()
+	gw, err := m.routingTable.DiscoverGateway()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to detect system default gateway, keeping old value")
 		return
 	}
 
-	if !m.currentGW.Equal(gw) {
+	if !m.currentGW.Equal(gw) && !gw.Equal(net.IPv4zero) {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 
