@@ -2583,6 +2583,27 @@
       "x-go-name": "ConnectOptions",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ConnectionCreateFilter": {
+      "type": "object",
+      "properties": {
+        "country_code": {
+          "type": "string",
+          "x-go-name": "CountryCode"
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Providers"
+        },
+        "sort_by": {
+          "type": "string",
+          "x-go-name": "SortBy"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ConnectionCreateRequestDTO": {
       "type": "object",
       "title": "ConnectionCreateRequest request used to start a connection.",
@@ -2599,6 +2620,9 @@
           "type": "string",
           "x-go-name": "ConsumerID",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "filter": {
+          "$ref": "#/definitions/ConnectionCreateFilter"
         },
         "hermes_id": {
           "description": "hermes identity",
