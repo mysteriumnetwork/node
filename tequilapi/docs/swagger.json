@@ -4217,6 +4217,10 @@
       "type": "object",
       "title": "WithdrawRequest represents the request to withdraw earnings to l1.",
       "properties": {
+        "amount": {
+          "type": "string",
+          "x-go-name": "Amount"
+        },
         "beneficiary": {
           "type": "string",
           "x-go-name": "Beneficiary"
