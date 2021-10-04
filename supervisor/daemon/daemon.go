@@ -25,11 +25,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/router/network"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
@@ -106,8 +108,79 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 			} else {
 				answer.ok()
 			}
+		case commandDiscoverGateway:
+			t := &network.RoutingTable{}
+			gw, err := t.DiscoverGateway()
+			if err != nil {
+				log.Err(err).Msgf("%s failed", commandDiscoverGateway)
+				answer.err(err)
+			} else {
+				answer.ok(gw.String())
+			}
+		case commandExcludeRoute:
+			if err := d.excludeRoute(cmd...); err != nil {
+				log.Err(err).Msgf("%s failed", commandDiscoverGateway)
+				answer.err(err)
+			} else {
+				answer.ok()
+			}
+		case commandDeleteRoute:
+			if err := d.deleteRoute(cmd...); err != nil {
+				log.Err(err).Msgf("%s failed", commandDiscoverGateway)
+				answer.err(err)
+			} else {
+				answer.ok()
+			}
 		}
 	}
+}
+
+func (d *Daemon) excludeRoute(args ...string) error {
+	flags := flag.NewFlagSet("", flag.ContinueOnError)
+
+	ip := flags.String("ip", "", "Destination IP address")
+	gw := flags.String("gw", "", "Gateway")
+
+	if err := flags.Parse(args[1:]); err != nil {
+		return err
+	}
+
+	if *ip == "" {
+		return errors.New("-ip is required")
+	}
+	if *gw == "" {
+		return errors.New("-gw is required")
+	}
+
+	ipAddr := net.ParseIP(*ip)
+	gwAddr := net.ParseIP(*gw)
+
+	t := &network.RoutingTable{}
+	return t.ExcludeRule(ipAddr, gwAddr)
+}
+
+func (d *Daemon) deleteRoute(args ...string) error {
+	flags := flag.NewFlagSet("", flag.ContinueOnError)
+
+	ip := flags.String("ip", "", "Destination IP address")
+	gw := flags.String("gw", "", "Gateway")
+
+	if err := flags.Parse(args[1:]); err != nil {
+		return err
+	}
+
+	if *ip == "" {
+		return errors.New("-ip is required")
+	}
+	if *gw == "" {
+		return errors.New("-gw is required")
+	}
+
+	ipAddr := net.ParseIP(*ip)
+	gwAddr := net.ParseIP(*gw)
+
+	t := &network.RoutingTable{}
+	return t.DeleteRule(ipAddr, gwAddr)
 }
 
 func (d *Daemon) wgUp(args ...string) (interfaceName string, err error) {
