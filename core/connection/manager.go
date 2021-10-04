@@ -853,7 +853,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 }
 
 func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnectionState) {
-	if state.State == connectionstate.StateOnHold {
+	if state.State == connectionstate.StateOnHold && config.GetBool(config.FlagAutoReconnect) {
 		if m.channel != nil {
 			m.channel.Close()
 		}
