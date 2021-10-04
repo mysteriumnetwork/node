@@ -21,8 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
+
+	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -35,8 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-
-	"github.com/urfave/cli/v2"
 )
 
 // CommandName is the name of this command
@@ -224,11 +225,13 @@ func (c *command) up(ctx *cli.Context) {
 		return
 	}
 
-	providerID := ctx.Args().First()
-	if providerID == "" {
+	providerIDs := ctx.Args().First()
+	if providerIDs == "" {
 		clio.Warn("First argument must be provider identity address")
 		return
 	}
+
+	providers := strings.Split(providerIDs, ",")
 
 	id, err := c.tequilapi.CurrentIdentity("", "")
 	if err != nil {
@@ -247,7 +250,7 @@ func (c *command) up(ctx *cli.Context) {
 		return
 	}
 
-	clio.Status("CONNECTING", "Creating connection from:", id.Address, "to:", providerID)
+	clio.Status("CONNECTING", "Creating connection from:", id.Address, "to:", providers)
 
 	connectOptions := contract.ConnectOptions{
 		DNS:               connection.DNSOptionAuto,
@@ -258,7 +261,9 @@ func (c *command) up(ctx *cli.Context) {
 		clio.Error(err)
 		return
 	}
-	_, err = c.tequilapi.ConnectionCreate(id.Address, providerID, hermesID, serviceWireguard, connectOptions)
+	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, serviceWireguard, contract.ConnectionCreateFilter{
+		Providers: providers,
+	}, connectOptions)
 	if err != nil {
 		clio.Error("Failed to create a new connection")
 		return
