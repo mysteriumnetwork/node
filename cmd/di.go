@@ -228,7 +228,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	netutil.ClearStaleRoutes()
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
@@ -467,10 +466,6 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	di.Storage = localStorage
 
-	if !config.GetBool(config.FlagUserMode) {
-		netutil.SetRouteManagerStorage(di.Storage)
-	}
-
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
@@ -568,6 +563,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.IdentityManager,
 		),
 		di.P2PDialer,
+		di.allowTrustedDomainBypassTunnel,
+		di.disallowTrustedDomainBypassTunnel,
 	)
 
 	di.NATProber = natprobe.NewNATProber(di.ConnectionManager, di.EventBus)
@@ -1046,12 +1043,6 @@ func (di *Dependencies) AllowURLAccess(servers ...string) error {
 		return err
 	}
 
-	if config.GetBool(config.FlagAutoReconnect) {
-		if err := router.ExcludeURL(servers...); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -1062,4 +1053,22 @@ func getUDPListenPorts() (port.Range, error) {
 		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
 	return udpPortRange, nil
+}
+
+func (di *Dependencies) allowTrustedDomainBypassTunnel() {
+	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
+
+	if err := router.ExcludeURL(allow...); err != nil {
+		log.Error().Err(err).Msgf("Failed to exclude routes for trusted domains: %v", allow)
+	}
+}
+
+func (di *Dependencies) disallowTrustedDomainBypassTunnel() {
+	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
+
+	if err := router.RemoveExcludedURL(allow...); err != nil {
+		log.Error().Err(err).Msgf("Failed to remove excluded routes for trusted domains: %v", allow)
+	}
 }

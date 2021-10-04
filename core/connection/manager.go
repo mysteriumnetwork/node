@@ -95,7 +95,7 @@ func DefaultConfig() Config {
 		KeepAlive: KeepAliveConfig{
 			SendInterval:    5 * time.Second,
 			SendTimeout:     5 * time.Second,
-			MaxSendErrCount: 5,
+			MaxSendErrCount: 3,
 		},
 	}
 }
@@ -128,6 +128,9 @@ type TimeGetter func() time.Time
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error)
 
+// ProposalLookup returns a service proposal based on predefined conditions.
+type ProposalLookup func() (proposal *proposal.PricedServiceProposal, err error)
+
 type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
@@ -155,6 +158,9 @@ type connectionManager struct {
 	cancel                 func()
 	channel                p2p.Channel
 
+	preReconnect  func()
+	postReconnect func()
+
 	discoLock      sync.Mutex
 	connectOptions ConnectOptions
 
@@ -172,6 +178,7 @@ func NewManager(
 	statsReportInterval time.Duration,
 	validator validator,
 	p2pDialer p2p.Dialer,
+	preReconnect, postReconnect func(),
 ) *connectionManager {
 	return &connectionManager{
 		newConnection:        connectionCreator,
@@ -187,6 +194,8 @@ func NewManager(
 		validator:            validator,
 		p2pDialer:            p2pDialer,
 		timeGetter:           time.Now,
+		preReconnect:         preReconnect,
+		postReconnect:        postReconnect,
 	}
 }
 
@@ -845,6 +854,13 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 
 func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnectionState) {
 	if state.State == connectionstate.StateOnHold {
+		if m.channel != nil {
+			m.channel.Close()
+		}
+
+		m.preReconnect()
+		m.clearIPCache()
+
 		for err := m.autoReconnect(); err != nil; err = m.autoReconnect() {
 			select {
 			case <-m.currentCtx().Done():
@@ -854,6 +870,7 @@ func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnec
 				log.Error().Err(err).Msg("Failed to reconnect active session, will try again")
 			}
 		}
+		m.postReconnect()
 	}
 }
 
