@@ -91,6 +91,24 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	return wgInterface, nil
 }
 
+func (a *WgInterface) Reconfigure(cfg wgcfg.DeviceConfig) error {
+	log.Info().Msgf("Applying interface configuration")
+	if err := a.Device.IpcSetOperation(bufio.NewReader(strings.NewReader(cfg.Encode()))); err != nil {
+		return fmt.Errorf("could not set device uapi config: %w", err)
+	}
+
+	log.Info().Msg("Bringing device up")
+	a.Device.Up()
+
+	log.Info().Msg("Configuring network")
+	dnsManager := dns.NewManager()
+	if err := configureNetwork(cfg, dnsManager); err != nil {
+		return fmt.Errorf("could not setup network: %w", err)
+	}
+
+	return nil
+}
+
 // Accept listens for WireGuard configuration changes via user space socket.
 func (a *WgInterface) accept() {
 	for {
@@ -133,9 +151,6 @@ func configureNetwork(cfg wgcfg.DeviceConfig, dnsManager dns.Manager) error {
 	}
 
 	if cfg.Peer.Endpoint != nil {
-		if err := netutil.ExcludeRoute(cfg.Peer.Endpoint.IP); err != nil {
-			return fmt.Errorf("could not exclude route %s: %w", cfg.Peer.Endpoint.IP.String(), err)
-		}
 		if err := netutil.AddDefaultRoute(cfg.IfaceName); err != nil {
 			return fmt.Errorf("could not add default route for %s: %w", cfg.IfaceName, err)
 		}
