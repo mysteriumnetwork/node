@@ -74,6 +74,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/requests/resolver"
 	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -227,7 +228,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	netutil.ClearStaleRoutes()
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
@@ -447,6 +447,8 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}
 
+	router.Clean()
+
 	return nil
 }
 
@@ -463,10 +465,6 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	}
 
 	di.Storage = localStorage
-
-	if !config.GetBool(config.FlagUserMode) {
-		netutil.SetRouteManagerStorage(di.Storage)
-	}
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
@@ -565,6 +563,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.IdentityManager,
 		),
 		di.P2PDialer,
+		di.allowTrustedDomainBypassTunnel,
+		di.disallowTrustedDomainBypassTunnel,
 	)
 
 	di.NATProber = natprobe.NewNATProber(di.ConnectionManager, di.EventBus)
@@ -644,7 +644,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	for host, hostIPs := range dnsMap {
 		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
 	}
-	resolver := requests.NewResolverMap(dnsMap)
+	resolver := resolver.NewResolverMap(dnsMap)
 
 	dialer := requests.NewDialerSwarm(options.BindAddress, options.SwarmDialerDNSHeadstart)
 	dialer.ResolveContext = resolver
@@ -1043,15 +1043,6 @@ func (di *Dependencies) AllowURLAccess(servers ...string) error {
 		return err
 	}
 
-	// Doesn't work as expected because some services share IP address with
-	// each other and with location oracle which is supposed to be routed
-	// through VPN tunnel.
-	if false && config.GetBool(config.FlagKeepConnectedOnFail) {
-		if err := router.AllowURLAccess(servers...); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -1062,4 +1053,22 @@ func getUDPListenPorts() (port.Range, error) {
 		return port.Range{}, fmt.Errorf("failed to parse UDP ports: %w", err)
 	}
 	return udpPortRange, nil
+}
+
+func (di *Dependencies) allowTrustedDomainBypassTunnel() {
+	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
+
+	if err := router.ExcludeURL(allow...); err != nil {
+		log.Error().Err(err).Msgf("Failed to exclude routes for trusted domains: %v", allow)
+	}
+}
+
+func (di *Dependencies) disallowTrustedDomainBypassTunnel() {
+	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
+
+	if err := router.RemoveExcludedURL(allow...); err != nil {
+		log.Error().Err(err).Msgf("Failed to remove excluded routes for trusted domains: %v", allow)
+	}
 }

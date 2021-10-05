@@ -25,6 +25,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/requests/resolver"
 )
 
 func Test_DialerSwarm_UsesDefaultResolver(t *testing.T) {
@@ -53,7 +55,7 @@ func Test_DialerSwarm_CustomResolverSuccessfully(t *testing.T) {
 	defer ln.Close()
 
 	dialer := NewDialerSwarm("127.0.0.1", 0)
-	dialer.ResolveContext = NewResolverMap(map[string][]string{
+	dialer.ResolveContext = resolver.NewResolverMap(map[string][]string{
 		"dns-is-faked.golang": {"127.0.0.1", "2001:db8::a3"},
 	})
 
@@ -74,7 +76,7 @@ func Test_DialerSwarm_CustomResolverWithSomeUnreachableIPs(t *testing.T) {
 	defer ln.Close()
 
 	dialer := NewDialerSwarm("127.0.0.1", 0)
-	dialer.ResolveContext = NewResolverMap(map[string][]string{
+	dialer.ResolveContext = resolver.NewResolverMap(map[string][]string{
 		"dns-is-faked.golang": {"2001:db8::a3", "127.0.0.1"},
 	})
 
@@ -88,7 +90,7 @@ func Test_DialerSwarm_CustomResolverWithSomeUnreachableIPs(t *testing.T) {
 
 func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
 	dialer := NewDialerSwarm("127.0.0.1", 0)
-	dialer.ResolveContext = NewResolverMap(map[string][]string{
+	dialer.ResolveContext = resolver.NewResolverMap(map[string][]string{
 		"dns-is-faked.golang": {"2001:db8::a1", "2001:db8::a3"},
 	})
 
@@ -113,7 +115,7 @@ func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
 func Test_DialerSwarm_CustomDialingIsCancelable(t *testing.T) {
 	// configure lagging dialer
 	dialer := NewDialerSwarm("127.0.0.1", 0)
-	dialer.ResolveContext = NewResolverMap(map[string][]string{})
+	dialer.ResolveContext = resolver.NewResolverMap(map[string][]string{})
 	dialer.Dialer = func(ctx context.Context, _, _ string) (net.Conn, error) {
 		select {
 		case <-ctx.Done():

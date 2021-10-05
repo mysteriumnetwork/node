@@ -462,26 +462,17 @@ const (
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
-	proposal, err := mb.proposalsManager.repository.Proposal(market.ProposalID{
-		ProviderID:  req.ProviderID,
-		ServiceType: req.ServiceType,
-	})
+	proposalLookup := func() (proposal *proposal.PricedServiceProposal, err error) {
+		return mb.proposalsManager.repository.Proposal(market.ProposalID{
+			ProviderID:  req.ProviderID,
+			ServiceType: req.ServiceType,
+		})
+	}
 
 	qualityEvent := quality.ConnectionEvent{
 		ServiceType: req.ServiceType,
 		ConsumerID:  req.IdentityAddress,
 		ProviderID:  req.ProviderID,
-	}
-
-	if err != nil {
-		qualityEvent.Stage = quality.StageGetProposal
-		qualityEvent.Error = err.Error()
-		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
-
-		return &ConnectResponse{
-			ErrorCode:    connectErrInvalidProposal,
-			ErrorMessage: err.Error(),
-		}
 	}
 
 	dnsOption, err := req.dnsOption()
@@ -504,7 +495,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		}
 	}
 
-	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), hermes, *proposal, connectOptions); err != nil {
+	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), hermes, proposalLookup, connectOptions); err != nil {
 		qualityEvent.Stage = quality.StageConnectionUnknownError
 		qualityEvent.Error = err.Error()
 		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)

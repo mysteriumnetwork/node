@@ -480,6 +480,10 @@ func (c *channel) Close() error {
 		}
 	})
 
+	if err := router.RemoveExcludedIP(c.peer.remoteAddr.IP); err != nil {
+		return err
+	}
+
 	return closeErr
 }
 

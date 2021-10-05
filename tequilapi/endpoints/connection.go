@@ -24,6 +24,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -34,18 +36,12 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
 	// statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
 	// operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 	statusConnectCancelled = 499
-)
-
-var (
-	errNoProposal = errors.New("provider has no service proposals")
 )
 
 // ProposalGetter defines interface to fetch currently active service proposal by id
@@ -62,7 +58,7 @@ type ConnectionEndpoint struct {
 	manager       connection.Manager
 	publisher     eventbus.Publisher
 	stateProvider stateProvider
-	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
+	// TODO connection should use concrete proposal from connection params and avoid going to marketplace
 	proposalRepository proposalRepository
 	identityRegistry   identityRegistry
 	addressProvider    addressProvider
@@ -192,25 +188,14 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 		return
 	}
 
-	// TODO Pass proposal ID directly in request
-	proposal, err := ce.proposalRepository.Proposal(market.ProposalID{
-		ProviderID:  cr.ProviderID,
-		ServiceType: cr.ServiceType,
-	})
-	if err != nil {
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageGetProposal, err.Error()))
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
+	var proposalLookup connection.ProposalLookup
+	if len(cr.ProviderID) == 0 {
+		proposalLookup = filteredProposals(cr.ServiceType, cr.Filter, ce.proposalRepository)
+	} else {
+		proposalLookup = toProposalLookup(cr.ProviderID, cr.ServiceType, ce.proposalRepository)
 	}
 
-	if proposal == nil {
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageNoProposal, errNoProposal.Error()))
-		utils.SendError(resp, errNoProposal, http.StatusBadRequest)
-		return
-	}
-
-	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.HermesID), *proposal, getConnectOptions(cr))
-
+	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.HermesID), proposalLookup, getConnectOptions(cr))
 	if err != nil {
 		switch err {
 		case connection.ErrAlreadyExists:
@@ -314,7 +299,7 @@ func AddRoutesForConnection(
 }
 
 func toConnectionRequest(req *http.Request, defaultHermes string) (*contract.ConnectionCreateRequest, error) {
-	var connectionRequest = contract.ConnectionCreateRequest{
+	connectionRequest := contract.ConnectionCreateRequest{
 		ConnectOptions: contract.ConnectOptions{
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,
@@ -337,5 +322,26 @@ func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectP
 	return connection.ConnectParams{
 		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
 		DNS:               dns,
+	}
+}
+
+func toProposalLookup(providerID, serviceType string, repo proposalRepository) connection.ProposalLookup {
+	return func() (*proposal.PricedServiceProposal, error) {
+		return repo.Proposal(market.ProposalID{
+			ProviderID:  providerID,
+			ServiceType: serviceType,
+		})
+	}
+}
+
+func filteredProposals(serviceType string, filter contract.ConnectionCreateFilter, repo proposalRepository) connection.ProposalLookup {
+	counter := 0
+	return func() (*proposal.PricedServiceProposal, error) {
+		defer func() { counter++ }()
+
+		return repo.Proposal(market.ProposalID{
+			ProviderID:  filter.Providers[counter%len(filter.Providers)],
+			ServiceType: serviceType,
+		})
 	}
 }

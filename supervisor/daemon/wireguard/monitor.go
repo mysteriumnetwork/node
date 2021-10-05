@@ -20,6 +20,9 @@ package wireguard
 import (
 	"fmt"
 	"sync"
+	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
@@ -44,13 +47,18 @@ func (m *Monitor) Up(cfg wgcfg.DeviceConfig, uid string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, exists := m.interfaces[cfg.IfaceName]; exists {
-		return "", fmt.Errorf("interface %s already exists", cfg.IfaceName)
+	if iface, exists := m.interfaces[cfg.IfaceName]; exists {
+		if err := iface.Reconfigure(cfg); err != nil {
+			return "", fmt.Errorf("failed to reconfigure interface %s: %w", cfg.IfaceName, err)
+		}
+		return iface.Name, nil
 	}
+
 	iface, err := wginterface.New(cfg, uid)
 	if err != nil {
 		return "", err
 	}
+
 	m.interfaces[iface.Name] = iface
 	return iface.Name, err
 }
@@ -84,9 +92,16 @@ func (m *Monitor) Stats(interfaceName string) (*wgcfg.Stats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse device state: %w", err)
 	}
-	stats, err := userspace.ParseDevicePeerStats(deviceState)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse device stats: %w", err)
+
+	for start := time.Now(); time.Since(start) < 10*time.Second; time.Sleep(time.Second) {
+		stats, statErr := userspace.ParseDevicePeerStats(deviceState)
+		if err != nil {
+			err = statErr
+			log.Warn().Err(err).Msg("Failed to parse device stats, will try again")
+		} else {
+			return stats, nil
+		}
 	}
-	return stats, nil
+
+	return nil, err
 }

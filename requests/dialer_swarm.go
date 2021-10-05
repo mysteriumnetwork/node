@@ -28,6 +28,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/requests/resolver"
 	"github.com/mysteriumnetwork/node/router"
 )
 
@@ -38,7 +39,7 @@ var ErrAllDialsFailed = errors.New("all dials failed")
 type DialerSwarm struct {
 	// ResolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
-	ResolveContext ResolveContext
+	ResolveContext resolver.ResolveContext
 
 	// Dialer specifies the dial function for creating unencrypted TCP connections.
 	Dialer DialContext
@@ -289,7 +290,7 @@ func (wd *dialerWithDNSCache) DialContext(ctx context.Context, network, addr str
 				return
 			}
 
-			CacheDNSRecord(addrHost, addrs)
+			resolver.CacheDNSRecord(addrHost, addrs)
 		}
 	}()
 
