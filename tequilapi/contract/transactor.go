@@ -202,6 +202,7 @@ type WithdrawRequest struct {
 	Beneficiary string `json:"beneficiary"`
 	FromChainID int64  `json:"from_chain_id"`
 	ToChainID   int64  `json:"to_chain_id"`
+	Amount      string `json:"amount,omitempty"`
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.

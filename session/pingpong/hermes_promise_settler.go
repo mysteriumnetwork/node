@@ -89,10 +89,6 @@ type hermesChannelProvider interface {
 	Fetch(chainID int64, id identity.Identity, hermesID common.Address) (HermesChannel, error)
 }
 
-type hermesCaller interface {
-	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
-}
-
 type receivedPromise struct {
 	provider    identity.Identity
 	hermesID    common.Address
@@ -106,7 +102,7 @@ type HermesPromiseSettler interface {
 	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
-	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
+	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
 }
 
 // hermesPromiseSettler is responsible for settling the hermes promises.
@@ -462,6 +458,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	providerID identity.Identity,
 	hermesID,
 	beneficiary common.Address,
+	amountToWithdraw *big.Int,
 ) error {
 	if aps.isSettling(providerID) {
 		return errors.New("provider already has settlement in progress")
@@ -507,20 +504,17 @@ func (aps *hermesPromiseSettler) Withdraw(
 			return err
 		}
 	} else {
-		amountToWithdraw, err := aps.calculateAmountToWithdrawFromPreviousPromise(providerID, promiseFromStorage)
-		if err != nil {
-			return err
-		}
+		oldAmountToWithdraw, err := aps.calculateAmountToWithdrawFromPreviousPromise(providerID, promiseFromStorage)
 
-		// if amount to withdraw = 0, the withdrawal has already completed, resume making a new one and delete the existing promise.
-		if amountToWithdraw.Cmp(big.NewInt(0)) > 0 {
-			err = aps.validateWithdrawalAmount(amountToWithdraw)
+		if oldAmountToWithdraw.Cmp(big.NewInt(0)) > 0 {
+			err = aps.validateWithdrawalAmount(oldAmountToWithdraw)
 			if err != nil {
 				return err
 			}
 
 			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage)
 		}
+
 		aps.deleteWithdrawnPromise(promiseFromStorage)
 	}
 
@@ -530,7 +524,9 @@ func (aps *hermesPromiseSettler) Withdraw(
 		return err
 	}
 
-	amountToWithdraw := new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
+	if amountToWithdraw == nil {
+		amountToWithdraw = new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
+	}
 
 	err = aps.validateWithdrawalAmount(amountToWithdraw)
 	if err != nil {
@@ -716,6 +712,20 @@ func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
 		panic(err)
 	}
 	return new(big.Int).SetBytes(agreementID)
+}
+
+func (aps *hermesPromiseSettler) getHermesDataForProvider(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {
+	caller, err := aps.getHermesCaller(chainID, hermesID)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := caller.GetProviderData(chainID, identity.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	return data.fillZerosIfBigIntNull(), nil
 }
 
 func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {

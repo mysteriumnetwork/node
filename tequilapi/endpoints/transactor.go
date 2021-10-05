@@ -58,7 +58,7 @@ type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
-	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
+	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
 }
 
 type addressProvider interface {
@@ -432,6 +432,12 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 		return
 	}
 
+	amount, err := te.parseWithdrawalAmount(req.Amount)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
 	fromChainID := config.GetInt64(config.FlagChainID)
 	if req.FromChainID != 0 {
 		if _, ok := registry.Chains()[req.FromChainID]; !ok {
@@ -452,13 +458,26 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 		toChainID = req.ToChainID
 	}
 
-	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
+	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary), amount)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	resp.WriteHeader(http.StatusOK)
+}
+
+func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, error) {
+	if amount == "" {
+		return nil, nil
+	}
+
+	res, ok := big.NewInt(0).SetString(amount, 10)
+	if !ok {
+		return nil, fmt.Errorf("%v is not a valid integer", amount)
+	}
+
+	return res, nil
 }
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
