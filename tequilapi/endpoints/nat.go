@@ -52,20 +52,6 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 	}
 }
 
-// NATStatus provides NAT configuration info
-// swagger:operation GET /nat/status NAT NATStatusDTO
-// ---
-// summary: Shows NAT status
-// description: NAT status returns the last known NAT traversal status
-// responses:
-//   200:
-//     description: NAT status ("not_finished"/"successful"/"failed") and optionally error if status is "failed"
-//     schema:
-//       "$ref": "#/definitions/NATStatusDTO"
-func (ne *NATEndpoint) NATStatus(c *gin.Context) {
-	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, c.Writer)
-}
-
 // NATType provides NAT type in terms of traversal capabilities
 // swagger:operation GET /nat/type NAT NATTypeDTO
 // ---
@@ -102,7 +88,6 @@ func AddRoutesForNAT(stateProvider stateProvider, natProber natProber) func(*gin
 	return func(e *gin.Engine) error {
 		v1Group := e.Group("/nat")
 		{
-			v1Group.GET("/status", natEndpoint.NATStatus)
 			v1Group.GET("/type", natEndpoint.NATType)
 		}
 		return nil
