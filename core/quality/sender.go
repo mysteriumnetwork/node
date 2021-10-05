@@ -22,11 +22,13 @@ import (
 	"math/big"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -97,10 +99,12 @@ type Event struct {
 }
 
 type appInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	OS      string `json:"os"`
-	Arch    string `json:"arch"`
+	Name            string `json:"name"`
+	Version         string `json:"version"`
+	OS              string `json:"os"`
+	Arch            string `json:"arch"`
+	LauncherVersion string `json:"launcher_version"`
+	HostOS          string `json:"host_os"`
 }
 
 type pingEventContext struct {
@@ -432,17 +436,25 @@ func (s *Sender) SendNATMappingFailEvent(id, stage string, gateways []map[string
 }
 
 func (s *Sender) sendEvent(eventName string, context interface{}) {
-	hostOS := runtime.GOOS
+	guestOS := runtime.GOOS
 	if _, err := os.Stat("/.dockerenv"); err == nil {
-		hostOS += "(docker)"
+		guestOS += "(docker)"
+	}
+	launcherInfo := strings.Split(config.GetString(config.FlagLauncherVersion), "/")
+	launcherVersion := launcherInfo[0]
+	hostOS := ""
+	if len(launcherInfo) > 0 {
+		hostOS = launcherInfo[1]
 	}
 
 	err := s.Transport.SendEvent(Event{
 		Application: appInfo{
-			Name:    appName,
-			OS:      hostOS,
-			Arch:    runtime.GOARCH,
-			Version: s.AppVersion,
+			Name:            appName,
+			OS:              guestOS,
+			Arch:            runtime.GOARCH,
+			Version:         s.AppVersion,
+			LauncherVersion: launcherVersion,
+			HostOS:          hostOS,
 		},
 		EventName: eventName,
 		CreatedAt: time.Now().Unix(),
