@@ -124,11 +124,11 @@ func Test_router_Clean(t *testing.T) {
 }
 
 func Test_router_ReplaceGW(t *testing.T) {
-	gwCheckInterval = 100 * time.Millisecond
 	table := &mockRoutingTable{gw: net.ParseIP("1.1.1.1")}
 	r := &manager{
-		stop:         make(chan struct{}),
-		routingTable: table,
+		stop:            make(chan struct{}),
+		gwCheckInterval: 100 * time.Millisecond,
+		routingTable:    table,
 	}
 
 	r.ExcludeIP(net.ParseIP("2.2.2.2"))
@@ -143,6 +143,9 @@ func Test_router_ReplaceGW(t *testing.T) {
 	table.setGW(net.ParseIP("4.4.4.4"))
 
 	assert.Eventually(t, func() bool {
+		table.mu.Lock()
+		defer table.mu.Unlock()
+
 		_, ok1 := table.rules["2.2.2.2:4.4.4.4"]
 		_, ok2 := table.rules["3.3.3.3:4.4.4.4"]
 		_, not1 := table.rules["2.2.2.2:1.1.1.1"]

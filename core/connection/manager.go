@@ -265,6 +265,8 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
+	originalPublicIP := m.getPublicIP()
+
 	err = m.startConnection(m.currentCtx(), m.activeConnection, m.activeConnection.Start, m.connectOptions, tracer)
 	if err != nil {
 		return m.handleStartError(sessionID, err)
@@ -272,7 +274,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	err = m.waitForConnectedState(m.activeConnection.State())
 	if err != nil {
-		return err
+		return m.handleStartError(sessionID, err)
 	}
 
 	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
@@ -285,6 +287,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 	})
 
 	go m.consumeConnectionStates(m.activeConnection.State())
+	go m.checkSessionIP(m.channel, m.connectOptions.ConsumerID, m.connectOptions.SessionID, originalPublicIP)
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
 
@@ -645,8 +648,6 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	trace := tracer.StartStage("Consumer start connection")
 	defer tracer.EndStage(trace)
 
-	originalPublicIP := m.getPublicIP()
-
 	if err = start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -664,8 +665,6 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 
 	// Clear IP cache so session IP check can report that IP has really changed.
 	m.clearIPCache()
-
-	go m.checkSessionIP(m.channel, connectOptions.ConsumerID, connectOptions.SessionID, originalPublicIP)
 
 	return nil
 }

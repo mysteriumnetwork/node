@@ -26,23 +26,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer/bandwidth"
-	"github.com/mysteriumnetwork/node/datasize"
-	"github.com/mysteriumnetwork/payments/crypto"
-
-	"github.com/gin-gonic/gin"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 type mockConnectionManager struct {
@@ -57,7 +55,8 @@ type mockConnectionManager struct {
 	requestedServiceType string
 }
 
-func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal proposal.PricedServiceProposal, options connection.ConnectParams) error {
+func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposalLookup connection.ProposalLookup, options connection.ConnectParams) error {
+	proposal, _ := proposalLookup()
 	cm.requestedConsumerID = consumerID
 	cm.requestedHermesID = hermesID
 	cm.requestedProvider = identity.FromAddress(proposal.ProviderID)
@@ -228,7 +227,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 			"message" : "validation_error",
 			"errors" : {
 				"consumer_id" : [ { "code" : "required" , "message" : "Field is required" } ],
-				"provider_id" : [ {"code" : "required" , "message" : "Field is required" } ]
+				"filter.providers" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`, resp.Body.String())
 }
@@ -539,14 +538,7 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 
 	g.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"message" : "provider has no service proposals"
-		}`,
-		resp.Body.String(),
-	)
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 }
 
 var mockIdentityRegistryInstance = &registry.FakeRegistry{RegistrationStatus: registry.Registered}

@@ -30,13 +30,23 @@ import (
 )
 
 var (
+	// DefaultRouter contains a default router used for managing routing tables.
+	DefaultRouter Manager
 	once          sync.Once
-	defaultRouter *manager
 )
+
+// Manager describes a routing tables management service.
+type Manager interface {
+	ExcludeIP(net.IP) error
+	RemoveExcludedIP(net.IP) error
+	Clean() error
+}
 
 func ensureRouterStarted() {
 	once.Do(func() {
-		defaultRouter = NewManager()
+		if DefaultRouter == nil {
+			DefaultRouter = NewManager()
+		}
 	})
 }
 
@@ -65,7 +75,7 @@ func ExcludeURL(urls ...string) error {
 
 		for _, a := range addresses {
 			ipv4 := net.ParseIP(a)
-			err := defaultRouter.ExcludeIP(ipv4)
+			err := DefaultRouter.ExcludeIP(ipv4)
 			log.Info().Err(err).Msgf("Excluding URL address from the routes: %s -> %s", u, ipv4)
 		}
 	}
@@ -98,7 +108,7 @@ func RemoveExcludedURL(urls ...string) error {
 
 		for _, a := range addresses {
 			ipv4 := net.ParseIP(a)
-			err := defaultRouter.RemoveExcludedIP(ipv4)
+			err := DefaultRouter.RemoveExcludedIP(ipv4)
 			log.Info().Err(err).Msgf("Excluding URL address from the routes: %s -> %s", u, ipv4)
 		}
 	}
@@ -110,7 +120,7 @@ func RemoveExcludedURL(urls ...string) error {
 func ExcludeIP(ip net.IP) error {
 	ensureRouterStarted()
 
-	err := defaultRouter.ExcludeIP(ip)
+	err := DefaultRouter.ExcludeIP(ip)
 	if err != nil {
 		log.Info().Err(err).Msgf("Excluding IP address from the routes: %s", ip)
 	}
@@ -122,7 +132,7 @@ func ExcludeIP(ip net.IP) error {
 func Clean() error {
 	ensureRouterStarted()
 
-	err := defaultRouter.Clean()
+	err := DefaultRouter.Clean()
 	if err != nil {
 		log.Info().Err(err).Msgf("Failed to clean")
 	}
@@ -130,10 +140,11 @@ func Clean() error {
 	return nil
 }
 
+// RemoveExcludedIP removes IP based exception to route traffic directly.
 func RemoveExcludedIP(ip net.IP) error {
 	ensureRouterStarted()
 
-	err := defaultRouter.RemoveExcludedIP(ip)
+	err := DefaultRouter.RemoveExcludedIP(ip)
 	if err != nil {
 		log.Info().Err(err).Msgf("Removing excluded IP address from the routes: %s", ip)
 	}

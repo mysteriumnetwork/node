@@ -91,6 +91,7 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	return wgInterface, nil
 }
 
+// Reconfigure applies new configuration for the existing wireguard interface.
 func (a *WgInterface) Reconfigure(cfg wgcfg.DeviceConfig) error {
 	log.Info().Msgf("Applying interface configuration")
 	if err := a.Device.IpcSetOperation(bufio.NewReader(strings.NewReader(cfg.Encode()))); err != nil {

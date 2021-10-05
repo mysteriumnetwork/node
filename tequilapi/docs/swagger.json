@@ -2584,6 +2584,7 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "ConnectionCreateFilter": {
+      "description": "ConnectionCreateFilter describes filter for the connection request to lookup\nfor a requested proposals based on specified params.",
       "type": "object",
       "properties": {
         "country_code": {

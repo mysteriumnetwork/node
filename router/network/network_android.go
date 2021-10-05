@@ -21,11 +21,6 @@ package network
 
 import (
 	"net"
-	"strings"
-
-	"github.com/rs/zerolog/log"
-
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
 // RoutingTable implements a set of platform specific tool for creating, deleting

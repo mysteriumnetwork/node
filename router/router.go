@@ -29,8 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/router/network"
 )
 
-var gwCheckInterval = 5 * time.Second
-
 type manager struct {
 	mu   sync.Mutex
 	once sync.Once
@@ -40,7 +38,10 @@ type manager struct {
 
 	routingTable router
 
-	stop chan struct{}
+	gwCheckInterval time.Duration
+
+	onceStop sync.Once
+	stop     chan struct{}
 }
 
 type router interface {
@@ -65,7 +66,8 @@ func NewManager() *manager {
 	return &manager{
 		stop: make(chan struct{}),
 
-		routingTable: r,
+		gwCheckInterval: 5 * time.Second,
+		routingTable:    r,
 	}
 }
 
@@ -77,13 +79,14 @@ func (m *manager) ExcludeIP(ip net.IP) error {
 	new := true
 
 	for i, rule := range m.rules {
-		if rule.ip.Equal(ip) {
-			m.rules[i].usage++
-
-			new = false
-
-			break
+		if !rule.ip.Equal(ip) {
+			continue
 		}
+
+		new = false
+		m.rules[i].usage++
+
+		break
 	}
 
 	if !new {
@@ -107,19 +110,21 @@ func (m *manager) RemoveExcludedIP(ip net.IP) error {
 	defer m.mu.Unlock()
 
 	for i, rule := range m.rules {
-		if rule.ip.Equal(ip) {
-			m.rules[i].usage--
-
-			if m.rules[i].usage == 0 {
-				m.rules = append(m.rules[:i], m.rules[i+1:]...)
-
-				if err := m.routingTable.DeleteRule(ip, m.currentGW); err != nil {
-					return fmt.Errorf("failed to remove excluded rule: %w", err)
-				}
-			}
-
-			break
+		if !rule.ip.Equal(ip) {
+			continue
 		}
+
+		m.rules[i].usage--
+
+		if m.rules[i].usage == 0 {
+			m.rules = append(m.rules[:i], m.rules[i+1:]...)
+
+			if err := m.routingTable.DeleteRule(ip, m.currentGW); err != nil {
+				return fmt.Errorf("failed to remove excluded rule: %w", err)
+			}
+		}
+
+		break
 	}
 
 	return nil
@@ -136,7 +141,7 @@ func (m *manager) ensureStarted() {
 func (m *manager) start() {
 	for {
 		select {
-		case <-time.After(gwCheckInterval):
+		case <-time.After(m.gwCheckInterval):
 			m.checkGW()
 		case <-m.stop:
 			return
@@ -149,7 +154,9 @@ func (m *manager) Stop() {
 		log.Error().Err(err).Msg("Failed to clean routing rules")
 	}
 
-	close(m.stop)
+	m.onceStop.Do(func() {
+		close(m.stop)
+	})
 }
 
 func (m *manager) Clean() (lastErr error) {
