@@ -322,7 +322,7 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 
 	evt, ok := e.(sevent.AppEventDataTransferred)
 	if !ok {
-		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		log.Warn().Msg("Received a wrong kind of event for session state update")
 		return
 	}
 
@@ -333,7 +333,7 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 		}
 	}
 	if session == nil {
-		log.Warn().Msgf("Couldn't find a matching session for earnings change: %s", evt.ID)
+		log.Warn().Msgf("Couldn't find a matching session for data transferred change: %+v", evt)
 		return
 	}
 
