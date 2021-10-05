@@ -33,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/trace"
 )
 
@@ -75,6 +76,8 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			portMapper:        &mockPortMapper{enabled: false},
 		},
 	}
+
+	router.DefaultRouter = &mockRouter{}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -160,3 +163,9 @@ type mockPortMapper struct {
 func (m mockPortMapper) Map(id, protocol string, port int, name string) (release func(), ok bool) {
 	return func() {}, m.enabled
 }
+
+type mockRouter struct{}
+
+func (mr *mockRouter) ExcludeIP(net.IP) error        { return nil }
+func (mr *mockRouter) RemoveExcludedIP(net.IP) error { return nil }
+func (mr *mockRouter) Clean() error                  { return nil }

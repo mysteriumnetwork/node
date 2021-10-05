@@ -251,6 +251,24 @@ func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, service
 	return status, err
 }
 
+// SmartConnectionCreate initiates a new connection to a host identified by filter
+func (client *Client) SmartConnectionCreate(consumerID, hermesID, serviceType string, filter contract.ConnectionCreateFilter, options contract.ConnectOptions) (status contract.ConnectionInfoDTO, err error) {
+	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
+		ConsumerID:     consumerID,
+		Filter:         filter,
+		HermesID:       hermesID,
+		ServiceType:    serviceType,
+		ConnectOptions: options,
+	})
+	if err != nil {
+		return contract.ConnectionInfoDTO{}, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &status)
+	return status, err
+}
+
 // ConnectionDestroy terminates current connection
 func (client *Client) ConnectionDestroy() (err error) {
 	response, err := client.http.Delete("connection", nil)

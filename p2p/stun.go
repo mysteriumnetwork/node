@@ -29,7 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/requests/resolver"
 )
 
 // AppTopicSTUN represents the STUN detection topic.
@@ -156,7 +156,7 @@ func stunPort(conn *net.UDPConn, server string) (remotePort int, err error) {
 		return 0, fmt.Errorf("failed to parse STUN server address: %w", err)
 	}
 
-	if addrs := requests.FetchDNSFromCache(host); len(addrs) > 0 {
+	if addrs := resolver.FetchDNSFromCache(host); len(addrs) > 0 {
 		server = net.JoinHostPort(addrs[0], port)
 	}
 
@@ -165,7 +165,7 @@ func stunPort(conn *net.UDPConn, server string) (remotePort int, err error) {
 		return 0, fmt.Errorf("failed to resolve STUN server address: %w", err)
 	}
 
-	requests.CacheDNSRecord(host, []string{serverAddr.IP.String()})
+	resolver.CacheDNSRecord(host, []string{serverAddr.IP.String()})
 
 	m := stun.MustBuild(stun.TransactionID, stun.BindingRequest)
 
