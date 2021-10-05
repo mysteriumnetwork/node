@@ -1289,24 +1289,6 @@
         }
       }
     },
-    "/nat/status": {
-      "get": {
-        "description": "NAT status returns the last known NAT traversal status",
-        "tags": [
-          "NAT"
-        ],
-        "summary": "Shows NAT status",
-        "operationId": "NATStatusDTO",
-        "responses": {
-          "200": {
-            "description": "NAT status (\"not_finished\"/\"successful\"/\"failed\") and optionally error if status is \"failed\"",
-            "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
-            }
-          }
-        }
-      }
-    },
     "/nat/type": {
       "get": {
         "description": "Returns NAT type. May produce invalid result while VPN connection is established",

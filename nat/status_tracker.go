@@ -64,6 +64,7 @@ func (t *StatusTracker) ConsumeNATEvent(event event.Event) {
 }
 
 // NewStatusTracker returns new instance of status tracker
+// TODO check with Dmitri if this is needed as we have NodeStatus now
 func NewStatusTracker(lastStageName string) *StatusTracker {
 	return &StatusTracker{
 		lastStageName: lastStageName,
