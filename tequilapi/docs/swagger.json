@@ -4108,6 +4108,11 @@
           "x-go-name": "ChannelAddress",
           "example": "0x0000000000000000000000000000000000000001"
         },
+        "error": {
+          "type": "string",
+          "x-go-name": "Error",
+          "example": "internal server error"
+        },
         "fees": {
           "$ref": "#/definitions/Int"
         },
@@ -4115,6 +4120,11 @@
           "type": "string",
           "x-go-name": "HermesID",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "is_withdrawal": {
+          "type": "boolean",
+          "x-go-name": "IsWithdrawal",
+          "example": false
         },
         "provider_id": {
           "type": "string",

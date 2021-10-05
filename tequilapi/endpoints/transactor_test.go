@@ -264,7 +264,9 @@ func Test_SettleHistory(t *testing.T) {
 						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
 						"amount": 123,
 						"settled_at": "2020-01-02T03:04:05Z",
-						"fees": 20
+						"fees": 20,
+						"is_withdrawal": false,
+						"error": ""
 					},
 					{
 						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
@@ -274,7 +276,9 @@ func Test_SettleHistory(t *testing.T) {
 						"beneficiary": "0x0000000000000000000000000000000000000000",
 						"amount": 456,
 						"settled_at": "2020-06-07T08:09:10Z",
-						"fees": 50
+						"fees": 50,
+						"is_withdrawal": false,
+						"error": ""
 					}
 				],
 				"page": 1,

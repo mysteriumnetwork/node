@@ -74,10 +74,6 @@ func (mac *mockHermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *bi
 	return promise, nil
 }
 
-func (mac *mockHermesCaller) GetProviderData(chainID int64, id string) (ConsumerData, error) {
-	return ConsumerData{}, nil
-}
-
 func (mac *mockHermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
 	return ConsumerData{}, nil
 }
