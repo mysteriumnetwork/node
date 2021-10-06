@@ -443,7 +443,7 @@ func (s *Sender) sendEvent(eventName string, context interface{}) {
 	launcherInfo := strings.Split(config.GetString(config.FlagLauncherVersion), "/")
 	launcherVersion := launcherInfo[0]
 	hostOS := ""
-	if len(launcherInfo) > 0 {
+	if len(launcherInfo) > 1 {
 		hostOS = launcherInfo[1]
 	}
 
