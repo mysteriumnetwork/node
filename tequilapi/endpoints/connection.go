@@ -327,9 +327,11 @@ func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectP
 
 func filteredProposals(serviceType string, filter contract.ConnectionCreateFilter, repo proposalRepository) connection.ProposalLookup {
 	f := &proposal.Filter{
-		ServiceType:     serviceType,
-		LocationCountry: filter.CountryCode,
-		ProviderIDs:     filter.Providers,
+		ServiceType:             serviceType,
+		LocationCountry:         filter.CountryCode,
+		ProviderIDs:             filter.Providers,
+		IPType:                  filter.IPType,
+		IncludeMonitoringFailed: filter.IncludeMonitoringFailed,
 	}
 
 	usedProposals := make(map[string]time.Time, 0)
