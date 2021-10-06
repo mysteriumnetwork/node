@@ -175,7 +175,7 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(servicestate.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeServiceSessionEvent); err != nil {
+	if err := bus.Subscribe(sevent.AppTopicSession, k.consumeServiceSessionEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(sevent.AppTopicDataTransferred, k.consumeServiceSessionStatisticsEvent); err != nil {
