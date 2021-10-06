@@ -226,8 +226,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
-				"consumer_id" : [ { "code" : "required" , "message" : "Field is required" } ],
-				"filter.providers" : [ {"code" : "required" , "message" : "Field is required" } ]
+				"consumer_id" : [ { "code" : "required" , "message" : "Field is required" } ]
 			}
 		}`, resp.Body.String())
 }

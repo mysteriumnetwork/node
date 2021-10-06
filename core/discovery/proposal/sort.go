@@ -45,6 +45,8 @@ func Sort(proposals []PricedServiceProposal, sortType string) ([]PricedServicePr
 		return SortByPrice(proposals), nil
 	case SortTypeQuality:
 		return SortByQuality(proposals), nil
+	case "": // Assuming zero value to be no sorting.
+		return proposals, nil
 	default:
 		return nil, ErrUnsupportedSortType
 	}
@@ -86,7 +88,7 @@ func SortByBandwidth(proposals []PricedServiceProposal) []PricedServiceProposal 
 	return tmp
 }
 
-// SortByBandwidth sorts proposals list based on proposal price.
+// SortByPrice sorts proposals list based on proposal price.
 func SortByPrice(proposals []PricedServiceProposal) []PricedServiceProposal {
 	tmp := make([]PricedServiceProposal, len(proposals))
 	copy(tmp, proposals)
