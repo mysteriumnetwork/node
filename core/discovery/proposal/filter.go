@@ -30,6 +30,7 @@ import (
 type Filter struct {
 	PresetID                           int
 	ProviderID                         string
+	ProviderIDs                        []string
 	ServiceType                        string
 	LocationCountry                    string
 	IPType                             string
@@ -57,6 +58,9 @@ func (filter *Filter) Build() {
 		if filter.ProviderID != "" {
 			conditions = append(conditions, reducer.Equal(reducer.ProviderID, filter.ProviderID))
 		}
+		if len(filter.ProviderIDs) > 0 {
+			conditions = append(conditions, reducer.InString(reducer.ProviderID, filter.ProviderIDs...))
+		}
 		if filter.ServiceType != "" {
 			conditions = append(conditions, reducer.Equal(reducer.ServiceType, filter.ServiceType))
 		}
@@ -73,7 +77,6 @@ func (filter *Filter) Build() {
 		}
 		filter.condition = reducer.And(conditions...)
 	})
-
 }
 
 // Matches return flag if filter matches given proposal
