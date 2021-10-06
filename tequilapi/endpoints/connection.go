@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
@@ -188,12 +189,11 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 		return
 	}
 
-	var proposalLookup connection.ProposalLookup
-	if len(cr.ProviderID) == 0 {
-		proposalLookup = filteredProposals(cr.ServiceType, cr.Filter, ce.proposalRepository)
-	} else {
-		proposalLookup = toProposalLookup(cr.ProviderID, cr.ServiceType, ce.proposalRepository)
+	if len(cr.ProviderID) > 0 {
+		cr.Filter.Providers = append(cr.Filter.Providers, cr.ProviderID)
 	}
+
+	proposalLookup := filteredProposals(cr.ServiceType, cr.Filter, ce.proposalRepository)
 
 	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.HermesID), proposalLookup, getConnectOptions(cr))
 	if err != nil {
@@ -325,23 +325,38 @@ func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectP
 	}
 }
 
-func toProposalLookup(providerID, serviceType string, repo proposalRepository) connection.ProposalLookup {
-	return func() (*proposal.PricedServiceProposal, error) {
-		return repo.Proposal(market.ProposalID{
-			ProviderID:  providerID,
-			ServiceType: serviceType,
-		})
-	}
-}
-
 func filteredProposals(serviceType string, filter contract.ConnectionCreateFilter, repo proposalRepository) connection.ProposalLookup {
-	counter := 0
-	return func() (*proposal.PricedServiceProposal, error) {
-		defer func() { counter++ }()
+	f := &proposal.Filter{
+		ServiceType:     serviceType,
+		LocationCountry: filter.CountryCode,
+		ProviderIDs:     filter.Providers,
+	}
 
-		return repo.Proposal(market.ProposalID{
-			ProviderID:  filter.Providers[counter%len(filter.Providers)],
-			ServiceType: serviceType,
-		})
+	usedProposals := make(map[string]time.Time, 0)
+
+	return func() (*proposal.PricedServiceProposal, error) {
+		proposals, err := repo.Proposals(f)
+		if err != nil {
+			return nil, err
+		}
+
+		proposals, err = proposal.Sort(proposals, filter.SortBy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sort proposals: %w", err)
+		}
+
+		for _, p := range proposals { // Trying to find providers that we didn't try to connect during 5 minutes.
+			if t, ok := usedProposals[p.ProviderID]; !ok || time.Since(t) > 5*time.Minute {
+				usedProposals[p.ProviderID] = time.Now()
+				return &p, nil
+			}
+		}
+
+		for _, p := range proposals { // If we failed to find new provider, trying the old ones.
+			usedProposals[p.ProviderID] = time.Now()
+			return &p, nil
+		}
+
+		return nil, fmt.Errorf("no providers available for the filter")
 	}
 }
