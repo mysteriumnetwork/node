@@ -28,19 +28,20 @@ import (
 
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/requests/resolver"
 )
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
 	// resolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
-	resolveContext requests.ResolveContext
+	resolveContext resolver.ResolveContext
 
 	dialer requests.DialContext
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
-func NewBrokerConnector(dialer requests.DialContext, resolveContext requests.ResolveContext) *BrokerConnector {
+func NewBrokerConnector(dialer requests.DialContext, resolveContext resolver.ResolveContext) *BrokerConnector {
 	return &BrokerConnector{
 		resolveContext: resolveContext,
 		dialer:         dialer,
@@ -129,5 +130,5 @@ func cacheBrokerDNS(server string, addrs []string) {
 		cacheAddrs = append(cacheAddrs, ip)
 	}
 
-	requests.CacheDNSRecord(host, cacheAddrs)
+	resolver.CacheDNSRecord(host, cacheAddrs)
 }

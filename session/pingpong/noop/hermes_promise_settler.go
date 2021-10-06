@@ -18,6 +18,8 @@
 package noop
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 )
@@ -47,6 +49,6 @@ func (n *NoopHermesPromiseSettler) GetHermesFee(chainID int64, _ common.Address)
 }
 
 // Withdraw does absolutely nothing.
-func (n *NoopHermesPromiseSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (n *NoopHermesPromiseSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error {
 	return nil
 }

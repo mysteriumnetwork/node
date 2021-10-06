@@ -2583,6 +2583,28 @@
       "x-go-name": "ConnectOptions",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ConnectionCreateFilter": {
+      "description": "ConnectionCreateFilter describes filter for the connection request to lookup\nfor a requested proposals based on specified params.",
+      "type": "object",
+      "properties": {
+        "country_code": {
+          "type": "string",
+          "x-go-name": "CountryCode"
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Providers"
+        },
+        "sort_by": {
+          "type": "string",
+          "x-go-name": "SortBy"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ConnectionCreateRequestDTO": {
       "type": "object",
       "title": "ConnectionCreateRequest request used to start a connection.",
@@ -2599,6 +2621,9 @@
           "type": "string",
           "x-go-name": "ConsumerID",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "filter": {
+          "$ref": "#/definitions/ConnectionCreateFilter"
         },
         "hermes_id": {
           "description": "hermes identity",
@@ -4217,6 +4242,10 @@
       "type": "object",
       "title": "WithdrawRequest represents the request to withdraw earnings to l1.",
       "properties": {
+        "amount": {
+          "type": "string",
+          "x-go-name": "Amount"
+        },
         "beneficiary": {
           "type": "string",
           "x-go-name": "Beneficiary"

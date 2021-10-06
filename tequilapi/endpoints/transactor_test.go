@@ -479,7 +479,7 @@ func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 
-func (ms *mockSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (ms *mockSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error {
 	ms.capturedToChainID = toChainID
 	ms.capturedFromChainID = fromChainID
 	return nil

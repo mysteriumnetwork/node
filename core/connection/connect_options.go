@@ -38,8 +38,8 @@ type ConnectParams struct {
 // ConnectOptions represents the params we need to ensure a successful connection
 type ConnectOptions struct {
 	ConsumerID      identity.Identity
-	ProviderID      identity.Identity
 	Proposal        proposal.PricedServiceProposal
+	ProposalLookup  ProposalLookup
 	SessionID       session.ID
 	Params          ConnectParams
 	SessionConfig   []byte
