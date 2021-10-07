@@ -89,7 +89,7 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 }
 
 func (c *client) configureDevice(config wgcfg.DeviceConfig) error {
-	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", config.IfaceName, config.Subnet.IP.String()); err != nil {
+	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", config.IfaceName, config.Subnet.String()); err != nil {
 		return err
 	}
 

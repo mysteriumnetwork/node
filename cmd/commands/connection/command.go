@@ -53,6 +53,18 @@ var (
 		Name:  "location-type",
 		Usage: "Node location types to filter by eg.'hosting', 'residential', 'mobile' etc.",
 	}
+
+	flagSortType = cli.StringFlag{
+		Name:  "sort",
+		Usage: "Proposal sorting type. One of: quality, bandwidth, latency or price",
+		Value: "quality",
+	}
+
+	flagIncludeFailed = cli.BoolFlag{
+		Name:  "include-failed",
+		Usage: "Include proposals marked as test failed by monitoring agent",
+		Value: false,
+	}
 )
 
 const serviceWireguard = "wireguard"
@@ -97,7 +109,7 @@ func NewCommand() *cli.Command {
 				Name:      "up",
 				ArgsUsage: "[ProviderIdentityAddress]",
 				Usage:     "Create a new connection",
-				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions},
+				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions, &flagCountry, &flagLocationType, &flagSortType, &flagIncludeFailed},
 				Action: func(ctx *cli.Context) error {
 					cmd.up(ctx)
 					return nil
@@ -225,13 +237,14 @@ func (c *command) up(ctx *cli.Context) {
 		return
 	}
 
-	providerIDs := ctx.Args().First()
-	if providerIDs == "" {
-		clio.Warn("First argument must be provider identity address")
-		return
-	}
+	providers := strings.Split(ctx.Args().First(), ",")
+	providerIDs := []string{}
 
-	providers := strings.Split(providerIDs, ",")
+	for _, p := range providers {
+		if len(p) > 0 {
+			providerIDs = append(providerIDs, p)
+		}
+	}
 
 	id, err := c.tequilapi.CurrentIdentity("", "")
 	if err != nil {
@@ -261,11 +274,18 @@ func (c *command) up(ctx *cli.Context) {
 		clio.Error(err)
 		return
 	}
-	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, serviceWireguard, contract.ConnectionCreateFilter{
-		Providers: providers,
-	}, connectOptions)
+
+	filter := contract.ConnectionCreateFilter{
+		Providers:               providerIDs,
+		CountryCode:             ctx.String(flagCountry.Name),
+		IPType:                  ctx.String(flagLocationType.Name),
+		SortBy:                  ctx.String(flagSortType.Name),
+		IncludeMonitoringFailed: ctx.Bool(flagIncludeFailed.Name),
+	}
+
+	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, serviceWireguard, filter, connectOptions)
 	if err != nil {
-		clio.Error("Failed to create a new connection")
+		clio.Error("Failed to create a new connection", err)
 		return
 	}
 

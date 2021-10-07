@@ -2591,6 +2591,14 @@
           "type": "string",
           "x-go-name": "CountryCode"
         },
+        "include_monitoring_failed": {
+          "type": "boolean",
+          "x-go-name": "IncludeMonitoringFailed"
+        },
+        "ip_type": {
+          "type": "string",
+          "x-go-name": "IPType"
+        },
         "providers": {
           "type": "array",
           "items": {

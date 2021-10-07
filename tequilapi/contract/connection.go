@@ -163,9 +163,11 @@ type ConnectionCreateRequest struct {
 // ConnectionCreateFilter describes filter for the connection request to lookup
 // for a requested proposals based on specified params.
 type ConnectionCreateFilter struct {
-	Providers   []string `json:"providers,omitempty"`
-	CountryCode string   `json:"country_code,omitempty"`
-	SortBy      string   `json:"sort_by,omitempty"`
+	Providers               []string `json:"providers,omitempty"`
+	CountryCode             string   `json:"country_code,omitempty"`
+	IPType                  string   `json:"ip_type,omitempty"`
+	IncludeMonitoringFailed bool     `json:"include_monitoring_failed,omitempty"`
+	SortBy                  string   `json:"sort_by,omitempty"`
 }
 
 // Validate validates fields in request.
@@ -173,11 +175,6 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
 		errs.ForField("consumer_id").Required()
-	}
-	if len(cr.ProviderID) == 0 {
-		if len(cr.Filter.Providers) == 0 {
-			errs.ForField("filter.providers").Required()
-		}
 	}
 	return errs
 }
