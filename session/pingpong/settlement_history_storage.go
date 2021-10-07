@@ -54,6 +54,8 @@ type SettlementHistoryEntry struct {
 	Amount         *big.Int
 	TotalSettled   *big.Int
 	Fees           *big.Int
+	IsWithdrawal   bool
+	Error          string
 }
 
 const settlementHistoryBucket = "settlement-history"
