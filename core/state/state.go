@@ -37,7 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
-	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	nodeSession "github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -82,7 +81,6 @@ type Keeper struct {
 
 	// provider
 	consumeServiceStateEvent             func(e interface{})
-	consumeNATEvent                      func(e interface{})
 	consumeServiceSessionStatisticsEvent func(e interface{})
 	consumeServiceSessionEarningsEvent   func(e interface{})
 	consumeNATStatusUpdateEvent          func(e interface{})
@@ -182,9 +180,6 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(sevent.AppTopicTokensEarned, k.consumeServiceSessionEarningsEvent); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, k.consumeConnectionStateEvent); err != nil {
