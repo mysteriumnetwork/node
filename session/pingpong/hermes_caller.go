@@ -227,26 +227,6 @@ func (ac *HermesCaller) IsIdentityOffchain(chainID int64, id string) (bool, erro
 	return data.IsOffchain, nil
 }
 
-// GetProviderData gets provider data from hermes
-func (ac *HermesCaller) GetProviderData(chainID int64, id string) (ConsumerData, error) {
-	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/provider/%v", id), nil)
-	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
-	}
-	var resp map[int64]ConsumerData
-	err = ac.doRequest(req, &resp)
-	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
-	}
-
-	data, ok := resp[chainID]
-	if !ok {
-		return ConsumerData{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
-	}
-
-	return data, nil
-}
-
 // GetConsumerData gets consumer data from hermes
 func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)

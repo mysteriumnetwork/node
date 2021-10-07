@@ -505,6 +505,9 @@ func (aps *hermesPromiseSettler) Withdraw(
 		}
 	} else {
 		oldAmountToWithdraw, err := aps.calculateAmountToWithdrawFromPreviousPromise(providerID, promiseFromStorage)
+		if err != nil {
+			return err
+		}
 
 		if oldAmountToWithdraw.Cmp(big.NewInt(0)) > 0 {
 			err = aps.validateWithdrawalAmount(oldAmountToWithdraw)
@@ -512,7 +515,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 				return err
 			}
 
-			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage)
+			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
 		}
 
 		aps.deleteWithdrawnPromise(promiseFromStorage)
@@ -552,20 +555,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 		return err
 	}
 
-	aps.publisher.Publish(event.AppTopicWithdrawalRequested, event.AppEventWithdrawalRequested{
-		ProviderID: providerID,
-		HermesID:   hermesID,
-		FromChain:  fromChainID,
-		ToChain:    toChainID,
-	})
-
 	decodedR, err := hex.DecodeString(promiseFromStorage.R)
 	if err != nil {
 		return fmt.Errorf("could not decode R %w", err)
 	}
 	promiseFromStorage.Promise.R = decodedR
 
-	return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage)
+	return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
 }
 
 func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage HermesPromise) {
@@ -575,7 +571,7 @@ func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage Herme
 	}
 }
 
-func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise) error {
+func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
 	decodedR, err := hex.DecodeString(promiseFromStorage.R)
 	if err != nil {
 		return fmt.Errorf("could not decode R %w", err)
@@ -588,6 +584,13 @@ func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.In
 	if err != nil {
 		return fmt.Errorf("could not sign pay and settle payload: %w", err)
 	}
+
+	aps.publisher.Publish(event.AppTopicWithdrawalRequested, event.AppEventWithdrawalRequested{
+		ProviderID: providerID,
+		HermesID:   promiseFromStorage.HermesID,
+		FromChain:  fromChain,
+		ToChain:    promiseFromStorage.Promise.ChainID,
+	})
 
 	go func() {
 		log.Info().Msg("caling mister transactor")
@@ -671,7 +674,7 @@ func (aps *hermesPromiseSettler) payAndSettle(
 		return fmt.Errorf("could not generate provider channel address: %w", err)
 	}
 
-	errCh := aps.listenForSettlement(hermesID, beneficiary, updatedPromise, provider, aps.toBytes32(channelID), id)
+	errCh := aps.listenForSettlement(hermesID, beneficiary, updatedPromise, provider, aps.toBytes32(channelID), id, true)
 	return <-errCh
 }
 
@@ -712,20 +715,6 @@ func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
 		panic(err)
 	}
 	return new(big.Int).SetBytes(agreementID)
-}
-
-func (aps *hermesPromiseSettler) getHermesDataForProvider(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {
-	caller, err := aps.getHermesCaller(chainID, hermesID)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := caller.GetProviderData(chainID, identity.Hex())
-	if err != nil {
-		return nil, err
-	}
-
-	return data.fillZerosIfBigIntNull(), nil
 }
 
 func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {
@@ -807,11 +796,11 @@ func (aps *hermesPromiseSettler) settle(
 		return fmt.Errorf("could not generate provider channel address: %w", err)
 	}
 
-	errCh := aps.listenForSettlement(hermesID, beneficiary, updatedPromise, provider, aps.toBytes32(channelID), id)
+	errCh := aps.listenForSettlement(hermesID, beneficiary, updatedPromise, provider, aps.toBytes32(channelID), id, false)
 	return <-errCh
 }
 
-func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary common.Address, promise crypto.Promise, provider identity.Identity, providerChannelID [32]byte, queueID string) <-chan error {
+func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary common.Address, promise crypto.Promise, provider identity.Identity, providerChannelID [32]byte, queueID string, isWithdrawal bool) <-chan error {
 	errCh := make(chan error)
 	go func() {
 		defer close(errCh)
@@ -823,7 +812,6 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 			case <-t:
 				return
 			case <-time.After(aps.config.SettlementCheckInterval):
-				// TODO: we could cache this internally and avoid further transactor calls.
 				res, err := aps.transactor.GetQueueStatus(queueID)
 				if err != nil {
 					log.Err(err).Str("queueID", queueID).Msg("could not get queue status")
@@ -838,7 +826,23 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 
 				// if error, don't wait as it will never complete
 				if state == "error" {
-					errCh <- fmt.Errorf("transactor reported queue error for id %v", queueID)
+					she := SettlementHistoryEntry{
+						TxHash:     common.HexToHash(res.Hash),
+						ProviderID: provider,
+						HermesID:   hermesID,
+						// TODO: this should probably be either provider channel address or the consumer address from the promise, not truncated provider channel address.
+						ChannelAddress: common.BytesToAddress(providerChannelID[:]),
+						Time:           time.Now().UTC(),
+						Promise:        promise,
+						Beneficiary:    beneficiary,
+						Error:          res.Error,
+						IsWithdrawal:   isWithdrawal,
+					}
+					err = aps.settlementHistoryStorage.Store(she)
+					if err != nil {
+						log.Error().Err(err).Msg("Could not store settlement history")
+					}
+					errCh <- fmt.Errorf("transactor reported queue error for id %v: %v", queueID, res.Error)
 					return
 				}
 
@@ -882,6 +886,7 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					Amount:         info.AmountSentToBeneficiary,
 					Fees:           info.Fees,
 					TotalSettled:   ch.Channel.Settled,
+					IsWithdrawal:   isWithdrawal,
 				}
 
 				err = aps.settlementHistoryStorage.Store(she)
