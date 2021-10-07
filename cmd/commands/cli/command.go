@@ -431,17 +431,6 @@ func (c *cliApp) healthcheck() (err error) {
 }
 
 func (c *cliApp) natStatus() (err error) {
-	status, err := c.tequilapi.NATStatus()
-	if err != nil {
-		return fmt.Errorf("failed to retrieve NAT traversal status: %w", err)
-	}
-
-	if status.Error == "" {
-		clio.Infof("NAT traversal status: %q\n", status.Status)
-	} else {
-		clio.Infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
-	}
-
 	connStatus, err := c.tequilapi.ConnectionStatus()
 	if err != nil {
 		clio.Warn(err)

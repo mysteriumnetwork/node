@@ -1322,7 +1322,7 @@
           "200": {
             "description": "Node status (\"passed\"/\"failed\"/\"pending)",
             "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
+              "$ref": "#/definitions/NodeStatusResponse"
             }
           }
         }
@@ -3257,21 +3257,6 @@
       "description": "MonitoringStatus enum",
       "type": "string",
       "x-go-package": "github.com/mysteriumnetwork/node/core/node"
-    },
-    "NATStatusDTO": {
-      "description": "NATStatusDTO gives information about NAT traversal success or failure",
-      "type": "object",
-      "properties": {
-        "error": {
-          "type": "string",
-          "x-go-name": "Error"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "NATType": {
       "description": "NATType represents nat type",

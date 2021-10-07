@@ -34,37 +34,6 @@ const errorMessage = `
 }
 `
 
-func Test_NATStatus_ReturnsStatus(t *testing.T) {
-	httpClient := mockHTTPClient(
-		t,
-		http.MethodGet,
-		"/nat/status",
-		http.StatusOK,
-		`{"status": "failure", "error": "mock error"}`,
-	)
-	client := Client{http: httpClient}
-
-	status, err := client.NATStatus()
-
-	assert.NoError(t, err)
-	assert.Equal(t, "failure", status.Status)
-	assert.Equal(t, "mock error", status.Error)
-}
-
-func Test_NATStatus_ReturnsError(t *testing.T) {
-	httpClient := mockHTTPClient(
-		t,
-		http.MethodGet,
-		"/nat/status",
-		http.StatusInternalServerError,
-		``,
-	)
-	client := Client{http: httpClient}
-
-	_, err := client.NATStatus()
-	assert.Error(t, err)
-}
-
 func TestConnectionErrorIsReturnedByClientInsteadOfDoubleParsing(t *testing.T) {
 	responseBody := &trackingCloser{
 		Reader: strings.NewReader(errorMessage),
