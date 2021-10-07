@@ -18,7 +18,6 @@
 package state
 
 import (
-	"errors"
 	"math/big"
 	"sync"
 	"testing"
@@ -36,7 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/nat"
 	nodeSession "github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -75,11 +73,6 @@ func Test_Debounce_CallsOnceInInterval(t *testing.T) {
 		f(struct{}{})
 	}
 	assert.Eventually(t, interacted(dt, 1), 2*time.Second, 10*time.Millisecond)
-}
-
-var mockNATStatus = nat.Status{
-	Status: "status",
-	Error:  errors.New("err"),
 }
 
 type mockPublisher struct {
