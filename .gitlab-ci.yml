@@ -78,7 +78,7 @@ test-install-script:
   tags: [go,dedicated]
   script: go run mage.go -v TestInstallScript
   only:
-    - master
+    - mainnet-builds
 
 create-bucket:
   stage: pre-release
@@ -160,7 +160,7 @@ release-snapshot:debian-ppa:
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPASnapshot
   only:
-    - master
+    - mainnet-builds
 
 release-snapshot:goreport:
   stage: release-snapshot
@@ -181,7 +181,7 @@ release-nightly:node:
   tags: [go]
   script: go run mage.go -v ReleaseGithubNightly
   only:
-    - master
+    - mainnet-builds
 
 
 release-tag:release:

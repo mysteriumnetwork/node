@@ -59,7 +59,6 @@ func ppaVersion(buildVersion string) string {
 // ReleaseDebianPPASnapshot releases to node-dev PPA
 func ReleaseDebianPPASnapshot() error {
 	err := env.EnsureEnvVars(
-		env.SnapshotBuild,
 		env.BuildVersion,
 		env.BuildNumber,
 	)
@@ -67,12 +66,8 @@ func ReleaseDebianPPASnapshot() error {
 		return err
 	}
 
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
-		return nil
-	}
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:  "node-dev",
+		repository:  "node-mainnet",
 		version:     ppaVersion(env.Str(env.BuildVersion)),
 		buildNumber: env.Str(env.BuildNumber),
 	})

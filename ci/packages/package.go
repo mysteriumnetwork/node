@@ -27,13 +27,14 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/rs/zerolog/log"
 )
 
 // PackageLinuxAmd64 builds and stores linux amd64 package
@@ -206,7 +207,7 @@ func PackageDockerAlpine() error {
 	if err := saveDockerImage("myst:alpine", "build/docker-images/myst_alpine.tgz"); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadDockerImages)
+	return storage.UploadDockerImages()
 }
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image

@@ -26,11 +26,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const dockerImagesDir = "build/docker-images"
@@ -106,7 +107,6 @@ func ReleaseDockerSnapshot() error {
 	logconfig.Bootstrap()
 
 	err := env.EnsureEnvVars(
-		env.SnapshotBuild,
 		env.BuildVersion,
 		env.DockerHubPassword,
 		env.DockerHubUsername,
@@ -115,17 +115,9 @@ func ReleaseDockerSnapshot() error {
 		return err
 	}
 
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseDockerSnapshot action...")
-		return nil
-	}
-
 	releasables := []dockerReleasable{
-		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst-snapshots", tags: []string{
-			env.Str(env.BuildVersion) + "-alpine",
-		}},
-		{partialLocalName: "myst:ubuntu", repository: "mysteriumnetwork/myst-snapshots", tags: []string{
-			env.Str(env.BuildVersion) + "-ubuntu",
+		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{
+			"mainnet",
 		}},
 	}
 	return releaseDockerHub(&releaseDockerHubOpts{
