@@ -532,6 +532,18 @@ func (client *Client) ServiceStop(id string) error {
 	return nil
 }
 
+// NATStatus returns status of NAT traversal
+func (client *Client) NATStatus() (status contract.NodeStatusResponse, err error) {
+	response, err := client.http.Get("node/monitoring-status", nil)
+	if err != nil {
+		return status, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &status)
+	return status, err
+}
+
 // NATType returns type of NAT in sense of traversal capabilities
 func (client *Client) NATType() (status contract.NATTypeDTO, err error) {
 	response, err := client.http.Get("nat/type", nil)

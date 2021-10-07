@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,6 +35,36 @@ const errorMessage = `
 	"message" : "me haz faild"
 }
 `
+
+func Test_NATStatus_ReturnsStatus(t *testing.T) {
+	httpClient := mockHTTPClient(
+		t,
+		http.MethodGet,
+		"/node/monitoring-status",
+		http.StatusOK,
+		`{"status": "failed"}`,
+	)
+	client := Client{http: httpClient}
+
+	status, err := client.NATStatus()
+
+	assert.NoError(t, err)
+	assert.Equal(t, node.Failed, status.Status)
+}
+
+func Test_NATStatus_ReturnsError(t *testing.T) {
+	httpClient := mockHTTPClient(
+		t,
+		http.MethodGet,
+		"/node/monitoring-status",
+		http.StatusInternalServerError,
+		``,
+	)
+	client := Client{http: httpClient}
+
+	_, err := client.NATStatus()
+	assert.Error(t, err)
+}
 
 func TestConnectionErrorIsReturnedByClientInsteadOfDoubleParsing(t *testing.T) {
 	responseBody := &trackingCloser{
