@@ -1289,24 +1289,6 @@
         }
       }
     },
-    "/nat/status": {
-      "get": {
-        "description": "NAT status returns the last known NAT traversal status",
-        "tags": [
-          "NAT"
-        ],
-        "summary": "Shows NAT status",
-        "operationId": "NATStatusDTO",
-        "responses": {
-          "200": {
-            "description": "NAT status (\"not_finished\"/\"successful\"/\"failed\") and optionally error if status is \"failed\"",
-            "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
-            }
-          }
-        }
-      }
-    },
     "/nat/type": {
       "get": {
         "description": "Returns NAT type. May produce invalid result while VPN connection is established",
@@ -1340,7 +1322,7 @@
           "200": {
             "description": "Node status (\"passed\"/\"failed\"/\"pending)",
             "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
+              "$ref": "#/definitions/NodeStatusResponse"
             }
           }
         }
@@ -3275,21 +3257,6 @@
       "description": "MonitoringStatus enum",
       "type": "string",
       "x-go-package": "github.com/mysteriumnetwork/node/core/node"
-    },
-    "NATStatusDTO": {
-      "description": "NATStatusDTO gives information about NAT traversal success or failure",
-      "type": "object",
-      "properties": {
-        "error": {
-          "type": "string",
-          "x-go-name": "Error"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "NATType": {
       "description": "NATType represents nat type",

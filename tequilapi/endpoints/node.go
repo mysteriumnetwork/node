@@ -44,7 +44,7 @@ func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider) *NodeEndpoint {
 //   200:
 //     description: Node status ("passed"/"failed"/"pending)
 //     schema:
-//       "$ref": "#/definitions/NATStatusDTO"
+//       "$ref": "#/definitions/NodeStatusResponse"
 func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.nodeStatusProvider.Status()}, c.Writer)
 }

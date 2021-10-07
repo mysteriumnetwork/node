@@ -26,6 +26,10 @@ import (
 	"net/url"
 	"testing"
 
+	"golang.org/x/net/context"
+
+	"github.com/mysteriumnetwork/node/nat"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/stretchr/testify/assert"
@@ -64,6 +68,15 @@ var serviceProposals = []proposal.PricedServiceProposal{
 			PricePerGiB:  big.NewInt(2),
 		},
 	},
+}
+
+type mockNATProber struct {
+	returnRes nat.NATType
+	returnErr error
+}
+
+func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
+	return m.returnRes, m.returnErr
 }
 
 var mockedNATProber = &mockNATProber{"none", nil}

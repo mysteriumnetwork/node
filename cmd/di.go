@@ -337,7 +337,6 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	deps := state.KeeperDeps{
-		NATStatusProvider:         nat.NewStatusTracker("unknown"),
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		IdentityProvider:          di.IdentityManager,
