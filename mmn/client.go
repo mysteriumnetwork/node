@@ -32,15 +32,13 @@ import (
 // NodeInformationDto contains node information to be sent to MMN
 type NodeInformationDto struct {
 	// local IP is used to give quick access to WebUI from MMN
-	LocalIP         string `json:"local_ip"`
-	Identity        string `json:"identity"`
-	APIKey          string `json:"api_key"`
-	VendorID        string `json:"vendor_id"`
-	OS              string `json:"os"`
-	Arch            string `json:"arch"`
-	NodeVersion     string `json:"node_version"`
-	LauncherVersion string `json:"launcher_version"`
-	HostOSType      string `json:"host_os_type"`
+	LocalIP     string `json:"local_ip"`
+	Identity    string `json:"identity"`
+	APIKey      string `json:"api_key"`
+	VendorID    string `json:"vendor_id"`
+	OS          string `json:"os"`
+	Arch        string `json:"arch"`
+	NodeVersion string `json:"node_version"`
 }
 
 // NewClient returns MMN API client
