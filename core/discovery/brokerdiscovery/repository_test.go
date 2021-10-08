@@ -186,9 +186,6 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 		]
 	  }
 }`)
-
-	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
-	assert.Exactly(t, []market.ServiceProposal{proposalSecond()}, repo.storage.Proposals())
 }
 
 func proposalRegister(connection nats.Connection, payload string) {
