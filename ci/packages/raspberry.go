@@ -27,14 +27,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/mholt/archiver"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
-	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/ci/util/device"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -48,11 +48,6 @@ const (
 // (so that it does not run out of space during the setup). I added +1G to the downloaded image.
 // https://wiki.debian.org/RaspberryPi/qemu-user-static
 func PackageLinuxRaspberryImage() error {
-	job.Precondition(func() bool {
-		pr, _ := env.IsPR()
-		fullBuild, _ := env.IsFullBuild()
-		return !pr || fullBuild
-	})
 	logconfig.Bootstrap()
 
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
@@ -67,7 +62,7 @@ func PackageLinuxRaspberryImage() error {
 	if err := buildMystRaspbianImage(); err != nil {
 		return err
 	}
-	return env.IfRelease(storage.UploadArtifacts)
+	return storage.UploadArtifacts()
 }
 
 func buildMystRaspbianImage() error {
