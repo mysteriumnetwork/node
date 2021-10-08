@@ -31,7 +31,7 @@ var (
 	SignatureEncoding = base64.RawURLEncoding
 )
 
-// SignedTopic signs topic to pass command through nats-proxy
+// SignedSubject signs topic to pass command through nats-proxy
 func SignedSubject(signer identity.Signer, topic string) (string, error) {
 	ts := time.Now().Unix()
 
