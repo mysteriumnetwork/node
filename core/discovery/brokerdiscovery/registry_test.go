@@ -39,7 +39,7 @@ func Test_NewRegistry(t *testing.T) {
 	assert.Equal(
 		t,
 		&registryBroker{
-			sender: nats.NewSender(connection, communication.NewCodecJSON(), "*"),
+			sender: nats.NewSender(connection, communication.NewCodecJSON()),
 		},
 		NewRegistry(connection),
 	)
