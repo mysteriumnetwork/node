@@ -32,10 +32,10 @@ var (
 )
 
 // SignedTopic signs topic to pass command through nats-proxy
-func SignedSubject(signerID identity.Identity, signer identity.SignerFactory, topic string) (string, error) {
+func SignedSubject(signer identity.Signer, topic string) (string, error) {
 	ts := time.Now().Unix()
 
-	signature, err := signer(signerID).Sign([]byte(fmt.Sprintf("%d.%s", ts, topic)))
+	signature, err := signer.Sign([]byte(fmt.Sprintf("%d.%s", ts, topic)))
 	if err != nil {
 		return "", err
 	}

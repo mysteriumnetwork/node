@@ -111,7 +111,7 @@ func (m *listener) GetContact() market.Contact {
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 // to channelHandlers.
 func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) (func(), error) {
-	configSignedSubject, err := nats.SignedSubject(providerID, m.signer, configExchangeSubject(providerID, serviceType))
+	configSignedSubject, err := nats.SignedSubject(m.signer(providerID), configExchangeSubject(providerID, serviceType))
 	if err != nil {
 		return func() {}, fmt.Errorf("cannot sign config topic: %w", err)
 	}
@@ -126,7 +126,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		return func() {}, fmt.Errorf("could not get subscribe to config exchange topic: %w", err)
 	}
 
-	ackSignedSubject, err := nats.SignedSubject(providerID, m.signer, configExchangeACKSubject(providerID, serviceType))
+	ackSignedSubject, err := nats.SignedSubject(m.signer(providerID), configExchangeACKSubject(providerID, serviceType))
 	if err != nil {
 		return func() {}, fmt.Errorf("cannot sign ack topic: %w", err)
 	}
@@ -393,7 +393,7 @@ func (m *listener) providerChannelHandlersReady(providerID identity.Identity, se
 		return fmt.Errorf("could not marshal exchange msg: %w", err)
 	}
 
-	signedSubject, err := nats.SignedSubject(providerID, m.signer, channelHandlersReadySubject(providerID, serviceType))
+	signedSubject, err := nats.SignedSubject(m.signer(providerID), channelHandlersReadySubject(providerID, serviceType))
 	if err != nil {
 		return fmt.Errorf("unable to sign p2p-channel-handlers-ready subject: %w", err)
 	}
