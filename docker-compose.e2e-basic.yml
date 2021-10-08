@@ -32,11 +32,19 @@ services:
     expose:
       - 3000
 
-  broker:
+  broker-real:
     image: nats:1.0.4
     expose:
       - 4222
-      - 8222
+
+  broker:
+    image: mysteriumnetwork/nats-proxy:1.0.1
+    depends_on:
+      - broker-real
+    command:
+      - '-target=broker-real:4222'
+    expose:
+      - 4222
 
   db:
     image: postgres:13-alpine
