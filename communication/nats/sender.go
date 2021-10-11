@@ -28,12 +28,11 @@ import (
 // NewSender constructs new Sender's instance which works thru NATS connection.
 // Codec packs/unpacks messages to byte payloads.
 // Topic (optional) if need to send messages prefixed topic.
-func NewSender(connection Connection, codec communication.Codec, topic string) *senderNATS {
+func NewSender(connection Connection, codec communication.Codec) *senderNATS {
 	return &senderNATS{
 		connection:     connection,
 		codec:          codec,
 		timeoutRequest: 10 * time.Second,
-		messageTopic:   topic + ".",
 	}
 }
 
@@ -45,7 +44,11 @@ type senderNATS struct {
 }
 
 func (sender *senderNATS) Send(producer communication.MessageProducer) error {
-	messageTopic := sender.messageTopic + string(producer.GetMessageEndpoint())
+	messageEndpoint, err := producer.GetMessageEndpoint()
+	if err != nil {
+		return err
+	}
+	messageTopic := string(messageEndpoint)
 
 	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
@@ -64,7 +67,11 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 }
 
 func (sender *senderNATS) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	requestTopic := sender.messageTopic + string(producer.GetRequestEndpoint())
+	requestEndpoint, err := producer.GetRequestEndpoint()
+	if err != nil {
+		return
+	}
+	requestTopic := string(requestEndpoint)
 	responsePtr = producer.NewResponse()
 
 	requestData, err := sender.codec.Pack(producer.Produce())

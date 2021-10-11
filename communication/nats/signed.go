@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,26 +18,29 @@
 package nats
 
 import (
-	"testing"
+	"encoding/base64"
+	"fmt"
 	"time"
 
-	"github.com/mysteriumnetwork/node/communication"
-	"github.com/stretchr/testify/assert"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
-var _ communication.Sender = &senderNATS{}
+var (
+	// SignatureEncoding represents base64 variant chosen for signature
+	// encoding
+	SignatureEncoding = base64.RawURLEncoding
+)
 
-func TestSenderNew(t *testing.T) {
-	connection := &ConnectionMock{}
-	codec := communication.NewCodecFake()
+// SignedSubject signs topic to pass command through nats-proxy
+func SignedSubject(signer identity.Signer, topic string) (string, error) {
+	ts := time.Now().Unix()
 
-	assert.Equal(
-		t,
-		&senderNATS{
-			connection:     connection,
-			codec:          codec,
-			timeoutRequest: 10 * time.Second,
-		},
-		NewSender(connection, codec),
-	)
+	signature, err := signer.Sign([]byte(fmt.Sprintf("%d.%s", ts, topic)))
+	if err != nil {
+		return "", err
+	}
+
+	encodedSignature := SignatureEncoding.EncodeToString(signature.Bytes())
+
+	return fmt.Sprintf("signed.%s.%d.%s", encodedSignature, ts, topic), nil
 }

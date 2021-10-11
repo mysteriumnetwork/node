@@ -31,24 +31,24 @@ type registryBroker struct {
 // NewRegistry create an instance of Broker registryBroker
 func NewRegistry(connection nats.Connection) *registryBroker {
 	return &registryBroker{
-		sender: nats.NewSender(connection, communication.NewCodecJSON(), "*"),
+		sender: nats.NewSender(connection, communication.NewCodecJSON()),
 	}
 }
 
 // RegisterProposal registers service proposal to discovery service
 func (rb *registryBroker) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	message := &registerMessage{Proposal: proposal}
-	return rb.sender.Send(&registerProducer{message: message})
+	return rb.sender.Send(&registerProducer{message: message, signer: signer})
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
 func (rb *registryBroker) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	message := &unregisterMessage{Proposal: proposal}
-	return rb.sender.Send(&unregisterProducer{message: message})
+	return rb.sender.Send(&unregisterProducer{message: message, signer: signer})
 }
 
 // PingProposal pings service proposal as being alive
 func (rb *registryBroker) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	message := &pingMessage{Proposal: proposal}
-	return rb.sender.Send(&pingProducer{message: message})
+	return rb.sender.Send(&pingProducer{message: message, signer: signer})
 }
