@@ -22,9 +22,7 @@ import (
 
 	"github.com/asdine/storm/v3"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -42,22 +40,15 @@ type storage interface {
 	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
 }
 
-type mmnClient interface {
-	UpdateBeneficiary(data *mmn.UpdateBeneficiaryRequest) error
-	GetBeneficiary(identityStr string) (string, error)
-}
-
 // AddressStorage handles storing of payout address
 type AddressStorage struct {
 	storage storage
-	mmnc    mmnClient
 }
 
 // NewAddressStorage constructor
-func NewAddressStorage(storage storage, mmnc mmnClient) *AddressStorage {
+func NewAddressStorage(storage storage) *AddressStorage {
 	return &AddressStorage{
 		storage: storage,
-		mmnc:    mmnc,
 	}
 }
 
@@ -65,13 +56,6 @@ func NewAddressStorage(storage storage, mmnc mmnClient) *AddressStorage {
 func (as *AddressStorage) Save(identity, address string) error {
 	if !common.IsHexAddress(address) {
 		return ErrInvalidAddress
-	}
-	err := as.mmnc.UpdateBeneficiary(&mmn.UpdateBeneficiaryRequest{
-		Beneficiary: address,
-		Identity:    identity,
-	})
-	if err != nil {
-		return err
 	}
 
 	store := &storedBeneficiary{
@@ -86,24 +70,13 @@ func (as *AddressStorage) Save(identity, address string) error {
 func (as *AddressStorage) Address(identity string) (string, error) {
 	result := &storedBeneficiary{}
 	err := as.storage.GetOneByField(bucket, "ID", identity, result)
-	if err != nil && err != storm.ErrNotFound {
+	if err != nil {
+		if errors.Is(err, storm.ErrNotFound) {
+			return "", ErrNotFound
+		}
 		return "", err
 	}
 
-	if err == storm.ErrNotFound || result.isExpired() {
-		addr, err := as.mmnc.GetBeneficiary(identity)
-		if err != nil {
-			return "", err
-		}
-		if addr == "" {
-			return "", ErrNotFound
-		}
-		if err := as.Save(identity, addr); err != nil {
-			log.Warn().Err(err).Msg("could not save benefiicary after not finding it in local cache, will try next time")
-		}
-
-		return addr, nil
-	}
 	return result.Beneficiary, nil
 }
 
@@ -111,12 +84,4 @@ type storedBeneficiary struct {
 	ID          string `storm:"id"`
 	Beneficiary string
 	LastUpdated time.Time
-}
-
-func (s *storedBeneficiary) isExpired() bool {
-	if s.LastUpdated.IsZero() {
-		return true
-	}
-	now := time.Now().UTC().AddDate(0, 0, 1)
-	return s.LastUpdated.After(now)
 }
