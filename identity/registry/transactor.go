@@ -608,6 +608,24 @@ func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Pro
 	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
 }
 
+// EligibilityResponse shows if one is eligible for free registration.
+type EligibilityResponse struct {
+	Eligible bool `json:"eligible"`
+}
+
+// GetFreeRegistrationEligibility determines if the identity is eligible for free registration.
+func (t *Transactor) GetFreeRegistrationEligibility(identity identity.Identity) (bool, error) {
+	e := EligibilityResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("identity/register/eligibility/%v", identity.Address), nil)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch registration eligibility")
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &e)
+	return e.Eligible, err
+}
+
 // PayAndSettlePayload represents the pay and settle payload.
 type PayAndSettlePayload struct {
 	PromiseSettlementRequest
