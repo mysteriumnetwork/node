@@ -492,7 +492,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapBeneficiarySaver(nodeOptions)
 	di.bootstrapBeneficiaryProvider(nodeOptions)
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage, di.MMN)
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err

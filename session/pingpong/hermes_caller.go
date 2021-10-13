@@ -228,28 +228,68 @@ func (ac *HermesCaller) IsIdentityOffchain(chainID int64, id string) (bool, erro
 }
 
 // GetConsumerData gets consumer data from hermes
-func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
+func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (HermesUserInfo, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
+		return HermesUserInfo{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
-	var resp map[int64]ConsumerData
+	var resp map[int64]HermesUserInfo
 	err = ac.doRequest(req, &resp)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
+		return HermesUserInfo{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
 	}
 
 	data, ok := resp[chainID]
 	if !ok {
-		return ConsumerData{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
+		return HermesUserInfo{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
 	}
 
 	err = data.LatestPromise.isValid(id)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not check promise validity: %w", err)
+		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
 	}
 
 	return data, nil
+}
+
+// GetProviderData gets provider data from hermes
+func (ac *HermesCaller) GetProviderData(chainID int64, id string) (HermesUserInfo, error) {
+	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/provider/%v", id), nil)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not form consumer data request: %w", err)
+	}
+	var resp map[int64]HermesUserInfo
+	err = ac.doRequest(req, &resp)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
+	}
+
+	data, ok := resp[chainID]
+	if !ok {
+		return HermesUserInfo{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
+	}
+
+	err = data.LatestPromise.isValid(id)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
+	}
+
+	return data, nil
+}
+
+// ProviderPromiseAmount returns the provider promise amount.
+// If can also return `nil` as the result if no promise exists.
+func (ac *HermesCaller) ProviderPromiseAmount(chainID int64, id string) (*big.Int, error) {
+	d, err := ac.GetProviderData(chainID, id)
+	if err != nil {
+		if errors.Is(err, ErrHermesNotFound) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return d.LatestPromise.Amount, nil
 }
 
 func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
@@ -282,8 +322,8 @@ func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
 	return hermesError
 }
 
-// ConsumerData represents the consumer data
-type ConsumerData struct {
+// HermesUserInfo represents the consumer data
+type HermesUserInfo struct {
 	Identity         string        `json:"Identity"`
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
@@ -295,7 +335,7 @@ type ConsumerData struct {
 	IsOffchain       bool          `json:"IsOffchain"`
 }
 
-func (cd *ConsumerData) fillZerosIfBigIntNull() *ConsumerData {
+func (cd *HermesUserInfo) fillZerosIfBigIntNull() *HermesUserInfo {
 	if cd.Balance == nil {
 		cd.Balance = big.NewInt(0)
 	}

@@ -19,7 +19,6 @@ package registry
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -48,13 +47,17 @@ type multiChainAddressKeeper interface {
 	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
 }
 
-type bsaver interface {
-	Save(id string, beneficiary string) error
-}
-
 type bc interface {
 	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
+
+// ProviderPromiseQuerier is responsible for checking provider promises.
+type ProviderPromiseQuerier interface {
+	ProviderPromiseAmount(chainID int64, id string) (*big.Int, error)
+}
+
+// HermesCallerFactory allows tu produce hermes clients
+type HermesCallerFactory func(hermesURL string) ProviderPromiseQuerier
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
 type ProviderRegistrar struct {
@@ -66,7 +69,7 @@ type ProviderRegistrar struct {
 	stopChan                  chan struct{}
 	queue                     chan queuedEvent
 	registeredIdentities      map[string]struct{}
-	saver                     bsaver
+	hf                        HermesCallerFactory
 
 	cfg ProviderRegistrarConfig
 }
@@ -78,7 +81,6 @@ type queuedEvent struct {
 
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
-	IsTestnet3          bool
 	MaxRetries          int
 	DelayBetweenRetries time.Duration
 }
@@ -90,7 +92,7 @@ func NewProviderRegistrar(
 	multiChainAddressKeeper multiChainAddressKeeper,
 	bc bc,
 	prc ProviderRegistrarConfig,
-	saver bsaver,
+	fact HermesCallerFactory,
 ) *ProviderRegistrar {
 	return &ProviderRegistrar{
 		stopChan:                  make(chan struct{}),
@@ -101,7 +103,7 @@ func NewProviderRegistrar(
 		txer:                      transactor,
 		multiChainAddressKeeper:   multiChainAddressKeeper,
 		bc:                        bc,
-		saver:                     saver,
+		hf:                        fact,
 	}
 }
 
@@ -202,59 +204,55 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 	}
 }
 
+const oldTestnet3ChainID = 80001
+
+func (pr *ProviderRegistrar) testnet3HermesURL() string {
+	return config.GetString(config.FlagTestnet3HermesURL)
+}
+
 func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 	id := identity.FromAddress(qe.event.ProviderID)
 
-	if !pr.cfg.IsTestnet3 {
-		eligible, err := pr.txer.CheckIfRegistrationBountyEligible(id)
-		if err != nil {
-			log.Error().Err(err).Msgf("eligibility for registration check failed for %q", id.Address)
-			return errors.Wrap(err, "could not check eligibility for auto-registration")
-		}
-
-		if !eligible {
-			return nil
-		}
+	eligible, err := pr.txer.CheckIfRegistrationBountyEligible(id)
+	if err != nil {
+		log.Error().Err(err).Msgf("eligibility for registration check failed for %q", id.Address)
+		return errors.Wrap(err, "could not check eligibility for auto-registration")
 	}
 
-	// check if we had a previous beneficiary set on old registry
-	benef, err := pr.getBeneficiaryFromOldRegistry(id)
+	if eligible {
+		return pr.registerIdentity(qe, id)
+	}
+
+	amount, err := pr.hf(pr.testnet3HermesURL()).ProviderPromiseAmount(oldTestnet3ChainID, id.Address)
 	if err != nil {
+		log.Error().Err(err).Msgf("tried to check legacy hermes in auto registration, but failed: %q", id.Address)
+		return errors.Wrap(err, "could not check eligibility for auto-registration")
+	}
+
+	if amount != nil && amount.Cmp(new(big.Int)) > 0 {
+		return pr.registerIdentity(qe, id)
+	}
+
+	log.Info().Msgf("provider %q not elgible for auto-registration", id.Address)
+	return nil
+}
+
+func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identity) error {
+	if pr.chainID() != pr.l2chainID() {
+		return errors.New("registration failed, cannot register on l1 chain")
+	}
+
+	// If chain is l2 (matic) beneficiary should be set to channel address
+	settleBeneficiary, err := pr.multiChainAddressKeeper.GetChannelAddress(pr.chainID(), id)
+	if err != nil {
+		log.Error().Err(err).Msg("Registration failed for could not generate channel address")
 		return err
 	}
 
-	return pr.registerIdentity(qe, id, benef)
-}
-
-func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identity, benef common.Address) error {
-	if isZeroAddress(benef) {
-		log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", id.Address)
-		return nil
-	}
-
-	settleBeneficiary := benef
-
-	// If chain is l2 (matic) beneficiary should be set to channel address
-	if pr.chainID() == pr.l2chainID() {
-		var err error
-		settleBeneficiary, err = pr.multiChainAddressKeeper.GetChannelAddress(pr.chainID(), id)
-		if err != nil {
-			log.Error().Err(err).Msg("Registration failed for could not generate channel address")
-			return err
-		}
-	}
-
-	err := pr.txer.RegisterIdentity(qe.event.ProviderID, big.NewInt(0), nil, settleBeneficiary.Hex(), pr.chainID(), nil)
+	err = pr.txer.RegisterIdentity(qe.event.ProviderID, big.NewInt(0), nil, settleBeneficiary.Hex(), pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
-	}
-
-	// If chain is l2 we should save the new beneficiary to db.
-	if pr.chainID() == pr.l2chainID() {
-		if err := pr.saver.Save(id.Address, benef.Hex()); err != nil {
-			log.Error().Err(err).Msg("Failed to save beneficiary to the database")
-		}
 	}
 
 	pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
@@ -263,32 +261,9 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 }
 
 var newRegistryAddress = common.HexToAddress("0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39")
-var oldRegistryAddress = common.HexToAddress("0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2")
-
-func (pr *ProviderRegistrar) getBeneficiaryFromOldRegistry(id identity.Identity) (common.Address, error) {
-	// This checks for migration from old registry to new on testnet3 related to matic.
-	// In such a case, we need to check if provider was already registered and just migrate them to new registry with the
-	// old beneficiary.
-	registryAddress, err := pr.multiChainAddressKeeper.GetRegistryAddress(pr.l1chainID())
-	if err != nil {
-		return common.Address{}, fmt.Errorf("could not get registry address for chain %v: %w", pr.l1chainID(), err)
-	}
-
-	if bytes.EqualFold(registryAddress.Bytes(), newRegistryAddress.Bytes()) {
-		benef, err := pr.bc.GetBeneficiary(5, oldRegistryAddress, id.ToCommonAddress())
-		if err != nil {
-			log.Err(err).Msg("could not get beneficiary status from bc")
-		}
-
-		return benef, nil
-	}
-
-	return common.Address{}, nil
-}
-
-var zeroAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 func isZeroAddress(in common.Address) bool {
+	var zeroAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
 	return bytes.EqualFold(in.Bytes(), zeroAddress.Bytes())
 }
 

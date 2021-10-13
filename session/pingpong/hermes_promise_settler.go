@@ -717,7 +717,7 @@ func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
 	return new(big.Int).SetBytes(agreementID)
 }
 
-func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {
+func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*HermesUserInfo, error) {
 	caller, err := aps.getHermesCaller(chainID, hermesID)
 	if err != nil {
 		return nil, err

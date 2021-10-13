@@ -33,6 +33,7 @@ type NetworkDefinition struct {
 	DefaultChainID            int64
 	DefaultCurrency           string
 	LocationAddress           string
+	Testnet3HermesURL         string
 	Payments                  Payments
 }
 
@@ -97,9 +98,10 @@ var Testnet3Definition = NetworkDefinition{
 		"testnet3-transactor.mysterium.network": {"167.233.11.60"},
 		"testnet3-pilvytis.mysterium.network":   {"167.233.11.60"},
 	},
-	DefaultChainID:  80001,
-	DefaultCurrency: "MYSTT",
-	LocationAddress: "https://testnet3-location.mysterium.network/api/v1/location",
+	DefaultChainID:    80001,
+	DefaultCurrency:   "MYSTT",
+	LocationAddress:   "https://testnet3-location.mysterium.network/api/v1/location",
+	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,

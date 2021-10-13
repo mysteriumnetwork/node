@@ -23,19 +23,8 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
-	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/stretchr/testify/assert"
 )
-
-type mmnMock struct {
-}
-
-func (m *mmnMock) UpdateBeneficiary(data *mmn.UpdateBeneficiaryRequest) error {
-	return nil
-}
-func (m *mmnMock) GetBeneficiary(identityStr string) (string, error) {
-	return "", nil
-}
 
 func TestPayout(t *testing.T) {
 	// given:
@@ -44,7 +33,7 @@ func TestPayout(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 	db, err := boltdb.NewStorage(dir)
-	payout := NewAddressStorage(db, &mmnMock{})
+	payout := NewAddressStorage(db)
 
 	// when
 	addr, err := payout.Address("random")
