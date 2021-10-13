@@ -2091,6 +2091,29 @@
         }
       }
     },
+    "/transactor/identities/{id}/eligibility": {
+      "get": {
+        "summary": "Checks if given id is eligible for free registration",
+        "operationId": "Eligibility",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity address to register",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility response",
+            "schema": {
+              "$ref": "#/definitions/EligibilityResponse"
+            }
+          }
+        }
+      }
+    },
     "/transactor/settle/async": {
       "post": {
         "description": "Forces a settlement for the hermes promises. Does not wait for completion.",
@@ -2805,6 +2828,17 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "EligibilityResponse": {
+      "description": "EligibilityResponse represents the eligibility response",
+      "type": "object",
+      "properties": {
+        "eligible": {
+          "type": "boolean",
+          "x-go-name": "Eligible"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "EntertainmentEstimateResponse": {
       "type": "object",
