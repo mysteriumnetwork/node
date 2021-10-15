@@ -33,7 +33,7 @@ var (
 
 // SignedSubject signs topic to pass command through nats-proxy
 func SignedSubject(signer identity.Signer, topic string) (string, error) {
-	ts := time.Now().Unix()
+	ts := time.Now().Truncate(0).Unix()
 
 	signature, err := signer.Sign([]byte(fmt.Sprintf("%d.%s", ts, topic)))
 	if err != nil {
