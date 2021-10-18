@@ -163,12 +163,6 @@ type SessionManager struct {
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
-	prices := manager.remapPricing(request.Consumer.Pricing)
-	err = manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country)
-	if err != nil {
-		return pb.SessionResponse{}, err
-	}
-
 	session, err := NewSession(manager.service, request, manager.channel.Tracer())
 	if err != nil {
 		return pb.SessionResponse{}, errors.Wrap(err, "cannot create new session")
@@ -187,7 +181,9 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 		log.Debug().Msgf("Provider connection trace: %s", traceResult)
 	}()
 
-	if err = manager.startSession(session); err != nil {
+	prices := manager.remapPricing(request.Consumer.Pricing)
+
+	if err = manager.startSession(session, prices); err != nil {
 		return pb.SessionResponse{}, err
 	}
 	if err = manager.paymentLoop(session, prices); err != nil {
@@ -234,11 +230,11 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 	return nil
 }
 
-func (manager *SessionManager) startSession(session *Session) error {
+func (manager *SessionManager) startSession(session *Session, prices market.Price) error {
 	trace := session.tracer.StartStage("Provider session create (start)")
 	defer session.tracer.EndStage(trace)
 
-	if err := manager.validateSession(session); err != nil {
+	if err := manager.validateSession(session, prices); err != nil {
 		return err
 	}
 
@@ -255,12 +251,12 @@ func (manager *SessionManager) startSession(session *Session) error {
 	return nil
 }
 
-func (manager *SessionManager) validateSession(session *Session) error {
+func (manager *SessionManager) validateSession(session *Session, prices market.Price) error {
 	if !manager.service.Policies().IsIdentityAllowed(session.ConsumerID) {
 		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
 	}
 
-	return nil
+	return manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country)
 }
 
 func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, serviceType string) {
