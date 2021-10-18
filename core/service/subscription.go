@@ -30,7 +30,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel) {
+func subscribeSessionCreate(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var request pb.SessionRequest
 		if err := c.Request().UnmarshalProto(&request); err != nil {
