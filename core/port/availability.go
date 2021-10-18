@@ -34,7 +34,7 @@ func available(port int) (bool, error) {
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Info().Err(err).Msgf("Cannot listen on UDP port %d", port)
+		log.Trace().Err(err).Msgf("Cannot listen on UDP port %d", port)
 		return false, nil
 	}
 	defer conn.Close()
