@@ -20,13 +20,13 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -38,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/utils/reftracker"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -165,8 +166,22 @@ type SessionManager struct {
 func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
 	session, err := NewSession(manager.service, request, manager.channel.Tracer())
 	if err != nil {
-		return pb.SessionResponse{}, errors.Wrap(err, "cannot create new session")
+		return pb.SessionResponse{}, fmt.Errorf("cannot create new session: %w", err)
 	}
+
+	rt := reftracker.Singleton()
+	chID := "channel:" + manager.channel.ID()
+
+	if rt.Incr(chID) != nil {
+		return pb.SessionResponse{}, fmt.Errorf("unable to hold the channel: %w", err)
+	}
+	log.Info().Msgf("session ref incr for %q", chID)
+
+	session.addCleanup(func() error {
+		log.Info().Msgf("session ref decr for %q", chID)
+		return rt.Decr(chID)
+	})
+
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Session failed, disconnecting")
@@ -367,17 +382,14 @@ func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel)
 	for {
 		select {
 		case <-sess.Done():
-			// Give some time for channel to finish sending last message.
-			time.Sleep(10 * time.Second)
-			channel.Close()
 			return
 		case <-time.After(manager.config.KeepAlive.SendInterval):
 			if err := manager.sendKeepAlivePing(channel, sess.ID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sess.ID)
 				errCount++
 				if errCount == manager.config.KeepAlive.MaxSendErrCount {
-					log.Error().Msgf("Max p2p keepalive err count reached, closing p2p channel. SessionID=%s", sess.ID)
-					channel.Close()
+					log.Error().Msgf("Max p2p keepalive err count reached, closing SessionID=%s", sess.ID)
+					sess.Close()
 					return
 				}
 			} else {

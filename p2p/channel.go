@@ -81,6 +81,9 @@ type Channel interface {
 
 	// Close closes p2p communication channel.
 	Close() error
+
+	// Unique ID
+	ID() string
 }
 
 // HandlerFunc is channel request handler func signature.
@@ -240,6 +243,10 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 	}
 
 	return &c, nil
+}
+
+func (c *channel) ID() string {
+	return fmt.Sprintf("%p", c)
 }
 
 func (c *channel) launchReadSendLoops() {
