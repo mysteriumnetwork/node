@@ -8,7 +8,7 @@
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node),
 client API (tequila API) and client-cli (console client) for Mysterium Network.
 
-Currently node supports OpenVPN as its underlying VPN transport.
+Currently node supports WireGuard as its underlying VPN transport.
 
 ## Getting Started
 
