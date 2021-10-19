@@ -19,6 +19,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
@@ -29,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	"github.com/mysteriumnetwork/node/utils/reftracker"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -40,6 +42,10 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type")
 	// ErrUnsupportedAccessPolicy indicates that manager tried to create service with unsupported access policy
 	ErrUnsupportedAccessPolicy = errors.New("unsupported access policy")
+)
+
+const (
+	channelIdleTimeout = 1 * time.Minute
 )
 
 // Service interface represents pluggable Mysterium service
@@ -164,6 +170,12 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 
 	channelHandlers := func(ch p2p.Channel) {
+		chID := "channel:" + ch.ID()
+		log.Info().Msgf("tracking p2p.Channel: %q", chID)
+		reftracker.Singleton().Put(chID, channelIdleTimeout, func() {
+			log.Debug().Msgf("collecting unused p2p.Channel %q", chID)
+			ch.Close()
+		})
 		instance.addP2PChannel(ch)
 		mng := manager.sessionManager(instance, ch)
 		subscribeSessionCreate(mng, ch)
