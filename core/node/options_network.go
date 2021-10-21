@@ -20,7 +20,7 @@ package node
 // OptionsNetwork describes possible parameters of network configuration
 type OptionsNetwork struct {
 	Localnet bool
-	Testnet3 bool
+	Mainnet  bool
 
 	MysteriumAPIAddress string
 	BrokerAddresses     []string

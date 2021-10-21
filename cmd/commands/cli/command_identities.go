@@ -220,9 +220,6 @@ func (c *cliApp) registerIdentity(actionArgs []string) error {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.config.GetBoolByFlag(config.FlagTestnet3) {
-		msg = "Registration successful, try to connect."
-	}
 
 	clio.Info(msg)
 	clio.Info(fmt.Sprintf("To explore additional information about the identity use: %s", usageGetIdentity))
