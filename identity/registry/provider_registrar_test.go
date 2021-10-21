@@ -306,7 +306,7 @@ type mockHermes struct {
 	err    error
 }
 
-func (m *mockHermes) ProviderPromiseAmount(chainID int64, id string) (*big.Int, error) {
+func (m *mockHermes) ProviderPromiseAmountUnsafe(chainID int64, id string) (*big.Int, error) {
 	return m.result, m.err
 }
 
