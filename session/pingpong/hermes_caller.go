@@ -254,6 +254,34 @@ func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (HermesUserInf
 
 // GetProviderData gets provider data from hermes
 func (ac *HermesCaller) GetProviderData(chainID int64, id string) (HermesUserInfo, error) {
+	data, err := ac.getProviderData(chainID, id)
+	if err != nil {
+		return HermesUserInfo{}, err
+	}
+	err = data.LatestPromise.isValid(id)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
+	}
+
+	return data, nil
+}
+
+// ProviderPromiseAmountUnsafe returns the provider promise amount.
+// If can also return `nil` as the result if no promise exists.
+func (ac *HermesCaller) ProviderPromiseAmountUnsafe(chainID int64, id string) (*big.Int, error) {
+	d, err := ac.getProviderData(chainID, id)
+	if err != nil {
+		if errors.Is(err, ErrHermesNotFound) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return d.LatestPromise.Amount, nil
+}
+
+func (ac *HermesCaller) getProviderData(chainID int64, id string) (HermesUserInfo, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/provider/%v", id), nil)
 	if err != nil {
 		return HermesUserInfo{}, fmt.Errorf("could not form consumer data request: %w", err)
@@ -269,27 +297,7 @@ func (ac *HermesCaller) GetProviderData(chainID int64, id string) (HermesUserInf
 		return HermesUserInfo{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
 	}
 
-	err = data.LatestPromise.isValid(id)
-	if err != nil {
-		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
-	}
-
 	return data, nil
-}
-
-// ProviderPromiseAmount returns the provider promise amount.
-// If can also return `nil` as the result if no promise exists.
-func (ac *HermesCaller) ProviderPromiseAmount(chainID int64, id string) (*big.Int, error) {
-	d, err := ac.GetProviderData(chainID, id)
-	if err != nil {
-		if errors.Is(err, ErrHermesNotFound) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return d.LatestPromise.Amount, nil
 }
 
 func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {

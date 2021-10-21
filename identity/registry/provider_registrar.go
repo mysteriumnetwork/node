@@ -53,7 +53,7 @@ type bc interface {
 
 // ProviderPromiseQuerier is responsible for checking provider promises.
 type ProviderPromiseQuerier interface {
-	ProviderPromiseAmount(chainID int64, id string) (*big.Int, error)
+	ProviderPromiseAmountUnsafe(chainID int64, id string) (*big.Int, error)
 }
 
 // HermesCallerFactory allows tu produce hermes clients
@@ -223,7 +223,7 @@ func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 		return pr.registerIdentity(qe, id)
 	}
 
-	amount, err := pr.hf(pr.testnet3HermesURL()).ProviderPromiseAmount(oldTestnet3ChainID, id.Address)
+	amount, err := pr.hf(pr.testnet3HermesURL()).ProviderPromiseAmountUnsafe(oldTestnet3ChainID, id.Address)
 	if err != nil {
 		log.Error().Err(err).Msgf("tried to check legacy hermes in auto registration, but failed: %q", id.Address)
 		return errors.Wrap(err, "could not check eligibility for auto-registration")
