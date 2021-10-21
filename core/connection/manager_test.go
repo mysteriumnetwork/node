@@ -723,6 +723,10 @@ func (m *mockP2PChannel) Close() error {
 	return nil
 }
 
+func (m *mockP2PChannel) ID() string {
+	return fmt.Sprintf("%p", m)
+}
+
 type mockValidator struct {
 	errorToReturn error
 }

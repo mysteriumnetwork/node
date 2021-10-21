@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"net"
 	"testing"
@@ -37,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/trace"
+	"github.com/mysteriumnetwork/node/utils/reftracker"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -93,6 +95,8 @@ func (m *mockP2PChannel) ServiceConn() *net.UDPConn { return nil }
 func (m *mockP2PChannel) Conn() *net.UDPConn { return nil }
 
 func (m *mockP2PChannel) Close() error { return nil }
+
+func (m *mockP2PChannel) ID() string { return fmt.Sprintf("%p", m) }
 
 func TestManager_Start_StoresSession(t *testing.T) {
 	publisher := mocks.NewEventBus()
@@ -303,19 +307,22 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 }
 
 func newManager(service *Instance, sessions *SessionPool, publisher publisher, paymentEngine PaymentEngine, isPriceValid bool) *SessionManager {
-	return NewSessionManager(
+	ch := &mockP2PChannel{tracer: trace.NewTracer("Provider connect")}
+	m := NewSessionManager(
 		service,
 		sessions,
 		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage, price market.Price) (PaymentEngine, error) {
 			return paymentEngine, nil
 		},
 		publisher,
-		&mockP2PChannel{tracer: trace.NewTracer("Provider connect")},
+		ch,
 		DefaultConfig(),
 		&mockPriceValidator{
 			toReturn: isPriceValid,
 		},
 	)
+	reftracker.Singleton().Put("channel:"+ch.ID(), 10*time.Second, func() { ch.Close() })
+	return m
 }
 
 func TestManager_Start_RejectsInvalidPricing(t *testing.T) {
