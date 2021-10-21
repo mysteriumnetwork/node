@@ -74,7 +74,7 @@ var MainnetDefinition = NetworkDefinition{
 		MystAddress:        "0x4Cf89ca06ad997bC732Dc876ed2A7F26a9E7f361",
 		EtherClientRPC: []string{
 			"https://ethereum1.mysterium.network/",
-			"https://main-light.eth.linkpool.io/",
+			"https://cloudflare-eth.com/",
 		},
 	},
 	Chain2: ChainDefinition{
