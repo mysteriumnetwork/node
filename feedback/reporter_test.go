@@ -54,6 +54,18 @@ func TestUserReport_Validate(t *testing.T) {
 			expectToFail: true,
 			testMSG:      "fail empty description",
 		},
+		{
+			email:        "",
+			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
+			expectToFail: false,
+			testMSG:      "pass valid report",
+		},
+		{
+			email:        "   ",
+			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
+			expectToFail: false,
+			testMSG:      "pass valid report",
+		},
 	} {
 		t.Run(data.testMSG, func(t *testing.T) {
 			r := UserReport{
