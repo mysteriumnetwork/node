@@ -67,11 +67,11 @@ var MainnetDefinition = NetworkDefinition{
 	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
 	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
 	Chain1: ChainDefinition{ // TODO: Update when mainnet deployed.
-		RegistryAddress:    "0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39",
-		ChannelImplAddress: "0x1aDF7Ef34b9d48DCc8EBC47D989bfdE55933B6ea",
-		HermesID:           "0x7119442C7E627438deb0ec59291e31378F88DD06",
+		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
+		ChannelImplAddress: "0xbd20839b331a7a8d10e34cdf7219edf334814c4f",
+		HermesID:           "0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
 		ChainID:            1,
-		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
+		MystAddress:        "0x4Cf89ca06ad997bC732Dc876ed2A7F26a9E7f361",
 		EtherClientRPC: []string{
 			"https://main-light.eth.linkpool.io/",
 		},
