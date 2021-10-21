@@ -73,6 +73,7 @@ var MainnetDefinition = NetworkDefinition{
 		ChainID:            1,
 		MystAddress:        "0x4Cf89ca06ad997bC732Dc876ed2A7F26a9E7f361",
 		EtherClientRPC: []string{
+			"https://ethereum1.mysterium.network/",
 			"https://main-light.eth.linkpool.io/",
 		},
 	},
@@ -83,6 +84,7 @@ var MainnetDefinition = NetworkDefinition{
 		ChainID:            137,
 		MystAddress:        "0x1379e8886a944d2d9d440b3d88df536aea08d9f3",
 		EtherClientRPC: []string{
+			"https://polygon1.mysterium.network/",
 			"https://polygon-rpc.com/",
 		},
 	},
