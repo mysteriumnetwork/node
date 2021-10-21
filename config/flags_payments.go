@@ -103,7 +103,7 @@ var (
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
 		Name:  "payments.consumer.data-leeway-megabytes",
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
-		Value: metadata.Testnet3Definition.Payments.Consumer.DataLeewayMegabytes,
+		Value: metadata.MainnetDefinition.Payments.Consumer.DataLeewayMegabytes,
 	}
 	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
 	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
