@@ -345,8 +345,9 @@ func Test_AvailableChains(t *testing.T) {
 	// then
 	var chainSummary contract.ChainSummary
 	err = json.NewDecoder(resp.Body).Decode(&chainSummary)
+	fmt.Println(chainSummary)
 	assert.NoError(t, err)
-	assert.Equal(t, "Ethereum Testnet Görli", chainSummary.Chains[5])
+	assert.Equal(t, "Matic(Polygon) Mainnet", chainSummary.Chains[137])
 	assert.Equal(t, config.FlagChainID.Value, chainSummary.CurrentChain)
 }
 
@@ -368,9 +369,9 @@ func Test_Withdrawal(t *testing.T) {
 		expectedToChainID   int64
 		expectedFromChainID int64
 	}{
-		{fromChainID: 5, toChainID: config.FlagChainID.Value, expectedFromChainID: 5, expectedToChainID: config.FlagChainID.Value},
+		{fromChainID: 1, toChainID: config.FlagChainID.Value, expectedFromChainID: 1, expectedToChainID: config.FlagChainID.Value},
 		{fromChainID: 0, toChainID: 0, expectedFromChainID: config.FlagChainID.Value, expectedToChainID: 0},
-		{fromChainID: 5, toChainID: 0, expectedFromChainID: 5, expectedToChainID: 0},
+		{fromChainID: 1, toChainID: 0, expectedFromChainID: 1, expectedToChainID: 0},
 	} {
 		t.Run(fmt.Sprintf("succeed withdrawal with fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
 			// when

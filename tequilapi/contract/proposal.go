@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 // AutoNATType passed as nat_compatibility parameter to proposal discovery
@@ -44,7 +45,7 @@ func NewProposalDTO(p proposal.PricedServiceProposal) ProposalDTO {
 			Bandwidth: p.Quality.Bandwidth,
 		},
 		Price: Price{
-			Currency: "MYSTT",
+			Currency: money.CurrencyMyst.String(),
 			PerHour:  p.Price.PricePerHour.Uint64(),
 			PerGiB:   p.Price.PricePerGiB.Uint64(),
 		},

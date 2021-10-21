@@ -32,3 +32,7 @@ const (
 	// CurrencyMystt is the test myst token currency representation
 	CurrencyMystt = Currency("MYSTT")
 )
+
+func (c Currency) String() string {
+	return string(c)
+}
