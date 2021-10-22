@@ -537,7 +537,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 
 	// 2. issue a self promise
-	msg, err := aps.issueSelfPromise(fromChainID, amountToWithdraw, data.LatestPromise.Amount, providerID, consumerChannelAddress, hermesID)
+	msg, err := aps.issueSelfPromise(fromChainID, toChainID, amountToWithdraw, data.LatestPromise.Amount, providerID, consumerChannelAddress, hermesID)
 	if err != nil {
 		return err
 	}
@@ -678,20 +678,20 @@ func (aps *hermesPromiseSettler) payAndSettle(
 	return <-errCh
 }
 
-func (aps *hermesPromiseSettler) issueSelfPromise(chainID int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
+func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
 	r := aps.generateR()
 	agreementID := aps.generateAgreementID()
 	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, 1)
 	invoice.Provider = providerID.ToCommonAddress().Hex()
 
-	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), chainID, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
+	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), fromChain, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could not create promise: %w", err)
 	}
 
 	promise.R = r
 
-	msg, err := crypto.CreateExchangeMessageWithPromise(aps.config.L1ChainID, invoice, promise, hermesAddress.Hex(), aps.ks, providerID.ToCommonAddress())
+	msg, err := crypto.CreateExchangeMessageWithPromise(toChain, invoice, promise, hermesAddress.Hex(), aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could not get create exchange message: %w", err)
 	}
