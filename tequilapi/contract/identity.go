@@ -53,6 +53,7 @@ type IdentityDTO struct {
 	Earnings           *big.Int `json:"earnings"`
 	EarningsTotal      *big.Int `json:"earnings_total"`
 	Stake              *big.Int `json:"stake"`
+	HermesID           string   `json:"hermes_id"`
 }
 
 // NewIdentityDTO maps to API identity.

@@ -54,6 +54,7 @@ type Identity struct {
 	Balance            *big.Int
 	Earnings           *big.Int
 	EarningsTotal      *big.Int
+	HermesID           common.Address
 }
 
 // Connection represents consumer connection state.

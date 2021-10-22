@@ -242,6 +242,7 @@ func mapState(event stateEvent.State) stateRes {
 			Earnings:           identity.Earnings,
 			EarningsTotal:      identity.EarningsTotal,
 			Stake:              stake,
+			HermesID:           identity.HermesID.Hex(),
 		}
 	}
 
