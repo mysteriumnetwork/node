@@ -225,6 +225,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
         "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
         "registration_status": "Registered",
         "channel_address": "0x000000000000000000000000000000000000000A",
+        "hermes_id": "0x0000000000000000000000000000000000000000",
         "balance": 50,
         "earnings": 1,
 		"earnings_total": 100,

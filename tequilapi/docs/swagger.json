@@ -3076,6 +3076,10 @@
         "earnings_total": {
           "$ref": "#/definitions/Int"
         },
+        "hermes_id": {
+          "type": "string",
+          "x-go-name": "HermesID"
+        },
         "id": {
           "description": "identity in Ethereum address format",
           "type": "string",

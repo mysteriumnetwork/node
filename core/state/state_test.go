@@ -642,6 +642,10 @@ func (mcac *mockChannelAddressCalculator) GetChannelAddress(chainID int64, id id
 	return common.Address{}, nil
 }
 
+func (mcac *mockChannelAddressCalculator) GetActiveHermes(chainID int64) (common.Address, error) {
+	return common.Address{}, nil
+}
+
 type mockProposalRepository struct {
 	priceToAdd market.Price
 }

@@ -61,6 +61,7 @@ type identityProvider interface {
 
 type channelAddressCalculator interface {
 	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetActiveHermes(chainID int64) (common.Address, error)
 }
 
 type balanceProvider interface {
@@ -149,6 +150,11 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			status = registry.Unregistered
 		}
 
+		hermesID, err := k.deps.IdentityChannelCalculator.GetActiveHermes(k.deps.ChainID)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Could not retrieve hermesID for %s", id.Address)
+		}
+
 		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(k.deps.ChainID, id)
 		if err != nil {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
@@ -162,6 +168,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			Balance:            k.deps.BalanceProvider.GetBalance(k.deps.ChainID, id),
 			Earnings:           earnings.UnsettledBalance,
 			EarningsTotal:      earnings.LifetimeBalance,
+			HermesID:           hermesID,
 		}
 		identities[idx] = stateIdentity
 	}
