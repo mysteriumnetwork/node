@@ -84,6 +84,8 @@ func (repo *Storage) GetAll() ([]History, error) {
 
 // List retrieves stored entries.
 func (repo *Storage) List(filter *Filter) (result []History, err error) {
+	repo.storage.RLock()
+	defer repo.storage.RUnlock()
 	query := repo.storage.DB().
 		From(sessionStorageBucketName).
 		Select(filter.toMatcher()).
@@ -100,6 +102,8 @@ func (repo *Storage) List(filter *Filter) (result []History, err error) {
 
 // Stats fetches aggregated statistics to Filter.Stats.
 func (repo *Storage) Stats(filter *Filter) (result Stats, err error) {
+	repo.storage.RLock()
+	defer repo.storage.RUnlock()
 	query := repo.storage.DB().
 		From(sessionStorageBucketName).
 		Select(filter.toMatcher()).
@@ -121,6 +125,8 @@ const stepDay = 24 * time.Hour
 
 // StatsByDay retrieves aggregated statistics grouped by day to Filter.StatsByDay.
 func (repo *Storage) StatsByDay(filter *Filter) (result map[time.Time]Stats, err error) {
+	repo.storage.RLock()
+	defer repo.storage.RUnlock()
 	query := repo.storage.DB().
 		From(sessionStorageBucketName).
 		Select(filter.toMatcher()).
