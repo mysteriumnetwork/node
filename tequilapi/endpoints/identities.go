@@ -64,13 +64,19 @@ type identitiesAPI struct {
 	idm               identity.Manager
 	selector          identity_selector.Handler
 	registry          registry.IdentityRegistry
-	channelCalculator *pingpong.AddressProvider
+	channelCalculator AddressProvider
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
 	bc                providerChannel
 	transactor        Transactor
 	bprovider         beneficiaryProvider
 	addressStorage    *payout.AddressStorage
+}
+
+// AddressProvider provides sc addresses.
+type AddressProvider interface {
+	GetActiveHermes(chainID int64) (common.Address, error)
+	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -348,8 +354,8 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 	}
 
 	var stake = new(big.Int)
+	hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
 	if regStatus == registry.Registered {
-		hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
 			return
@@ -373,6 +379,7 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		Earnings:           settlement.UnsettledBalance,
 		EarningsTotal:      settlement.LifetimeBalance,
 		Stake:              stake,
+		HermesID:           hermesID.Hex(),
 	}
 	utils.WriteAsJSON(status, resp)
 }
