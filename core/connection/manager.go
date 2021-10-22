@@ -95,7 +95,7 @@ func DefaultConfig() Config {
 		KeepAlive: KeepAliveConfig{
 			SendInterval:    5 * time.Second,
 			SendTimeout:     5 * time.Second,
-			MaxSendErrCount: 5,
+			MaxSendErrCount: 3,
 		},
 	}
 }
@@ -128,6 +128,9 @@ type TimeGetter func() time.Time
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error)
 
+// ProposalLookup returns a service proposal based on predefined conditions.
+type ProposalLookup func() (proposal *proposal.PricedServiceProposal, err error)
+
 type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
@@ -155,6 +158,9 @@ type connectionManager struct {
 	cancel                 func()
 	channel                p2p.Channel
 
+	preReconnect  func()
+	postReconnect func()
+
 	discoLock      sync.Mutex
 	connectOptions ConnectOptions
 
@@ -172,6 +178,7 @@ func NewManager(
 	statsReportInterval time.Duration,
 	validator validator,
 	p2pDialer p2p.Dialer,
+	preReconnect, postReconnect func(),
 ) *connectionManager {
 	return &connectionManager{
 		newConnection:        connectionCreator,
@@ -187,6 +194,8 @@ func NewManager(
 		validator:            validator,
 		p2pDialer:            p2pDialer,
 		timeGetter:           time.Now,
+		preReconnect:         preReconnect,
+		postReconnect:        postReconnect,
 	}
 }
 
@@ -194,8 +203,13 @@ func (m *connectionManager) chainID() int64 {
 	return config.GetInt64(config.FlagChainID)
 }
 
-func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal proposal.PricedServiceProposal, params ConnectParams) (err error) {
+func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposalLookup ProposalLookup, params ConnectParams) (err error) {
 	var sessionID session.ID
+
+	proposal, err := proposalLookup()
+	if err != nil {
+		return fmt.Errorf("failed to lookup proposal: %w", err)
+	}
 
 	tracer := trace.NewTracer("Consumer whole Connect")
 	defer func() {
@@ -214,7 +228,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return ErrAlreadyExists
 	}
 
-	prc := m.priceFromProposal(proposal)
+	prc := m.priceFromProposal(*proposal)
 
 	err = m.validator.Validate(m.chainID(), consumerID, prc)
 	if err != nil {
@@ -225,7 +239,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
-	m.statusConnecting(consumerID, hermesID, proposal)
+	m.statusConnecting(consumerID, hermesID, *proposal)
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -233,14 +247,12 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		}
 	}()
 
-	providerID := identity.FromAddress(proposal.ProviderID)
-
 	m.connectOptions = ConnectOptions{
-		ConsumerID: consumerID,
-		ProviderID: providerID,
-		HermesID:   hermesID,
-		Proposal:   proposal,
-		Params:     params,
+		ConsumerID:     consumerID,
+		HermesID:       hermesID,
+		Proposal:       *proposal,
+		ProposalLookup: proposalLookup,
+		Params:         params,
 	}
 
 	m.activeConnection, err = m.newConnection(proposal.ServiceType)
@@ -253,10 +265,29 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
+	originalPublicIP := m.getPublicIP()
+
 	err = m.startConnection(m.currentCtx(), m.activeConnection, m.activeConnection.Start, m.connectOptions, tracer)
 	if err != nil {
 		return m.handleStartError(sessionID, err)
 	}
+
+	err = m.waitForConnectedState(m.activeConnection.State())
+	if err != nil {
+		return m.handleStartError(sessionID, err)
+	}
+
+	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
+	go statsPublisher.start(m, m.activeConnection)
+	m.addCleanup(func() error {
+		log.Trace().Msg("Cleaning: stopping statistics publisher")
+		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
+		statsPublisher.stop()
+		return nil
+	})
+
+	go m.consumeConnectionStates(m.activeConnection.State())
+	go m.checkSessionIP(m.channel, m.connectOptions.ConsumerID, m.connectOptions.SessionID, originalPublicIP)
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
 
@@ -271,6 +302,13 @@ func (m *connectionManager) autoReconnect() (err error) {
 		traceResult := tracer.Finish(m.eventBus, string(sessionID))
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
+
+	proposal, err := m.connectOptions.ProposalLookup()
+	if err != nil {
+		return fmt.Errorf("failed to lookup proposal: %w", err)
+	}
+
+	m.connectOptions.Proposal = *proposal
 
 	sessionID, err = m.initSession(tracer, m.priceFromProposal(m.connectOptions.Proposal))
 	if err != nil {
@@ -410,7 +448,7 @@ func (m *connectionManager) getPublicIP() string {
 }
 
 func (m *connectionManager) paymentLoop(opts ConnectOptions, price market.Price) (PaymentIssuer, error) {
-	payments, err := m.paymentEngineFactory(m.channel, opts.ConsumerID, opts.ProviderID, opts.HermesID, opts.Proposal, price)
+	payments, err := m.paymentEngineFactory(m.channel, opts.ConsumerID, identity.FromAddress(opts.Proposal.ProviderID), opts.HermesID, opts.Proposal, price)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +518,7 @@ func (m *connectionManager) createP2PChannel(opts ConnectOptions, tracer *trace.
 	defer cancel()
 
 	// TODO register all handlers before channel read/write loops
-	channel, err := m.p2pDialer.Dial(timeoutCtx, opts.ConsumerID, opts.ProviderID, opts.Proposal.ServiceType, contactDef, tracer)
+	channel, err := m.p2pDialer.Dial(timeoutCtx, opts.ConsumerID, identity.FromAddress(opts.Proposal.ProviderID), opts.Proposal.ServiceType, contactDef, tracer)
 	if err != nil {
 		return fmt.Errorf("p2p dialer failed: %w", err)
 	}
@@ -610,8 +648,6 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	trace := tracer.StartStage("Consumer start connection")
 	defer tracer.EndStage(trace)
 
-	originalPublicIP := m.getPublicIP()
-
 	if err = start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -627,26 +663,8 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return err
 	}
 
-	err = m.waitForConnectedState(conn.State())
-	if err != nil {
-		return err
-	}
-
-	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
-	go statsPublisher.start(m, conn)
-	m.addCleanup(func() error {
-		log.Trace().Msg("Cleaning: stopping statistics publisher")
-		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
-		statsPublisher.stop()
-		return nil
-	})
-
-	go m.consumeConnectionStates(conn.State())
-
 	// Clear IP cache so session IP check can report that IP has really changed.
 	m.clearIPCache()
-
-	go m.checkSessionIP(m.channel, connectOptions.ConsumerID, connectOptions.SessionID, originalPublicIP)
 
 	return nil
 }
@@ -834,17 +852,27 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 }
 
 func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnectionState) {
-	if state.State == connectionstate.StateOnHold {
-		for err := m.autoReconnect(); err != nil; err = m.autoReconnect() {
-			select {
-			case <-m.currentCtx().Done():
-				log.Info().Err(m.currentCtx().Err()).Msg("Stopping reconnect")
-				return
-			default:
-				log.Error().Err(err).Msg("Failed to reconnect active session, will try again")
-			}
+	if state.State != connectionstate.StateOnHold || !config.GetBool(config.FlagAutoReconnect) {
+		return
+	}
+
+	if m.channel != nil {
+		m.channel.Close()
+	}
+
+	m.preReconnect()
+	m.clearIPCache()
+
+	for err := m.autoReconnect(); err != nil; err = m.autoReconnect() {
+		select {
+		case <-m.currentCtx().Done():
+			log.Info().Err(m.currentCtx().Err()).Msg("Stopping reconnect")
+			return
+		default:
+			log.Error().Err(err).Msg("Failed to reconnect active session, will try again")
 		}
 	}
+	m.postReconnect()
 }
 
 func (m *connectionManager) publishStateEvent(state connectionstate.State) {
@@ -932,7 +960,7 @@ func (m *connectionManager) Reconnect() {
 	m.cleanupFinishedLock.Lock()
 	defer m.cleanupFinishedLock.Unlock()
 	<-m.cleanupFinished
-	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.Proposal, m.connectOptions.Params)
+	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.ProposalLookup, m.connectOptions.Params)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to reconnect")
 	}

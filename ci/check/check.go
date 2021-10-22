@@ -76,7 +76,7 @@ func CheckDNSMaps() error {
 	ipMissmatches := make([]string, 0)
 
 	valuesToCheck := make(map[string][]string, 0)
-	for k, v := range metadata.Testnet3Definition.DNSMap {
+	for k, v := range metadata.MainnetDefinition.DNSMap {
 		valuesToCheck[k] = v
 	}
 

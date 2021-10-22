@@ -37,8 +37,7 @@ func TestSenderNew(t *testing.T) {
 			connection:     connection,
 			codec:          codec,
 			timeoutRequest: 10 * time.Second,
-			messageTopic:   "custom.",
 		},
-		NewSender(connection, codec, "custom"),
+		NewSender(connection, codec),
 	)
 }

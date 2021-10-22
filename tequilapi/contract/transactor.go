@@ -156,6 +156,8 @@ func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO 
 		Amount:         settlement.Amount,
 		SettledAt:      settlement.Time.Format(time.RFC3339),
 		Fees:           settlement.Fees,
+		Error:          settlement.Error,
+		IsWithdrawal:   settlement.IsWithdrawal,
 	}
 }
 
@@ -185,6 +187,12 @@ type SettlementDTO struct {
 
 	// example: 500000
 	Fees *big.Int `json:"fees"`
+
+	// example: false
+	IsWithdrawal bool `json:"is_withdrawal"`
+
+	// example: internal server error
+	Error string `json:"error"`
 }
 
 // SettleRequest represents the request to settle hermes promises
@@ -202,6 +210,7 @@ type WithdrawRequest struct {
 	Beneficiary string `json:"beneficiary"`
 	FromChainID int64  `json:"from_chain_id"`
 	ToChainID   int64  `json:"to_chain_id"`
+	Amount      string `json:"amount,omitempty"`
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.

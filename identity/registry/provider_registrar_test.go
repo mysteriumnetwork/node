@@ -32,7 +32,7 @@ func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, newHermesMockFactory(nil, nil))
 
 	done := make(chan struct{})
 
@@ -49,7 +49,7 @@ func Test_ProviderRegistrar_needsHandling(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, newHermesMockFactory(nil, nil))
 
 	mockEvent := queuedEvent{
 		event:   servicestate.AppEventServiceStatus{},
@@ -78,7 +78,7 @@ func Test_ProviderRegistrar_RegistersProvider(t *testing.T) {
 		addrToReturn: newRegistryAddress,
 	}, &mockBlockchain{
 		beneficiaryToReturn: common.HexToAddress("0x3b2e61d42aa1ba340f8a60128fadb273894df145"),
-	}, cfg, &mockPayoutStorage{})
+	}, cfg, newHermesMockFactory(nil, nil))
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -112,7 +112,7 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, newHermesMockFactory(nil, nil))
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -138,21 +138,28 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet3(t *testing.T) {
+func Test_ProviderRegistrar_Does_NotIfUnknownInHermes_Mainnet(t *testing.T) {
 	mt := mockTransactor{
 		bountyResult: false,
 	}
 	mrsp := mockRegistrationStatusProvider{
 		status: Unregistered,
 	}
-	cfg := ProviderRegistrarConfig{
-		IsTestnet3: true,
-	}
+	cfg := ProviderRegistrarConfig{}
+
 	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{
 		addrToReturn: newRegistryAddress,
 	}, &mockBlockchain{
 		beneficiaryToReturn: common.HexToAddress("0x3b2e61d42aa1ba340f8a60128fadb273894df145"),
-	}, cfg, &mockPayoutStorage{})
+	}, cfg, newHermesMockFactory(nil, nil))
+
+	done := make(chan struct{})
+
+	go func() {
+		err := registrar.start()
+		assert.Nil(t, err)
+		done <- struct{}{}
+	}()
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -161,6 +168,31 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet3(t *testing.T) 
 		},
 		retries: 0,
 	}
+
+	registrar.consumeServiceEvent(mockEvent.event)
+
+	registrar.stop()
+	<-done
+
+	_, ok := registrar.registeredIdentities[mockEvent.event.ProviderID]
+	assert.False(t, ok)
+}
+
+func Test_ProviderRegistrar_Does_RegisterIfKnownProvider_Mainnet(t *testing.T) {
+	mt := mockTransactor{
+		bountyResult: false,
+	}
+	mrsp := mockRegistrationStatusProvider{
+		status: Unregistered,
+	}
+	cfg := ProviderRegistrarConfig{}
+
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{
+		addrToReturn: newRegistryAddress,
+	}, &mockBlockchain{
+		beneficiaryToReturn: common.HexToAddress("0x3b2e61d42aa1ba340f8a60128fadb273894df145"),
+	}, cfg, newHermesMockFactory(big.NewInt(10), nil))
+
 	done := make(chan struct{})
 
 	go func() {
@@ -168,6 +200,14 @@ func Test_ProviderRegistrar_Does_NotRegisterWithNoBounty_Testnet3(t *testing.T) 
 		assert.Nil(t, err)
 		done <- struct{}{}
 	}()
+
+	mockEvent := queuedEvent{
+		event: servicestate.AppEventServiceStatus{
+			Status:     "Running",
+			ProviderID: "0x3b2e61d42aa1ba340f8a60128fadb273894df145",
+		},
+		retries: 0,
+	}
 
 	registrar.consumeServiceEvent(mockEvent.event)
 
@@ -186,7 +226,7 @@ func Test_ProviderRegistrar_FailsAfterRetries(t *testing.T) {
 	cfg := ProviderRegistrarConfig{
 		MaxRetries: 5,
 	}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, &mockPayoutStorage{})
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAddressKeeper{}, &mockBlockchain{}, cfg, newHermesMockFactory(nil, nil))
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -259,4 +299,22 @@ type mockPayoutStorage struct {
 
 func (mb *mockPayoutStorage) Save(identity, address string) error {
 	return nil
+}
+
+type mockHermes struct {
+	result *big.Int
+	err    error
+}
+
+func (m *mockHermes) ProviderPromiseAmountUnsafe(chainID int64, id string) (*big.Int, error) {
+	return m.result, m.err
+}
+
+func newHermesMockFactory(result *big.Int, err error) HermesCallerFactory {
+	return func(hermesURL string) ProviderPromiseQuerier {
+		return &mockHermes{
+			result: result,
+			err:    err,
+		}
+	}
 }

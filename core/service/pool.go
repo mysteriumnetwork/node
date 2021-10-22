@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // ID represent unique identifier of the running service.
@@ -187,22 +186,6 @@ func (i *Instance) addP2PChannel(ch p2p.Channel) {
 	defer i.p2pChannelsLock.Unlock()
 
 	i.p2pChannels = append(i.p2pChannels, ch)
-}
-
-func (i *Instance) closeP2PChannel(ch p2p.Channel) {
-	i.p2pChannelsLock.Lock()
-	defer i.p2pChannelsLock.Unlock()
-
-	for index, channel := range i.p2pChannels {
-		if channel == ch {
-			// Close and delete channel.
-			if err := channel.Close(); err != nil {
-				log.Err(err).Msg("Could not close p2p channel")
-			}
-			i.p2pChannels = append(i.p2pChannels[:index], i.p2pChannels[index+1:]...)
-			return
-		}
-	}
 }
 
 func (i *Instance) stop() error {

@@ -237,7 +237,7 @@ func (c *cliApp) handleActions(args []string) error {
 		{"help", c.help},
 		{"status", c.status},
 		{"healthcheck", c.healthcheck},
-		{"nat", c.natStatus},
+		{"nat", c.nodeMonitoringStatus},
 		{"location", c.location},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
@@ -430,17 +430,13 @@ func (c *cliApp) healthcheck() (err error) {
 	return nil
 }
 
-func (c *cliApp) natStatus() (err error) {
+func (c *cliApp) nodeMonitoringStatus() (err error) {
 	status, err := c.tequilapi.NATStatus()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve NAT traversal status: %w", err)
 	}
 
-	if status.Error == "" {
-		clio.Infof("NAT traversal status: %q\n", status.Status)
-	} else {
-		clio.Infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
-	}
+	clio.Infof("Node Monitoring Status: %q\n", status.Status)
 
 	connStatus, err := c.tequilapi.ConnectionStatus()
 	if err != nil {

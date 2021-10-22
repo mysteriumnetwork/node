@@ -21,8 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
+
+	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -35,8 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-
-	"github.com/urfave/cli/v2"
 )
 
 // CommandName is the name of this command
@@ -51,6 +52,18 @@ var (
 	flagLocationType = cli.StringFlag{
 		Name:  "location-type",
 		Usage: "Node location types to filter by eg.'hosting', 'residential', 'mobile' etc.",
+	}
+
+	flagSortType = cli.StringFlag{
+		Name:  "sort",
+		Usage: "Proposal sorting type. One of: quality, bandwidth, latency or price",
+		Value: "quality",
+	}
+
+	flagIncludeFailed = cli.BoolFlag{
+		Name:  "include-failed",
+		Usage: "Include proposals marked as test failed by monitoring agent",
+		Value: false,
 	}
 )
 
@@ -96,7 +109,7 @@ func NewCommand() *cli.Command {
 				Name:      "up",
 				ArgsUsage: "[ProviderIdentityAddress]",
 				Usage:     "Create a new connection",
-				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions},
+				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions, &flagCountry, &flagLocationType, &flagSortType, &flagIncludeFailed},
 				Action: func(ctx *cli.Context) error {
 					cmd.up(ctx)
 					return nil
@@ -224,10 +237,13 @@ func (c *command) up(ctx *cli.Context) {
 		return
 	}
 
-	providerID := ctx.Args().First()
-	if providerID == "" {
-		clio.Warn("First argument must be provider identity address")
-		return
+	providers := strings.Split(ctx.Args().First(), ",")
+	providerIDs := []string{}
+
+	for _, p := range providers {
+		if len(p) > 0 {
+			providerIDs = append(providerIDs, p)
+		}
 	}
 
 	id, err := c.tequilapi.CurrentIdentity("", "")
@@ -247,7 +263,7 @@ func (c *command) up(ctx *cli.Context) {
 		return
 	}
 
-	clio.Status("CONNECTING", "Creating connection from:", id.Address, "to:", providerID)
+	clio.Status("CONNECTING", "Creating connection from:", id.Address, "to:", providers)
 
 	connectOptions := contract.ConnectOptions{
 		DNS:               connection.DNSOptionAuto,
@@ -258,9 +274,18 @@ func (c *command) up(ctx *cli.Context) {
 		clio.Error(err)
 		return
 	}
-	_, err = c.tequilapi.ConnectionCreate(id.Address, providerID, hermesID, serviceWireguard, connectOptions)
+
+	filter := contract.ConnectionCreateFilter{
+		Providers:               providerIDs,
+		CountryCode:             ctx.String(flagCountry.Name),
+		IPType:                  ctx.String(flagLocationType.Name),
+		SortBy:                  ctx.String(flagSortType.Name),
+		IncludeMonitoringFailed: ctx.Bool(flagIncludeFailed.Name),
+	}
+
+	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, serviceWireguard, filter, connectOptions)
 	if err != nil {
-		clio.Error("Failed to create a new connection")
+		clio.Error("Failed to create a new connection", err)
 		return
 	}
 

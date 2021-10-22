@@ -26,6 +26,10 @@ import (
 	"net/url"
 	"testing"
 
+	"golang.org/x/net/context"
+
+	"github.com/mysteriumnetwork/node/nat"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/stretchr/testify/assert"
@@ -64,6 +68,15 @@ var serviceProposals = []proposal.PricedServiceProposal{
 			PricePerGiB:  big.NewInt(2),
 		},
 	},
+}
+
+type mockNATProber struct {
+	returnRes nat.NATType
+	returnErr error
+}
+
+func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
+	return m.returnRes, m.returnErr
 }
 
 var mockedNATProber = &mockNATProber{"none", nil}
@@ -112,7 +125,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -172,7 +185,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -239,7 +252,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -260,7 +273,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}

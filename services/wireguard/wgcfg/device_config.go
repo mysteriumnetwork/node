@@ -109,6 +109,7 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 		DNS          []string `json:"dns"`
 		DNSScriptDir string   `json:"dns_script_dir"`
 		Peer         peer     `json:"peer"`
+		ReplacePeers bool     `json:"replace_peers,omitempty"`
 	}
 
 	cfg := deviceConfig{}
@@ -143,6 +144,7 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 		AllowedIPs:             cfg.Peer.AllowedIPs,
 		KeepAlivePeriodSeconds: cfg.Peer.KeepAlivePeriodSeconds,
 	}
+	dc.ReplacePeers = cfg.ReplacePeers
 
 	return nil
 }

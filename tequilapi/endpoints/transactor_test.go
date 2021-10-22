@@ -264,7 +264,9 @@ func Test_SettleHistory(t *testing.T) {
 						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
 						"amount": 123,
 						"settled_at": "2020-01-02T03:04:05Z",
-						"fees": 20
+						"fees": 20,
+						"is_withdrawal": false,
+						"error": ""
 					},
 					{
 						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
@@ -274,7 +276,9 @@ func Test_SettleHistory(t *testing.T) {
 						"beneficiary": "0x0000000000000000000000000000000000000000",
 						"amount": 456,
 						"settled_at": "2020-06-07T08:09:10Z",
-						"fees": 50
+						"fees": 50,
+						"is_withdrawal": false,
+						"error": ""
 					}
 				],
 				"page": 1,
@@ -341,8 +345,9 @@ func Test_AvailableChains(t *testing.T) {
 	// then
 	var chainSummary contract.ChainSummary
 	err = json.NewDecoder(resp.Body).Decode(&chainSummary)
+	fmt.Println(chainSummary)
 	assert.NoError(t, err)
-	assert.Equal(t, "Ethereum Testnet Görli", chainSummary.Chains[5])
+	assert.Equal(t, "Matic(Polygon) Mainnet", chainSummary.Chains[137])
 	assert.Equal(t, config.FlagChainID.Value, chainSummary.CurrentChain)
 }
 
@@ -364,9 +369,9 @@ func Test_Withdrawal(t *testing.T) {
 		expectedToChainID   int64
 		expectedFromChainID int64
 	}{
-		{fromChainID: 5, toChainID: config.FlagChainID.Value, expectedFromChainID: 5, expectedToChainID: config.FlagChainID.Value},
+		{fromChainID: 1, toChainID: config.FlagChainID.Value, expectedFromChainID: 1, expectedToChainID: config.FlagChainID.Value},
 		{fromChainID: 0, toChainID: 0, expectedFromChainID: config.FlagChainID.Value, expectedToChainID: 0},
-		{fromChainID: 5, toChainID: 0, expectedFromChainID: 5, expectedToChainID: 0},
+		{fromChainID: 1, toChainID: 0, expectedFromChainID: 1, expectedToChainID: 0},
 	} {
 		t.Run(fmt.Sprintf("succeed withdrawal with fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
 			// when
@@ -479,7 +484,7 @@ func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 
-func (ms *mockSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (ms *mockSettler) Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error {
 	ms.capturedToChainID = toChainID
 	ms.capturedFromChainID = fromChainID
 	return nil

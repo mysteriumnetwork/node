@@ -43,8 +43,7 @@ func New() (*client, error) {
 }
 
 func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
-	// TODO add reconnect support
-	return fmt.Errorf("not supported")
+	return c.ConfigureDevice(config)
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {

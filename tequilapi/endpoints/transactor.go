@@ -51,6 +51,7 @@ type Transactor interface {
 	GetReferralToken(id common.Address) (string, error)
 	ReferralTokenAvailable(id common.Address) error
 	RegistrationTokenReward(token string) (*big.Int, error)
+	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 }
 
 // promiseSettler settles the given promises
@@ -58,7 +59,7 @@ type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
-	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
+	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
 }
 
 type addressProvider interface {
@@ -432,6 +433,12 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 		return
 	}
 
+	amount, err := te.parseWithdrawalAmount(req.Amount)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
 	fromChainID := config.GetInt64(config.FlagChainID)
 	if req.FromChainID != 0 {
 		if _, ok := registry.Chains()[req.FromChainID]; !ok {
@@ -452,13 +459,26 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 		toChainID = req.ToChainID
 	}
 
-	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
+	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary), amount)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	resp.WriteHeader(http.StatusOK)
+}
+
+func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, error) {
+	if amount == "" {
+		return nil, nil
+	}
+
+	res, ok := big.NewInt(0).SetString(amount, 10)
+	if !ok {
+		return nil, fmt.Errorf("%v is not a valid integer", amount)
+	}
+
+	return res, nil
 }
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
@@ -594,6 +614,41 @@ func (te *transactorEndpoint) ChainSummary(c *gin.Context) {
 	})
 }
 
+// EligibilityResponse represents the eligibility response
+// swagger:model EligibilityResponse
+type EligibilityResponse struct {
+	Eligible bool `json:"eligible"`
+}
+
+// swagger:operation GET /transactor/identities/{id}/eligibility Eligibility
+// ---
+// summary: Checks if given id is eligible for free registration
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity address to register
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Eligibility response
+//     schema:
+//       "$ref": "#/definitions/EligibilityResponse"
+func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
+	resp := c.Writer
+
+	params := c.Params
+	id := identity.FromAddress(params.ByName("id"))
+
+	res, err := te.transactor.GetFreeRegistrationEligibility(id)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
@@ -608,6 +663,7 @@ func AddRoutesForTransactor(
 		idGroup := e.Group("/identities")
 		{
 			idGroup.POST("/:id/register", te.RegisterIdentity)
+			idGroup.GET("/:id/eligibility", te.FreeRegistrationEligibility)
 		}
 
 		transGroup := e.Group("/transactor")

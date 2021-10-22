@@ -29,10 +29,10 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
-	// FlagTestnet3 uses testnet3 network.
-	FlagTestnet3 = cli.BoolFlag{
-		Name:  "testnet3",
-		Usage: "Defines testnet3 configuration",
+	// FlagMainnet uses mainnet network.
+	FlagMainnet = cli.BoolFlag{
+		Name:  "mainnet",
+		Usage: "Defines mainnet configuration",
 		Value: true,
 	}
 	// FlagAPIAddress Mysterium API URL
@@ -96,6 +96,12 @@ var (
 		Usage: "Do not disconnect consumer on session fail to prevent traffic leaks",
 		Value: false,
 	}
+	// FlagAutoReconnect restore connection automatically once it failed.
+	FlagAutoReconnect = cli.BoolFlag{
+		Name:  "auto-reconnect",
+		Usage: "Restore connection automatically once it failed",
+		Value: false,
+	}
 	// FlagSTUNservers list of STUN server to be used to detect NAT type.
 	FlagSTUNservers = cli.StringSliceFlag{
 		Name:  "stun-servers",
@@ -142,9 +148,10 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagEtherRPCL2,
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
-		&FlagTestnet3,
+		&FlagMainnet,
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
+		&FlagAutoReconnect,
 		&FlagSTUNservers,
 		&FlagLocalServiceDiscovery,
 		&FlagUDPListenPorts,
@@ -156,7 +163,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
-	Current.ParseBoolFlag(ctx, FlagTestnet3)
+	Current.ParseBoolFlag(ctx, FlagMainnet)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL1)
@@ -167,6 +174,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)
 	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
+	Current.ParseBoolFlag(ctx, FlagAutoReconnect)
 	Current.ParseStringSliceFlag(ctx, FlagSTUNservers)
 	Current.ParseBoolFlag(ctx, FlagLocalServiceDiscovery)
 	Current.ParseStringFlag(ctx, FlagUDPListenPorts)

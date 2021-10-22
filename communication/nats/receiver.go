@@ -31,24 +31,26 @@ import (
 // Topic (optional) if need to send messages prefixed topic.
 func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNATS {
 	return &receiverNATS{
-		connection:   connection,
-		codec:        codec,
-		messageTopic: topic + ".",
-		subs:         make(map[string]*nats.Subscription),
+		connection: connection,
+		codec:      codec,
+		subs:       make(map[string]*nats.Subscription),
 	}
 }
 
 type receiverNATS struct {
-	connection   Connection
-	codec        communication.Codec
-	messageTopic string
+	connection Connection
+	codec      communication.Codec
 
 	mu   sync.Mutex
 	subs map[string]*nats.Subscription
 }
 
 func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) error {
-	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
+	messageEndpoint, err := consumer.GetMessageEndpoint()
+	if err != nil {
+		return err
+	}
+	messageTopic := string(messageEndpoint)
 
 	messageHandler := func(msg *nats.Msg) {
 		log.WithLevel(levelFor(messageTopic)).Msgf("Message %q received: %s", messageTopic, msg.Data)
@@ -84,7 +86,7 @@ func (receiver *receiverNATS) ReceiveUnsubscribe(endpoint communication.MessageE
 	receiver.mu.Lock()
 	defer receiver.mu.Unlock()
 
-	messageTopic := receiver.messageTopic + string(endpoint)
+	messageTopic := string(endpoint)
 	subscription, found := receiver.subs[messageTopic]
 	if !found {
 		log.Error().Msg("Unknown topic to unsubscribe: " + messageTopic)
@@ -113,7 +115,11 @@ func (receiver *receiverNATS) Unsubscribe() {
 }
 
 func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) error {
-	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
+	requestEndpoint, err := consumer.GetRequestEndpoint()
+	if err != nil {
+		return err
+	}
+	requestTopic := string(requestEndpoint)
 
 	messageHandler := func(msg *nats.Msg) {
 		log.WithLevel(levelFor(requestTopic)).Msgf("Request %q received: %s", requestTopic, msg.Data)

@@ -163,7 +163,7 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			FlagQualityType.Name,
 		),
-		Value: "https://testnet3-quality.mysterium.network/api/v2",
+		Value: "https://quality.mysterium.network/api/v2",
 	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
@@ -236,6 +236,11 @@ var (
 		Name: "vendor.id",
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
+	}
+	// FlagLauncherVersion is used for reporting the version of a Launcher.
+	FlagLauncherVersion = cli.StringFlag{
+		Name:  "launcher.ver",
+		Usage: "Report the version of a launcher for statistics",
 	}
 
 	// FlagP2PListenPorts sets manual ports for p2p connections.
@@ -331,6 +336,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagUIPort,
 		&FlagUserMode,
 		&FlagVendorID,
+		&FlagLauncherVersion,
 		&FlagP2PListenPorts,
 		&FlagConsumer,
 		&FlagDefaultCurrency,
@@ -386,6 +392,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)
+	Current.ParseStringFlag(ctx, FlagLauncherVersion)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 	Current.ParseBoolFlag(ctx, FlagConsumer)
 	Current.ParseStringFlag(ctx, FlagDefaultCurrency)

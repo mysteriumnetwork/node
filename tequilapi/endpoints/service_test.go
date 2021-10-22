@@ -163,7 +163,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -198,7 +198,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		              "bandwidth": 10
 		            },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -233,7 +233,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		              "bandwidth": 10
 		            },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -442,7 +442,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				  "bandwidth": 10
 				},
 				"price": {
-					"currency": "MYSTT",
+					"currency": "MYST",
 					"per_gib": 2.0,
 					"per_hour": 1.0
 				}
@@ -545,7 +545,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				  "bandwidth": 10
 				},
 				"price": {
-					"currency": "MYSTT",
+					"currency": "MYST",
 					"per_gib": 2.0,
 					"per_hour": 1.0
 				},

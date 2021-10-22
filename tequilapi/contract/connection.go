@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -142,6 +143,8 @@ type ConnectionCreateRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"provider_id"`
 
+	Filter ConnectionCreateFilter `json:"filter"`
+
 	// hermes identity
 	// example: 0x0000000000000000000000000000000000000003
 	HermesID string `json:"hermes_id"`
@@ -157,14 +160,21 @@ type ConnectionCreateRequest struct {
 	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
 }
 
+// ConnectionCreateFilter describes filter for the connection request to lookup
+// for a requested proposals based on specified params.
+type ConnectionCreateFilter struct {
+	Providers               []string `json:"providers,omitempty"`
+	CountryCode             string   `json:"country_code,omitempty"`
+	IPType                  string   `json:"ip_type,omitempty"`
+	IncludeMonitoringFailed bool     `json:"include_monitoring_failed,omitempty"`
+	SortBy                  string   `json:"sort_by,omitempty"`
+}
+
 // Validate validates fields in request.
 func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
 		errs.ForField("consumer_id").Required()
-	}
-	if len(cr.ProviderID) == 0 {
-		errs.ForField("provider_id").Required()
 	}
 	return errs
 }

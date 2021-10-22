@@ -44,7 +44,9 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 				"name": "test app",
 				"version": "test version",
 				"os": "`+runtime.GOOS+`",
-				"arch": "`+runtime.GOARCH+`"
+				"arch": "`+runtime.GOARCH+`",
+				"launcher_version": "test version",
+				"host_os": "test os"
 			},
 			"createdAt": 0,
 			"eventName": "",
@@ -55,7 +57,7 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 		invoked = true
 	}))
 
-	app := appInfo{Name: "test app", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}
+	app := appInfo{Name: "test app", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH, LauncherVersion: "test version", HostOS: "test os"}
 	event := Event{Application: app}
 
 	transport := NewElasticSearchTransport(httpClient, server.URL, time.Second)

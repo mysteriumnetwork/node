@@ -30,8 +30,8 @@ type bytesRequestProducer struct {
 	Request []byte
 }
 
-func (producer *bytesRequestProducer) GetRequestEndpoint() communication.RequestEndpoint {
-	return communication.RequestEndpoint("bytes-request")
+func (producer *bytesRequestProducer) GetRequestEndpoint() (communication.RequestEndpoint, error) {
+	return communication.RequestEndpoint("bytes-request"), nil
 }
 
 func (producer *bytesRequestProducer) NewResponse() (responsePtr interface{}) {
@@ -66,8 +66,8 @@ type bytesRequestConsumer struct {
 	requestReceived interface{}
 }
 
-func (consumer *bytesRequestConsumer) GetRequestEndpoint() communication.RequestEndpoint {
-	return communication.RequestEndpoint("bytes-response")
+func (consumer *bytesRequestConsumer) GetRequestEndpoint() (communication.RequestEndpoint, error) {
+	return communication.RequestEndpoint("bytes-response"), nil
 }
 
 func (consumer *bytesRequestConsumer) NewRequest() (requestPtr interface{}) {

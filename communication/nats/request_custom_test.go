@@ -38,8 +38,8 @@ type customRequestProducer struct {
 	Request *customRequest
 }
 
-func (producer *customRequestProducer) GetRequestEndpoint() communication.RequestEndpoint {
-	return communication.RequestEndpoint("custom-request")
+func (producer *customRequestProducer) GetRequestEndpoint() (communication.RequestEndpoint, error) {
+	return communication.RequestEndpoint("custom-request"), nil
 }
 
 func (producer *customRequestProducer) NewResponse() (responsePtr interface{}) {
@@ -73,8 +73,8 @@ type customRequestConsumer struct {
 	requestReceived interface{}
 }
 
-func (consumer *customRequestConsumer) GetRequestEndpoint() communication.RequestEndpoint {
-	return communication.RequestEndpoint("custom-response")
+func (consumer *customRequestConsumer) GetRequestEndpoint() (communication.RequestEndpoint, error) {
+	return communication.RequestEndpoint("custom-response"), nil
 }
 
 func (consumer *customRequestConsumer) NewRequest() (requestPtr interface{}) {

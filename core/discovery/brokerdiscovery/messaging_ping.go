@@ -19,6 +19,8 @@ package brokerdiscovery
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -27,16 +29,18 @@ type pingMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const pingEndpoint = communication.MessageEndpoint("proposal-ping.v3")
+const pingEndpoint = communication.MessageEndpoint("*.proposal-ping.v3")
 
 // pingProducer
 type pingProducer struct {
 	message *pingMessage
+	signer  identity.Signer
 }
 
 // GetMessageEndpoint returns endpoint where to send messages
-func (p *pingProducer) GetMessageEndpoint() communication.MessageEndpoint {
-	return pingEndpoint
+func (p *pingProducer) GetMessageEndpoint() (communication.MessageEndpoint, error) {
+	subj, err := nats.SignedSubject(p.signer, string(pingEndpoint))
+	return communication.MessageEndpoint(subj), err
 }
 
 // Produce creates message which will be serialized to endpoint
@@ -50,8 +54,8 @@ type pingConsumer struct {
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (c *pingConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return pingEndpoint
+func (c *pingConsumer) GetMessageEndpoint() (communication.MessageEndpoint, error) {
+	return pingEndpoint, nil
 }
 
 // NewMessage creates struct where message from endpoint will be serialized

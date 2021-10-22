@@ -26,4 +26,7 @@ const (
 	commandWgDown           = "wg-down"
 	commandWgStats          = "wg-stats"
 	commandTequilapiSetPort = "ta-set-port"
+	commandDiscoverGateway  = "discover-gateway"
+	commandExcludeRoute     = "exclude-route"
+	commandDeleteRoute      = "delete-route"
 )

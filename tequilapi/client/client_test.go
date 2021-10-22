@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,24 +40,23 @@ func Test_NATStatus_ReturnsStatus(t *testing.T) {
 	httpClient := mockHTTPClient(
 		t,
 		http.MethodGet,
-		"/nat/status",
+		"/node/monitoring-status",
 		http.StatusOK,
-		`{"status": "failure", "error": "mock error"}`,
+		`{"status": "failed"}`,
 	)
 	client := Client{http: httpClient}
 
 	status, err := client.NATStatus()
 
 	assert.NoError(t, err)
-	assert.Equal(t, "failure", status.Status)
-	assert.Equal(t, "mock error", status.Error)
+	assert.Equal(t, node.Failed, status.Status)
 }
 
 func Test_NATStatus_ReturnsError(t *testing.T) {
 	httpClient := mockHTTPClient(
 		t,
 		http.MethodGet,
-		"/nat/status",
+		"/node/monitoring-status",
 		http.StatusInternalServerError,
 		``,
 	)

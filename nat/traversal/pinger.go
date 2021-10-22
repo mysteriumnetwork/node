@@ -48,7 +48,6 @@ const (
 	msgPing           = "continuously pinging to "
 	sendRetryInterval = 5 * time.Millisecond
 	sendRetries       = 10
-	recvErrLimit      = 10
 )
 
 // ErrTooFew indicates there were too few successful ping
@@ -147,7 +146,7 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, remoteIP strin
 				continue
 			}
 
-			sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
+			p.sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
 
 			wg.Add(1)
 			go func(ping pingResponse) {
@@ -213,13 +212,13 @@ func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string,
 				continue
 			}
 
-			sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
+			p.sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
 
 			// Wait for peer to notify that it uses this connection too.
 			wg.Add(1)
 			go func(ping pingResponse) {
 				defer wg.Done()
-				if err := waitMsg(ctx, ping.conn, msgOK); err != nil {
+				if err := p.waitMsg(ctx, ping.conn, msgOK); err != nil {
 					if !errors.Is(err, context.Canceled) {
 						log.Err(err).Msg("Failed to wait for conn OK from provider")
 					}
@@ -236,7 +235,7 @@ func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string,
 	var pings []pingResponse
 	for ping := range pingsCh {
 		pings = append(pings, ping)
-		sendMsg(ping.conn, msgOKACK)
+		p.sendMsg(ping.conn, msgOKACK)
 		if len(pings) == n {
 			go drainPingResponses(pingsCh)
 			return sortedConns(pings), nil
@@ -253,7 +252,7 @@ func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string,
 func (p *Pinger) sendConnACK(ctx context.Context, conn *net.UDPConn) error {
 	ackWaitErr := make(chan error)
 	go func() {
-		ackWaitErr <- waitMsg(ctx, conn, msgOKACK)
+		ackWaitErr <- p.waitMsg(ctx, conn, msgOKACK)
 	}()
 
 	for {
@@ -261,7 +260,7 @@ func (p *Pinger) sendConnACK(ctx context.Context, conn *net.UDPConn) error {
 		case err := <-ackWaitErr:
 			return err
 		case <-time.After(p.pingConfig.SendConnACKInterval):
-			sendMsg(conn, msgOK)
+			p.sendMsg(conn, msgOK)
 		}
 	}
 }
@@ -278,13 +277,17 @@ func sortedConns(pings []pingResponse) []*net.UDPConn {
 }
 
 // waitMsg waits until conn receives given message or timeouts.
-func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
+func (p *Pinger) waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
 	var (
 		n   int
 		err error
 	)
 	buf := make([]byte, 1024)
-	for errCount := 0; errCount < recvErrLimit; errCount++ {
+	// just reasonable upper boundary for receive errors to not enter infinite
+	// loop on closed socket, but still skim errors of closed port etc
+	// +1 in denominator is to avoid division by zero
+	recvErrLimit := 2 * int(p.pingConfig.Timeout/(p.pingConfig.Interval+1))
+	for errCount := 0; errCount < recvErrLimit; {
 		n, err = readFromConnWithContext(ctx, conn, buf)
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -295,6 +298,7 @@ func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
 			return nil
 		}
 		if err != nil {
+			errCount++
 			log.Error().Err(err).Msgf("got error in waitMsg, trying to recover. %d attempts left",
 				recvErrLimit-errCount)
 			continue
@@ -303,12 +307,12 @@ func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
 	return fmt.Errorf("too many recv errors, last one: %w", err)
 }
 
-func sendMsg(conn *net.UDPConn, msg string) {
+func (p *Pinger) sendMsg(conn *net.UDPConn, msg string) {
 	for i := 0; i < sendRetries; i++ {
 		_, err := conn.Write([]byte(msg))
 		if err != nil {
 			log.Error().Err(err).Msg("pinger message send failed")
-			time.Sleep(sendRetryInterval)
+			time.Sleep(p.pingConfig.Interval)
 		} else {
 			return
 		}

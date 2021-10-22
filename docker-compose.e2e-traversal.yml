@@ -60,11 +60,10 @@ services:
       public1:
         ipv4_address: 172.31.0.10
 
-  broker:
+  broker-real:
     image: nats:1.0.4
     expose:
       - 4222
-      - 8222
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -78,6 +77,28 @@ services:
         ipv4_address: 172.30.0.30
       public1:
         ipv4_address: 172.31.0.30
+
+  broker:
+    image: mysteriumnetwork/nats-proxy:1.0.1
+    command:
+      - '-target=broker-real:4222'
+    depends_on:
+      - broker-real
+    expose:
+      - 4222
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.31
+      public1:
+        ipv4_address: 172.31.0.31
 
   db:
     image: postgres:13-alpine

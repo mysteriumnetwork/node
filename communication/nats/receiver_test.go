@@ -34,10 +34,9 @@ func TestReceiverNew(t *testing.T) {
 	assert.Equal(
 		t,
 		&receiverNATS{
-			connection:   connection,
-			codec:        codec,
-			messageTopic: "custom.",
-			subs:         make(map[string]*nats.Subscription),
+			connection: connection,
+			codec:      codec,
+			subs:       make(map[string]*nats.Subscription),
 		},
 		NewReceiver(connection, codec, "custom"),
 	)

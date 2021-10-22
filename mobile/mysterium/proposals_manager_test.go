@@ -88,7 +88,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 		  "price": {
 			  "per_gib": 2.0,
 			  "per_hour": 1.0,
-			  "currency": "MYSTT"
+			  "currency": "MYST"
 		  }
 		}
 	  ]
@@ -129,7 +129,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 		  "price": {
 			"per_gib": 2.0,
 			"per_hour": 1.0,
-			"currency": "MYSTT"
+			"currency": "MYST"
 		  }
 		}
 	  ]

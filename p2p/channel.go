@@ -81,6 +81,9 @@ type Channel interface {
 
 	// Close closes p2p communication channel.
 	Close() error
+
+	// Unique ID
+	ID() string
 }
 
 // HandlerFunc is channel request handler func signature.
@@ -177,12 +180,6 @@ type channel struct {
 
 	// stop is used to stop all running goroutines.
 	stop chan struct{}
-
-	// weather channel saw remote traffic
-	remoteAlive chan struct{}
-
-	// terminate remote aliveness checking only once
-	remoteAliveOnce sync.Once
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
@@ -236,10 +233,13 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		serviceConn:      nil,
 		stop:             make(chan struct{}, 1),
 		sendQueue:        make(chan *transportMsg, 100),
-		remoteAlive:      make(chan struct{}, 1),
 	}
 
 	return &c, nil
+}
+
+func (c *channel) ID() string {
+	return fmt.Sprintf("%p", c)
 }
 
 func (c *channel) launchReadSendLoops() {
@@ -254,8 +254,6 @@ func (c *channel) launchReadSendLoops() {
 func (c *channel) remoteReadLoop() {
 	buf := make([]byte, mtuLimit)
 	latestPeerAddr := c.peer.addr()
-
-	go c.checkIfChannelAlive()
 
 	for {
 		select {
@@ -272,10 +270,6 @@ func (c *channel) remoteReadLoop() {
 
 			return
 		}
-
-		c.remoteAliveOnce.Do(func() {
-			close(c.remoteAlive)
-		})
 
 		// Check if peer port changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
@@ -480,6 +474,10 @@ func (c *channel) Close() error {
 		}
 	})
 
+	if err := router.RemoveExcludedIP(c.peer.remoteAddr.IP); err != nil {
+		return err
+	}
+
 	return closeErr
 }
 
@@ -575,20 +573,6 @@ func (c *channel) setUpnpPortsRelease(release func()) {
 	defer c.mu.Unlock()
 
 	c.upnpPortsRelease = release
-}
-
-func (c *channel) checkIfChannelAlive() {
-	select {
-	case <-c.stop:
-	case <-c.remoteAlive:
-		return
-	case <-time.After(initialTrafficTimeout):
-		log.Warn().Msgf("No initial traffic for %.0f sec. Terminating channel.", initialTrafficTimeout.Seconds())
-		err := c.Close()
-		if err != nil {
-			log.Err(err).Msg("Failed to close channel on inactivity")
-		}
-	}
 }
 
 func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {

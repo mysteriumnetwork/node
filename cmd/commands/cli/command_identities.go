@@ -220,9 +220,6 @@ func (c *cliApp) registerIdentity(actionArgs []string) error {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.config.GetBoolByFlag(config.FlagTestnet3) {
-		msg = "Registration successful, try to connect."
-	}
 
 	clio.Info(msg)
 	clio.Info(fmt.Sprintf("To explore additional information about the identity use: %s", usageGetIdentity))
@@ -305,10 +302,10 @@ func (c *cliApp) setPayoutAddress(args []string) error {
 	return nil
 }
 
-const usageWithdraw = "withdraw <providerIdentity> <beneficiary>"
+const usageWithdraw = "withdraw <providerIdentity> <beneficiary> [amount]"
 
 func (c *cliApp) withdraw(args []string) error {
-	if len(args) != 2 {
+	if len(args) < 2 {
 		clio.Info("Usage: " + usageWithdraw)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
@@ -327,8 +324,17 @@ func (c *cliApp) withdraw(args []string) error {
 	clio.Info("Waiting for withdrawal to complete")
 	errChan := make(chan error)
 
+	var amount *big.Int
+	if len(args) == 3 {
+		a, ok := big.NewInt(0).SetString(args[2], 10)
+		if !ok {
+			return fmt.Errorf("%v is not a valid amount", args[2])
+		}
+		amount = a
+	}
+
 	go func() {
-		errChan <- c.tequilapi.Withdraw(identity.FromAddress(args[0]), common.HexToAddress(hermesID), common.HexToAddress(args[1]))
+		errChan <- c.tequilapi.Withdraw(identity.FromAddress(args[0]), common.HexToAddress(hermesID), common.HexToAddress(args[1]), amount)
 	}()
 
 	timeout := time.After(time.Minute * 2)

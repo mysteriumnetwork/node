@@ -1289,24 +1289,6 @@
         }
       }
     },
-    "/nat/status": {
-      "get": {
-        "description": "NAT status returns the last known NAT traversal status",
-        "tags": [
-          "NAT"
-        ],
-        "summary": "Shows NAT status",
-        "operationId": "NATStatusDTO",
-        "responses": {
-          "200": {
-            "description": "NAT status (\"not_finished\"/\"successful\"/\"failed\") and optionally error if status is \"failed\"",
-            "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
-            }
-          }
-        }
-      }
-    },
     "/nat/type": {
       "get": {
         "description": "Returns NAT type. May produce invalid result while VPN connection is established",
@@ -1340,7 +1322,7 @@
           "200": {
             "description": "Node status (\"passed\"/\"failed\"/\"pending)",
             "schema": {
-              "$ref": "#/definitions/NATStatusDTO"
+              "$ref": "#/definitions/NodeStatusResponse"
             }
           }
         }
@@ -2109,6 +2091,29 @@
         }
       }
     },
+    "/transactor/identities/{id}/eligibility": {
+      "get": {
+        "summary": "Checks if given id is eligible for free registration",
+        "operationId": "Eligibility",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity address to register",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility response",
+            "schema": {
+              "$ref": "#/definitions/EligibilityResponse"
+            }
+          }
+        }
+      }
+    },
     "/transactor/settle/async": {
       "post": {
         "description": "Forces a settlement for the hermes promises. Does not wait for completion.",
@@ -2583,6 +2588,36 @@
       "x-go-name": "ConnectOptions",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ConnectionCreateFilter": {
+      "description": "ConnectionCreateFilter describes filter for the connection request to lookup\nfor a requested proposals based on specified params.",
+      "type": "object",
+      "properties": {
+        "country_code": {
+          "type": "string",
+          "x-go-name": "CountryCode"
+        },
+        "include_monitoring_failed": {
+          "type": "boolean",
+          "x-go-name": "IncludeMonitoringFailed"
+        },
+        "ip_type": {
+          "type": "string",
+          "x-go-name": "IPType"
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Providers"
+        },
+        "sort_by": {
+          "type": "string",
+          "x-go-name": "SortBy"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ConnectionCreateRequestDTO": {
       "type": "object",
       "title": "ConnectionCreateRequest request used to start a connection.",
@@ -2599,6 +2634,9 @@
           "type": "string",
           "x-go-name": "ConsumerID",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "filter": {
+          "$ref": "#/definitions/ConnectionCreateFilter"
         },
         "hermes_id": {
           "description": "hermes identity",
@@ -2790,6 +2828,17 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "EligibilityResponse": {
+      "description": "EligibilityResponse represents the eligibility response",
+      "type": "object",
+      "properties": {
+        "eligible": {
+          "type": "boolean",
+          "x-go-name": "Eligible"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "EntertainmentEstimateResponse": {
       "type": "object",
@@ -3242,21 +3291,6 @@
       "description": "MonitoringStatus enum",
       "type": "string",
       "x-go-package": "github.com/mysteriumnetwork/node/core/node"
-    },
-    "NATStatusDTO": {
-      "description": "NATStatusDTO gives information about NAT traversal success or failure",
-      "type": "object",
-      "properties": {
-        "error": {
-          "type": "string",
-          "x-go-name": "Error"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "NATType": {
       "description": "NATType represents nat type",
@@ -4075,6 +4109,11 @@
           "x-go-name": "ChannelAddress",
           "example": "0x0000000000000000000000000000000000000001"
         },
+        "error": {
+          "type": "string",
+          "x-go-name": "Error",
+          "example": "internal server error"
+        },
         "fees": {
           "$ref": "#/definitions/Int"
         },
@@ -4082,6 +4121,11 @@
           "type": "string",
           "x-go-name": "HermesID",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "is_withdrawal": {
+          "type": "boolean",
+          "x-go-name": "IsWithdrawal",
+          "example": false
         },
         "provider_id": {
           "type": "string",
@@ -4217,6 +4261,10 @@
       "type": "object",
       "title": "WithdrawRequest represents the request to withdraw earnings to l1.",
       "properties": {
+        "amount": {
+          "type": "string",
+          "x-go-name": "Amount"
+        },
         "beneficiary": {
           "type": "string",
           "x-go-name": "Beneficiary"

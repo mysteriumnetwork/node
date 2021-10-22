@@ -18,6 +18,9 @@
 package feedback
 
 import (
+	"net/mail"
+	"strings"
+
 	"github.com/mysteriumnetwork/feedback/client"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
@@ -63,8 +66,25 @@ type UserReport struct {
 	Description string `json:"description"`
 }
 
+// Validate validate UserReport
+func (ur *UserReport) Validate() error {
+	if _, err := mail.ParseAddress(ur.Email); err != nil {
+		return err
+	}
+
+	if trimmed := strings.TrimSpace(ur.Description); len(trimmed) < 30 {
+		return errors.New("Description too short. Provide at least 30 character long description.")
+	}
+
+	return nil
+}
+
 // NewIssue sends node logs, Identity and UserReport to the feedback service
 func (r *Reporter) NewIssue(report UserReport) (result *client.CreateGithubIssueResult, err error) {
+	if err := report.Validate(); err != nil {
+		return nil, err
+	}
+
 	userID := r.currentIdentity()
 
 	archiveFilepath, err := r.logCollector.Archive()

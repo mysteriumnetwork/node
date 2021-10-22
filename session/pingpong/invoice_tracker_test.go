@@ -74,8 +74,12 @@ func (mac *mockHermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *bi
 	return promise, nil
 }
 
-func (mac *mockHermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
-	return ConsumerData{}, nil
+func (mac *mockHermesCaller) GetConsumerData(chainID int64, id string) (HermesUserInfo, error) {
+	return HermesUserInfo{}, nil
+}
+
+func (mac *mockHermesCaller) GetProviderData(chainID int64, id string) (HermesUserInfo, error) {
+	return HermesUserInfo{}, nil
 }
 
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
@@ -611,7 +615,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 					AgreementTotal: new(big.Int),
 				},
 				invoicesSent: map[string]sentInvoice{
-					hex.EncodeToString(msg3.Promise.Hashlock): sentInvoice{
+					hex.EncodeToString(msg3.Promise.Hashlock): {
 						invoice: crypto.Invoice{
 							Hashlock: hex.EncodeToString(msg3.Promise.Hashlock),
 						},

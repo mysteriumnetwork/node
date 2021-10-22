@@ -54,23 +54,18 @@ func NewWireguardClient() (*client, error) {
 }
 
 func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
-	// TODO add reconnect support
-	return fmt.Errorf("not supported")
+	err := c.configureDevice(config)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	rollback := actionstack.NewActionStack()
 
-	var deviceConfig wgtypes.Config
-	port := config.ListenPort
-	privateKey, err := stringToKey(config.PrivateKey)
-	if err != nil {
-		return err
-	}
-	deviceConfig.PrivateKey = &privateKey
-	deviceConfig.ListenPort = &port
-
-	if err := c.up(config.IfaceName, config.Subnet); err != nil {
+	if err := c.up(config.IfaceName); err != nil {
 		return err
 	}
 	rollback.Push(func() {
@@ -78,35 +73,60 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	})
 
 	if config.Peer.Endpoint != nil {
-		if err := configureRoutes(config.IfaceName, config.Peer.Endpoint.IP); err != nil {
+		if err := netutil.AddDefaultRoute(config.IfaceName); err != nil {
 			rollback.Run()
 			return err
 		}
 	}
-	peer, err := addPeerConfig(config.Peer)
+
+	err := c.configureDevice(config)
 	if err != nil {
 		rollback.Run()
 		return err
 	}
-	deviceConfig.Peers = []wgtypes.PeerConfig{peer}
+
+	return nil
+}
+
+func (c *client) configureDevice(config wgcfg.DeviceConfig) error {
+	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", config.IfaceName, config.Subnet.String()); err != nil {
+		return err
+	}
+
+	peer, err := peerConfig(config.Peer)
+	if err != nil {
+		return err
+	}
+
+	privateKey, err := stringToKey(config.PrivateKey)
+	if err != nil {
+		return err
+	}
+
 	c.iface = config.IfaceName
+	deviceConfig := wgtypes.Config{
+		PrivateKey:   &privateKey,
+		ListenPort:   &config.ListenPort,
+		Peers:        []wgtypes.PeerConfig{peer},
+		ReplacePeers: true,
+	}
+
 	if err := c.wgClient.ConfigureDevice(c.iface, deviceConfig); err != nil {
-		rollback.Run()
 		return fmt.Errorf("could not configure kernel space device: %w", err)
 	}
+
 	if err := c.dnsManager.Set(dns.Config{
 		ScriptDir: config.DNSScriptDir,
 		IfaceName: config.IfaceName,
 		DNS:       config.DNS,
 	}); err != nil {
-		rollback.Run()
 		return fmt.Errorf("could not set DNS: %w", err)
 	}
 
 	return nil
 }
 
-func addPeerConfig(peer wgcfg.Peer) (wgtypes.PeerConfig, error) {
+func peerConfig(peer wgcfg.Peer) (wgtypes.PeerConfig, error) {
 	endpoint := peer.Endpoint
 	publicKey, err := stringToKey(peer.PublicKey)
 	if err != nil {
@@ -159,7 +179,7 @@ func (c *client) DestroyDevice(name string) error {
 	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }
 
-func (c *client) up(iface string, ipAddr net.IPNet) error {
+func (c *client) up(iface string) error {
 	rollback := actionstack.NewActionStack()
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
 		if err := cmdutil.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
@@ -169,11 +189,6 @@ func (c *client) up(iface string, ipAddr net.IPNet) error {
 	rollback.Push(func() {
 		_ = c.DestroyDevice(iface)
 	})
-
-	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
-		rollback.Run()
-		return err
-	}
 
 	if err := cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up"); err != nil {
 		rollback.Run()
@@ -198,13 +213,6 @@ func (c *client) Close() (err error) {
 		return fmt.Errorf("could not close client: %w", err)
 	}
 	return nil
-}
-
-func configureRoutes(iface string, ip net.IP) error {
-	if err := netutil.ExcludeRoute(ip); err != nil {
-		return err
-	}
-	return netutil.AddDefaultRoute(iface)
 }
 
 func stringToKey(key string) (wgtypes.Key, error) {

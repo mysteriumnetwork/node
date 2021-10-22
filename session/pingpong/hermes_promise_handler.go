@@ -52,7 +52,8 @@ type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
 	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
-	GetConsumerData(chainID int64, id string) (ConsumerData, error)
+	GetConsumerData(chainID int64, id string) (HermesUserInfo, error)
+	GetProviderData(chainID int64, id string) (HermesUserInfo, error)
 }
 
 type encryption interface {

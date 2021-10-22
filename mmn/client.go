@@ -18,10 +18,7 @@
 package mmn
 
 import (
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -67,81 +64,6 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 	}
 
 	return m.httpClient.DoRequest(req)
-}
-
-// UpdateBeneficiaryRequest is used when setting a new beneficiary in MMN.
-type UpdateBeneficiaryRequest struct {
-	Beneficiary string `json:"beneficiary"`
-	Identity    string `json:"identity"`
-}
-
-// UpdateBeneficiary updates beneficiary in MMN
-func (m *client) UpdateBeneficiary(data *UpdateBeneficiaryRequest) error {
-	log.Debug().Msgf("Updating beneficiary in MMN: %+v", *data)
-
-	id := identity.FromAddress(data.Identity)
-	req, err := requests.NewSignedPutRequest(m.mmnAddress, "node/beneficiary", data, m.signer(id))
-	if err != nil {
-		return err
-	}
-
-	resp, err := m.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	var respBody struct {
-		Success bool   `json:"success"`
-		Message string `json:"message"`
-	}
-	if err := json.Unmarshal(body, &respBody); err != nil {
-		return err
-	}
-
-	if !respBody.Success {
-		return fmt.Errorf("update beneficiary request failed with message: %s", respBody.Message)
-	}
-
-	return nil
-}
-
-// GetBeneficiary get beneficiary from MMN.
-func (m *client) GetBeneficiary(identityStr string) (string, error) {
-	id := identity.FromAddress(identityStr)
-	req, err := requests.NewSignedGetRequest(m.mmnAddress, "node/beneficiary?identity="+identityStr, m.signer(id))
-	if err != nil {
-		return "", err
-	}
-	resp, err := m.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var benef struct {
-		Success     bool   `json:"success"`
-		Message     string `json:"message"`
-		Beneficiary string `json:"beneficiary"`
-	}
-	if err := json.Unmarshal(body, &benef); err != nil {
-		return "", err
-	}
-
-	if !benef.Success {
-		if strings.Contains(benef.Message, "not found") {
-			return "", nil
-		}
-
-		return "", fmt.Errorf("beneficiary get request failed with message: %s", benef.Message)
-	}
-
-	return benef.Beneficiary, nil
 }
 
 // GetReport does an HTTP call to MMN and fetches node report

@@ -111,7 +111,12 @@ func (m *listener) GetContact() market.Contact {
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 // to channelHandlers.
 func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) (func(), error) {
-	configSub, err := m.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+	configSignedSubject, err := nats.SignedSubject(m.signer(providerID), configExchangeSubject(providerID, serviceType))
+	if err != nil {
+		return func() {}, fmt.Errorf("cannot sign config topic: %w", err)
+	}
+
+	configSub, err := m.brokerConn.Subscribe(configSignedSubject, func(msg *nats_lib.Msg) {
 		if err := m.providerStartConfigExchange(providerID, msg); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
@@ -121,7 +126,12 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		return func() {}, fmt.Errorf("could not get subscribe to config exchange topic: %w", err)
 	}
 
-	ackSub, err := m.brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+	ackSignedSubject, err := nats.SignedSubject(m.signer(providerID), configExchangeACKSubject(providerID, serviceType))
+	if err != nil {
+		return func() {}, fmt.Errorf("cannot sign ack topic: %w", err)
+	}
+
+	ackSub, err := m.brokerConn.Subscribe(ackSignedSubject, func(msg *nats_lib.Msg) {
 		config, err := m.providerAckConfigExchange(msg)
 		if err != nil {
 			log.Err(err).Msg("Could not handle exchange ack")
@@ -383,8 +393,13 @@ func (m *listener) providerChannelHandlersReady(providerID identity.Identity, se
 		return fmt.Errorf("could not marshal exchange msg: %w", err)
 	}
 
+	signedSubject, err := nats.SignedSubject(m.signer(providerID), channelHandlersReadySubject(providerID, serviceType))
+	if err != nil {
+		return fmt.Errorf("unable to sign p2p-channel-handlers-ready subject: %w", err)
+	}
+
 	log.Debug().Msgf("Sending handlers ready message")
-	return m.brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
+	return m.brokerConn.Publish(signedSubject, message)
 }
 
 func (m *listener) pendingConfig(peerPubKey PublicKey) (p2pConnectConfig, bool) {
