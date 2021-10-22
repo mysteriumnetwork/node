@@ -355,12 +355,12 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 
 	var stake = new(big.Int)
 	hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
-	if regStatus == registry.Registered {
-		if err != nil {
-			utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
-			return
-		}
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
+		return
+	}
 
+	if regStatus == registry.Registered {
 		data, err := ia.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
