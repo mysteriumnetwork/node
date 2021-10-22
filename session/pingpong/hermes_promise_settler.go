@@ -510,7 +510,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 		}
 
 		if oldAmountToWithdraw.Cmp(big.NewInt(0)) > 0 {
-			err = aps.validateWithdrawalAmount(oldAmountToWithdraw)
+			err = aps.validateWithdrawalAmount(oldAmountToWithdraw, toChainID)
 			if err != nil {
 				return err
 			}
@@ -531,7 +531,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 		amountToWithdraw = new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
 	}
 
-	err = aps.validateWithdrawalAmount(amountToWithdraw)
+	err = aps.validateWithdrawalAmount(amountToWithdraw, toChainID)
 	if err != nil {
 		return err
 	}
@@ -628,8 +628,8 @@ func (aps *hermesPromiseSettler) calculateAmountToWithdrawFromPreviousPromise(pr
 	return diff, nil
 }
 
-func (aps *hermesPromiseSettler) validateWithdrawalAmount(amount *big.Int) error {
-	fees, err := aps.transactor.FetchSettleFees(aps.config.L1ChainID)
+func (aps *hermesPromiseSettler) validateWithdrawalAmount(amount *big.Int, toChain int64) error {
+	fees, err := aps.transactor.FetchSettleFees(toChain)
 	if err != nil {
 		return err
 	}
@@ -717,20 +717,42 @@ func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
 	return new(big.Int).SetBytes(agreementID)
 }
 
-func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*HermesUserInfo, error) {
+func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, id common.Address) (*HermesUserInfo, error) {
 	caller, err := aps.getHermesCaller(chainID, hermesID)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := caller.GetConsumerData(chainID, identity.Hex())
+	data, err := caller.GetConsumerData(chainID, id.Hex())
 	if err != nil {
 		return nil, err
 	}
 
-	if data.Balance.Cmp(big.NewInt(0)) <= 0 {
+	if data.Balance.Cmp(big.NewInt(0)) > 0 {
+		return data.fillZerosIfBigIntNull(), nil
+	}
+
+	// if hermes returned zero, re-check with BC
+	myst, err := aps.addressProvider.GetMystAddress(chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	channelAddress, err := aps.addressProvider.GetChannelAddress(chainID, identity.FromAddress(id.Hex()))
+	if err != nil {
+		return nil, err
+	}
+
+	balance, err := aps.bc.GetMystBalance(chainID, myst, channelAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if balance.Cmp(big.NewInt(0)) <= 0 {
 		return nil, fmt.Errorf("nothing to withdraw. Balance in channel %v is %v", data.ChannelID, data.Balance)
 	}
+
+	data.Balance = balance
 
 	return data.fillZerosIfBigIntNull(), nil
 }

@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -302,10 +303,10 @@ func (c *cliApp) setPayoutAddress(args []string) error {
 	return nil
 }
 
-const usageWithdraw = "withdraw <providerIdentity> <beneficiary> [amount]"
+const usageWithdraw = "withdraw <providerIdentity> <beneficiary> <toChain> [amount]"
 
 func (c *cliApp) withdraw(args []string) error {
-	if len(args) < 2 {
+	if len(args) < 3 {
 		clio.Info("Usage: " + usageWithdraw)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
@@ -324,8 +325,10 @@ func (c *cliApp) withdraw(args []string) error {
 	clio.Info("Waiting for withdrawal to complete")
 	errChan := make(chan error)
 
+	fromChain := c.config.GetInt64ByFlag(config.FlagChain2ChainID)
+
 	var amount *big.Int
-	if len(args) == 3 {
+	if len(args) == 4 {
 		a, ok := big.NewInt(0).SetString(args[2], 10)
 		if !ok {
 			return fmt.Errorf("%v is not a valid amount", args[2])
@@ -333,8 +336,13 @@ func (c *cliApp) withdraw(args []string) error {
 		amount = a
 	}
 
+	toChain, err := strconv.Atoi(args[2])
+	if err != nil {
+		return fmt.Errorf("could not parse chain id %w", err)
+	}
+
 	go func() {
-		errChan <- c.tequilapi.Withdraw(identity.FromAddress(args[0]), common.HexToAddress(hermesID), common.HexToAddress(args[1]), amount)
+		errChan <- c.tequilapi.Withdraw(identity.FromAddress(args[0]), common.HexToAddress(hermesID), common.HexToAddress(args[1]), amount, fromChain, int64(toChain))
 	}()
 
 	timeout := time.After(time.Minute * 2)
