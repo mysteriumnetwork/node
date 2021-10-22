@@ -58,7 +58,7 @@ func LoadUserConfigQuietly(ctx *cli.Context) error {
 
 func resolveLocation(ctx *cli.Context) (configDir string, configFilePath string) {
 	configDir = ctx.String("config-dir")
-	configFilePath = path.Join(configDir, "config.toml")
+	configFilePath = path.Join(configDir, "config-mainnet.toml")
 	return configDir, configFilePath
 }
 
