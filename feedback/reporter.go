@@ -68,8 +68,10 @@ type UserReport struct {
 
 // Validate validate UserReport
 func (ur *UserReport) Validate() error {
-	if _, err := mail.ParseAddress(ur.Email); err != nil {
-		return err
+	if strings.TrimSpace(ur.Email) != "" {
+		if _, err := mail.ParseAddress(ur.Email); err != nil {
+			return err
+		}
 	}
 
 	if trimmed := strings.TrimSpace(ur.Description); len(trimmed) < 30 {
