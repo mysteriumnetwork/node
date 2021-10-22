@@ -19,6 +19,7 @@ package boltdb
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/asdine/storm/v3"
 	"github.com/pkg/errors"
@@ -26,7 +27,8 @@ import (
 
 // Bolt is a wrapper around boltdb
 type Bolt struct {
-	db *storm.DB
+	mux sync.RWMutex
+	db  *storm.DB
 }
 
 // NewStorage creates a new BoltDB storage for service promises
@@ -37,56 +39,78 @@ func NewStorage(path string) (*Bolt, error) {
 // openDB creates new or open existing BoltDB
 func openDB(name string) (*Bolt, error) {
 	db, err := storm.Open(name)
-	return &Bolt{db}, errors.Wrap(err, "failed to open boltDB")
+	return &Bolt{
+		db: db,
+	}, errors.Wrap(err, "failed to open boltDB")
 }
 
 // GetValue gets key value
 func (b *Bolt) GetValue(bucket string, key interface{}, to interface{}) error {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
 	return b.db.Get(bucket, key, to)
 }
 
 // SetValue sets key value
 func (b *Bolt) SetValue(bucket string, key interface{}, to interface{}) error {
+	b.mux.Lock()
+	defer b.mux.Unlock()
 	return b.db.Set(bucket, key, to)
 }
 
 // Store allows to keep struct grouped by the bucket
 func (b *Bolt) Store(bucket string, data interface{}) error {
+	b.mux.Lock()
+	defer b.mux.Unlock()
 	return b.db.From(bucket).Save(data)
 }
 
 // GetAllFrom allows to get all structs from the bucket
 func (b *Bolt) GetAllFrom(bucket string, data interface{}) error {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
 	return b.db.From(bucket).All(data)
 }
 
 // Delete removes the given struct from the given bucket
 func (b *Bolt) Delete(bucket string, data interface{}) error {
+	b.mux.Lock()
+	defer b.mux.Unlock()
 	return b.db.From(bucket).DeleteStruct(data)
 }
 
 // DeleteKey the given struct from the given bucket
 func (b *Bolt) DeleteKey(bucket string, key interface{}) error {
+	b.mux.Lock()
+	defer b.mux.Unlock()
 	return b.db.Delete(bucket, key)
 }
 
 // Update allows to update the struct in the given bucket
 func (b *Bolt) Update(bucket string, object interface{}) error {
+	b.mux.Lock()
+	defer b.mux.Unlock()
 	return b.db.From(bucket).Update(object)
 }
 
 // GetOneByField returns an object from the given bucket by the given field
 func (b *Bolt) GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
 	return b.db.From(bucket).One(fieldName, key, to)
 }
 
 // GetLast returns the last entry in the bucket
 func (b *Bolt) GetLast(bucket string, to interface{}) error {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
 	return b.db.From(bucket).Select().Reverse().First(to)
 }
 
 // GetBuckets returns a list of buckets
 func (b *Bolt) GetBuckets() []string {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
 	return b.db.Bucket()
 }
 
@@ -97,5 +121,27 @@ func (b *Bolt) DB() *storm.DB {
 
 // Close closes database
 func (b *Bolt) Close() error {
+	b.mux.Lock()
+	defer b.mux.Unlock()
 	return b.db.Close()
+}
+
+// RLock locks underlying RWMutex for reading
+func (b *Bolt) RLock() {
+	b.mux.RLock()
+}
+
+// RUnlock unlocks underlying RWMutex for reading
+func (b *Bolt) RUnlock() {
+	b.mux.RUnlock()
+}
+
+// Lock locks underlying RWMutex for write
+func (b *Bolt) Lock() {
+	b.mux.Lock()
+}
+
+// Unlock unlocks underlying RWMutex for write
+func (b *Bolt) Unlock() {
+	b.mux.Unlock()
 }
