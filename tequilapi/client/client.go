@@ -583,11 +583,13 @@ func filterSessionsByStatus(status string, sessions contract.SessionListResponse
 }
 
 // Withdraw requests the withdrawal of money from l2 to l1 of hermes promises
-func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error {
+func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int, fromChainID, toChainID int64) error {
 	withdrawRequest := contract.WithdrawRequest{
 		ProviderID:  providerID.Address,
 		HermesID:    hermesID.Hex(),
 		Beneficiary: beneficiary.Hex(),
+		FromChainID: fromChainID,
+		ToChainID:   toChainID,
 	}
 
 	if amount != nil {
