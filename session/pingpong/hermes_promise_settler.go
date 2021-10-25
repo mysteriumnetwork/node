@@ -515,7 +515,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 				return err
 			}
 
-			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
+			return aps.payAndSettleTransactor(toChainID, oldAmountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
 		}
 
 		aps.deleteWithdrawnPromise(promiseFromStorage)
@@ -561,7 +561,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 	promiseFromStorage.Promise.R = decodedR
 
-	return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
+	return aps.payAndSettleTransactor(toChainID, amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
 }
 
 func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage HermesPromise) {
@@ -571,7 +571,7 @@ func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage Herme
 	}
 }
 
-func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
+func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
 	decodedR, err := hex.DecodeString(promiseFromStorage.R)
 	if err != nil {
 		return fmt.Errorf("could not decode R %w", err)
@@ -579,7 +579,7 @@ func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.In
 	promiseFromStorage.Promise.R = decodedR
 
 	// 5. add the missing beneficiary signature
-	payload := crypto.NewPayAndSettleBeneficiaryPayload(beneficiary, aps.config.L1ChainID, chid, promiseFromStorage.Promise.Amount, client.ToBytes32(promiseFromStorage.Promise.R))
+	payload := crypto.NewPayAndSettleBeneficiaryPayload(beneficiary, toChainID, chid, promiseFromStorage.Promise.Amount, client.ToBytes32(promiseFromStorage.Promise.R))
 	err = payload.Sign(aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return fmt.Errorf("could not sign pay and settle payload: %w", err)
@@ -681,7 +681,7 @@ func (aps *hermesPromiseSettler) payAndSettle(
 func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
 	r := aps.generateR()
 	agreementID := aps.generateAgreementID()
-	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, 1)
+	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, toChain)
 	invoice.Provider = providerID.ToCommonAddress().Hex()
 
 	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), fromChain, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
