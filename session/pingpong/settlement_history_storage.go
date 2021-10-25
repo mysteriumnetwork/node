@@ -62,6 +62,8 @@ const settlementHistoryBucket = "settlement-history"
 
 // Store stores a given settlement history entry.
 func (shs *SettlementHistoryStorage) Store(she SettlementHistoryEntry) error {
+	shs.bolt.Lock()
+	defer shs.bolt.Unlock()
 	return shs.bolt.DB().From(settlementHistoryBucket).Save(&she)
 }
 
@@ -89,6 +91,8 @@ func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (resul
 		where = append(where, q.Eq("HermesID", filter.HermesID))
 	}
 
+	shs.bolt.RLock()
+	defer shs.bolt.RUnlock()
 	sq := shs.bolt.DB().
 		From(settlementHistoryBucket).
 		Select(q.And(where...)).

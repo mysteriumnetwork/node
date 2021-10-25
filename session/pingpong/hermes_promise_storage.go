@@ -126,6 +126,8 @@ func (aps *HermesPromiseStorage) List(filter HermesPromiseFilter) ([]HermesPromi
 	defer aps.lock.Unlock()
 
 	result := make([]HermesPromise, 0)
+	aps.bolt.RLock()
+	defer aps.bolt.RUnlock()
 	err := aps.bolt.DB().Bolt.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(aps.getBucketName(filter.ChainID)))
 		if bucket == nil {

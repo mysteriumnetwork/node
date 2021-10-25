@@ -63,11 +63,18 @@ func (m *Migrator) migrate(migration migrations.Migration) error {
 	if err != nil || isRun {
 		return err
 	}
-	log.Info().Msg("Running migration " + migration.Name)
-	err = migration.Migrate(m.db.DB())
+
+	err = func() error {
+		log.Info().Msg("Running migration " + migration.Name)
+		m.db.Lock()
+		defer m.db.Unlock()
+
+		return migration.Migrate(m.db.DB())
+	}()
 	if err != nil {
 		return err
 	}
+
 	log.Info().Msg("Saving migration " + migration.Name)
 	return m.saveMigrationRun(migration)
 }
