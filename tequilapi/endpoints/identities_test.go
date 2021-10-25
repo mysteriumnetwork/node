@@ -20,9 +20,14 @@ package endpoints
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/client"
 
 	"github.com/gin-gonic/gin"
 
@@ -305,10 +310,56 @@ func Test_ReferralTokenGet(t *testing.T) {
 	assert.JSONEq(t, `{"token":"yay-free-myst"}`, resp.Body.String())
 }
 
+func Test_IdentityGet(t *testing.T) {
+	endpoint := &identitiesAPI{
+		idm:      identity.NewIdentityManagerFake(existingIdentities, newIdentity),
+		registry: &registry.FakeRegistry{RegistrationStatus: registry.Registered},
+		channelCalculator: &mockAddressProvider{
+			channelAddressToReturn: common.HexToAddress("0x100000000000000000000000000000000000000a"),
+			hermesToReturn:         common.HexToAddress("0x200000000000000000000000000000000000000a"),
+		},
+		bc: &mockProviderChannelStatusProvider{
+			channelToReturn: client.ProviderChannel{
+				Settled:       big.NewInt(1),
+				Stake:         big.NewInt(2),
+				LastUsedNonce: big.NewInt(3),
+				Timelock:      big.NewInt(4),
+			},
+		},
+		earningsProvider: &mockEarningsProvider{
+			earnings: pingpongEvent.Earnings{
+				LifetimeBalance:  big.NewInt(100),
+				UnsettledBalance: big.NewInt(50),
+			},
+		},
+		balanceProvider: &mockBalanceProvider{
+			balance: big.NewInt(25),
+		},
+	}
+
+	router := gin.Default()
+	router.GET("/identities/:id", endpoint.Get)
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/identities/0x000000000000000000000000000000000000000a",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(t,
+		`{"id":"0x000000000000000000000000000000000000000a","registration_status":"Registered","channel_address":"0x100000000000000000000000000000000000000A","balance":25,"earnings":50,"earnings_total":100,"stake":2,"hermes_id":"0x200000000000000000000000000000000000000A"}`,
+		resp.Body.String())
+}
+
 type mockAddressProvider struct {
-	hermesToReturn   common.Address
-	registryToReturn common.Address
-	channelToReturn  common.Address
+	hermesToReturn         common.Address
+	registryToReturn       common.Address
+	channelToReturn        common.Address
+	channelAddressToReturn common.Address
 }
 
 func (ma *mockAddressProvider) GetChannelImplementation(chainID int64) (common.Address, error) {
@@ -321,4 +372,41 @@ func (ma *mockAddressProvider) GetActiveHermes(chainID int64) (common.Address, e
 
 func (ma *mockAddressProvider) GetRegistryAddress(chainID int64) (common.Address, error) {
 	return ma.registryToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
+	return ma.channelAddressToReturn, nil
+}
+
+type mockProviderChannelStatusProvider struct {
+	channelToReturn client.ProviderChannel
+}
+
+func (m *mockProviderChannelStatusProvider) GetProviderChannel(chainID int64, hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error) {
+	return m.channelToReturn, nil
+}
+
+type mockEarningsProvider struct {
+	earnings pingpongEvent.Earnings
+	channels []pingpong.HermesChannel
+}
+
+func (mep *mockEarningsProvider) List(chainID int64) []pingpong.HermesChannel {
+	return mep.channels
+}
+
+func (mep *mockEarningsProvider) GetEarnings(chainID int64, _ identity.Identity) pingpongEvent.Earnings {
+	return mep.earnings
+}
+
+type mockBalanceProvider struct {
+	balance            *big.Int
+	forceUpdateBalance *big.Int
+}
+
+func (m *mockBalanceProvider) GetBalance(chainID int64, id identity.Identity) *big.Int {
+	return m.balance
+}
+func (m *mockBalanceProvider) ForceBalanceUpdateCached(chainID int64, id identity.Identity) *big.Int {
+	return m.forceUpdateBalance
 }
