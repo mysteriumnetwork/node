@@ -108,7 +108,7 @@ var (
 	FlagShaperBandwidth = cli.Uint64Flag{
 		Name:  "shaper.bandwidth",
 		Usage: "Set the bandwidth limit in Kbytes",
-		Value: 5000,
+		Value: 6250,
 	}
 	// FlagKeystoreLightweight determines the scrypt memory complexity.
 	FlagKeystoreLightweight = cli.BoolFlag{
