@@ -874,7 +874,7 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					return
 				}
 
-				info, err := aps.findSettlementInBCLogs(promise.ChainID, res.Hash, hermesID, providerChannelID)
+				info, err := aps.findSettlementInBCLogs(promise.ChainID, hermesID, providerChannelID)
 				if err != nil {
 					if errors.Is(err, errNoSettlementFound) {
 						log.Warn().Fields(map[string]interface{}{
@@ -938,7 +938,7 @@ func (aps *hermesPromiseSettler) toBytes32(providerAddress string) [32]byte {
 
 var errNoSettlementFound = errors.New("no settlement found")
 
-func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, txHash string, hermesID common.Address, providerAddress [32]byte) (bindings.HermesImplementationPromiseSettled, error) {
+func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, hermesID common.Address, providerAddress [32]byte) (bindings.HermesImplementationPromiseSettled, error) {
 	latest, err := aps.bc.HeaderByNumber(chainID, nil)
 	if err != nil {
 		return bindings.HermesImplementationPromiseSettled{}, err
@@ -951,10 +951,9 @@ func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, txHash st
 		return bindings.HermesImplementationPromiseSettled{}, err
 	}
 
-	expected := common.BytesToHash(crypto.HexToBytes(txHash))
 	for _, v := range filtered {
-		log.Info().Str("expected", expected.Hex()).Str("got", v.Raw.TxHash.Hex()).Msg("filtering")
-		if bytes.EqualFold(v.Raw.TxHash.Bytes(), expected.Bytes()) {
+		log.Info().Str("expected", hex.EncodeToString(providerAddress[:])).Str("got", hex.EncodeToString(v.ChannelId[:])).Msg("filtering")
+		if bytes.EqualFold(v.ChannelId[:], providerAddress[:]) {
 			return v, nil
 		}
 	}
