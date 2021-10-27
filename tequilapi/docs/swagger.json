@@ -1639,7 +1639,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1647,7 +1647,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -1744,7 +1744,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1752,7 +1752,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -1823,7 +1823,7 @@
     },
     "/sessions/stats-daily": {
       "get": {
-        "description": "Returns aggregated daily statistics of sessions filtered by given query",
+        "description": "Returns aggregated daily statistics of sessions filtered by given query (date_from=\u003cnow -30d\u003e and date_to=\u003cnow\u003e by default)",
         "tags": [
           "Session"
         ],
@@ -1834,7 +1834,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1842,7 +1842,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
