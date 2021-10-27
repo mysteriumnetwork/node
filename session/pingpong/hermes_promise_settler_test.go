@@ -17,6 +17,7 @@
 package pingpong
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -317,11 +318,18 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 	fac := &mockHermesCallerFactory{}
 	transactorFee := big.NewInt(5000)
 	hermesFee := big.NewInt(20000)
+	expectedChannel, err := hex.DecodeString("d0bb35eb0e4a0c972f2c154f91cf676b804762bef69c7fe4cef38642c3ac7ffc")
+	assert.NoError(t, err)
+
+	var arr [32]byte
+	copy(arr[:], expectedChannel)
 	bc := &mockProviderChannelStatusProvider{
 		calculatedFees: hermesFee,
 		subCancel:      func() {},
 		promiseEventsToReturn: []bindings.HermesImplementationPromiseSettled{
-			{},
+			{
+				ChannelId: arr,
+			},
 		},
 		headerToReturn: &types.Header{
 			Number: big.NewInt(0),
@@ -362,7 +370,7 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 
 	mockSettler := func(crypto.Promise) (string, error) { return "", nil }
 
-	err := promiseSettler.settle(mockSettler, identity.Identity{Address: "0x92fE1c838b08dB4c072DDa805FB4292d9b76B5E7"}, common.HexToAddress("0x07b5fD382b5e375F202184052BeF2C50b3B1404F"), mockPromise, common.Address{}, settled)
+	err = promiseSettler.settle(mockSettler, identity.Identity{Address: "0x92fE1c838b08dB4c072DDa805FB4292d9b76B5E7"}, common.HexToAddress("0x07b5fD382b5e375F202184052BeF2C50b3B1404F"), mockPromise, common.Address{}, settled)
 	assert.NoError(t, err)
 	ev := <-publisher.publicationChan
 	assert.Equal(t, event.AppTopicSettlementComplete, ev.name)
