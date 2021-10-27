@@ -87,15 +87,25 @@ func (c *cliApp) gateways(args []string) (err error) {
 	return nil
 }
 
-const usageOrderCreate = "create <identity> <amount> <pay currency> <gateway> [gw data: use_network=true,order=123]"
+const usageOrderCreate = "create <identity> <amount> <pay currency> <gateway> <country> [gw data: lightning_network=true,order=123]"
 
 func (c *cliApp) orderCreate(args []string) (err error) {
-	if len(args) > 6 || len(args) < 4 {
+	if len(args) != 5 && len(args) != 6 {
 		clio.Info("Usage: " + usageOrderCreate)
 		return errWrongArgumentCount
 	}
 
-	f, err := strconv.ParseFloat(args[1], 64)
+	argId := args[0]
+	argAmount := args[1]
+	argPayCurrency := args[2]
+	argGateway := args[3]
+	argCountry := args[4]
+	var argCallerData string
+	if len(args) > 5 {
+		argCallerData = args[5]
+	}
+
+	f, err := strconv.ParseFloat(argAmount, 64)
 	if err != nil {
 		return fmt.Errorf("could not parse amount: %w", err)
 	}
@@ -114,10 +124,9 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 		return
 	}
 
-	gatewayName := args[3]
-	gw, ok := findGateway(gatewayName, gws)
+	gw, ok := findGateway(argGateway, gws)
 	if !ok {
-		clio.Error("Can't continue, no such gateway:", gatewayName)
+		clio.Error("Can't continue, no such gateway:", argGateway)
 		return
 	}
 	if gw.OrderOptions.Minimum != 0 && f <= gw.OrderOptions.Minimum {
@@ -127,43 +136,41 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 			config.GetString(config.FlagDefaultCurrency))
 	}
 
-	callerData := json.RawMessage("{}")
-	if len(args) == 5 {
-		data := map[string]interface{}{}
-		parts := strings.Split(args[4], ",")
-		for _, part := range parts {
-			kv := strings.Split(part, "=")
-			if len(kv) != 2 {
-				clio.Error("gateway data wrong, example: lightning_network=true,custom_id=\"123 11\"")
-				return
-			}
-
-			if b, err := strconv.ParseBool(kv[1]); err == nil {
-				data[kv[0]] = b
-				continue
-			}
-
-			if b, err := strconv.ParseFloat(kv[1], 64); err == nil {
-				data[kv[0]] = b
-				continue
-			}
-
-			data[kv[0]] = kv[1]
-		}
-
-		callerData, err = json.Marshal(data)
-		if err != nil {
-			clio.Error("failed to make caller data")
+	data := map[string]interface{}{}
+	parts := strings.Split(argCallerData, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			clio.Error("gateway data wrong, example: lightning_network=true,custom_id=\"123 11\"")
 			return
 		}
+
+		if b, err := strconv.ParseBool(kv[1]); err == nil {
+			data[kv[0]] = b
+			continue
+		}
+
+		if b, err := strconv.ParseFloat(kv[1], 64); err == nil {
+			data[kv[0]] = b
+			continue
+		}
+
+		data[kv[0]] = kv[1]
+	}
+
+	callerData, err := json.Marshal(data)
+	if err != nil {
+		clio.Error("failed to make caller data")
+		return
 	}
 
 	resp, err := c.tequilapi.OrderCreate(
-		identity.FromAddress(args[0]),
-		gatewayName,
+		identity.FromAddress(argId),
+		argGateway,
 		contract.PaymentOrderRequest{
-			MystAmount:  args[1],
-			PayCurrency: args[2],
+			MystAmount:  argAmount,
+			PayCurrency: argPayCurrency,
+			Country:     argCountry,
 			CallerData:  callerData,
 		})
 	if err != nil {
@@ -221,6 +228,10 @@ func printOrder(o contract.PaymentOrderResponse, rc *remote.Config) {
 	clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", o.ID, o.Status))
 	clio.Info(fmt.Sprintf("Pay: %s %s", o.PayAmount, o.PayCurrency))
 	clio.Info(fmt.Sprintf("Receive MYST: %s", o.ReceiveMYST))
+	clio.Info("Order details:")
+	clio.Info(fmt.Sprintf(" + MYST (%v): %s %s", o.ReceiveMYST, o.ItemsSubTotal, o.Currency))
+	clio.Info(fmt.Sprintf(" + Tax (%s %%): %s %s", o.TaxRate, o.TaxSubTotal, o.Currency))
+	clio.Info(fmt.Sprintf(" = Total: %s %s", o.OrderTotal, o.Currency))
 	clio.Info("Data:", string(o.PublicGatewayData))
 }
 

@@ -56,7 +56,7 @@ func (mock *mockPilvytisIssuer) CreatePaymentOrder(i identity.Identity, mystAmou
 	return &mock.resp, nil
 }
 
-func (mock *mockPilvytisIssuer) CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error) {
+func (mock *mockPilvytisIssuer) CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency, country string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error) {
 	if id.Address != mock.identity {
 		return nil, errors.New("wrong identity")
 	}
