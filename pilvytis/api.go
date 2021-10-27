@@ -272,6 +272,14 @@ type PaymentOrderResponse struct {
 	PayAmount   string `json:"pay_amount"`
 	PayCurrency string `json:"pay_currency"`
 
+	Country string `json:"country"`
+
+	Currency      string `json:"currency"`
+	ItemsSubTotal string `json:"items_sub_total"`
+	TaxRate       string `json:"tax_rate"`
+	TaxSubTotal   string `json:"tax_sub_total"`
+	OrderTotal    string `json:"order_total"`
+
 	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
 }
 
@@ -341,13 +349,14 @@ type paymentOrderRequest struct {
 	ChannelAddress string `json:"channel_address"`
 	MystAmount     string `json:"myst_amount"`
 	PayCurrency    string `json:"pay_currency"`
+	Country        string `json:"country"`
 	ChainID        int64  `json:"chain_id"`
 
 	GatewayCallerData json.RawMessage `json:"gateway_caller_data"`
 }
 
 // createPaymentOrder creates a new payment order in the API service.
-func (a *API) createPaymentGatewayOrder(id identity.Identity, gateway string, mystAmount string, payCurrency string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
+func (a *API) createPaymentGatewayOrder(id identity.Identity, gateway string, mystAmount string, payCurrency string, country string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
 	ch, err := a.channelCalculator.GetChannelAddress(chainID, id)
@@ -359,6 +368,7 @@ func (a *API) createPaymentGatewayOrder(id identity.Identity, gateway string, my
 		ChannelAddress:    ch.Hex(),
 		MystAmount:        mystAmount,
 		PayCurrency:       payCurrency,
+		Country:           country,
 		ChainID:           chainID,
 		GatewayCallerData: callerData,
 	}

@@ -100,6 +100,7 @@ type CreatePaymentGatewayOrderReq struct {
 	Gateway         string
 	MystAmount      string
 	PayCurrency     string
+	Country         string
 	// GatewayCallerData is marshaled json that is accepting by the payment gateway.
 	GatewayCallerData []byte
 }
@@ -111,6 +112,7 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 		req.Gateway,
 		req.MystAmount,
 		req.PayCurrency,
+		req.Country,
 		req.GatewayCallerData,
 	)
 	if err != nil {
