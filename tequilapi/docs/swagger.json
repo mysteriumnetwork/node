@@ -3509,6 +3509,11 @@
       "description": "PaymentOrderRequest holds order request details",
       "type": "object",
       "properties": {
+        "country": {
+          "type": "string",
+          "x-go-name": "Country",
+          "example": "US"
+        },
         "gateway_caller_data": {
           "type": "object",
           "x-go-name": "CallerData",
@@ -3540,6 +3545,14 @@
           "type": "string",
           "x-go-name": "ChannelAddress"
         },
+        "country": {
+          "type": "string",
+          "x-go-name": "Country"
+        },
+        "currency": {
+          "type": "string",
+          "x-go-name": "Currency"
+        },
         "gateway_name": {
           "type": "string",
           "x-go-name": "GatewayName"
@@ -3551,6 +3564,14 @@
         "identity": {
           "type": "string",
           "x-go-name": "Identity"
+        },
+        "items_sub_total": {
+          "type": "string",
+          "x-go-name": "ItemsSubTotal"
+        },
+        "order_total": {
+          "type": "string",
+          "x-go-name": "OrderTotal"
         },
         "pay_amount": {
           "type": "string",
@@ -3571,6 +3592,14 @@
         "status": {
           "type": "string",
           "x-go-name": "Status"
+        },
+        "tax_rate": {
+          "type": "string",
+          "x-go-name": "TaxRate"
+        },
+        "tax_sub_total": {
+          "type": "string",
+          "x-go-name": "TaxSubTotal"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

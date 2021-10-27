@@ -125,6 +125,13 @@ type PaymentOrderResponse struct {
 	ReceiveMYST string `json:"receive_myst"`
 	PayAmount   string `json:"pay_amount"`
 	PayCurrency string `json:"pay_currency"`
+	Country     string `json:"country"`
+
+	Currency      string `json:"currency"`
+	ItemsSubTotal string `json:"items_sub_total"`
+	TaxRate       string `json:"tax_rate"`
+	TaxSubTotal   string `json:"tax_sub_total"`
+	OrderTotal    string `json:"order_total"`
 
 	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
 }
@@ -141,6 +148,12 @@ func NewPaymentOrderResponse(r *pilvytis.PaymentOrderResponse) PaymentOrderRespo
 		ReceiveMYST:       r.ReceiveMYST,
 		PayAmount:         r.PayAmount,
 		PayCurrency:       r.PayCurrency,
+		Country:           r.Country,
+		Currency:          r.Currency,
+		ItemsSubTotal:     r.ItemsSubTotal,
+		TaxRate:           r.TaxRate,
+		TaxSubTotal:       r.TaxSubTotal,
+		OrderTotal:        r.OrderTotal,
 		PublicGatewayData: r.PublicGatewayData,
 	}
 }
@@ -184,6 +197,9 @@ type PaymentOrderRequest struct {
 
 	// example: EUR
 	PayCurrency string `json:"pay_currency"`
+
+	// example: US
+	Country string `json:"country"`
 
 	// example: {}
 	CallerData json.RawMessage `json:"gateway_caller_data"`
