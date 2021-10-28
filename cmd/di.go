@@ -475,12 +475,17 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) getHermesURL(nodeOptions node.Options) (string, error) {
-	log.Info().Msgf("node chain id %v", nodeOptions.ChainID)
+	log.Info().Msgf("Node chain id %v", nodeOptions.ChainID)
+	addr := common.HexToAddress(nodeOptions.Chains.Chain2.HermesID)
 	if nodeOptions.ChainID == nodeOptions.Chains.Chain1.ChainID {
-		return di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, common.HexToAddress(nodeOptions.Chains.Chain1.HermesID))
+		addr = common.HexToAddress(nodeOptions.Chains.Chain1.HermesID)
 	}
 
-	return di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, common.HexToAddress(nodeOptions.Chains.Chain2.HermesID))
+	hermesURL, err := di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, addr)
+	if err != nil {
+		return "", fmt.Errorf("could not get hermes URL: %w", err)
+	}
+	return hermesURL, nil
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {

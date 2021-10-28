@@ -50,8 +50,8 @@ func (o *OrderIssuer) CreatePaymentOrder(id identity.Identity, mystAmount float6
 }
 
 // CreatePaymentGatewayOrder will create a new payment order and send a notification to start tracking it.
-func (o *OrderIssuer) CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
-	resp, err := o.api.createPaymentGatewayOrder(id, gw, mystAmount, payCurrency, callerData)
+func (o *OrderIssuer) CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency, country string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
+	resp, err := o.api.createPaymentGatewayOrder(id, gw, mystAmount, payCurrency, country, callerData)
 	if err != nil {
 		return nil, err
 	}
