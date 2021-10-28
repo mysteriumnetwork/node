@@ -241,6 +241,9 @@ func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, service
 		HermesID:       hermesID,
 		ServiceType:    serviceType,
 		ConnectOptions: options,
+		Filter: contract.ConnectionCreateFilter{
+			IncludeMonitoringFailed: true,
+		},
 	})
 	if err != nil {
 		return contract.ConnectionInfoDTO{}, err
