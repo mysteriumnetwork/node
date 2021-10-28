@@ -332,9 +332,10 @@ func filteredProposals(serviceType string, filter contract.ConnectionCreateFilte
 		ProviderIDs:             filter.Providers,
 		IPType:                  filter.IPType,
 		IncludeMonitoringFailed: filter.IncludeMonitoringFailed,
+		AccessPolicy:            "all",
 	}
 
-	usedProposals := make(map[string]time.Time, 0)
+	usedProposals := make(map[string]time.Time)
 
 	return func() (*proposal.PricedServiceProposal, error) {
 		proposals, err := repo.Proposals(f)
