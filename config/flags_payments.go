@@ -20,9 +20,9 @@ package config
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/metadata"
-
 	"github.com/urfave/cli/v2"
+
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -109,7 +109,7 @@ var (
 	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
 		Name:  "payments.provider.max-unpaid-invoice-value",
 		Usage: "sets the upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
-		Value: "30000000000000000",
+		Value: "3000000000000000",
 	}
 	// FlagPaymentsHermesStatusRecheckInterval sets how often we re-check the hermes status on bc. Higher values allow for less bc lookups but increase the risk for provider.
 	FlagPaymentsHermesStatusRecheckInterval = cli.DurationFlag{
