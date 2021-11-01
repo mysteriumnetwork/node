@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -266,6 +267,7 @@ func proposalEventToMetricsEvent(ctx market.ServiceProposal) (string, *metrics.E
 			ProposalPayload: &metrics.ProposalPayload{
 				ServiceType: ctx.ServiceType,
 				NodeType:    ctx.Location.IPType,
+				VendorId:    config.GetString(config.FlagVendorID),
 			},
 		},
 	}
