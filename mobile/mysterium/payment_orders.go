@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -107,6 +108,11 @@ type CreatePaymentGatewayOrderReq struct {
 
 // CreatePaymentGatewayOrder creates a payment order.
 func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderReq) ([]byte, error) {
+	if req.Country == "" {
+		org := mb.locationResolver.GetOrigin()
+		req.Country = strings.ToUpper(org.Country)
+	}
+
 	order, err := mb.pilvytisOrderIssuer.CreatePaymentGatewayOrder(
 		identity.FromAddress(req.IdentityAddress),
 		req.Gateway,
