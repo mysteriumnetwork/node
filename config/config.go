@@ -221,7 +221,7 @@ func (cfg *Config) Get(key string) interface{} {
 		return copyValue(userValue)
 	}
 	defaultValue := SearchMap(cfg.defaults, segments)
-	log.Debug().Msgf("Returning default value %v:%v", key, defaultValue)
+	log.Trace().Msgf("Returning default value %v:%v", key, defaultValue)
 	return copyValue(defaultValue)
 }
 
