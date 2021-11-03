@@ -21,9 +21,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -50,16 +52,22 @@ type paymentsIssuer interface {
 	CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency, country string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error)
 }
 
+type paymentLocationFallback interface {
+	GetOrigin() locationstate.Location
+}
+
 type pilvytisEndpoint struct {
 	api api
 	pt  paymentsIssuer
+	lf  paymentLocationFallback
 }
 
 // NewPilvytisEndpoint returns pilvytis endpoints.
-func NewPilvytisEndpoint(pil api, pt paymentsIssuer) *pilvytisEndpoint {
+func NewPilvytisEndpoint(pil api, pt paymentsIssuer, lf paymentLocationFallback) *pilvytisEndpoint {
 	return &pilvytisEndpoint{
 		api: pil,
 		pt:  pt,
+		lf:  lf,
 	}
 }
 
@@ -411,6 +419,12 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		return
 	}
 
+	// TODO: Remove this once apps update
+	if req.Country == "" {
+		org := e.lf.GetOrigin()
+		req.Country = strings.ToUpper(org.Country)
+	}
+
 	rid := identity.FromAddress(params.ByName("id"))
 	resp, err := e.pt.CreatePaymentGatewayOrder(
 		rid,
@@ -428,8 +442,8 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 }
 
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.
-func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer) func(*gin.Engine) error {
-	pil := NewPilvytisEndpoint(pilvytis, pt)
+func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer, lf paymentLocationFallback) func(*gin.Engine) error {
+	pil := NewPilvytisEndpoint(pilvytis, pt, lf)
 	return func(e *gin.Engine) error {
 		// TODO: Deprecated
 		// =====
