@@ -43,4 +43,10 @@ var Sequence = []migrations.Migration{
 			2021, 3, 15, 16, 00, 00, 0, time.UTC),
 		Migrate: migrations.MigrateRegistrationState,
 	},
+	{
+		Name: "registration-status-to-new-mainnet",
+		Date: time.Date(
+			2021, 10, 11, 0, 00, 00, 0, time.UTC),
+		Migrate: migrations.MigrateRegistrationState,
+	},
 }

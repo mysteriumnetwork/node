@@ -42,8 +42,8 @@ type OptionsDirectory struct {
 }
 
 const (
-	// NetworkSubDirTestnet3 represents testnet3 subdir
-	NetworkSubDirTestnet3 = "testnet3"
+	// NetworkSubDirMainnet represents mainnet subdir
+	NetworkSubDirMainnet = "mainnet"
 
 	// NetworkSubDirLocalnet represents localnet subdir
 	NetworkSubDirLocalnet = "localnet"
@@ -52,10 +52,10 @@ const (
 // GetOptionsDirectory retrieves directory configuration from app configuration.
 func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
-	networkSubdir := NetworkSubDirTestnet3 // Matches DefaultNetworkDefinition
+	networkSubdir := NetworkSubDirMainnet // Matches DefaultNetworkDefinition
 	switch {
-	case network.Testnet3:
-		networkSubdir = NetworkSubDirTestnet3
+	case network.Mainnet:
+		networkSubdir = NetworkSubDirMainnet
 	case network.Localnet:
 		networkSubdir = NetworkSubDirLocalnet
 	}

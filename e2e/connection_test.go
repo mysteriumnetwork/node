@@ -252,7 +252,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, big.NewInt(0).Uint64(), balance.Uint64())
 
-		err = tequilapiProvider.Withdraw(identity.FromAddress(providerID), common.HexToAddress(hermes2ID), beneficiary, nil)
+		err = tequilapiProvider.Withdraw(identity.FromAddress(providerID), common.HexToAddress(hermes2ID), beneficiary, nil, chainID, 0)
 		assert.NoError(t, err)
 
 		assert.Eventually(t, func() bool {

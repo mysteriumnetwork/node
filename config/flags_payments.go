@@ -103,7 +103,7 @@ var (
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
 		Name:  "payments.consumer.data-leeway-megabytes",
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
-		Value: metadata.Testnet3Definition.Payments.Consumer.DataLeewayMegabytes,
+		Value: metadata.MainnetDefinition.Payments.Consumer.DataLeewayMegabytes,
 	}
 	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
 	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
@@ -124,6 +124,14 @@ var (
 		Name:   "payments.consumer.offchain-expiration",
 		Usage:  "after syncing offchain balance, how long should node wait for next check to occur",
 		Value:  time.Minute * 30,
+	}
+	// FlagTestnet3HermesURL sets the default value for legacy (testnet3) hermes URL.
+	// TODO: Remove after migrations are considered done.
+	FlagTestnet3HermesURL = cli.StringFlag{
+		Name:   "payments.testnet3-hermes-url",
+		Usage:  "sets the URL for legacy testnet3 hermes",
+		Value:  metadata.Testnet3Definition.Testnet3HermesURL,
+		Hidden: true,
 	}
 )
 
@@ -146,6 +154,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
 		&FlagOffchainBalanceExpiration,
+		&FlagTestnet3HermesURL,
 	)
 }
 
@@ -167,4 +176,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
 	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
+	Current.ParseStringFlag(ctx, FlagTestnet3HermesURL)
 }

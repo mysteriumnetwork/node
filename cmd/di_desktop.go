@@ -134,11 +134,13 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 
 	cfg := registry.ProviderRegistrarConfig{
-		IsTestnet3:          nodeOptions.OptionsNetwork.Testnet3,
-		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg, di.PayoutAddressStorage)
+
+	fact := func(hermesURL string) registry.ProviderPromiseQuerier {
+		return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+	}
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg, fact)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 

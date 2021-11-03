@@ -20,7 +20,9 @@ package registry
 // Chains returns chainID to name map. Source: https://chainlist.org/
 func Chains() map[int64]string {
 	return map[int64]string{
+		1:     "Ethereum Mainnet",
 		5:     "Ethereum Testnet Görli",
+		137:   "Matic(Polygon) Mainnet",
 		80001: "Matic(Polygon) Testnet Mumbai",
 	}
 }

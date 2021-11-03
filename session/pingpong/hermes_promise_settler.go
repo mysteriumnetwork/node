@@ -510,12 +510,12 @@ func (aps *hermesPromiseSettler) Withdraw(
 		}
 
 		if oldAmountToWithdraw.Cmp(big.NewInt(0)) > 0 {
-			err = aps.validateWithdrawalAmount(oldAmountToWithdraw)
+			err = aps.validateWithdrawalAmount(oldAmountToWithdraw, toChainID)
 			if err != nil {
 				return err
 			}
 
-			return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
+			return aps.payAndSettleTransactor(toChainID, oldAmountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
 		}
 
 		aps.deleteWithdrawnPromise(promiseFromStorage)
@@ -531,13 +531,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 		amountToWithdraw = new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
 	}
 
-	err = aps.validateWithdrawalAmount(amountToWithdraw)
+	err = aps.validateWithdrawalAmount(amountToWithdraw, toChainID)
 	if err != nil {
 		return err
 	}
 
 	// 2. issue a self promise
-	msg, err := aps.issueSelfPromise(fromChainID, amountToWithdraw, data.LatestPromise.Amount, providerID, consumerChannelAddress, hermesID)
+	msg, err := aps.issueSelfPromise(fromChainID, toChainID, amountToWithdraw, data.LatestPromise.Amount, providerID, consumerChannelAddress, hermesID)
 	if err != nil {
 		return err
 	}
@@ -561,7 +561,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 	promiseFromStorage.Promise.R = decodedR
 
-	return aps.payAndSettleTransactor(amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
+	return aps.payAndSettleTransactor(toChainID, amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
 }
 
 func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage HermesPromise) {
@@ -571,7 +571,7 @@ func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage Herme
 	}
 }
 
-func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
+func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
 	decodedR, err := hex.DecodeString(promiseFromStorage.R)
 	if err != nil {
 		return fmt.Errorf("could not decode R %w", err)
@@ -579,7 +579,7 @@ func (aps *hermesPromiseSettler) payAndSettleTransactor(amountToWithdraw *big.In
 	promiseFromStorage.Promise.R = decodedR
 
 	// 5. add the missing beneficiary signature
-	payload := crypto.NewPayAndSettleBeneficiaryPayload(beneficiary, aps.config.L1ChainID, chid, promiseFromStorage.Promise.Amount, client.ToBytes32(promiseFromStorage.Promise.R))
+	payload := crypto.NewPayAndSettleBeneficiaryPayload(beneficiary, toChainID, chid, promiseFromStorage.Promise.Amount, client.ToBytes32(promiseFromStorage.Promise.R))
 	err = payload.Sign(aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return fmt.Errorf("could not sign pay and settle payload: %w", err)
@@ -628,8 +628,8 @@ func (aps *hermesPromiseSettler) calculateAmountToWithdrawFromPreviousPromise(pr
 	return diff, nil
 }
 
-func (aps *hermesPromiseSettler) validateWithdrawalAmount(amount *big.Int) error {
-	fees, err := aps.transactor.FetchSettleFees(aps.config.L1ChainID)
+func (aps *hermesPromiseSettler) validateWithdrawalAmount(amount *big.Int, toChain int64) error {
+	fees, err := aps.transactor.FetchSettleFees(toChain)
 	if err != nil {
 		return err
 	}
@@ -678,20 +678,20 @@ func (aps *hermesPromiseSettler) payAndSettle(
 	return <-errCh
 }
 
-func (aps *hermesPromiseSettler) issueSelfPromise(chainID int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
+func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
 	r := aps.generateR()
 	agreementID := aps.generateAgreementID()
-	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, 1)
+	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, toChain)
 	invoice.Provider = providerID.ToCommonAddress().Hex()
 
-	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), chainID, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
+	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), fromChain, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could not create promise: %w", err)
 	}
 
 	promise.R = r
 
-	msg, err := crypto.CreateExchangeMessageWithPromise(aps.config.L1ChainID, invoice, promise, hermesAddress.Hex(), aps.ks, providerID.ToCommonAddress())
+	msg, err := crypto.CreateExchangeMessageWithPromise(toChain, invoice, promise, hermesAddress.Hex(), aps.ks, providerID.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could not get create exchange message: %w", err)
 	}
@@ -717,20 +717,42 @@ func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {
 	return new(big.Int).SetBytes(agreementID)
 }
 
-func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, identity common.Address) (*ConsumerData, error) {
+func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, id common.Address) (*HermesUserInfo, error) {
 	caller, err := aps.getHermesCaller(chainID, hermesID)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := caller.GetConsumerData(chainID, identity.Hex())
+	data, err := caller.GetConsumerData(chainID, id.Hex())
 	if err != nil {
 		return nil, err
 	}
 
-	if data.Balance.Cmp(big.NewInt(0)) <= 0 {
+	if data.Balance.Cmp(big.NewInt(0)) > 0 {
+		return data.fillZerosIfBigIntNull(), nil
+	}
+
+	// if hermes returned zero, re-check with BC
+	myst, err := aps.addressProvider.GetMystAddress(chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	channelAddress, err := aps.addressProvider.GetChannelAddress(chainID, identity.FromAddress(id.Hex()))
+	if err != nil {
+		return nil, err
+	}
+
+	balance, err := aps.bc.GetMystBalance(chainID, myst, channelAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if balance.Cmp(big.NewInt(0)) <= 0 {
 		return nil, fmt.Errorf("nothing to withdraw. Balance in channel %v is %v", data.ChannelID, data.Balance)
 	}
+
+	data.Balance = balance
 
 	return data.fillZerosIfBigIntNull(), nil
 }
@@ -852,7 +874,7 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					return
 				}
 
-				info, err := aps.findSettlementInBCLogs(promise.ChainID, res.Hash, hermesID, providerChannelID)
+				info, err := aps.findSettlementInBCLogs(promise.ChainID, hermesID, providerChannelID)
 				if err != nil {
 					if errors.Is(err, errNoSettlementFound) {
 						log.Warn().Fields(map[string]interface{}{
@@ -916,7 +938,7 @@ func (aps *hermesPromiseSettler) toBytes32(providerAddress string) [32]byte {
 
 var errNoSettlementFound = errors.New("no settlement found")
 
-func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, txHash string, hermesID common.Address, providerAddress [32]byte) (bindings.HermesImplementationPromiseSettled, error) {
+func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, hermesID common.Address, providerAddress [32]byte) (bindings.HermesImplementationPromiseSettled, error) {
 	latest, err := aps.bc.HeaderByNumber(chainID, nil)
 	if err != nil {
 		return bindings.HermesImplementationPromiseSettled{}, err
@@ -929,10 +951,9 @@ func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, txHash st
 		return bindings.HermesImplementationPromiseSettled{}, err
 	}
 
-	expected := common.BytesToHash(crypto.HexToBytes(txHash))
 	for _, v := range filtered {
-		log.Info().Str("expected", expected.Hex()).Str("got", v.Raw.TxHash.Hex()).Msg("filtering")
-		if bytes.EqualFold(v.Raw.TxHash.Bytes(), expected.Bytes()) {
+		log.Info().Str("expected", hex.EncodeToString(providerAddress[:])).Str("got", hex.EncodeToString(v.ChannelId[:])).Msg("filtering")
+		if bytes.EqualFold(v.ChannelId[:], providerAddress[:]) {
 			return v, nil
 		}
 	}

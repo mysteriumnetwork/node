@@ -125,7 +125,7 @@ func NewConsumerBalanceTracker(
 }
 
 type consumerInfoGetter interface {
-	GetConsumerData(chainID int64, id string) (ConsumerData, error)
+	GetConsumerData(chainID int64, id string) (HermesUserInfo, error)
 }
 
 type consumerBalanceChecker interface {
@@ -629,7 +629,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 		}
 	}()
 
-	var data ConsumerData
+	var data HermesUserInfo
 	boff = backoff.WithContext(boff, ctx)
 	toRetry := func() error {
 		d, err := cbt.consumerInfoGetter.GetConsumerData(chainID, identity.Address)
