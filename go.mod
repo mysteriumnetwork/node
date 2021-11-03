@@ -54,7 +54,7 @@ require (
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
-	github.com/mysteriumnetwork/metrics v0.0.16
+	github.com/mysteriumnetwork/metrics v0.0.18
 	github.com/mysteriumnetwork/payments v1.0.1-0.20211025073343-0b355972a602
 	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
