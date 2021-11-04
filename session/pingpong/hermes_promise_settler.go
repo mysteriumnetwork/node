@@ -839,8 +839,13 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					log.Err(err).Str("queueID", queueID).Msg("could not get queue status")
 					break
 				}
-
+				hash := common.HexToHash(res.Hash)
 				state := strings.ToLower(res.State)
+				uri, err := formTXUrl(hash.Hex(), promise.ChainID)
+				if err != nil {
+					log.Err(err).Msg("could not generate tx uri")
+				}
+
 				// if queued, continue
 				if state == "queue" {
 					break
@@ -849,9 +854,10 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 				// if error, don't wait as it will never complete
 				if state == "error" {
 					she := SettlementHistoryEntry{
-						TxHash:     common.HexToHash(res.Hash),
-						ProviderID: provider,
-						HermesID:   hermesID,
+						TxHash:           hash,
+						BlockExplorerURL: uri,
+						ProviderID:       provider,
+						HermesID:         hermesID,
 						// TODO: this should probably be either provider channel address or the consumer address from the promise, not truncated provider channel address.
 						ChannelAddress: common.BytesToAddress(providerChannelID[:]),
 						Time:           time.Now().UTC(),
@@ -897,9 +903,10 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 				}
 
 				she := SettlementHistoryEntry{
-					TxHash:     common.HexToHash(res.Hash),
-					ProviderID: provider,
-					HermesID:   hermesID,
+					TxHash:           hash,
+					BlockExplorerURL: uri,
+					ProviderID:       provider,
+					HermesID:         hermesID,
 					// TODO: this should probably be either provider channel address or the consumer address from the promise, not truncated provider channel address.
 					ChannelAddress: common.BytesToAddress(providerChannelID[:]),
 					Time:           time.Now().UTC(),
@@ -918,10 +925,11 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 				log.Info().Msgf("Settling complete for provider %v", provider)
 
 				aps.publisher.Publish(event.AppTopicSettlementComplete, event.AppEventSettlementComplete{
-					ProviderID: provider,
-					HermesID:   hermesID,
-					TxHash:     res.Hash,
-					ChainID:    promise.ChainID,
+					ProviderID:       provider,
+					HermesID:         hermesID,
+					BlockExplorerURL: uri,
+					TxHash:           res.Hash,
+					ChainID:          promise.ChainID,
 				})
 				return
 			}
@@ -1048,4 +1056,27 @@ func (ss settlementState) needsSettling(threshold float64, channel HermesChannel
 	}
 
 	return false
+}
+
+func formTXUrl(txHash string, chainID int64) (string, error) {
+	if len(txHash) == 0 {
+		return "", nil
+	}
+
+	if txHash == common.HexToHash("").Hex() {
+		return "", nil
+	}
+
+	switch chainID {
+	case 1:
+		return fmt.Sprintf("https://etherscan.io/tx/%v", txHash), nil
+	case 5:
+		return fmt.Sprintf("https://goerli.etherscan.io/tx/%v", txHash), nil
+	case 80001:
+		return fmt.Sprintf("https://mumbai.polygonscan.com/tx/%v", txHash), nil
+	case 137:
+		return fmt.Sprintf("https://polygonscan.com/tx/%v", txHash), nil
+	default:
+		return "", fmt.Errorf("unsupported chainID(%v) for tx url", chainID)
+	}
 }
