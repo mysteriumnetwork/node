@@ -82,14 +82,19 @@ func ReleaseDebianPPASnapshot() error {
 func ReleaseDebianPPAPreRelease() error {
 	err := env.EnsureEnvVars(
 		env.TagBuild,
+		env.RCBuild,
 		env.BuildVersion,
 		env.BuildNumber,
 	)
 	if err != nil {
 		return err
 	}
+
 	if !env.Bool(env.TagBuild) {
 		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPAPreRelease action...")
+		return nil
+	} else if env.Bool(env.RCBuild) {
+		log.Info().Msg("RC build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
 
