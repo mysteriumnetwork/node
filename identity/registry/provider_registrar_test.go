@@ -264,8 +264,12 @@ type mockTransactor struct {
 	bountyResult  bool
 }
 
-func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
+func (mt *mockTransactor) RegisterProvider(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
 	return mt.registerError
+}
+
+func (mt *mockTransactor) GetFreeProviderRegistrationEligibility() (bool, error) {
+	return false, nil
 }
 
 func (mt *mockTransactor) CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error) {

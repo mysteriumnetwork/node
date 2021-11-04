@@ -38,8 +38,9 @@ type registrationStatusChecker interface {
 }
 
 type txer interface {
-	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
+	GetFreeProviderRegistrationEligibility() (bool, error)
+	RegisterProvider(id string, stake, fee *big.Int, beneficiary string, chainID int64) error
 }
 
 type multiChainAddressKeeper interface {
@@ -233,6 +234,15 @@ func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 		return pr.registerIdentity(qe, id)
 	}
 
+	eligible, err = pr.txer.GetFreeProviderRegistrationEligibility()
+	if err != nil {
+		log.Error().Err(err).Msgf("tried to auto-registration eligibility, but failed: %q", id.Address)
+		return errors.Wrap(err, "could not check auto-registration eligibility")
+	}
+	if eligible {
+		return pr.registerIdentity(qe, id)
+	}
+
 	log.Info().Msgf("provider %q not elgible for auto-registration", id.Address)
 	return nil
 }
@@ -249,7 +259,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 		return err
 	}
 
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, big.NewInt(0), nil, settleBeneficiary.Hex(), pr.chainID(), nil)
+	err = pr.txer.RegisterProvider(qe.event.ProviderID, big.NewInt(0), nil, settleBeneficiary.Hex(), pr.chainID())
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
