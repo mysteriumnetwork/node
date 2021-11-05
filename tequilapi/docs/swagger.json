@@ -2091,6 +2091,36 @@
         }
       }
     },
+    "/transactor/fees/{chain}": {
+      "get": {
+        "description": "Returns fees applied by Transactor",
+        "summary": "Returns fees",
+        "operationId": "FeesChain",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Chain ID given in path to determine what fees to look up.",
+            "name": "chain",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "fees applied by Transactor",
+            "schema": {
+              "$ref": "#/definitions/FeesDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/transactor/identities/{id}/eligibility": {
       "get": {
         "summary": "Checks if given id is eligible for free registration",
