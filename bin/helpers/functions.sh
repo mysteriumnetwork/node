@@ -5,7 +5,6 @@ function get_linker_ldflags {
     [ -n "$BUILD_BRANCH" ] && echo -n "-X 'github.com/mysteriumnetwork/node/metadata.BuildBranch=${BUILD_BRANCH}' "
     [ -n "$BUILD_COMMIT" ] && echo -n "-X 'github.com/mysteriumnetwork/node/metadata.BuildCommit=${BUILD_COMMIT}' "
     [ -n "$BUILD_NUMBER" ] && echo -n "-X 'github.com/mysteriumnetwork/node/metadata.BuildNumber=${BUILD_NUMBER}' "
-    [ -n "$BUILD_VERSION" ] && echo -n "-X 'github.com/mysteriumnetwork/node/metadata.Version=${BUILD_VERSION}' "
 }
 
 function copy_config {

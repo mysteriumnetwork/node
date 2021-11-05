@@ -20,7 +20,7 @@ package metadata
 import "fmt"
 
 // Version comes from BUILD_VERSION env variable (set via linker flags)
-var Version = ""
+var Version = "1.0.0-rc"
 
 const versionSummaryFormat = `Mysterium Node
   Version: %s
