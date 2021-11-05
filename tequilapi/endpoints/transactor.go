@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"strconv"
 
 	"github.com/spf13/cast"
 
@@ -118,77 +117,42 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 		chainID = qcid
 	}
 
-	fees, err := te.feesByChain(chainID)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
-	utils.WriteAsJSON(fees, resp)
-}
-
-// swagger:operation GET /transactor/fees/{chain} FeesChain
-// ---
-// summary: Returns fees
-// description: Returns fees applied by Transactor
-// parameters:
-// - name: chain
-//   in: path
-//   description: Chain ID given in path to determine what fees to look up.
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: fees applied by Transactor
-//     schema:
-//       "$ref": "#/definitions/FeesDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) TransactorChainFees(c *gin.Context) {
-	resp := c.Writer
-
-	chainID, _ := strconv.ParseInt(c.Params.ByName("chain"), 10, 64)
-	fees, err := te.feesByChain(chainID)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
-	utils.WriteAsJSON(fees, resp)
-}
-
-func (te *transactorEndpoint) feesByChain(chainID int64) (*contract.FeesDTO, error) {
 	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 	settlementFees, err := te.transactor.FetchSettleFees(chainID)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee(chainID)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 
 	hermes, err := te.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 
 	hermesFees, err := te.promiseSettler.GetHermesFee(chainID, hermes)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 
-	return &contract.FeesDTO{
+	f := contract.FeesDTO{
 		Registration:  registrationFees.Fee,
 		Settlement:    settlementFees.Fee,
 		Hermes:        hermesFees,
 		DecreaseStake: decreaseStakeFees.Fee,
-	}, nil
+	}
+
+	utils.WriteAsJSON(f, resp)
 }
 
 // swagger:operation POST /transactor/settle/sync SettleSync
@@ -704,8 +668,7 @@ func AddRoutesForTransactor(
 
 		transGroup := e.Group("/transactor")
 		{
-			transGroup.GET("/fees", te.TransactorFees) // TODO: Deprecated, should be replaced with `/fees/:chain`
-			transGroup.GET("/fees/:chain", te.TransactorChainFees)
+			transGroup.GET("/fees", te.TransactorFees)
 			transGroup.POST("/settle/sync", te.SettleSync)
 			transGroup.POST("/settle/async", te.SettleAsync)
 			transGroup.GET("/settle/history", te.SettlementHistory)
