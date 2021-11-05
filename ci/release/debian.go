@@ -68,7 +68,7 @@ func ReleaseDebianPPASnapshot() error {
 
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:  "node-mainnet",
-		version:     ppaVersion(env.Str(env.BuildVersion)),
+		version:     ppaVersion("1.0.0-rc"),
 		buildNumber: env.Str(env.BuildNumber),
 	})
 }
