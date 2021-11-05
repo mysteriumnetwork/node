@@ -127,13 +127,14 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 	utils.WriteAsJSON(fees, resp)
 }
 
-// swagger:operation GET /transactor/fees/{chainID} FeesDTO
+// swagger:operation GET /transactor/fees/{chain} FeesChain
 // ---
-// summary: Returns fees by chain
-// description: Returns fees applied by Transactor for a given chain
-// - in: path
-//   name: chainID
-//   description: ChainID for which we should return the fees
+// summary: Returns fees
+// description: Returns fees applied by Transactor
+// parameters:
+// - name: chain
+//   in: path
+//   description: Chain ID given in path to determine what fees to look up.
 //   type: string
 //   required: true
 // responses:
