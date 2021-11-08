@@ -179,11 +179,12 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.SettlementHistoryStorage,
 		di.EventBus,
 		pingpong.HermesPromiseSettlerConfig{
-			Threshold:               nodeOptions.Payments.HermesPromiseSettlingThreshold,
-			SettlementCheckTimeout:  nodeOptions.Payments.SettlementTimeout,
-			SettlementCheckInterval: nodeOptions.Payments.SettlementRecheckInterval,
-			L1ChainID:               nodeOptions.Chains.Chain1.ChainID,
-			L2ChainID:               nodeOptions.Chains.Chain2.ChainID,
+			Threshold:                    nodeOptions.Payments.HermesPromiseSettlingThreshold,
+			SettlementCheckTimeout:       nodeOptions.Payments.SettlementTimeout,
+			SettlementCheckInterval:      nodeOptions.Payments.SettlementRecheckInterval,
+			L1ChainID:                    nodeOptions.Chains.Chain1.ChainID,
+			L2ChainID:                    nodeOptions.Chains.Chain2.ChainID,
+			ZeroStakeSettlementThreshold: nodeOptions.Payments.ZeroStakeSettlementThreshold,
 		},
 	)
 	if err := settler.Subscribe(di.EventBus); err != nil {

@@ -130,11 +130,12 @@ type hermesPromiseSettler struct {
 
 // HermesPromiseSettlerConfig configures the hermes promise settler accordingly.
 type HermesPromiseSettlerConfig struct {
-	Threshold               float64
-	L1ChainID               int64
-	L2ChainID               int64
-	SettlementCheckInterval time.Duration
-	SettlementCheckTimeout  time.Duration
+	Threshold                    float64
+	L1ChainID                    int64
+	L2ChainID                    int64
+	SettlementCheckInterval      time.Duration
+	SettlementCheckTimeout       time.Duration
+	ZeroStakeSettlementThreshold float64
 }
 
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
@@ -302,7 +303,7 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 
 	log.Info().Msgf("Hermes %q promise state updated for provider %q", apep.HermesID.Hex(), id)
 
-	if s.needsSettling(aps.config.Threshold, channel) {
+	if s.needsSettling(aps.config.Threshold, aps.config.ZeroStakeSettlementThreshold, channel) {
 		log.Info().Msgf("Starting auto settle for provider %v", id)
 		aps.initiateSettling(channel)
 	}
@@ -1029,7 +1030,7 @@ type settlementState struct {
 	registered       bool
 }
 
-func (ss settlementState) needsSettling(threshold float64, channel HermesChannel) bool {
+func (ss settlementState) needsSettling(threshold float64, zeroStakeThreshold float64, channel HermesChannel) bool {
 	if !ss.registered {
 		return false
 	}
@@ -1039,8 +1040,8 @@ func (ss settlementState) needsSettling(threshold float64, channel HermesChannel
 	}
 
 	if channel.Channel.Stake.Cmp(big.NewInt(0)) == 0 {
-		// if starting with zero stake, only settle one myst or more.
-		return channel.UnsettledBalance().Cmp(big.NewInt(0).SetUint64(crypto.Myst)) == 1
+		// if starting with zero stake, only settle predefined myst in config.
+		return channel.UnsettledBalance().Cmp(crypto.FloatToBigMyst(zeroStakeThreshold)) == 1
 	}
 
 	floated := new(big.Float).SetInt(channel.availableBalance())
