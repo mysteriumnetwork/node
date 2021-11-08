@@ -160,6 +160,7 @@ func GetOptions() *Options {
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
 			HermesStatusRecheckInterval:    config.GetDuration(config.FlagPaymentsHermesStatusRecheckInterval),
+			ZeroStakeSettlementThreshold:   config.GetFloat64(config.FlagPaymentsZeroStakeUnsettledAmount),
 		},
 		Chains: OptionsChains{
 			Chain1: metadata.ChainDefinition{

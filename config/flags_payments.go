@@ -79,6 +79,12 @@ var (
 		Usage:  "The duration we'll wait before giving up trying to fetch new balance.",
 		Hidden: true,
 	}
+	// FlagPaymentsZeroStakeUnsettledAmount determines the minimum amount of myst required before auto settling is triggered if zero stake is used.
+	FlagPaymentsZeroStakeUnsettledAmount = cli.Float64Flag{
+		Name:  "payments.zero-stake-unsettled-amount",
+		Value: 0.25,
+		Usage: "The settling threshold if provider uses a zero stake",
+	}
 	// FlagPaymentsRegistryTransactorPollInterval The duration we'll wait before calling transactor to check for new status updates.
 	FlagPaymentsRegistryTransactorPollInterval = cli.DurationFlag{
 		Name:   "payments.registry-transactor-poll.interval",
@@ -155,6 +161,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsHermesStatusRecheckInterval,
 		&FlagOffchainBalanceExpiration,
 		&FlagTestnet3HermesURL,
+		&FlagPaymentsZeroStakeUnsettledAmount,
 	)
 }
 
@@ -177,4 +184,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
 	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
 	Current.ParseStringFlag(ctx, FlagTestnet3HermesURL)
+	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
 }
