@@ -50,9 +50,11 @@ type morqaTransport struct {
 func (t *morqaTransport) SendEvent(event Event) error {
 	if id, metric := mapEventToMetric(event); metric != nil {
 		metric.Version = &metrics.VersionPayload{
-			Version: event.Application.Version,
-			Os:      event.Application.OS,
-			Arch:    event.Application.Arch,
+			Version:         event.Application.Version,
+			Os:              event.Application.OS,
+			Arch:            event.Application.Arch,
+			LauncherVersion: event.Application.LauncherVersion,
+			HostOs:          event.Application.HostOS,
 		}
 		metric.Country = t.lp.GetOrigin().Country
 		return t.morqaClient.SendMetric(id, metric)
