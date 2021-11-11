@@ -1244,27 +1244,6 @@
         }
       }
     },
-    "/mmn/node-report": {
-      "get": {
-        "description": "Returns node report from MMN",
-        "tags": [
-          "MMN"
-        ],
-        "summary": "Returns node report from MMN",
-        "operationId": "getNodeReport",
-        "responses": {
-          "200": {
-            "description": "Node report from MMN"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/mmn/report": {
       "get": {
         "description": "returns MMN's API key",
