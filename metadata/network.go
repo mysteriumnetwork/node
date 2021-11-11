@@ -88,8 +88,8 @@ var MainnetDefinition = NetworkDefinition{
 			"https://polygon-rpc.com/",
 		},
 	},
-	MMNAddress:      "https://mystnodes.com",        // TODO: Figure this out
-	MMNAPIAddress:   "https://mystnodes.com/api/v1", // TODO: Figure this out
+	MMNAddress:      "https://mystnodes.com",
+	MMNAPIAddress:   "https://mystnodes.com/api/v1",
 	PilvytisAddress: "https://pilvytis.mysterium.network",
 	DNSMap: map[string][]string{
 		"discovery.mysterium.network":  {"51.158.129.204"},
