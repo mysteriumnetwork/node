@@ -389,7 +389,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		client.ProviderChannel{Stake: big.NewInt(1000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(1000)}},
 	)
-	assert.True(t, s.needsSettling(0.1, channel), "should be true with zero balance left")
+	assert.True(t, s.needsSettling(0.1, 0.0, channel), "should be true with zero balance left")
 
 	s = settlementState{
 		registered: true,
@@ -401,13 +401,13 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		client.ProviderChannel{Stake: big.NewInt(1000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(9000)}},
 	)
-	assert.True(t, s.needsSettling(0.1, channel), "should be true with 10% missing")
+	assert.True(t, s.needsSettling(0.1, 0.0, channel), "should be true with 10% missing")
 
 	s.registered = false
-	assert.False(t, s.needsSettling(0.1, channel), "should be false with no registration")
+	assert.False(t, s.needsSettling(0.1, 0.0, channel), "should be false with no registration")
 
 	s.settleInProgress = true
-	assert.False(t, s.needsSettling(0.1, channel), "should be false with settle in progress")
+	assert.False(t, s.needsSettling(0.1, 0.0, channel), "should be false with settle in progress")
 
 	s = settlementState{
 		registered: true,
@@ -419,7 +419,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		client.ProviderChannel{Stake: big.NewInt(10000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(8999)}},
 	)
-	assert.False(t, s.needsSettling(0.1, channel), "should be false with 10.01% missing")
+	assert.False(t, s.needsSettling(0.1, 0.0, channel), "should be false with 10.01% missing")
 }
 
 // mocks start here
