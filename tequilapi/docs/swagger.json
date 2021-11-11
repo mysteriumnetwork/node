@@ -1639,7 +1639,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1647,7 +1647,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -1744,7 +1744,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1752,7 +1752,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -1823,7 +1823,7 @@
     },
     "/sessions/stats-daily": {
       "get": {
-        "description": "Returns aggregated daily statistics of sessions filtered by given query",
+        "description": "Returns aggregated daily statistics of sessions filtered by given query (date_from=\u003cnow -30d\u003e and date_to=\u003cnow\u003e by default)",
         "tags": [
           "Session"
         ],
@@ -1834,7 +1834,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1842,7 +1842,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -2086,6 +2086,29 @@
             "description": "Internal server error",
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/transactor/identities/{id}/eligibility": {
+      "get": {
+        "summary": "Checks if given id is eligible for free registration",
+        "operationId": "Eligibility",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity address to register",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility response",
+            "schema": {
+              "$ref": "#/definitions/EligibilityResponse"
             }
           }
         }
@@ -2805,6 +2828,17 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "EligibilityResponse": {
+      "description": "EligibilityResponse represents the eligibility response",
+      "type": "object",
+      "properties": {
+        "eligible": {
+          "type": "boolean",
+          "x-go-name": "Eligible"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "EntertainmentEstimateResponse": {
       "type": "object",

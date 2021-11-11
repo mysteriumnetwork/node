@@ -37,11 +37,11 @@ func NewSessionQuery() SessionQuery {
 // SessionQuery allows to filter requested sessions.
 // swagger:parameters sessionStatsAggregated sessionStatsDaily
 type SessionQuery struct {
-	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
+	// Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.
 	// in: query
 	DateFrom *strfmt.Date `json:"date_from"`
 
-	// Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.
+	// Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.
 	// in: query
 	DateTo *strfmt.Date `json:"date_to"`
 

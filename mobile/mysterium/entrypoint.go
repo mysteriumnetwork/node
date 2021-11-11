@@ -89,7 +89,7 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Testnet3                       bool
+	Mainnet                        bool
 	Localnet                       bool
 	KeepConnectedOnFail            bool
 	MysteriumAPIAddress            string
@@ -122,25 +122,25 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Testnet3:                       true,
+		Mainnet:                        true,
 		KeepConnectedOnFail:            true,
-		MysteriumAPIAddress:            metadata.Testnet3Definition.MysteriumAPIAddress,
-		BrokerAddresses:                metadata.Testnet3Definition.BrokerAddresses,
-		EtherClientRPCL1:               metadata.Testnet3Definition.Chain1.EtherClientRPC,
-		EtherClientRPCL2:               metadata.Testnet3Definition.Chain2.EtherClientRPC,
+		MysteriumAPIAddress:            metadata.MainnetDefinition.MysteriumAPIAddress,
+		BrokerAddresses:                metadata.MainnetDefinition.BrokerAddresses,
+		EtherClientRPCL1:               metadata.MainnetDefinition.Chain1.EtherClientRPC,
+		EtherClientRPCL2:               metadata.MainnetDefinition.Chain2.EtherClientRPC,
 		FeedbackURL:                    "https://feedback.mysterium.network",
-		QualityOracleURL:               "https://testnet3-quality.mysterium.network/api/v2",
-		IPDetectorURL:                  "https://testnet3-location.mysterium.network/api/v1/location",
-		LocationDetectorURL:            "https://testnet3-location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:      metadata.Testnet3Definition.TransactorAddress,
-		ActiveChainID:                  metadata.Testnet3Definition.DefaultChainID,
-		Chain1ID:                       metadata.Testnet3Definition.Chain1.ChainID,
-		Chain2ID:                       metadata.Testnet3Definition.Chain2.ChainID,
-		PilvytisAddress:                metadata.Testnet3Definition.PilvytisAddress,
-		MystSCAddress:                  metadata.Testnet3Definition.Chain2.MystAddress,
-		RegistrySCAddress:              metadata.Testnet3Definition.Chain2.RegistryAddress,
-		HermesSCAddress:                metadata.Testnet3Definition.Chain2.HermesID,
-		ChannelImplementationSCAddress: metadata.Testnet3Definition.Chain2.ChannelImplAddress,
+		QualityOracleURL:               "https://quality.mysterium.network/api/v2",
+		IPDetectorURL:                  "https://location.mysterium.network/api/v1/location",
+		LocationDetectorURL:            "https://location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:      metadata.MainnetDefinition.TransactorAddress,
+		ActiveChainID:                  metadata.MainnetDefinition.DefaultChainID,
+		Chain1ID:                       metadata.MainnetDefinition.Chain1.ChainID,
+		Chain2ID:                       metadata.MainnetDefinition.Chain2.ChainID,
+		PilvytisAddress:                metadata.MainnetDefinition.PilvytisAddress,
+		MystSCAddress:                  metadata.MainnetDefinition.Chain2.MystAddress,
+		RegistrySCAddress:              metadata.MainnetDefinition.Chain2.RegistryAddress,
+		HermesSCAddress:                metadata.MainnetDefinition.Chain2.HermesID,
+		ChannelImplementationSCAddress: metadata.MainnetDefinition.Chain2.ChannelImplAddress,
 		CacheTTLSeconds:                5,
 	}
 }
@@ -166,7 +166,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 
 	network := node.OptionsNetwork{
-		Testnet3:            options.Testnet3,
+		Mainnet:             options.Mainnet,
 		Localnet:            options.Localnet,
 		MysteriumAPIAddress: options.MysteriumAPIAddress,
 		BrokerAddresses:     options.BrokerAddresses,
@@ -174,9 +174,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		EtherClientRPCL2:    options.EtherClientRPCL2,
 		ChainID:             options.ActiveChainID,
 		DNSMap: map[string][]string{
-			"testnet3-location.mysterium.network": {"167.233.11.60"},
-			"testnet3-quality.mysterium.network":  {"167.233.11.60"},
-			"feedback.mysterium.network":          {"116.203.17.150"},
+			"location.mysterium.network": {"51.158.129.204"},
+			"quality.mysterium.network":  {"51.158.129.204"},
+			"feedback.mysterium.network": {"116.203.17.150"},
 			"api.ipify.org": {
 				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
 				"23.21.109.69", "23.21.126.66",

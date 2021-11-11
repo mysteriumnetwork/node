@@ -29,10 +29,10 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
-	// FlagTestnet3 uses testnet3 network.
-	FlagTestnet3 = cli.BoolFlag{
-		Name:  "testnet3",
-		Usage: "Defines testnet3 configuration",
+	// FlagMainnet uses mainnet network.
+	FlagMainnet = cli.BoolFlag{
+		Name:  "mainnet",
+		Usage: "Defines mainnet configuration",
 		Value: true,
 	}
 	// FlagAPIAddress Mysterium API URL
@@ -148,7 +148,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagEtherRPCL2,
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
-		&FlagTestnet3,
+		&FlagMainnet,
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
 		&FlagAutoReconnect,
@@ -163,7 +163,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
-	Current.ParseBoolFlag(ctx, FlagTestnet3)
+	Current.ParseBoolFlag(ctx, FlagMainnet)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL1)

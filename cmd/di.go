@@ -497,7 +497,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapBeneficiarySaver(nodeOptions)
 	di.bootstrapBeneficiaryProvider(nodeOptions)
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage, di.MMN)
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
@@ -617,8 +617,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	network := metadata.DefaultNetwork
 
 	switch {
-	case optionsNetwork.Testnet3:
-		network = metadata.Testnet3Definition
+	case optionsNetwork.Mainnet:
+		network = metadata.MainnetDefinition
 	case optionsNetwork.Localnet:
 		network = metadata.LocalnetDefinition
 	}

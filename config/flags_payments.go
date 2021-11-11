@@ -79,6 +79,12 @@ var (
 		Usage:  "The duration we'll wait before giving up trying to fetch new balance.",
 		Hidden: true,
 	}
+	// FlagPaymentsZeroStakeUnsettledAmount determines the minimum amount of myst required before auto settling is triggered if zero stake is used.
+	FlagPaymentsZeroStakeUnsettledAmount = cli.Float64Flag{
+		Name:  "payments.zero-stake-unsettled-amount",
+		Value: 0.25,
+		Usage: "The settling threshold if provider uses a zero stake",
+	}
 	// FlagPaymentsRegistryTransactorPollInterval The duration we'll wait before calling transactor to check for new status updates.
 	FlagPaymentsRegistryTransactorPollInterval = cli.DurationFlag{
 		Name:   "payments.registry-transactor-poll.interval",
@@ -103,7 +109,7 @@ var (
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
 		Name:  "payments.consumer.data-leeway-megabytes",
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
-		Value: metadata.Testnet3Definition.Payments.Consumer.DataLeewayMegabytes,
+		Value: metadata.MainnetDefinition.Payments.Consumer.DataLeewayMegabytes,
 	}
 	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
 	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
@@ -124,6 +130,14 @@ var (
 		Name:   "payments.consumer.offchain-expiration",
 		Usage:  "after syncing offchain balance, how long should node wait for next check to occur",
 		Value:  time.Minute * 30,
+	}
+	// FlagTestnet3HermesURL sets the default value for legacy (testnet3) hermes URL.
+	// TODO: Remove after migrations are considered done.
+	FlagTestnet3HermesURL = cli.StringFlag{
+		Name:   "payments.testnet3-hermes-url",
+		Usage:  "sets the URL for legacy testnet3 hermes",
+		Value:  metadata.Testnet3Definition.Testnet3HermesURL,
+		Hidden: true,
 	}
 )
 
@@ -146,6 +160,8 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
 		&FlagOffchainBalanceExpiration,
+		&FlagTestnet3HermesURL,
+		&FlagPaymentsZeroStakeUnsettledAmount,
 	)
 }
 
@@ -167,4 +183,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
 	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
+	Current.ParseStringFlag(ctx, FlagTestnet3HermesURL)
+	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
 }

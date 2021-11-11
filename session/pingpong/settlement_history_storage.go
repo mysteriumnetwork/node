@@ -44,18 +44,19 @@ func NewSettlementHistoryStorage(bolt *boltdb.Bolt) *SettlementHistoryStorage {
 
 // SettlementHistoryEntry represents a settlement history entry
 type SettlementHistoryEntry struct {
-	TxHash         common.Hash `storm:"id"`
-	ProviderID     identity.Identity
-	HermesID       common.Address
-	ChannelAddress common.Address
-	Time           time.Time
-	Promise        crypto.Promise
-	Beneficiary    common.Address
-	Amount         *big.Int
-	TotalSettled   *big.Int
-	Fees           *big.Int
-	IsWithdrawal   bool
-	Error          string
+	TxHash           common.Hash `storm:"id"`
+	BlockExplorerURL string
+	ProviderID       identity.Identity
+	HermesID         common.Address
+	ChannelAddress   common.Address
+	Time             time.Time
+	Promise          crypto.Promise
+	Beneficiary      common.Address
+	Amount           *big.Int
+	TotalSettled     *big.Int
+	Fees             *big.Int
+	IsWithdrawal     bool
+	Error            string
 }
 
 const settlementHistoryBucket = "settlement-history"

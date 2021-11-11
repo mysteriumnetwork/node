@@ -108,7 +108,7 @@ var (
 	FlagShaperBandwidth = cli.Uint64Flag{
 		Name:  "shaper.bandwidth",
 		Usage: "Set the bandwidth limit in Kbytes",
-		Value: 5000,
+		Value: 6250,
 	}
 	// FlagKeystoreLightweight determines the scrypt memory complexity.
 	FlagKeystoreLightweight = cli.BoolFlag{
@@ -163,7 +163,7 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			FlagQualityType.Name,
 		),
-		Value: "https://testnet3-quality.mysterium.network/api/v2",
+		Value: "https://quality.mysterium.network/api/v2",
 	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{

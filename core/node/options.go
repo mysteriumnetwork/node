@@ -89,16 +89,16 @@ type Options struct {
 func GetOptions() *Options {
 	network := OptionsNetwork{
 		Localnet:            config.GetBool(config.FlagLocalnet),
-		Testnet3:            config.GetBool(config.FlagTestnet3),
+		Mainnet:             config.GetBool(config.FlagMainnet),
 		MysteriumAPIAddress: config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:     config.GetStringSlice(config.FlagBrokerAddress),
 		EtherClientRPCL1:    config.GetStringSlice(config.FlagEtherRPCL1),
 		EtherClientRPCL2:    config.GetStringSlice(config.FlagEtherRPCL2),
 		ChainID:             config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
-			"testnet3-location.mysterium.network": {"167.233.11.60"},
-			"testnet3-quality.mysterium.network":  {"167.233.11.60"},
-			"feedback.mysterium.network":          {"116.203.17.150"},
+			"location.mysterium.network": {"51.158.129.204"},
+			"quality.mysterium.network":  {"51.158.129.204"},
+			"feedback.mysterium.network": {"116.203.17.150"},
 			"api.ipify.org": {
 				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
 				"23.21.109.69", "23.21.126.66",
@@ -160,6 +160,7 @@ func GetOptions() *Options {
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
 			HermesStatusRecheckInterval:    config.GetDuration(config.FlagPaymentsHermesStatusRecheckInterval),
+			ZeroStakeSettlementThreshold:   config.GetFloat64(config.FlagPaymentsZeroStakeUnsettledAmount),
 		},
 		Chains: OptionsChains{
 			Chain1: metadata.ChainDefinition{

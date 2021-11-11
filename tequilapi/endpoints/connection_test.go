@@ -57,6 +57,10 @@ type mockConnectionManager struct {
 
 func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposalLookup connection.ProposalLookup, options connection.ConnectParams) error {
 	proposal, _ := proposalLookup()
+	if proposal == nil {
+		return errors.New("no proposal")
+	}
+
 	cm.requestedConsumerID = consumerID
 	cm.requestedHermesID = hermesID
 	cm.requestedProvider = identity.FromAddress(proposal.ProviderID)

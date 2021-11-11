@@ -38,4 +38,5 @@ type OptionsPayments struct {
 	BalanceLongPollInterval        time.Duration
 	RegistryTransactorPollInterval time.Duration
 	RegistryTransactorPollTimeout  time.Duration
+	ZeroStakeSettlementThreshold   float64
 }
