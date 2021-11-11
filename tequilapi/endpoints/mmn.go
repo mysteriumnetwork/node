@@ -49,31 +49,6 @@ func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
 	return &mmnAPI{config: config, mmn: client}
 }
 
-// GetNodeReport returns node report from MMN
-// swagger:operation GET /mmn/node-report MMN getNodeReport
-// ---
-// summary: Returns node report from MMN
-// description: Returns node report from MMN
-// responses:
-//   200:
-//     description: Node report from MMN
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *mmnAPI) GetNodeReport(c *gin.Context) {
-	writer := c.Writer
-
-	report, err := api.mmn.GetReport()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
-		return
-	}
-
-	writer.Header().Set("Content-type", "application/json; charset=utf-8")
-	fmt.Fprint(writer, report)
-}
-
 // GetApiKey returns MMN's API key
 // swagger:operation GET /mmn/report MMN getApiKey
 // ---
@@ -196,7 +171,6 @@ func AddRoutesForMMN(
 	return func(e *gin.Engine) error {
 		g := e.Group("/mmn")
 		{
-			g.GET("/report", api.GetNodeReport)
 			g.GET("/api-key", api.GetApiKey)
 			g.POST("/api-key", api.SetApiKey)
 			g.DELETE("/api-key", api.ClearApiKey)
