@@ -113,11 +113,6 @@ func (m *MMN) Register() error {
 	return m.register()
 }
 
-// GetReport fetches node report from MMN
-func (m *MMN) GetReport() (string, error) {
-	return m.client.GetReport(m.lastIdentity)
-}
-
 func getOS() string {
 	switch runtime.GOOS {
 	case "darwin":
