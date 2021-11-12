@@ -156,5 +156,8 @@ func isTequilapiProtectedUrl(url string) bool {
 	if isTequilapiURL(url, "/auth/login") {
 		return false
 	}
+	if isTequilapiURL(url, "/healthcheck") {
+		return false
+	}
 	return true
 }

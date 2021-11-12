@@ -57,6 +57,10 @@ func NewDialerSwarm(srcIP string, dnsHeadstart time.Duration) *DialerSwarm {
 			KeepAlive: 30 * time.Second,
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
 			Control: func(net, address string, c syscall.RawConn) (err error) {
+				if net == "tcp6" {
+					return fmt.Errorf("ipv6 not supported")
+				}
+
 				err = c.Control(func(f uintptr) {
 					log.Trace().Msgf("Protecting connection to: %s (%s)", address, net)
 
