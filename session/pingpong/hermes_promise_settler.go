@@ -496,32 +496,6 @@ func (aps *hermesPromiseSettler) Withdraw(
 		return fmt.Errorf("could not get channel id for pay and settle: %w", err)
 	}
 
-	// 0. check if previous withdrawal attempt exists
-	promiseFromStorage, err := aps.promiseStorage.Get(toChainID, chid)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			log.Info().Msg("no previous promise, will do a new attempt")
-		} else {
-			return err
-		}
-	} else {
-		oldAmountToWithdraw, err := aps.calculateAmountToWithdrawFromPreviousPromise(providerID, promiseFromStorage)
-		if err != nil {
-			return err
-		}
-
-		if oldAmountToWithdraw.Cmp(big.NewInt(0)) > 0 {
-			err = aps.validateWithdrawalAmount(oldAmountToWithdraw, toChainID)
-			if err != nil {
-				return err
-			}
-
-			return aps.payAndSettleTransactor(toChainID, oldAmountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
-		}
-
-		aps.deleteWithdrawnPromise(promiseFromStorage)
-	}
-
 	// 1. calculate amount to withdraw - check balance on consumer channel
 	data, err := aps.getHermesData(fromChainID, hermesID, providerID.ToCommonAddress())
 	if err != nil {
@@ -530,6 +504,8 @@ func (aps *hermesPromiseSettler) Withdraw(
 
 	if amountToWithdraw == nil {
 		amountToWithdraw = new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
+	} else {
+		amountToWithdraw = new(big.Int).Add(data.LatestPromise.Amount, amountToWithdraw)
 	}
 
 	err = aps.validateWithdrawalAmount(amountToWithdraw, toChainID)
@@ -551,7 +527,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 
 	// 4. fetch the promise from storage
-	promiseFromStorage, err = aps.promiseStorage.Get(toChainID, chid)
+	promiseFromStorage, err := aps.promiseStorage.Get(toChainID, chid)
 	if err != nil {
 		return err
 	}
