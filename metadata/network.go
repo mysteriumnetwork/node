@@ -147,7 +147,6 @@ var Testnet3Definition = NetworkDefinition{
 		"testnet3-trust.mysterium.network":      {"167.233.11.60"},
 		"testnet3-broker.mysterium.network":     {"167.233.11.60"},
 		"testnet3-transactor.mysterium.network": {"167.233.11.60"},
-		"testnet3-pilvytis.mysterium.network":   {"167.233.11.60"},
 	},
 	DefaultChainID:    80001,
 	DefaultCurrency:   "MYSTT",

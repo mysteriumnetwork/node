@@ -33,7 +33,7 @@ type releaseDebianOpts struct {
 }
 
 func releaseDebianPPA(opts *releaseDebianOpts) error {
-	for _, codename := range []string{"bionic", "focal", "hirsute"} {
+	for _, codename := range []string{"bionic", "focal", "hirsute", "impish"} {
 		err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, codename).Run()
 		if err != nil {
 			return err
