@@ -1016,7 +1016,10 @@
         ],
         "responses": {
           "200": {
-            "description": "Payout info registered"
+            "description": "Identity registered."
+          },
+          "202": {
+            "description": "Identity registerion accepted and will be processed."
           },
           "400": {
             "description": "Bad request",
