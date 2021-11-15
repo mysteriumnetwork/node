@@ -121,7 +121,7 @@ func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identi
 		newStatus = InProgress
 	}
 
-	if newStatus == Unregistered {
+	if newStatus == Unregistered || newStatus == InProgress {
 		ok, err := registry.hermes.IsIdentityOffchain(chainID, id.Address)
 		if err != nil {
 			log.Err(err).Str("status", newStatus.String()).Msg("failed to contact hermes to get new registration status")
