@@ -536,6 +536,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		FeeProvider:     di.Transactor,
 		Encryption:      di.Keystore,
 		EventBus:        di.EventBus,
+		Signer:          di.SignerFactory,
 	})
 
 	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
