@@ -82,6 +82,10 @@ func (mac *mockHermesCaller) GetProviderData(chainID int64, id string) (HermesUs
 	return HermesUserInfo{}, nil
 }
 
+func (mac *mockHermesCaller) SyncProviderPromise(promise crypto.Promise, signer identity.Signer) error {
+	return nil
+}
+
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
