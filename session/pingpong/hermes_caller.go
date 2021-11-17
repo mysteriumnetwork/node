@@ -31,6 +31,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
@@ -225,6 +226,39 @@ func (ac *HermesCaller) IsIdentityOffchain(chainID int64, id string) (bool, erro
 	}
 
 	return data.IsOffchain, nil
+}
+
+type syncPromiseRequest struct {
+	ChannelID string   `json:"channel_id"`
+	ChainID   int64    `json:"chain_id"`
+	Amount    *big.Int `json:"amount"`
+	Fee       *big.Int `json:"fee"`
+	Hashlock  string   `json:"hashlock"`
+	Signature string   `json:"signature"`
+}
+
+// SyncProviderPromise syncs provider promise.
+func (ac *HermesCaller) SyncProviderPromise(promise crypto.Promise, signer identity.Signer) error {
+	toSend := syncPromiseRequest{
+		ChannelID: common.Bytes2Hex(promise.ChannelID),
+		ChainID:   promise.ChainID,
+		Amount:    promise.Amount,
+		Fee:       promise.Fee,
+		Hashlock:  common.Bytes2Hex(promise.Hashlock),
+		Signature: common.Bytes2Hex(promise.Signature),
+	}
+
+	req, err := requests.NewSignedPostRequest(ac.hermesBaseURI, "provider/sync_promise", toSend, signer)
+	if err != nil {
+		return fmt.Errorf("could not make promise sync request: %w", err)
+	}
+
+	err = ac.doRequest(req, map[string]interface{}{})
+	if err != nil {
+		return fmt.Errorf("could not sync promise hermes: %w", err)
+	}
+
+	return nil
 }
 
 // GetConsumerData gets consumer data from hermes
@@ -446,6 +480,9 @@ var ErrHermesMalformedJSON = errors.New("malformed json")
 // ErrNeedsRRecovery indicates that we need to recover R.
 var ErrNeedsRRecovery = errors.New("r recovery required")
 
+// ErrInvalidPreviuosLatestPromise represents an error where historical promise data is invalid resulting in a non functional provider or consumner.
+var ErrInvalidPreviuosLatestPromise = errors.New("invalid previuos latest promise, impossible to issue new one")
+
 // ErrHermesNoPreviousPromise indicates that we have no previous knowledge of a promise for the provider.
 var ErrHermesNoPreviousPromise = errors.New("no previous promise found")
 
@@ -476,6 +513,7 @@ var hermesCauseToError = map[string]error{
 	ErrNeedsRRecovery.Error():                 ErrNeedsRRecovery,
 	ErrTooManyRequests.Error():                ErrTooManyRequests,
 	ErrConsumerUnregistered.Error():           ErrConsumerUnregistered,
+	ErrInvalidPreviuosLatestPromise.Error():   ErrInvalidPreviuosLatestPromise,
 }
 
 type rRecoveryDetails struct {

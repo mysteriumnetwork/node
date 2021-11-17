@@ -252,7 +252,9 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 //     $ref: "#/definitions/IdentityRegisterRequestDTO"
 // responses:
 //   200:
-//     description: Payout info registered
+//     description: Identity registered.
+//   202:
+//     description: Identity registerion accepted and will be processed.
 //   400:
 //     description: Bad request
 //     schema:
@@ -284,9 +286,12 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 		return
 	}
 	switch registrationStatus {
-	case registry.InProgress, registry.Registered:
+	case registry.InProgress:
 		log.Info().Msgf("identity %q registration is in status %s, aborting...", id.Address, registrationStatus)
-		utils.SendErrorMessage(resp, "Identity already registered", http.StatusConflict)
+		utils.SendErrorMessage(resp, "Identity registration in progress", http.StatusConflict)
+		return
+	case registry.Registered:
+		resp.WriteHeader(http.StatusOK)
 		return
 	}
 
