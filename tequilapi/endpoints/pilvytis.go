@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -459,8 +458,6 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		return
 	}
 
-	log.Debug().Msgf("CreatePaymentOrder %+v", req)
-
 	// TODO: Remove this once apps update
 	if req.Country == "" {
 		org := e.lf.GetOrigin()
@@ -476,11 +473,9 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		req.Country,
 		req.CallerData)
 	if err != nil {
-		log.Debug().Msgf("pt.response error %s", err)
 		utils.SendError(w, err, http.StatusInternalServerError)
 		return
 	}
-	log.Debug().Msgf("pt.response %+v", resp)
 
 	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), w)
 }
