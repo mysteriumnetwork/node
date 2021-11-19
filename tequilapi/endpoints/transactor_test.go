@@ -266,6 +266,7 @@ func Test_SettleHistory(t *testing.T) {
 						"settled_at": "2020-01-02T03:04:05Z",
 						"fees": 20,
 						"is_withdrawal": false,
+ 						"block_explorer_url": "",
 						"error": ""
 					},
 					{
@@ -278,6 +279,7 @@ func Test_SettleHistory(t *testing.T) {
 						"settled_at": "2020-06-07T08:09:10Z",
 						"fees": 50,
 						"is_withdrawal": false,
+ 						"block_explorer_url": "",
 						"error": ""
 					}
 				],
