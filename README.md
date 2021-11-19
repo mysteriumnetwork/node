@@ -18,7 +18,6 @@ Currently node supports WireGuard as its underlying VPN transport.
 - [Snapshot builds](https://github.com/mysteriumnetwork/node-builds/releases) - bleeding edge, use at your own risk
 - [Documentation](https://docs.mysterium.network/)
 - [Installation guide](https://docs.mysterium.network/user-guide/)
-- [Node wiki](https://github.com/mysteriumnetwork/node/wiki/)
 
 ## Installation options
 
@@ -56,6 +55,7 @@ You should be able to run a node on any OS that supports docker. We have tested 
 - Debian 10
 - Ubuntu 18.04
 - Ubuntu 20.04
+- Ubuntu 21.10
 
 Run node:
 ```bash
@@ -73,8 +73,8 @@ docker logs -f myst
 
 ### Further information
 
-More installation options are described in the [installation guide](http://docs.mysterium.network/en/latest/user-guide/installation/).
-For possible issues while running a node refer to our [FAQ](https://github.com/mysteriumnetwork/node/wiki/Node-operation) section.
+More installation options are described in the [installation guide](https://docs.mysterium.network/node-runners/setup/).
+For possible issues while running a node refer to our [Troubleshooting guide](https://docs.mysterium.network/node-runners/troubleshooting/).
 
 ## Built With
 
@@ -83,24 +83,26 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 * [docker](https://www.docker.com/what-docker) - Containerize applications
 * [openvpn](https://openvpn.net) - Solid VPN solution
 * [wireguard](https://www.wireguard.com/) - Extremely simple yet fast and modern VPN
+* [geth](https://geth.ethereum.org/) - Official Go implementation of the Ethereum protocol
 
 ## Contributing
 
 For a detailed guide, please visit our [developer docs](https://docs.mysterium.network/developers/).
 
-## Contributors
+## Core contributors
 * **Valdas Petrulis** - *Lead developer, go evangelist, node bootstrapper* - [Waldz](https://github.com/Waldz)
 * **Tadas Valiukas** - *Senior developer, experienced bug maker* - [tadovas](https://github.com/tadovas)
 * **Donatas Kučinskas** - *Senior developer, clean code savvy* - [donce](https://github.com/donce)
 * **Antanas Masevičius** - *Network engineer / developer, net guru* - [zolia](https://github.com/zolia)
-* **Paulius Mozuras** - *Software developer, snakes lover* - [interro](https://github.com/interro)
 * **Ignas Bernotas** - *Senior developer, open source enthusiast* - [ignasbernotas](https://github.com/ignasbernotas)
-* **Andrej Novikov** - *Senior developer, JS enthusiast, UX jazzman* - [shroomist](https://github.com/shroomist)
 * **Dmitry Shihovtsev** - *Senior developer, devops ninja* - [soffokl](https://github.com/soffokl)
 * **Viktoras Kuznecovas** - *Senior developer, supersonic typing specialist* [vkuznecovas](https://github.com/vkuznecovas)
-* **Tadas Krivickas** - *Senior developer, CI boss, refactoring fairy* [tadaskay](https://github.com/tadaskay)
+* **Tadas Krivickas** - *Senior fullstack engineer, CI boss, refactoring fairy* [tadaskay](https://github.com/tadaskay)
 * **Jaro Šatkevič** - *Senior developer, micro-payments researcher, crypto maniac* [chompomonim](https://github.com/chompomonim)
 * **Andzej Maciusovič** - *Senior developer, disciplined world changer* [anjmao](https://github.com/anjmao)
+* **Mantas Domaševičius** - *Senior fullstack engineer, always ready for pair programming* [mdomasevicius](https://github.com/mdomasevicius)
+* **Tomas Mikalauskas** - *Backend developer, golang lover, payment guru* [tomasmik](https://github.com/tomasmik)
+* **Vlad Iarmak** - *Protocol architect, networking guru, inexhaustible RFC writer* [Snawoot](https://github.com/Snawoot)
 
 See also full list of [contributors](https://github.com/mysteriumnetwork/node/contributors) who participated in this project.
 
