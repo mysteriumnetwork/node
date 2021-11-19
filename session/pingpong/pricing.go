@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
@@ -105,6 +106,11 @@ func (p *Pricer) getPreviousByType(pricing market.LatestPrices, nodeType string,
 
 // IsPriceValid checks if the given price is valid or not.
 func (p *Pricer) IsPriceValid(in market.Price, nodeType string, country string) bool {
+	if config.GetBool(config.FlagPaymentsDuringSessionDebug) {
+		log.Info().Msg("Payments debug bas been enabled, will agree with any price given")
+		return true
+	}
+
 	pricing := p.getPricing()
 	if p.pricesEqual(p.getCurrentByType(pricing, nodeType, country), in) {
 		return true

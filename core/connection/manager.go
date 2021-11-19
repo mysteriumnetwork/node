@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -324,10 +325,21 @@ func (m *connectionManager) autoReconnect() (err error) {
 }
 
 func (m *connectionManager) priceFromProposal(proposal proposal.PricedServiceProposal) market.Price {
-	return market.Price{
+	p := market.Price{
 		PricePerHour: proposal.Price.PricePerHour,
 		PricePerGiB:  proposal.Price.PricePerGiB,
 	}
+
+	if config.GetBool(config.FlagPaymentsDuringSessionDebug) {
+		log.Info().Msg("Payments debug bas been enabled, will use absurd amounts for the proposal price")
+		p = market.Price{
+			PricePerHour: new(big.Int).SetInt64(5000000000000000000),
+			PricePerGiB:  new(big.Int).SetInt64(5000000000000000000),
+		}
+	}
+
+	return p
+
 }
 
 func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) (sessionID session.ID, err error) {

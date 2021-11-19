@@ -139,6 +139,13 @@ var (
 		Value:  metadata.Testnet3Definition.Testnet3HermesURL,
 		Hidden: true,
 	}
+	// FlagPaymentsDuringSessionDebug sets if we're in debug more for the payments done in a VPN session.
+	FlagPaymentsDuringSessionDebug = cli.BoolFlag{
+		Name:   "payments.during-session-debug",
+		Usage:  "Set debug mode for payments made during a session, it will bypass any price validation and allow absurd prices during sessions",
+		Value:  false,
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -162,6 +169,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagOffchainBalanceExpiration,
 		&FlagTestnet3HermesURL,
 		&FlagPaymentsZeroStakeUnsettledAmount,
+		&FlagPaymentsDuringSessionDebug,
 	)
 }
 
@@ -185,4 +193,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
 	Current.ParseStringFlag(ctx, FlagTestnet3HermesURL)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
+	Current.ParseBoolFlag(ctx, FlagPaymentsDuringSessionDebug)
 }
