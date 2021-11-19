@@ -19,6 +19,7 @@ package client
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -781,6 +782,18 @@ func (client *Client) OrderGetAll(id identity.Identity) ([]contract.PaymentOrder
 
 	var res []contract.PaymentOrderResponse
 	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderInvoice returns a single order istance given it's ID.
+func (client *Client) OrderInvoice(address identity.Identity, orderID string) ([]byte, error) {
+	path := fmt.Sprintf("v2/identities/%s/payment-order/%s/invoice", address.Address, orderID)
+	resp, err := client.http.Get(path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 // PaymentOrderGateways returns all possible gateways and their data.

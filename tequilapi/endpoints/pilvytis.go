@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -43,6 +44,7 @@ type api interface {
 	// =================
 
 	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.PaymentOrderResponse, error)
+	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
 	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.PaymentOrderResponse, error)
 	GetPaymentGateways() ([]pilvytis.GatewaysResponse, error)
 }
@@ -377,6 +379,44 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
 	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), w)
 }
 
+// GetPaymentGatewayOrderInvoice returns an invoice for payment order matching the given ID and identity.
+//
+// swagger:operation GET /v2/identities/{id}/payment-order/{order_id}/invoice Order getPaymentGatewayOrderInvoice
+// ---
+// summary: Get invoice
+// description: Gets an invoice for payment order matching the given ID and identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get an order invoice
+//   type: string
+//   required: true
+// - name: order_id
+//   in: path
+//   description: Order id
+//   type: integer
+//   required: true
+// responses:
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
+	w := c.Writer
+	params := c.Params
+
+	resp, err := e.api.GetPaymentGatewayOrderInvoice(
+		identity.FromAddress(params.ByName("id")),
+		params.ByName("order_id"),
+	)
+	if err != nil {
+		utils.SendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	c.Data(200, "application/pdf", resp)
+}
+
 // CreatePaymentGatewayOrder creates a new payment order.
 //
 // swagger:operation POST /identities/{id}/{gw}/payment-order Order createPaymentGatewayOrder
@@ -419,6 +459,8 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		return
 	}
 
+	log.Debug().Msgf("CreatePaymentOrder %+v", req)
+
 	// TODO: Remove this once apps update
 	if req.Country == "" {
 		org := e.lf.GetOrigin()
@@ -434,9 +476,11 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		req.Country,
 		req.CallerData)
 	if err != nil {
+		log.Debug().Msgf("pt.response error %s", err)
 		utils.SendError(w, err, http.StatusInternalServerError)
 		return
 	}
+	log.Debug().Msgf("pt.response %+v", resp)
 
 	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), w)
 }
@@ -461,6 +505,7 @@ func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer, lf paymentLocationFal
 		{
 			idGroupV2.POST("/:id/:gw/payment-order", pil.CreatePaymentGatewayOrder)
 			idGroupV2.GET("/:id/payment-order/:order_id", pil.GetPaymentGatewayOrder)
+			idGroupV2.GET("/:id/payment-order/:order_id/invoice", pil.GetPaymentGatewayOrderInvoice)
 			idGroupV2.GET("/:id/payment-order", pil.GetPaymentGatewayOrders)
 		}
 		e.GET("/v2/payment-order-gateways", pil.GetPaymentGateways)

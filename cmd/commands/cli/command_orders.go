@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -57,6 +58,8 @@ func (c *cliApp) order(args []string) (err error) {
 		return c.orderGet(actionArgs)
 	case "get-all":
 		return c.orderGetAll(actionArgs)
+	case "invoice":
+		return c.invoice(actionArgs)
 	case "gateways":
 		return c.gateways(actionArgs)
 	default:
@@ -222,6 +225,23 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 		fmt.Sprintf("To explore additional order information use: '%s'", usageOrderGet),
 	)
 	return nil
+}
+
+const usageOrderInvoice = "invoice <identity> <orderID>"
+
+func (c *cliApp) invoice(args []string) (err error) {
+	if len(args) != 2 {
+		clio.Info("Usage: " + usageOrderInvoice)
+		return
+	}
+
+	resp, err := c.tequilapi.OrderInvoice(identity.FromAddress(args[0]), args[1])
+	if err != nil {
+		return fmt.Errorf("could not get an order invoice: %w", err)
+	}
+	filename := fmt.Sprintf("invoice-%v.pdf", args[1])
+	clio.Info("Writing invoice to", filename)
+	return ioutil.WriteFile(filename, resp, 0644)
 }
 
 func printOrder(o contract.PaymentOrderResponse, rc *remote.Config) {

@@ -2378,6 +2378,40 @@
         }
       }
     },
+    "/v2/identities/{id}/payment-order/{order_id}/invoice": {
+      "get": {
+        "description": "Gets an invoice for payment order matching the given ID and identity",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get invoice",
+        "operationId": "getPaymentGatewayOrderInvoice",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get an order invoice",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Order id",
+            "name": "order_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/v2/payment-order-gateways": {
       "get": {
         "description": "Returns gateway configuration including supported currencies, minimum amounts, etc.",

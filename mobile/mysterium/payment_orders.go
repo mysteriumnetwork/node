@@ -56,6 +56,11 @@ func (mb *MobileNode) GetPaymentGatewayOrder(req *GetPaymentOrderRequest) ([]byt
 	return json.Marshal(res)
 }
 
+// GetPaymentGatewayOrderInvoice gets the invoice for an order.
+func (mb *MobileNode) GetPaymentGatewayOrderInvoice(req *GetPaymentOrderRequest) ([]byte, error) {
+	return mb.pilvytis.GetPaymentGatewayOrderInvoice(identity.FromAddress(req.IdentityAddress), req.ID)
+}
+
 // GatewaysResponse represents a respose which cointains gateways and their data.
 type GatewaysResponse struct {
 	Name         string              `json:"name"`

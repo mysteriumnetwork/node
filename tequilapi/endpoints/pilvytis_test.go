@@ -104,6 +104,10 @@ func (mock *mockPilvytis) GetPaymentGatewayOrders(id identity.Identity) ([]pilvy
 	return nil, nil
 }
 
+func (mock *mockPilvytis) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error) {
+	return nil, nil
+}
+
 func (mock *mockPilvytis) GetPaymentGateways() ([]pilvytis.GatewaysResponse, error) {
 	return nil, nil
 }
