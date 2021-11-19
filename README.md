@@ -100,7 +100,7 @@ For a detailed guide, please visit our [developer docs](https://docs.mysterium.n
 * **Tadas Krivickas** - *Senior fullstack engineer, CI boss, refactoring fairy* [tadaskay](https://github.com/tadaskay)
 * **Jaro Šatkevič** - *Senior developer, micro-payments researcher, crypto maniac* [chompomonim](https://github.com/chompomonim)
 * **Andzej Maciusovič** - *Senior developer, disciplined world changer* [anjmao](https://github.com/anjmao)
-* **Mantas Domaševičius** - *Senior full stack engineer, always ready to pair programming* [mdomasevicius](https://github.com/mdomasevicius)
+* **Mantas Domaševičius** - *Senior fullstack engineer, always ready for pair programming* [mdomasevicius](https://github.com/mdomasevicius)
 * **Tomas Mikalauskas** - *Backend developer, golang lover, payment guru* [tomasmik](https://github.com/tomasmik)
 * **Vlad Iarmak** - *Protocol architect, networking guru, inexhaustible RFC writer* [Snawoot](https://github.com/Snawoot)
 
