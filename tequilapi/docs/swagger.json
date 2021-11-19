@@ -4119,6 +4119,11 @@
           "x-go-name": "Beneficiary",
           "example": "0x0000000000000000000000000000000000000001"
         },
+        "block_explorer_url": {
+          "type": "string",
+          "x-go-name": "BlockExplorerURL",
+          "example": "https://example.com"
+        },
         "channel_address": {
           "type": "string",
           "x-go-name": "ChannelAddress",

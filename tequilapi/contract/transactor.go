@@ -148,16 +148,17 @@ type SettlementListResponse struct {
 // NewSettlementDTO maps to API settlement.
 func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO {
 	return SettlementDTO{
-		TxHash:         settlement.TxHash.Hex(),
-		ProviderID:     settlement.ProviderID.Address,
-		HermesID:       settlement.HermesID.Hex(),
-		ChannelAddress: settlement.ChannelAddress.Hex(),
-		Beneficiary:    settlement.Beneficiary.Hex(),
-		Amount:         settlement.Amount,
-		SettledAt:      settlement.Time.Format(time.RFC3339),
-		Fees:           settlement.Fees,
-		Error:          settlement.Error,
-		IsWithdrawal:   settlement.IsWithdrawal,
+		TxHash:           settlement.TxHash.Hex(),
+		ProviderID:       settlement.ProviderID.Address,
+		HermesID:         settlement.HermesID.Hex(),
+		ChannelAddress:   settlement.ChannelAddress.Hex(),
+		Beneficiary:      settlement.Beneficiary.Hex(),
+		Amount:           settlement.Amount,
+		SettledAt:        settlement.Time.Format(time.RFC3339),
+		Fees:             settlement.Fees,
+		Error:            settlement.Error,
+		IsWithdrawal:     settlement.IsWithdrawal,
+		BlockExplorerURL: settlement.BlockExplorerURL,
 	}
 }
 
@@ -190,6 +191,9 @@ type SettlementDTO struct {
 
 	// example: false
 	IsWithdrawal bool `json:"is_withdrawal"`
+
+	// example: https://example.com
+	BlockExplorerURL string `json:"block_explorer_url"`
 
 	// example: internal server error
 	Error string `json:"error"`
