@@ -504,8 +504,6 @@ func (aps *hermesPromiseSettler) Withdraw(
 
 	if amountToWithdraw == nil {
 		amountToWithdraw = new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
-	} else {
-		amountToWithdraw = new(big.Int).Add(data.LatestPromise.Amount, amountToWithdraw)
 	}
 
 	err = aps.validateWithdrawalAmount(amountToWithdraw, toChainID)
