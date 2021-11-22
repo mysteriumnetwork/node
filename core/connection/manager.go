@@ -332,9 +332,14 @@ func (m *connectionManager) priceFromProposal(proposal proposal.PricedServicePro
 
 	if config.GetBool(config.FlagPaymentsDuringSessionDebug) {
 		log.Info().Msg("Payments debug bas been enabled, will use absurd amounts for the proposal price")
+		amount := config.GetUInt64(config.FlagPaymentsAmountDuringSessionDebug)
+		if amount == 0 {
+			amount = 5000000000000000000
+		}
+
 		p = market.Price{
-			PricePerHour: new(big.Int).SetInt64(5000000000000000000),
-			PricePerGiB:  new(big.Int).SetInt64(5000000000000000000),
+			PricePerHour: new(big.Int).SetUint64(amount),
+			PricePerGiB:  new(big.Int).SetUint64(amount),
 		}
 	}
 

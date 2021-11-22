@@ -146,6 +146,13 @@ var (
 		Value:  false,
 		Hidden: true,
 	}
+	// FlagPaymentsAmountDuringSessionDebug sets the amount of MYST sent during session debug
+	FlagPaymentsAmountDuringSessionDebug = cli.Uint64Flag{
+		Name:   "payments.amount-during-session-debug-amount",
+		Usage:  "Set amount to pay during session debug",
+		Value:  5000000000000000000,
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -170,6 +177,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagTestnet3HermesURL,
 		&FlagPaymentsZeroStakeUnsettledAmount,
 		&FlagPaymentsDuringSessionDebug,
+		&FlagPaymentsAmountDuringSessionDebug,
 	)
 }
 
@@ -194,4 +202,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTestnet3HermesURL)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
 	Current.ParseBoolFlag(ctx, FlagPaymentsDuringSessionDebug)
+	Current.ParseUInt64Flag(ctx, FlagPaymentsAmountDuringSessionDebug)
 }
