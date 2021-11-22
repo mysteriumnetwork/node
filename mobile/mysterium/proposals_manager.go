@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
@@ -223,7 +224,7 @@ func (m *proposalsManager) mapProposal(p *proposal.PricedServiceProposal) *propo
 		ServiceType:  p.ServiceType,
 		QualityLevel: proposalQualityLevelUnknown,
 		Price: proposalPrice{
-			Currency: "MYSTT",
+			Currency: money.CurrencyMyst.String(),
 			PerGiB:   perGib,
 			PerHour:  perHour,
 		},

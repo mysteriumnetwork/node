@@ -175,7 +175,7 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
 }
 
-func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
+func (t *Transactor) registerIdentity(endpoint string, id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
 	regReq, err := t.fillIdentityRegistrationRequest(id, stake, fee, beneficiary, chainID)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
@@ -186,7 +186,7 @@ func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiar
 		return errors.Wrap(err, "identity request validation failed")
 	}
 
-	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register", regReq)
+	req, err := requests.NewPostRequest(t.endpointAddress, endpoint, regReq)
 	if err != nil {
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
@@ -201,6 +201,11 @@ func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiar
 	t.publisher.Publish(AppTopicTransactorRegistration, regReq)
 
 	return nil
+}
+
+// RegisterProvider registers a provider if free registration slots are available.
+func (t *Transactor) RegisterProvider(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
+	return t.registerIdentity("identity/register/provider", id, stake, fee, beneficiary, chainID)
 }
 
 type identityRegistrationRequestWithToken struct {
@@ -261,7 +266,7 @@ func (t *Transactor) GetTokenReward(token string) (TokenRewardResponse, error) {
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
 func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
 	if referralToken == nil {
-		return t.registerIdentity(id, stake, fee, beneficiary, chainID)
+		return t.registerIdentity("identity/register", id, stake, fee, beneficiary, chainID)
 	}
 
 	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken, chainID)
@@ -606,6 +611,37 @@ func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Pro
 	}
 	res := SettleResponse{}
 	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
+}
+
+// EligibilityResponse shows if one is eligible for free registration.
+type EligibilityResponse struct {
+	Eligible bool `json:"eligible"`
+}
+
+// GetFreeProviderRegistrationEligibility determines if there are any free provider registrations available.
+func (t *Transactor) GetFreeProviderRegistrationEligibility() (bool, error) {
+	e := EligibilityResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, "identity/register/provider/eligibility", nil)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch registration eligibility")
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &e)
+	return e.Eligible, err
+}
+
+// GetFreeRegistrationEligibility determines if the identity is eligible for free registration.
+func (t *Transactor) GetFreeRegistrationEligibility(identity identity.Identity) (bool, error) {
+	e := EligibilityResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("identity/register/eligibility/%v", identity.Address), nil)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch registration eligibility")
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &e)
+	return e.Eligible, err
 }
 
 // PayAndSettlePayload represents the pay and settle payload.

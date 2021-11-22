@@ -21,9 +21,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -41,6 +43,7 @@ type api interface {
 	// =================
 
 	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.PaymentOrderResponse, error)
+	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
 	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.PaymentOrderResponse, error)
 	GetPaymentGateways() ([]pilvytis.GatewaysResponse, error)
 }
@@ -50,16 +53,22 @@ type paymentsIssuer interface {
 	CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency, country string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error)
 }
 
+type paymentLocationFallback interface {
+	GetOrigin() locationstate.Location
+}
+
 type pilvytisEndpoint struct {
 	api api
 	pt  paymentsIssuer
+	lf  paymentLocationFallback
 }
 
 // NewPilvytisEndpoint returns pilvytis endpoints.
-func NewPilvytisEndpoint(pil api, pt paymentsIssuer) *pilvytisEndpoint {
+func NewPilvytisEndpoint(pil api, pt paymentsIssuer, lf paymentLocationFallback) *pilvytisEndpoint {
 	return &pilvytisEndpoint{
 		api: pil,
 		pt:  pt,
+		lf:  lf,
 	}
 }
 
@@ -369,6 +378,44 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
 	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), w)
 }
 
+// GetPaymentGatewayOrderInvoice returns an invoice for payment order matching the given ID and identity.
+//
+// swagger:operation GET /v2/identities/{id}/payment-order/{order_id}/invoice Order getPaymentGatewayOrderInvoice
+// ---
+// summary: Get invoice
+// description: Gets an invoice for payment order matching the given ID and identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get an order invoice
+//   type: string
+//   required: true
+// - name: order_id
+//   in: path
+//   description: Order id
+//   type: integer
+//   required: true
+// responses:
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
+	w := c.Writer
+	params := c.Params
+
+	resp, err := e.api.GetPaymentGatewayOrderInvoice(
+		identity.FromAddress(params.ByName("id")),
+		params.ByName("order_id"),
+	)
+	if err != nil {
+		utils.SendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	c.Data(200, "application/pdf", resp)
+}
+
 // CreatePaymentGatewayOrder creates a new payment order.
 //
 // swagger:operation POST /identities/{id}/{gw}/payment-order Order createPaymentGatewayOrder
@@ -411,6 +458,12 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		return
 	}
 
+	// TODO: Remove this once apps update
+	if req.Country == "" {
+		org := e.lf.GetOrigin()
+		req.Country = strings.ToUpper(org.Country)
+	}
+
 	rid := identity.FromAddress(params.ByName("id"))
 	resp, err := e.pt.CreatePaymentGatewayOrder(
 		rid,
@@ -428,8 +481,8 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 }
 
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.
-func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer) func(*gin.Engine) error {
-	pil := NewPilvytisEndpoint(pilvytis, pt)
+func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer, lf paymentLocationFallback) func(*gin.Engine) error {
+	pil := NewPilvytisEndpoint(pilvytis, pt, lf)
 	return func(e *gin.Engine) error {
 		// TODO: Deprecated
 		// =====
@@ -447,6 +500,7 @@ func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer) func(*gin.Engine) err
 		{
 			idGroupV2.POST("/:id/:gw/payment-order", pil.CreatePaymentGatewayOrder)
 			idGroupV2.GET("/:id/payment-order/:order_id", pil.GetPaymentGatewayOrder)
+			idGroupV2.GET("/:id/payment-order/:order_id/invoice", pil.GetPaymentGatewayOrderInvoice)
 			idGroupV2.GET("/:id/payment-order", pil.GetPaymentGatewayOrders)
 		}
 		e.GET("/v2/payment-order-gateways", pil.GetPaymentGateways)

@@ -113,21 +113,6 @@ func (m *MMN) Register() error {
 	return m.register()
 }
 
-// GetReport fetches node report from MMN
-func (m *MMN) GetReport() (string, error) {
-	return m.client.GetReport(m.lastIdentity)
-}
-
-// UpdateBeneficiary updates beneficiary in MMN.
-func (m *MMN) UpdateBeneficiary(data *UpdateBeneficiaryRequest) error {
-	return m.client.UpdateBeneficiary(data)
-}
-
-// GetBeneficiary get beneficiary from MMN.
-func (m *MMN) GetBeneficiary(identityStr string) (string, error) {
-	return m.client.GetBeneficiary(identityStr)
-}
-
 func getOS() string {
 	switch runtime.GOOS {
 	case "darwin":

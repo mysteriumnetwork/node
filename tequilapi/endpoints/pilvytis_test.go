@@ -28,6 +28,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -103,8 +104,20 @@ func (mock *mockPilvytis) GetPaymentGatewayOrders(id identity.Identity) ([]pilvy
 	return nil, nil
 }
 
+func (mock *mockPilvytis) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error) {
+	return nil, nil
+}
+
 func (mock *mockPilvytis) GetPaymentGateways() ([]pilvytis.GatewaysResponse, error) {
 	return nil, nil
+}
+
+type mockPilvytisLocation struct{}
+
+func (mock *mockPilvytisLocation) GetOrigin() locationstate.Location {
+	return locationstate.Location{
+		Country: "LT",
+	}
 }
 
 func newMockPilvytisResp(id int, identity, priceC, payC string, recvAmount float64) pilvytis.OrderResponse {
@@ -142,7 +155,7 @@ func TestCreatePaymentOrder(t *testing.T) {
 		identity: identity,
 		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
 	}
-	handler := NewPilvytisEndpoint(mock, mockIssuer).CreatePaymentOrder
+	handler := NewPilvytisEndpoint(mock, mockIssuer, &mockPilvytisLocation{}).CreatePaymentOrder
 
 	mb, err := json.Marshal(reqBody)
 	assert.NoError(t, err)
@@ -192,7 +205,7 @@ func TestGetPaymentOrder(t *testing.T) {
 		identity: identity,
 		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
 	}
-	handler := NewPilvytisEndpoint(mock, mockIssuer).GetPaymentOrder
+	handler := NewPilvytisEndpoint(mock, mockIssuer, &mockPilvytisLocation{}).GetPaymentOrder
 
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
@@ -238,7 +251,7 @@ func TestGetPaymentOrders(t *testing.T) {
 		identity: identity,
 		resp:     newMockPilvytisResp(1, identity, "BTC", "BTC", 1),
 	}
-	handler := NewPilvytisEndpoint(mock, mockIssuer).GetPaymentOrders
+	handler := NewPilvytisEndpoint(mock, mockIssuer, &mockPilvytisLocation{}).GetPaymentOrders
 
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
@@ -275,7 +288,7 @@ func TestGetPaymentOrders(t *testing.T) {
 
 func TestGetCurrency(t *testing.T) {
 	mock := &mockPilvytis{currencies: []string{"BTC"}}
-	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}).GetPaymentOrderCurrencies
+	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}, &mockPilvytisLocation{}).GetPaymentOrderCurrencies
 
 	resp := httptest.NewRecorder()
 	url := "/payment-order-currencies"
@@ -299,7 +312,7 @@ func TestGetCurrency(t *testing.T) {
 
 func TestGetPaymentOrderOptions(t *testing.T) {
 	mock := &mockPilvytis{}
-	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}).GetPaymentOrderOptions
+	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}, &mockPilvytisLocation{}).GetPaymentOrderOptions
 
 	resp := httptest.NewRecorder()
 	url := "/payment-order-options"

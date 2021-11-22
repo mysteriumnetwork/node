@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -53,6 +54,11 @@ func (mb *MobileNode) GetPaymentGatewayOrder(req *GetPaymentOrderRequest) ([]byt
 	}
 
 	return json.Marshal(res)
+}
+
+// GetPaymentGatewayOrderInvoice gets the invoice for an order.
+func (mb *MobileNode) GetPaymentGatewayOrderInvoice(req *GetPaymentOrderRequest) ([]byte, error) {
+	return mb.pilvytis.GetPaymentGatewayOrderInvoice(identity.FromAddress(req.IdentityAddress), req.ID)
 }
 
 // GatewaysResponse represents a respose which cointains gateways and their data.
@@ -107,6 +113,11 @@ type CreatePaymentGatewayOrderReq struct {
 
 // CreatePaymentGatewayOrder creates a payment order.
 func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderReq) ([]byte, error) {
+	if req.Country == "" {
+		org := mb.locationResolver.GetOrigin()
+		req.Country = strings.ToUpper(org.Country)
+	}
+
 	order, err := mb.pilvytisOrderIssuer.CreatePaymentGatewayOrder(
 		identity.FromAddress(req.IdentityAddress),
 		req.Gateway,

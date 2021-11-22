@@ -31,6 +31,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
@@ -227,26 +228,107 @@ func (ac *HermesCaller) IsIdentityOffchain(chainID int64, id string) (bool, erro
 	return data.IsOffchain, nil
 }
 
+type syncPromiseRequest struct {
+	ChannelID string   `json:"channel_id"`
+	ChainID   int64    `json:"chain_id"`
+	Amount    *big.Int `json:"amount"`
+	Fee       *big.Int `json:"fee"`
+	Hashlock  string   `json:"hashlock"`
+	Signature string   `json:"signature"`
+}
+
+// SyncProviderPromise syncs provider promise.
+func (ac *HermesCaller) SyncProviderPromise(promise crypto.Promise, signer identity.Signer) error {
+	toSend := syncPromiseRequest{
+		ChannelID: common.Bytes2Hex(promise.ChannelID),
+		ChainID:   promise.ChainID,
+		Amount:    promise.Amount,
+		Fee:       promise.Fee,
+		Hashlock:  common.Bytes2Hex(promise.Hashlock),
+		Signature: common.Bytes2Hex(promise.Signature),
+	}
+
+	req, err := requests.NewSignedPostRequest(ac.hermesBaseURI, "provider/sync_promise", toSend, signer)
+	if err != nil {
+		return fmt.Errorf("could not make promise sync request: %w", err)
+	}
+
+	err = ac.doRequest(req, map[string]interface{}{})
+	if err != nil {
+		return fmt.Errorf("could not sync promise hermes: %w", err)
+	}
+
+	return nil
+}
+
 // GetConsumerData gets consumer data from hermes
-func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
+func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (HermesUserInfo, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
+		return HermesUserInfo{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
-	var resp map[int64]ConsumerData
+	var resp map[int64]HermesUserInfo
 	err = ac.doRequest(req, &resp)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
+		return HermesUserInfo{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
 	}
 
 	data, ok := resp[chainID]
 	if !ok {
-		return ConsumerData{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
+		return HermesUserInfo{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
 	}
 
 	err = data.LatestPromise.isValid(id)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not check promise validity: %w", err)
+		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
+	}
+
+	return data, nil
+}
+
+// GetProviderData gets provider data from hermes
+func (ac *HermesCaller) GetProviderData(chainID int64, id string) (HermesUserInfo, error) {
+	data, err := ac.getProviderData(chainID, id)
+	if err != nil {
+		return HermesUserInfo{}, err
+	}
+	err = data.LatestPromise.isValid(id)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
+	}
+
+	return data, nil
+}
+
+// ProviderPromiseAmountUnsafe returns the provider promise amount.
+// If can also return `nil` as the result if no promise exists.
+func (ac *HermesCaller) ProviderPromiseAmountUnsafe(chainID int64, id string) (*big.Int, error) {
+	d, err := ac.getProviderData(chainID, id)
+	if err != nil {
+		if errors.Is(err, ErrHermesNotFound) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return d.LatestPromise.Amount, nil
+}
+
+func (ac *HermesCaller) getProviderData(chainID int64, id string) (HermesUserInfo, error) {
+	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/provider/%v", id), nil)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not form consumer data request: %w", err)
+	}
+	var resp map[int64]HermesUserInfo
+	err = ac.doRequest(req, &resp)
+	if err != nil {
+		return HermesUserInfo{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
+	}
+
+	data, ok := resp[chainID]
+	if !ok {
+		return HermesUserInfo{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
 	}
 
 	return data, nil
@@ -282,8 +364,8 @@ func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
 	return hermesError
 }
 
-// ConsumerData represents the consumer data
-type ConsumerData struct {
+// HermesUserInfo represents the consumer data
+type HermesUserInfo struct {
 	Identity         string        `json:"Identity"`
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
@@ -295,7 +377,7 @@ type ConsumerData struct {
 	IsOffchain       bool          `json:"IsOffchain"`
 }
 
-func (cd *ConsumerData) fillZerosIfBigIntNull() *ConsumerData {
+func (cd *HermesUserInfo) fillZerosIfBigIntNull() *HermesUserInfo {
 	if cd.Balance == nil {
 		cd.Balance = big.NewInt(0)
 	}
@@ -398,6 +480,9 @@ var ErrHermesMalformedJSON = errors.New("malformed json")
 // ErrNeedsRRecovery indicates that we need to recover R.
 var ErrNeedsRRecovery = errors.New("r recovery required")
 
+// ErrInvalidPreviuosLatestPromise represents an error where historical promise data is invalid resulting in a non functional provider or consumner.
+var ErrInvalidPreviuosLatestPromise = errors.New("invalid previuos latest promise, impossible to issue new one")
+
 // ErrHermesNoPreviousPromise indicates that we have no previous knowledge of a promise for the provider.
 var ErrHermesNoPreviousPromise = errors.New("no previous promise found")
 
@@ -428,6 +513,7 @@ var hermesCauseToError = map[string]error{
 	ErrNeedsRRecovery.Error():                 ErrNeedsRRecovery,
 	ErrTooManyRequests.Error():                ErrTooManyRequests,
 	ErrConsumerUnregistered.Error():           ErrConsumerUnregistered,
+	ErrInvalidPreviuosLatestPromise.Error():   ErrInvalidPreviuosLatestPromise,
 }
 
 type rRecoveryDetails struct {

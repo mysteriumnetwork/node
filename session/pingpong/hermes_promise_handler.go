@@ -40,6 +40,7 @@ import (
 
 type hermesPromiseStorage interface {
 	Store(promise HermesPromise) error
+	Get(chainID int64, channelID string) (HermesPromise, error)
 }
 
 type feeProvider interface {
@@ -52,7 +53,9 @@ type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
 	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
-	GetConsumerData(chainID int64, id string) (ConsumerData, error)
+	GetConsumerData(chainID int64, id string) (HermesUserInfo, error)
+	GetProviderData(chainID int64, id string) (HermesUserInfo, error)
+	SyncProviderPromise(promise crypto.Promise, signer identity.Signer) error
 }
 
 type encryption interface {
@@ -71,6 +74,7 @@ type HermesPromiseHandlerDeps struct {
 	EventBus             eventbus.Publisher
 	HermesURLGetter      hermesURLGetter
 	HermesCallerFactory  HermesCallerFactory
+	Signer               identity.SignerFactory
 }
 
 // HermesPromiseHandler handles the hermes promises for ongoing sessions.
@@ -125,10 +129,45 @@ func (aph *HermesPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMess
 		return er.errChan
 	}
 
-	er.requestFunc = hermesCaller.RequestPromise
+	er.requestFunc = aph.makeRequestPromiseFunc(providerID, hermesCaller)
 
 	aph.queue <- er
 	return er.errChan
+}
+
+func (aph *HermesPromiseHandler) makeRequestPromiseFunc(providerID identity.Identity, caller HermesHTTPRequester) func(rp RequestPromise) (crypto.Promise, error) {
+	return func(rp RequestPromise) (crypto.Promise, error) {
+		p, err := caller.RequestPromise(rp)
+		if err == nil {
+			return p, nil
+		}
+
+		if !stdErr.Is(err, ErrInvalidPreviuosLatestPromise) {
+			// We can only really handle the previuos promise is invalid error.
+			return crypto.Promise{}, err
+		}
+
+		chid, err := crypto.GenerateProviderChannelID(providerID.Address, rp.ExchangeMessage.HermesID)
+		if err != nil {
+			return crypto.Promise{}, fmt.Errorf("failed to generate provider ID in promise sync: %w", err)
+		}
+
+		stored, err := aph.deps.HermesPromiseStorage.Get(rp.ExchangeMessage.ChainID, chid)
+		if err != nil {
+			return crypto.Promise{}, fmt.Errorf("failed to get last known promise from bolt: %w", err)
+		}
+
+		signer := aph.deps.Signer(providerID)
+		if err := caller.SyncProviderPromise(stored.Promise, signer); err != nil {
+			return crypto.Promise{}, fmt.Errorf("failed to sync to last known promise: %w", err)
+		}
+
+		if err := caller.RevealR(stored.R, providerID.Address, stored.AgreementID); err != nil {
+			return crypto.Promise{}, fmt.Errorf("failed to reveal R after sync: %w", err)
+		}
+
+		return caller.RequestPromise(rp)
+	}
 }
 
 // PayAndSettle adds the request to the queue.
@@ -347,6 +386,7 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 }
 
 var errRrecovered = errors.New("R recovered")
+var errPreviuosPromise = errors.New("action cannot be performed as previuos promise is invalid")
 
 func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identity.Identity, chainID int64, hermesID common.Address) error {
 	if err == nil {

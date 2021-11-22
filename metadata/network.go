@@ -33,6 +33,7 @@ type NetworkDefinition struct {
 	DefaultChainID            int64
 	DefaultCurrency           string
 	LocationAddress           string
+	Testnet3HermesURL         string
 	Payments                  Payments
 }
 
@@ -59,7 +60,58 @@ type Consumer struct {
 	EtherClientRPC      string
 }
 
-// Testnet3Definition defines parameters for testnet3 network (currently default network)
+// MainnetDefinition defines parameters for mainnet network (currently default network)
+var MainnetDefinition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v3",
+	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
+	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
+	Chain1: ChainDefinition{ // TODO: Update when mainnet deployed.
+		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
+		ChannelImplAddress: "0xbd20839b331a7a8d10e34cdf7219edf334814c4f",
+		HermesID:           "0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
+		ChainID:            1,
+		MystAddress:        "0x4Cf89ca06ad997bC732Dc876ed2A7F26a9E7f361",
+		EtherClientRPC: []string{
+			"https://ethereum1.mysterium.network/",
+			"https://cloudflare-eth.com/",
+		},
+	},
+	Chain2: ChainDefinition{
+		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
+		ChannelImplAddress: "0x25882f4966065ca13b7bac15cc48391d9a4124f6",
+		HermesID:           "0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
+		ChainID:            137,
+		MystAddress:        "0x1379e8886a944d2d9d440b3d88df536aea08d9f3",
+		EtherClientRPC: []string{
+			"https://polygon1.mysterium.network/",
+			"https://polygon-rpc.com/",
+		},
+	},
+	MMNAddress:      "https://mystnodes.com",
+	MMNAPIAddress:   "https://mystnodes.com/api/v1",
+	PilvytisAddress: "https://pilvytis.mysterium.network",
+	DNSMap: map[string][]string{
+		"discovery.mysterium.network":  {"51.158.129.204"},
+		"trust.mysterium.network":      {"51.158.129.204"},
+		"broker.mysterium.network":     {"51.158.129.204"},
+		"transactor.mysterium.network": {"51.158.129.204"},
+		"pilvytis.mysterium.network":   {"51.158.129.204"},
+	},
+	DefaultChainID:    137,
+	DefaultCurrency:   "MYST",
+	LocationAddress:   "https://location.mysterium.network/api/v1/location",
+	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
+	Payments: Payments{
+		Consumer: Consumer{
+			DataLeewayMegabytes: 20,
+			PriceGiBMax:         "500000000000000000", // 0.5 MYSTT
+			PriceHourMax:        "180000000000000",    // 0.0018 MYSTT
+		},
+	},
+}
+
+// Testnet3Definition defines parameters for testnet3 network
 var Testnet3Definition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet3-discovery.mysterium.network/api/v3",
 	AccessPolicyOracleAddress: "https://testnet3-trust.mysterium.network/api/v1/access-policies/",
@@ -96,9 +148,10 @@ var Testnet3Definition = NetworkDefinition{
 		"testnet3-broker.mysterium.network":     {"167.233.11.60"},
 		"testnet3-transactor.mysterium.network": {"167.233.11.60"},
 	},
-	DefaultChainID:  80001,
-	DefaultCurrency: "MYSTT",
-	LocationAddress: "https://testnet3-location.mysterium.network/api/v1/location",
+	DefaultChainID:    80001,
+	DefaultCurrency:   "MYSTT",
+	LocationAddress:   "https://testnet3-location.mysterium.network/api/v1/location",
+	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,
@@ -124,4 +177,4 @@ var LocalnetDefinition = NetworkDefinition{
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given
-var DefaultNetwork = Testnet3Definition
+var DefaultNetwork = MainnetDefinition

@@ -96,10 +96,11 @@ type AppEventGrandTotalChanged struct {
 
 // AppEventSettlementComplete represent a completed settlement.
 type AppEventSettlementComplete struct {
-	ProviderID identity.Identity
-	TxHash     string
-	HermesID   common.Address
-	ChainID    int64
+	ProviderID       identity.Identity
+	TxHash           string
+	HermesID         common.Address
+	BlockExplorerURL string
+	ChainID          int64
 }
 
 // AppEventWithdrawalRequested represents a request for withdrawal.

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"runtime"
 	"strings"
@@ -343,6 +344,21 @@ func (a *API) GetPaymentGatewayOrder(id identity.Identity, oid string) (*Payment
 
 	var resp PaymentOrderResponse
 	return &resp, a.sendRequestAndParseResp(req, &resp)
+}
+
+// GetPaymentGatewayOrderInvoice returns an invoice for a payment order by ID from the API
+// service that belongs to a given identity.
+func (a *API) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error) {
+	req, err := requests.NewSignedGetRequest(a.url, fmt.Sprintf("api/v2/payment/orders/%s/invoice", oid), a.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := a.req.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(res.Body)
 }
 
 type paymentOrderRequest struct {

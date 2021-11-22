@@ -51,6 +51,7 @@ type Transactor interface {
 	GetReferralToken(id common.Address) (string, error)
 	ReferralTokenAvailable(id common.Address) error
 	RegistrationTokenReward(token string) (*big.Int, error)
+	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 }
 
 // promiseSettler settles the given promises
@@ -251,7 +252,9 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 //     $ref: "#/definitions/IdentityRegisterRequestDTO"
 // responses:
 //   200:
-//     description: Payout info registered
+//     description: Identity registered.
+//   202:
+//     description: Identity registerion accepted and will be processed.
 //   400:
 //     description: Bad request
 //     schema:
@@ -283,9 +286,12 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 		return
 	}
 	switch registrationStatus {
-	case registry.InProgress, registry.Registered:
+	case registry.InProgress:
 		log.Info().Msgf("identity %q registration is in status %s, aborting...", id.Address, registrationStatus)
-		utils.SendErrorMessage(resp, "Identity already registered", http.StatusConflict)
+		utils.SendErrorMessage(resp, "Identity registration in progress", http.StatusConflict)
+		return
+	case registry.Registered:
+		resp.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -613,6 +619,41 @@ func (te *transactorEndpoint) ChainSummary(c *gin.Context) {
 	})
 }
 
+// EligibilityResponse represents the eligibility response
+// swagger:model EligibilityResponse
+type EligibilityResponse struct {
+	Eligible bool `json:"eligible"`
+}
+
+// swagger:operation GET /transactor/identities/{id}/eligibility Eligibility
+// ---
+// summary: Checks if given id is eligible for free registration
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity address to register
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Eligibility response
+//     schema:
+//       "$ref": "#/definitions/EligibilityResponse"
+func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
+	resp := c.Writer
+
+	params := c.Params
+	id := identity.FromAddress(params.ByName("id"))
+
+	res, err := te.transactor.GetFreeRegistrationEligibility(id)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
@@ -627,6 +668,7 @@ func AddRoutesForTransactor(
 		idGroup := e.Group("/identities")
 		{
 			idGroup.POST("/:id/register", te.RegisterIdentity)
+			idGroup.GET("/:id/eligibility", te.FreeRegistrationEligibility)
 		}
 
 		transGroup := e.Group("/transactor")

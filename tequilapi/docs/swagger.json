@@ -1016,7 +1016,10 @@
         ],
         "responses": {
           "200": {
-            "description": "Payout info registered"
+            "description": "Identity registered."
+          },
+          "202": {
+            "description": "Identity registerion accepted and will be processed."
           },
           "400": {
             "description": "Bad request",
@@ -1234,27 +1237,6 @@
         "responses": {
           "200": {
             "description": "MMN's API key removed"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
-    "/mmn/node-report": {
-      "get": {
-        "description": "Returns node report from MMN",
-        "tags": [
-          "MMN"
-        ],
-        "summary": "Returns node report from MMN",
-        "operationId": "getNodeReport",
-        "responses": {
-          "200": {
-            "description": "Node report from MMN"
           },
           "500": {
             "description": "Internal server error",
@@ -1639,7 +1621,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1647,7 +1629,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -1744,7 +1726,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1752,7 +1734,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -1823,7 +1805,7 @@
     },
     "/sessions/stats-daily": {
       "get": {
-        "description": "Returns aggregated daily statistics of sessions filtered by given query",
+        "description": "Returns aggregated daily statistics of sessions filtered by given query (date_from=\u003cnow -30d\u003e and date_to=\u003cnow\u003e by default)",
         "tags": [
           "Session"
         ],
@@ -1834,7 +1816,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "description": "Filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
@@ -1842,7 +1824,7 @@
             "type": "string",
             "format": "date",
             "x-go-name": "DateTo",
-            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "description": "Filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
@@ -2086,6 +2068,29 @@
             "description": "Internal server error",
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/transactor/identities/{id}/eligibility": {
+      "get": {
+        "summary": "Checks if given id is eligible for free registration",
+        "operationId": "Eligibility",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity address to register",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility response",
+            "schema": {
+              "$ref": "#/definitions/EligibilityResponse"
             }
           }
         }
@@ -2364,6 +2369,40 @@
               "$ref": "#/definitions/PaymentOrderResponse"
             }
           },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/v2/identities/{id}/payment-order/{order_id}/invoice": {
+      "get": {
+        "description": "Gets an invoice for payment order matching the given ID and identity",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get invoice",
+        "operationId": "getPaymentGatewayOrderInvoice",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get an order invoice",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Order id",
+            "name": "order_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
           "500": {
             "description": "Internal server error",
             "schema": {
@@ -2805,6 +2844,17 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "EligibilityResponse": {
+      "description": "EligibilityResponse represents the eligibility response",
+      "type": "object",
+      "properties": {
+        "eligible": {
+          "type": "boolean",
+          "x-go-name": "Eligible"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "EntertainmentEstimateResponse": {
       "type": "object",
@@ -4102,6 +4152,11 @@
           "type": "string",
           "x-go-name": "Beneficiary",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "block_explorer_url": {
+          "type": "string",
+          "x-go-name": "BlockExplorerURL",
+          "example": "https://example.com"
         },
         "channel_address": {
           "type": "string",

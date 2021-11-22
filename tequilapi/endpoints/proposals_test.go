@@ -125,7 +125,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -185,7 +185,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -252,7 +252,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}
@@ -273,7 +273,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYSTT",
+						"currency": "MYST",
 						"per_gib": 2.0,
 						"per_hour": 1.0
 					}

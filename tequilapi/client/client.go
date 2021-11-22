@@ -19,6 +19,7 @@ package client
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -586,11 +587,13 @@ func filterSessionsByStatus(status string, sessions contract.SessionListResponse
 }
 
 // Withdraw requests the withdrawal of money from l2 to l1 of hermes promises
-func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error {
+func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int, fromChainID, toChainID int64) error {
 	withdrawRequest := contract.WithdrawRequest{
 		ProviderID:  providerID.Address,
 		HermesID:    hermesID.Hex(),
 		Beneficiary: beneficiary.Hex(),
+		FromChainID: fromChainID,
+		ToChainID:   toChainID,
 	}
 
 	if amount != nil {
@@ -779,6 +782,18 @@ func (client *Client) OrderGetAll(id identity.Identity) ([]contract.PaymentOrder
 
 	var res []contract.PaymentOrderResponse
 	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderInvoice returns a single order istance given it's ID.
+func (client *Client) OrderInvoice(address identity.Identity, orderID string) ([]byte, error) {
+	path := fmt.Sprintf("v2/identities/%s/payment-order/%s/invoice", address.Address, orderID)
+	resp, err := client.http.Get(path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 // PaymentOrderGateways returns all possible gateways and their data.

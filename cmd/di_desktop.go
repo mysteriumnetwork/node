@@ -134,11 +134,13 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 
 	cfg := registry.ProviderRegistrarConfig{
-		IsTestnet3:          nodeOptions.OptionsNetwork.Testnet3,
-		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg, di.PayoutAddressStorage)
+
+	fact := func(hermesURL string) registry.ProviderPromiseQuerier {
+		return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+	}
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg, fact)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
@@ -177,11 +179,12 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.SettlementHistoryStorage,
 		di.EventBus,
 		pingpong.HermesPromiseSettlerConfig{
-			Threshold:               nodeOptions.Payments.HermesPromiseSettlingThreshold,
-			SettlementCheckTimeout:  nodeOptions.Payments.SettlementTimeout,
-			SettlementCheckInterval: nodeOptions.Payments.SettlementRecheckInterval,
-			L1ChainID:               nodeOptions.Chains.Chain1.ChainID,
-			L2ChainID:               nodeOptions.Chains.Chain2.ChainID,
+			Threshold:                    nodeOptions.Payments.HermesPromiseSettlingThreshold,
+			SettlementCheckTimeout:       nodeOptions.Payments.SettlementTimeout,
+			SettlementCheckInterval:      nodeOptions.Payments.SettlementRecheckInterval,
+			L1ChainID:                    nodeOptions.Chains.Chain1.ChainID,
+			L2ChainID:                    nodeOptions.Chains.Chain2.ChainID,
+			ZeroStakeSettlementThreshold: nodeOptions.Payments.ZeroStakeSettlementThreshold,
 		},
 	)
 	if err := settler.Subscribe(di.EventBus); err != nil {
