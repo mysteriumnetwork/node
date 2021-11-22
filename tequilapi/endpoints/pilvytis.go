@@ -23,13 +23,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+
+	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
 
