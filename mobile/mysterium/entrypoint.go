@@ -161,6 +161,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ActiveChainID)
 	config.Current.SetDefault(config.FlagKeepConnectedOnFail.Name, options.KeepConnectedOnFail)
+	config.Current.SetDefault(config.FlagAutoReconnect.Name, "true")
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
