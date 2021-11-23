@@ -23,7 +23,7 @@ import (
 )
 
 func setDNS(cfg Config) error {
-	cmd := fmt.Sprintf("netsh interface ipv4 set dnsservers name=%s address=%s validate=no", cfg.IfaceName, cfg.DNS[0])
+	cmd := fmt.Sprintf("netsh interface ipv4 set dnsservers name=%s source=static address=%s validate=no", cfg.IfaceName, cfg.DNS[0])
 	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not configure DNS, %s:%v", string(out), err)
