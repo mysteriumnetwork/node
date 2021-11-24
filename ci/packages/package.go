@@ -197,8 +197,13 @@ func PackageAndroid() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
+func binFmtSupport() error {
+	return sh.RunV("docker", "run", "--rm", "--privileged", "linuxkit/binfmt:v0.8")
+}
+
 // PackageDockerAlpine builds and stores docker alpine image
 func PackageDockerAlpine() error {
+	mg.Deps(binFmtSupport)
 	logconfig.Bootstrap()
 
 	buildID := env.Str(env.BuildNumber)
@@ -232,6 +237,7 @@ func PackageDockerAlpine() error {
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
+	mg.Deps(binFmtSupport)
 	logconfig.Bootstrap()
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
