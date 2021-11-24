@@ -208,7 +208,7 @@ func buildDockerImage(dockerfile string, buildArgs map[string]string, cacheRepo 
 
 	args := []string{"docker", "buildx", "build",
 		"--file", dockerfile,
-		"--platform", "linux/amd64,linux/arm64",
+		"--platform", "linux/amd64,linux/arm64,linux/arm",
 		"--output", fmt.Sprintf("type=image,push=%v", push),
 	}
 	for buildArgKey, buildArgValue := range buildArgs {
