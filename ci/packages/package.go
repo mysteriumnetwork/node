@@ -237,20 +237,35 @@ func PackageDockerSwaggerRedoc() error {
 		return err
 	}
 
-	if err := sh.RunV("bin/package_docker_docs"); err != nil {
+	buildID := env.Str(env.BuildNumber)
+	if buildID == "" {
+		buildID = "local"
+	}
+
+	args := []string{"docker", "buildx", "build",
+		"--file", path.Join("bin", "docs_docker", "Dockerfile"),
+		"--tag", "tequilapi:" + env.Str(env.BuildVersion),
+		"--platform", "linux/amd64,linux/arm64",
+		"--output", "type=image,push=false",
+	}
+
+	if env.Str(env.DockerHubUsername) != "" {
+		args = append(args, fmt.Sprintf(
+			"--cache-to=type=registry,ref=%s/documentation:build-cache-%s",
+			env.Str(env.DockerHubUsername),
+			buildID,
+		))
+	}
+
+	args = append(args, ".")
+
+	err := sh.RunV(args[0], args[1:]...)
+	if err != nil {
 		return err
 	}
-	if err := saveDockerImage("tequilapi:"+env.Str(env.BuildVersion), "build/docker-images/tequilapi_redoc.tgz"); err != nil {
-		return err
-	}
+
 	return env.IfRelease(func() error {
-		if err := storage.UploadSingleArtifact("tequilapi/docs/swagger.json"); err != nil {
-			return err
-		}
-		if err := storage.UploadDockerImages(); err != nil {
-			return err
-		}
-		return nil
+		return storage.UploadSingleArtifact("tequilapi/docs/swagger.json")
 	})
 }
 
