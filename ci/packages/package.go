@@ -20,9 +20,7 @@ package packages
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
-	"path/filepath"
 	"text/template"
 
 	"github.com/magefile/mage/mg"
@@ -201,33 +199,28 @@ func binFmtSupport() error {
 	return sh.RunV("docker", "run", "--rm", "--privileged", "linuxkit/binfmt:v0.8")
 }
 
-// PackageDockerAlpine builds and stores docker alpine image
-func PackageDockerAlpine() error {
-	mg.Deps(binFmtSupport)
-	logconfig.Bootstrap()
+func makeCacheRef(cacheRepo string) string {
+	return cacheRepo + ":build-cache"
+}
 
-	buildID := env.Str(env.BuildNumber)
-	if buildID == "" {
-		buildID = "local"
-	}
+func buildDockerImage(dockerfile string, buildArgs map[string]string, cacheRepo string, tags []string, push bool) error {
+	mg.Deps(binFmtSupport)
 
 	args := []string{"docker", "buildx", "build",
-		"--build-arg", "BUILD_BRANCH=" + env.Str(env.BuildBranch),
-		"--build-arg", "BUILD_COMMIT=" + env.Str(env.BuildCommit),
-		"--build-arg", "BUILD_NUMBER=" + env.Str(env.BuildNumber),
-		"--build-arg", "BUILD_VERSION=" + env.Str(env.BuildVersion),
-		"--file", path.Join("bin", "docker", "alpine", "Dockerfile"),
-		"--tag", "myst:alpine",
+		"--file", dockerfile,
 		"--platform", "linux/amd64,linux/arm64",
-		"--output", "type=image,push=false",
+		"--output", fmt.Sprintf("type=image,push=%v", push),
+	}
+	for buildArgKey, buildArgValue := range buildArgs {
+		args = append(args, "--build-arg", buildArgKey+"="+buildArgValue)
+	}
+	for _, tag := range tags {
+		args = append(args, "--tag", tag)
 	}
 
-	if env.Str(env.DockerHubUsername) != "" {
-		args = append(args, fmt.Sprintf(
-			"--cache-to=type=registry,ref=%s/myst:build-cache-%s",
-			env.Str(env.DockerHubUsername),
-			buildID,
-		))
+	if cacheRepo != "" {
+		args = append(args, "--cache-to=type=registry,ref="+makeCacheRef(cacheRepo))
+		args = append(args, "--cache-from=type=registry,ref="+makeCacheRef(cacheRepo))
 	}
 
 	args = append(args, ".")
@@ -235,37 +228,46 @@ func PackageDockerAlpine() error {
 	return sh.RunV(args[0], args[1:]...)
 }
 
+// BuildMystAlpineImage wraps buildDockerImage with required
+// parameters to build myst on Alpine
+func BuildMystAlpineImage(tags []string, push bool) error {
+	return buildDockerImage(
+		path.Join("bin", "docker", "alpine", "Dockerfile"),
+		map[string]string{
+			string(env.BuildBranch):  env.Str(env.BuildBranch),
+			string(env.BuildCommit):  env.Str(env.BuildCommit),
+			string(env.BuildNumber):  env.Str(env.BuildNumber),
+			string(env.BuildVersion): env.Str(env.BuildVersion),
+		},
+		"mysteriumnetwork/myst",
+		tags,
+		push,
+	)
+}
+
+// BuildMystDocumentationImage wraps buildDockerImage with required
+// parameters to build TequilAPI ReDoc image
+func BuildMystDocumentationImage(tags []string, push bool) error {
+	return buildDockerImage(
+		path.Join("bin", "docs_docker", "Dockerfile"),
+		nil,
+		"mysteriumnetwork/documentation",
+		tags,
+		push,
+	)
+}
+
+// PackageDockerAlpine builds and stores docker alpine image
+func PackageDockerAlpine() error {
+	logconfig.Bootstrap()
+	return BuildMystAlpineImage([]string{"myst:alpine"}, false)
+}
+
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
-	mg.Deps(binFmtSupport)
 	logconfig.Bootstrap()
-	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
-		return err
-	}
 
-	buildID := env.Str(env.BuildNumber)
-	if buildID == "" {
-		buildID = "local"
-	}
-
-	args := []string{"docker", "buildx", "build",
-		"--file", path.Join("bin", "docs_docker", "Dockerfile"),
-		"--tag", "tequilapi:" + env.Str(env.BuildVersion),
-		"--platform", "linux/amd64,linux/arm64",
-		"--output", "type=image,push=false",
-	}
-
-	if env.Str(env.DockerHubUsername) != "" {
-		args = append(args, fmt.Sprintf(
-			"--cache-to=type=registry,ref=%s/documentation:build-cache-%s",
-			env.Str(env.DockerHubUsername),
-			buildID,
-		))
-	}
-
-	args = append(args, ".")
-
-	err := sh.RunV(args[0], args[1:]...)
+	err := BuildMystDocumentationImage([]string{"tequilapi"}, false)
 	if err != nil {
 		return err
 	}
@@ -343,31 +345,4 @@ func packageDebian(binaryPath, arch string) error {
 		"BINARY": binaryPath,
 	}
 	return sh.RunWith(envs, "bin/package_debian", env.Str(env.BuildVersion), arch)
-}
-
-func saveDockerImage(image, outputPath string) error {
-	parentDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
-		return err
-	}
-	out, err := os.OpenFile(outputPath, os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	save := exec.Command("docker", "save", image)
-	gzip := exec.Command("gzip")
-	gzip.Stdin, _ = save.StdoutPipe()
-	gzip.Stdout = out
-	if err := gzip.Start(); err != nil {
-		return err
-	}
-	if err := save.Run(); err != nil {
-		return err
-	}
-	if err := gzip.Wait(); err != nil {
-		return err
-	}
-	return nil
 }
