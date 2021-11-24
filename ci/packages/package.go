@@ -200,13 +200,34 @@ func PackageAndroid() error {
 // PackageDockerAlpine builds and stores docker alpine image
 func PackageDockerAlpine() error {
 	logconfig.Bootstrap()
-	if err := sh.RunV("bin/package_docker"); err != nil {
-		return err
+
+	buildID := env.Str(env.BuildNumber)
+	if buildID == "" {
+		buildID = "local"
 	}
-	if err := saveDockerImage("myst:alpine", "build/docker-images/myst_alpine.tgz"); err != nil {
-		return err
+
+	args := []string{"docker", "buildx", "build",
+		"--build-arg", "BUILD_BRANCH=" + env.Str(env.BuildBranch),
+		"--build-arg", "BUILD_COMMIT=" + env.Str(env.BuildCommit),
+		"--build-arg", "BUILD_NUMBER=" + env.Str(env.BuildNumber),
+		"--build-arg", "BUILD_VERSION=" + env.Str(env.BuildVersion),
+		"--file", path.Join("bin", "docker", "alpine", "Dockerfile"),
+		"--tag", "myst:alpine",
+		"--platform", "linux/amd64,linux/arm64",
+		"--output", "type=image,push=false",
 	}
-	return env.IfRelease(storage.UploadDockerImages)
+
+	if env.Str(env.DockerHubUsername) != "" {
+		args = append(args, fmt.Sprintf(
+			"--cache-to=type=registry,ref=%s/myst:build-cache-%s",
+			env.Str(env.DockerHubUsername),
+			buildID,
+		))
+	}
+
+	args = append(args, ".")
+
+	return sh.RunV(args[0], args[1:]...)
 }
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
