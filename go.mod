@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Microsoft/go-winio v0.4.14
+	github.com/Microsoft/go-winio v0.4.16
 	github.com/andybalholm/brotli v1.0.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/arthurkiller/rollingwriter v1.1.2
@@ -40,7 +40,6 @@ require (
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/klauspost/pgzip v1.2.4 // indirect
 	github.com/koron/go-ssdp v0.0.2
-	github.com/kr/pretty v0.2.1 // indirect
 	github.com/lib/pq v1.7.0 // indirect
 	github.com/libp2p/go-libp2p v0.5.2
 	github.com/libp2p/go-libp2p-core v0.3.0
@@ -49,7 +48,7 @@ require (
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/feedback v1.1.1
-	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
+	github.com/mysteriumnetwork/go-ci v0.0.0-20211124142828-37ca8ff3ef34
 	github.com/mysteriumnetwork/go-dvpn-web v1.0.2
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
@@ -67,7 +66,6 @@ require (
 	github.com/pion/stun v0.3.5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.17.2
-	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
 	github.com/spf13/cast v1.3.1
@@ -88,6 +86,5 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.26.0
-	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

@@ -51,8 +51,8 @@ func linkerFlags() (flags []string) {
 	if env.Str(env.BuildBranch) != "" {
 		flags = append(flags, "-X", fmt.Sprintf("'github.com/mysteriumnetwork/node/metadata.BuildBranch=%s'", env.Str(env.BuildBranch)))
 	}
-	if env.Str("BUILD_COMMIT") != "" {
-		flags = append(flags, "-X", fmt.Sprintf("'github.com/mysteriumnetwork/node/metadata.BuildCommit=%s'", env.Str("BUILD_COMMIT")))
+	if env.Str(env.BuildCommit) != "" {
+		flags = append(flags, "-X", fmt.Sprintf("'github.com/mysteriumnetwork/node/metadata.BuildCommit=%s'", env.Str(env.BuildCommit)))
 	}
 	if env.Str(env.BuildNumber) != "" {
 		flags = append(flags, "-X", fmt.Sprintf("'github.com/mysteriumnetwork/node/metadata.BuildNumber=%s'", env.Str(env.BuildNumber)))
