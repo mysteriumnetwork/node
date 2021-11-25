@@ -219,7 +219,7 @@ func buildDockerImage(dockerfile string, buildArgs map[string]string, cacheRepo 
 	}
 
 	if cacheRepo != "" {
-		args = append(args, "--cache-to=type=registry,ref="+makeCacheRef(cacheRepo))
+		args = append(args, "--cache-to=type=registry,mode=max,ref="+makeCacheRef(cacheRepo))
 		args = append(args, "--cache-from=type=registry,ref="+makeCacheRef(cacheRepo))
 	}
 
