@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine AS builder
+FROM golang:1.17-alpine AS builder
 
 # Install packages
 RUN apk add --no-cache git bash gcc musl-dev make linux-headers
