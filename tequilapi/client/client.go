@@ -227,8 +227,10 @@ func (client *Client) RegisterIdentity(address string, token *string) error {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
+	switch response.StatusCode {
+	case http.StatusOK, http.StatusAccepted:
+	default:
+		return fmt.Errorf("expected 200 or 202 got %v", response.StatusCode)
 	}
 
 	return nil
