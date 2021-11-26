@@ -512,7 +512,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 
 	// 2. issue a self promise
-	msg, err := aps.issueSelfPromise(fromChainID, toChainID, amountToWithdraw, data.LatestPromise.Amount, providerID, consumerChannelAddress, hermesID)
+	promisedAmount := data.LatestPromise.Amount
+	if promisedAmount.Cmp(data.Settled) < 0 {
+		// If consumer has an incorrect promise. Issue a correct one
+		// together with a withdrawal request.
+		promisedAmount = data.Settled
+	}
+	msg, err := aps.issueSelfPromise(fromChainID, toChainID, amountToWithdraw, promisedAmount, providerID, consumerChannelAddress, hermesID)
 	if err != nil {
 		return err
 	}
