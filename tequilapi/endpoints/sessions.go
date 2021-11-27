@@ -150,8 +150,8 @@ func (endpoint *sessionsEndpoint) StatsDaily(c *gin.Context) {
 	request := c.Request
 
 	query := contract.SessionQuery{
-		DateFrom: conv.Date(strfmt.Date(time.Now().AddDate(0, 0, -30))),
-		DateTo:   conv.Date(strfmt.Date(time.Now())),
+		DateFrom: conv.Date(strfmt.Date(time.Now().UTC().AddDate(0, 0, -30))),
+		DateTo:   conv.Date(strfmt.Date(time.Now().UTC())),
 	}
 	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
