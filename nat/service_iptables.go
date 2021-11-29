@@ -18,6 +18,7 @@
 package nat
 
 import (
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -36,6 +37,7 @@ type serviceIPTables struct {
 }
 
 const (
+	chainMyst        = "MYST"
 	chainInput       = "INPUT"
 	chainForward     = "FORWARD"
 	chainPreRouting  = "PREROUTING"
@@ -92,7 +94,12 @@ func (svc *serviceIPTables) Del(rules []interface{}) (err error) {
 
 // Enable enables NAT service.
 func (svc *serviceIPTables) Enable() error {
-	err := svc.ipForward.Enable()
+	err := svc.prepare()
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to prepare iptables setup")
+	}
+
+	err = svc.ipForward.Enable()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to enable IP forwarding")
 	}
@@ -102,7 +109,17 @@ func (svc *serviceIPTables) Enable() error {
 // Disable disables NAT service and deletes all rules.
 func (svc *serviceIPTables) Disable() error {
 	svc.ipForward.Disable()
-	return svc.Del(untypedIptRules(svc.rules))
+	err := svc.Del(untypedIptRules(svc.rules))
+	if err != nil {
+		return fmt.Errorf("failed to cleanup iptables rules")
+	}
+
+	err = svc.clean()
+	if err != nil {
+		return fmt.Errorf("failed to cleanup iptables chains")
+	}
+
+	return nil
 }
 
 func (svc *serviceIPTables) applyRule(rule iptables.Rule) error {
@@ -126,13 +143,49 @@ func (svc *serviceIPTables) removeRule(rule iptables.Rule) error {
 	return nil
 }
 
+func (svc *serviceIPTables) prepare() error {
+	err := iptablesExec("--new", chainMyst, "--table", "nat")
+	if err != nil {
+		return fmt.Errorf("failed to create MYST iptables chain: %w", err)
+	}
+
+	for _, ipNet := range protectedNetworks() {
+		// Protect private networks rule
+		err = svc.applyRule(iptables.AppendTo(chainMyst).RuleSpec(
+			"--destination", ipNet.String(), "--jump", "DNAT", "--to-destination", "240.0.0.1", "--table", "nat"))
+		if err != nil {
+			return fmt.Errorf("failed to create blackhole rule in the MYST iptables chain: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (svc *serviceIPTables) clean() error {
+	err := iptablesExec("--flush", chainMyst, "--table", "nat")
+	if err != nil {
+		return fmt.Errorf("failed to flush MYST iptables chain: %w", err)
+	}
+
+	err = iptablesExec("--delete-chain", chainMyst, "--table", "nat")
+	if err != nil {
+		return fmt.Errorf("failed to delete MYST iptables chain: %w", err)
+	}
+
+	return nil
+}
+
 func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 	vpnNetwork := opts.VPNNetwork.String()
 
+	rule := iptables.InsertAt(chainPreRouting, 1).RuleSpec(
+		"--source", vpnNetwork, "--jump", chainMyst, "--table", "nat")
+	rules = append(rules, rule)
+
 	if opts.EnableDNSRedirect {
 		// DNS port redirect rule (udp)
-		rule := iptables.AppendTo(chainPreRouting).RuleSpec(
-			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(53),
+		rule := iptables.InsertAt(chainMyst, 1).RuleSpec(
+			"--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(53),
 			"--jump", "REDIRECT",
 			"--to-ports", strconv.Itoa(opts.DNSPort),
 			"--table", "nat",
@@ -140,51 +193,17 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 		rules = append(rules, rule)
 
 		// DNS port redirect rule (tcp)
-		rule = iptables.AppendTo(chainPreRouting).RuleSpec(
-			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(53),
+		rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
+			"--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(53),
 			"--jump", "REDIRECT",
 			"--to-ports", strconv.Itoa(opts.DNSPort),
 			"--table", "nat",
 		)
 		rules = append(rules, rule)
-
-		// Enable pings rule (tcp)
-		rule = iptables.InsertAt(chainInput, 1).RuleSpec(
-			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "icmp", "--jump", "ACCEPT",
-		)
-		rules = append(rules, rule)
-
-		// DNS port input rule (tcp)
-		rule = iptables.InsertAt(chainInput, 1).RuleSpec(
-			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(opts.DNSPort),
-			"--jump", "ACCEPT",
-		)
-		rules = append(rules, rule)
-
-		// DNS port input rule (udp)
-		rule = iptables.InsertAt(chainInput, 1).RuleSpec(
-			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(opts.DNSPort),
-			"--jump", "ACCEPT",
-		)
-		rules = append(rules, rule)
-	}
-
-	for _, ipNet := range protectedNetworks() {
-		// Protect private networks rule
-		rule := iptables.AppendTo(chainForward).RuleSpec(
-			"--source", vpnNetwork, "--destination", ipNet.String(),
-			"--jump", "DROP")
-		rules = append(rules, rule)
-
-		// Protect host rule
-		rule = iptables.AppendTo(chainInput).RuleSpec(
-			"--source", vpnNetwork, "--destination", ipNet.String(),
-			"--jump", "DROP")
-		rules = append(rules, rule)
 	}
 
 	// NAT forwarding rule
-	rule := iptables.AppendTo(chainPostRouting).RuleSpec("--source", vpnNetwork, "!", "--destination", vpnNetwork,
+	rule = iptables.AppendTo(chainPostRouting).RuleSpec("--source", vpnNetwork, "!", "--destination", vpnNetwork,
 		"--jump", "SNAT", "--to", opts.ProviderExtIP.String(),
 		"--table", "nat")
 	rules = append(rules, rule)
