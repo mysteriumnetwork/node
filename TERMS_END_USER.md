@@ -1,4 +1,4 @@
-**MYSTERIUM NETWORK OPEN ALPHA** 
+**MYSTERIUM NETWORK BETA** 
 
 **This document includes:**
 
@@ -11,7 +11,7 @@
 
 **SHORT VERSION IN HUMAN LANGUAGE:**
 
- - Mysterium Network is still in its development (alpha version) stage. We will do our best to develop it further, but we cannot guarantee this.
+ - Mysterium Network is still in beta stage. We will do our best to develop it further, but we cannot guarantee this.
 
  - You cannot use or encourage or assist others to use the network in any way which violates any laws or rights of any party, including intellectual property rights. 
 
