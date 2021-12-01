@@ -22,7 +22,7 @@ package metadata
 const CurrentTermsVersion = "0.0.34"
 
 const termsAndConditions = `
-                       MYSTERIUM NETWORK OPEN ALPHA
+                          MYSTERIUM NETWORK BETA
                                TERMS OF USE
                            FOR MYSTERIUM NODES
 
@@ -37,15 +37,15 @@ SHORT VERSION IN HUMAN LANGUAGE FOR EXIT NODE:
  - We recommend that you read the full version below to get acquainted with all of the terms and conditions.
 
 SHORT VERSION IN HUMAN LANGUAGE FOR END USER:
- - We recommend you to read the full version bellow to get acquainted with all of the terms and conditions.
  - Mysterium Network is still in beta stage. We will do our best to develop it further, but we cannot guarantee this.
  - You cannot use or encourage or assist others to use the network in any way which violates any laws or rights of any party, including intellectual property rights.
  - Your use of the network is at your own risk. We provide it to you “as is” without any warranties.
  - You are responsible for all the content that you receive, distribute or otherwise transmit through the network.
  - You can use the network with our Mysterium software ([https://github.com/mysteriumnetwork/](https://github.com/mysteriumnetwork/)) or any other compatible software.
  - In no event will we be liable for any damages which you may incur.
+ - We recommend you to read the full version bellow to get acquainted with all of the terms and conditions.
 
-We recommend that you read the full versions below to get acquainted 
+We recommend that you read the full versions below to get acquainted
    with all of the terms and conditions available here:
       https://github.com/mysteriumnetwork/terms/blob/master/documents/TERMS_EXIT_NODE.md
       https://github.com/mysteriumnetwork/terms/blob/master/documents/TERMS_END_USER.md`
