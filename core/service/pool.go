@@ -176,7 +176,7 @@ func (i *Instance) State() servicestate.State {
 	return i.state
 }
 
-func (i *Instance) ProposalWithCurrentLocation() market.ServiceProposal {
+func (i *Instance) proposalWithCurrentLocation() market.ServiceProposal {
 	location, err := i.location.DetectLocation()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to get current location for proposal, using last known location")

@@ -170,7 +170,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		location:       manager.location,
 	}
 
-	discovery.Start(providerID, instance.ProposalWithCurrentLocation)
+	discovery.Start(providerID, instance.proposalWithCurrentLocation)
 
 	channelHandlers := func(ch p2p.Channel) {
 		chID := "channel:" + ch.ID()

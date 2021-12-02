@@ -22,11 +22,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	identityregistry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -54,7 +55,7 @@ func TestStartRegistersProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Registered}
 
-	d.Start(providerID, serviceProposal)
+	d.Start(providerID, func() market.ServiceProposal { return serviceProposal })
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -64,7 +65,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Unregistered}
 
-	d.Start(providerID, serviceProposal)
+	d.Start(providerID, func() market.ServiceProposal { return serviceProposal })
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
@@ -83,7 +84,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 	mockRegistry := &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Unregistered}
 	d.identityRegistry = mockRegistry
 
-	d.Start(providerID, serviceProposal)
+	d.Start(providerID, func() market.ServiceProposal { return serviceProposal })
 	defer d.Stop()
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
@@ -102,7 +103,7 @@ func TestStartStopUnregisterProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Registered}
 
-	d.Start(providerID, serviceProposal)
+	d.Start(providerID, func() market.ServiceProposal { return serviceProposal })
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -125,8 +126,7 @@ func observeStatus(d *Discovery, status Status) Status {
 	}
 }
 
-type mockedProposalRegistry struct {
-}
+type mockedProposalRegistry struct{}
 
 func (mockedProposalRegistry) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	return nil
