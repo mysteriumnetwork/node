@@ -22,6 +22,9 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -31,8 +34,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/node/utils/reftracker"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -60,7 +61,7 @@ type DiscoveryFactory func() Discovery
 
 // Discovery registers the service to the discovery api periodically
 type Discovery interface {
-	Start(ownIdentity identity.Identity, proposal market.ServiceProposal)
+	Start(ownIdentity identity.Identity, proposal func() market.ServiceProposal)
 	Stop()
 	Wait()
 }
@@ -149,7 +150,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	})
 
 	discovery := manager.discoveryFactory()
-	discovery.Start(providerID, proposal)
 
 	id, err = generateID()
 	if err != nil {
@@ -167,7 +167,10 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		policies:       policyRules,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
+		location:       manager.location,
 	}
+
+	discovery.Start(providerID, instance.proposalWithCurrentLocation)
 
 	channelHandlers := func(ch p2p.Channel) {
 		chID := "channel:" + ch.ID()

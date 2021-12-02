@@ -20,13 +20,15 @@ package service
 import (
 	"sync"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/pkg/errors"
 )
 
 // ID represent unique identifier of the running service.
@@ -154,6 +156,7 @@ type Instance struct {
 	eventPublisher  Publisher
 	p2pChannelsLock sync.Mutex
 	p2pChannels     []p2p.Channel
+	location        locationResolver
 }
 
 // Service returns the running service implementation.
@@ -171,6 +174,18 @@ func (i *Instance) State() servicestate.State {
 	i.stateLock.RLock()
 	defer i.stateLock.RUnlock()
 	return i.state
+}
+
+func (i *Instance) proposalWithCurrentLocation() market.ServiceProposal {
+	location, err := i.location.DetectLocation()
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to get current location for proposal, using last known location")
+		return i.Proposal
+	}
+
+	i.Proposal.Location = *market.NewLocation(location)
+
+	return i.Proposal
 }
 
 func (i *Instance) setState(newState servicestate.State) {

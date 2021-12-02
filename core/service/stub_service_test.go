@@ -60,9 +60,10 @@ type mockDiscovery struct {
 	wg sync.WaitGroup
 }
 
-func (mds *mockDiscovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
+func (mds *mockDiscovery) Start(ownIdentity identity.Identity, proposal func() market.ServiceProposal) {
 	mds.wg.Add(1)
 }
+
 func (mds *mockDiscovery) Stop() {
 	mds.wg.Done()
 }

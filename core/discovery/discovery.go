@@ -21,13 +21,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/rs/zerolog/log"
 )
 
 // Status describes stage of proposal registration
@@ -54,7 +55,7 @@ type Discovery struct {
 	proposalPingTTL  time.Duration
 	signerCreate     identity.SignerFactory
 	signer           identity.Signer
-	proposal         market.ServiceProposal
+	proposal         func() market.ServiceProposal
 	eventBus         eventbus.EventBus
 
 	statusChan                  chan Status
@@ -88,7 +89,7 @@ func NewService(
 }
 
 // Start launches discovery service
-func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
+func (d *Discovery) Start(ownIdentity identity.Identity, proposal func() market.ServiceProposal) {
 	log.Info().Msg("Starting discovery...")
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -183,7 +184,8 @@ func (d *Discovery) registerIdentity() {
 }
 
 func (d *Discovery) registerProposal() {
-	err := d.proposalRegistry.RegisterProposal(d.proposal, d.signer)
+	proposal := d.proposal()
+	err := d.proposalRegistry.RegisterProposal(proposal, d.signer)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to register proposal, retrying after 1 min")
 		select {
@@ -194,7 +196,7 @@ func (d *Discovery) registerProposal() {
 			return
 		}
 	}
-	d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
+	d.eventBus.Publish(AppTopicProposalAnnounce, proposal)
 	d.changeStatus(PingProposal)
 }
 
@@ -203,18 +205,19 @@ func (d *Discovery) pingProposal() {
 	case <-d.stop:
 		return
 	case <-time.After(d.proposalPingTTL):
-		err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
+		proposal := d.proposal()
+		err := d.proposalRegistry.PingProposal(proposal, d.signer)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to ping proposal")
 		}
-
-		d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
+		d.eventBus.Publish(AppTopicProposalAnnounce, proposal)
 		d.changeStatus(PingProposal)
 	}
 }
 
 func (d *Discovery) unregisterProposal() {
-	err := d.proposalRegistry.UnregisterProposal(d.proposal, d.signer)
+	proposal := d.proposal()
+	err := d.proposalRegistry.UnregisterProposal(proposal, d.signer)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to unregister proposal: ")
 		d.changeStatus(UnregisterProposalFailed)
