@@ -171,7 +171,7 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 	}
 
 	switch status {
-	case registry.Unregistered, registry.RegistrationError:
+	case registry.Unregistered, registry.RegistrationError, registry.Unknown:
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnregistered, ""))
 		log.Error().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
