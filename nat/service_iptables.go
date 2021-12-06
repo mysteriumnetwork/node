@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/firewall/iptables"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
@@ -94,6 +95,11 @@ func (svc *serviceIPTables) Del(rules []interface{}) (err error) {
 
 // Enable enables NAT service.
 func (svc *serviceIPTables) Enable() error {
+	if config.GetBool(config.FlagUserMode) {
+		log.Info().Msg("Usermode active, nothing to do with iptables")
+		return nil
+	}
+
 	err := svc.prepare()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to prepare iptables setup")
@@ -108,6 +114,11 @@ func (svc *serviceIPTables) Enable() error {
 
 // Disable disables NAT service and deletes all rules.
 func (svc *serviceIPTables) Disable() error {
+	if config.GetBool(config.FlagUserMode) {
+		log.Info().Msg("Usermode active, nothing to do with iptables")
+		return nil
+	}
+
 	svc.ipForward.Disable()
 	err := svc.Del(untypedIptRules(svc.rules))
 	if err != nil {
