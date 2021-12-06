@@ -52,6 +52,7 @@ type Transactor interface {
 	ReferralTokenAvailable(id common.Address) error
 	RegistrationTokenReward(token string) (*big.Int, error)
 	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
+	GetFreeProviderRegistrationEligibility() (bool, error)
 }
 
 // promiseSettler settles the given promises
@@ -654,6 +655,26 @@ func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
 }
 
+// swagger:operation GET /identities/provider/eligibility ProviderEligibility
+// ---
+// summary: Checks if provider is eligible for free registration
+// responses:
+//   200:
+//     description: Eligibility response
+//     schema:
+//       "$ref": "#/definitions/EligibilityResponse"
+func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context) {
+	resp := c.Writer
+
+	res, err := te.transactor.GetFreeProviderRegistrationEligibility()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
@@ -668,6 +689,7 @@ func AddRoutesForTransactor(
 		idGroup := e.Group("/identities")
 		{
 			idGroup.POST("/:id/register", te.RegisterIdentity)
+			idGroup.GET("/provider/eligibility", te.FreeProviderRegistrationEligibility)
 			idGroup.GET("/:id/eligibility", te.FreeRegistrationEligibility)
 		}
 
