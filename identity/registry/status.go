@@ -35,6 +35,9 @@ const (
 	InProgress
 	// RegistrationError shows that an error occurred during registration
 	RegistrationError
+	// Unknown is returned when there was an error fetching registration status and it is now
+	// impossible to determine. A request should be retried to get the status again.
+	Unknown
 )
 
 // String converts registration to human readable notation
@@ -44,7 +47,7 @@ func (rs RegistrationStatus) String() string {
 		"Unregistered",
 		"InProgress",
 		"RegistrationError",
-		"RegistrationError",
+		"Unknown",
 	}[rs]
 }
 
