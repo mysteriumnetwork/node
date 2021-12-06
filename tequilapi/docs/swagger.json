@@ -713,6 +713,20 @@
         }
       }
     },
+    "/identities/provider/eligibility": {
+      "get": {
+        "summary": "Checks if provider is eligible for free registration",
+        "operationId": "ProviderEligibility",
+        "responses": {
+          "200": {
+            "description": "Eligibility response",
+            "schema": {
+              "$ref": "#/definitions/EligibilityResponse"
+            }
+          }
+        }
+      }
+    },
     "/identities/{id}": {
       "get": {
         "description": "Provide identity details",
