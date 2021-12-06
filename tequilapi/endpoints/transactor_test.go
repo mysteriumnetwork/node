@@ -349,7 +349,7 @@ func Test_AvailableChains(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&chainSummary)
 	fmt.Println(chainSummary)
 	assert.NoError(t, err)
-	assert.Equal(t, "Matic(Polygon) Mainnet", chainSummary.Chains[137])
+	assert.Equal(t, "Polygon Mainnet", chainSummary.Chains[137])
 	assert.Equal(t, config.FlagChainID.Value, chainSummary.CurrentChain)
 }
 
