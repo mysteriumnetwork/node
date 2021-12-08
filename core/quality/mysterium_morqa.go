@@ -142,6 +142,23 @@ func (m *MysteriumMORQA) addMetric(event *metrics.Event) {
 	m.eventsMu.Lock()
 	defer m.eventsMu.Unlock()
 
+	switch event.Metric.(type) {
+	case *metrics.Event_SessionStatisticsPayload: // Allow sending only the last session statistics payload in a single batch.
+		for i, e := range m.batch.Events {
+			if _, ok := e.Metric.(*metrics.Event_SessionStatisticsPayload); ok {
+				m.batch.Events[i] = event
+				return
+			}
+		}
+	case *metrics.Event_PingEvent: // Allow sending only the last ping event in a single batch.
+		for i, e := range m.batch.Events {
+			if _, ok := e.Metric.(*metrics.Event_PingEvent); ok {
+				m.batch.Events[i] = event
+				return
+			}
+		}
+	}
+
 	m.batch.Events = append(m.batch.Events, event)
 }
 
