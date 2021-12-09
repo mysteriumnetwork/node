@@ -27,12 +27,41 @@ import (
 
 // PaymentOrderResponse represents a payment order for mobile usage.
 type PaymentOrderResponse struct {
-	Order []byte `json:"order"`
+	ID                string          `json:"id"`
+	Status            string          `json:"status"`
+	IdentityAddress   string          `json:"identity"`
+	ChannelAddress    string          `json:"channel_address"`
+	Gateway           string          `json:"gateway"`
+	ReceiveMYST       string          `json:"receive_myst"`
+	PayAmount         string          `json:"pay_amount"`
+	PayCurrency       string          `json:"pay_currency"`
+	Country           string          `json:"country"`
+	Currency          string          `json:"currency"`
+	ItemsSubTotal     string          `json:"items_sub_total"`
+	TaxRate           string          `json:"tax_rate"`
+	TaxSubTotal       string          `json:"tax_sub_total"`
+	OrderTotal        string          `json:"order_total"`
+	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
 }
 
-func newPaymentOrderResponse(r pilvytis.PaymentOrderResponse) (PaymentOrderResponse, error) {
-	o, err := json.Marshal(r)
-	return PaymentOrderResponse{Order: o}, err
+func newPaymentOrderResponse(r pilvytis.PaymentOrderResponse) PaymentOrderResponse {
+	return PaymentOrderResponse{
+		ID:                r.ID,
+		Status:            r.Status.Status(),
+		IdentityAddress:   r.Identity,
+		ChannelAddress:    r.ChannelAddress,
+		Gateway:           r.GatewayName,
+		ReceiveMYST:       r.ReceiveMYST,
+		PayAmount:         r.PayAmount,
+		PayCurrency:       r.PayCurrency,
+		Country:           r.Country,
+		Currency:          r.Currency,
+		ItemsSubTotal:     r.ItemsSubTotal,
+		TaxRate:           r.TaxRate,
+		TaxSubTotal:       r.TaxSubTotal,
+		OrderTotal:        r.OrderTotal,
+		PublicGatewayData: r.PublicGatewayData,
+	}
 }
 
 // GetPaymentOrderRequest a request to get an order.
@@ -48,10 +77,7 @@ func (mb *MobileNode) GetPaymentGatewayOrder(req *GetPaymentOrderRequest) ([]byt
 		return nil, err
 	}
 
-	res, err := newPaymentOrderResponse(*order)
-	if err != nil {
-		return nil, err
-	}
+	res := newPaymentOrderResponse(*order)
 
 	return json.Marshal(res)
 }
@@ -130,10 +156,7 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 		return nil, err
 	}
 
-	res, err := newPaymentOrderResponse(*order)
-	if err != nil {
-		return nil, err
-	}
+	res := newPaymentOrderResponse(*order)
 
 	return json.Marshal(res)
 }
@@ -148,10 +171,7 @@ func (mb *MobileNode) ListPaymentGatewayOrders(req *ListOrdersRequest) ([]byte, 
 	res := make([]PaymentOrderResponse, len(orders))
 
 	for i := range orders {
-		orderRes, err := newPaymentOrderResponse(orders[i])
-		if err != nil {
-			return nil, err
-		}
+		orderRes := newPaymentOrderResponse(orders[i])
 
 		res[i] = orderRes
 	}
