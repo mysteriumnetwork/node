@@ -455,7 +455,7 @@ func (client *Client) GetPayout(identity string) (contract.PayoutAddressRequest,
 // Stop kills mysterium client
 func (client *Client) Stop() error {
 	emptyPayload := struct{}{}
-	response, err := client.http.Post("/stop", emptyPayload)
+	response, err := client.http.Post("stop", emptyPayload)
 	if err != nil {
 		return err
 	}
