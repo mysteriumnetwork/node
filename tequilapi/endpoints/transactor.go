@@ -351,7 +351,7 @@ func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
 	}
 
 	var settlements []pingpong.SettlementHistoryEntry
-	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), query.PageSize, query.PageSize)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), query.PageSize, query.Page)
 	if err := p.Results(&settlements); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
