@@ -28,6 +28,7 @@ import (
 // ProposalsQuery represents URL query for proposal listing
 type ProposalsQuery struct {
 	ProviderID      string
+	ProviderIDs     []string
 	ServiceType     string
 	LocationCountry string
 
@@ -45,6 +46,9 @@ func (q ProposalsQuery) ToURLValues() url.Values {
 	values := url.Values{}
 	if q.ProviderID != "" {
 		values.Set("provider_id", q.ProviderID)
+	}
+	for _, p := range q.ProviderIDs {
+		values.Add("provider_id", p)
 	}
 	if q.ServiceType != "" {
 		values.Set("service_type", q.ServiceType)
