@@ -26,17 +26,14 @@ import (
 	"net/url"
 	"testing"
 
-	"golang.org/x/net/context"
-
-	"github.com/mysteriumnetwork/node/nat"
-
 	"github.com/gin-gonic/gin"
-
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/nat"
 )
 
 var TestLocation = market.Location{ASN: 123, Country: "Lithuania", City: "Vilnius"}
@@ -300,6 +297,11 @@ func (m *mockProposalRepository) Proposal(_ market.ProposalID) (*proposal.Priced
 func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error) {
 	m.recordedFilter = filter
 	return m.proposals, nil
+}
+
+func (m *mockProposalRepository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	m.recordedFilter = filter
+	return nil, nil
 }
 
 func (m *mockProposalRepository) EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error) {

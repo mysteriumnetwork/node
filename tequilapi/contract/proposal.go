@@ -70,6 +70,10 @@ type ListProposalsResponse struct {
 	Proposals []ProposalDTO `json:"proposals"`
 }
 
+// ListProposalsCountiesResponse holds number of proposals per country.
+// swagger:model ListProposalsCountiesResponse
+type ListProposalsCountiesResponse map[string]int
+
 // ProposalDTO holds service proposal details.
 // swagger:model ProposalDTO
 type ProposalDTO struct {

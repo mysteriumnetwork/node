@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -168,6 +169,109 @@ func (pe *proposalsEndpoint) List(c *gin.Context) {
 	utils.WriteAsJSON(proposalsRes, resp)
 }
 
+// swagger:operation GET /proposals/countries Countries listCountries
+// ---
+// summary: Returns number of proposals per country
+// description: Returns list of countries with a number of proposals
+// parameters:
+//   - in: query
+//     name: provider_id
+//     description: id of provider proposals
+//     type: string
+//   - in: query
+//     name: service_type
+//     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
+//     type: string
+//   - in: query
+//     name: access_policy
+//     description: the access policy id to filter the proposals by
+//     type: string
+//   - in: query
+//     name: access_policy_source
+//     description: the access policy source to filter the proposals by
+//     type: string
+//   - in: query
+//     name: country
+//     description: If given will filter proposals by node location country.
+//     type: string
+//   - in: query
+//     name: ip_type
+//     description: IP Type (residential, datacenter, etc.).
+//     type: string
+//   - in: query
+//     name: compatibility_min
+//     description: Minimum compatibility level of the proposal.
+//     type: integer
+//   - in: query
+//     name: compatibility_max
+//     description: Maximum compatibility level of the proposal.
+//     type: integer
+//   - in: query
+//     name: quality_min
+//     description: Minimum quality of the provider.
+//     type: number
+//   - in: query
+//     name: nat_compatibility
+//     description: Pick nodes compatible with NAT of specified type. Specify "auto" to probe NAT.
+//     type: string
+// responses:
+//   200:
+//     description: List of countries
+//     schema:
+//       "$ref": "#/definitions/ListProposalsCountiesResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (pe *proposalsEndpoint) Countries(c *gin.Context) {
+	req := c.Request
+	resp := c.Writer
+
+	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
+	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
+	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
+	qualityMin := func() float32 {
+		f, err := strconv.ParseFloat(req.URL.Query().Get("quality_min"), 32)
+		if err != nil {
+			return 0
+		}
+		return float32(f)
+	}()
+
+	natCompatibility := nat.NATType(req.URL.Query().Get("nat_compatibility"))
+	if natCompatibility == contract.AutoNATType {
+		natType, err := pe.natProber.Probe(req.Context())
+		if err != nil {
+			natCompatibility = ""
+		} else {
+			natCompatibility = natType
+		}
+	}
+
+	includeMonitoringFailed, _ := strconv.ParseBool(req.URL.Query().Get("include_monitoring_failed"))
+	countries, err := pe.proposalRepository.Countries(&proposal.Filter{
+		PresetID:                presetID,
+		ProviderID:              req.URL.Query().Get("provider_id"),
+		ServiceType:             req.URL.Query().Get("service_type"),
+		AccessPolicy:            req.URL.Query().Get("access_policy"),
+		AccessPolicySource:      req.URL.Query().Get("access_policy_source"),
+		LocationCountry:         req.URL.Query().Get("location_country"),
+		IPType:                  req.URL.Query().Get("ip_type"),
+		NATCompatibility:        natCompatibility,
+		CompatibilityMin:        compatibilityMin,
+		CompatibilityMax:        compatibilityMax,
+		QualityMin:              qualityMin,
+		ExcludeUnsupported:      true,
+		IncludeMonitoringFailed: includeMonitoringFailed,
+	})
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(countries, resp)
+}
+
 // swagger:operation GET /prices/current
 // ---
 // summary: Returns proposals
@@ -244,6 +348,7 @@ func AddRoutesForProposals(
 		{
 			proposalGroup.GET("", pe.List)
 			proposalGroup.GET("/filter-presets", pe.FilterPresets)
+			proposalGroup.GET("/countries", pe.Countries)
 		}
 
 		e.GET("/prices/current", pe.CurrentPrice)
