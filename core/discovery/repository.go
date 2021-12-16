@@ -20,10 +20,11 @@ package discovery
 import (
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/rs/zerolog/log"
 )
 
 // repository provides proposals from multiple other repositories.
@@ -92,4 +93,21 @@ func (c *repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposa
 
 	log.Err(allErrors.Error()).Msgf("Returning %d unique proposals", len(result))
 	return result, allErrors.Error()
+}
+
+// Countries returns proposals per country matching the filter.
+func (c *repository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	countries := make(map[string]int, 0)
+
+	for _, repo := range c.delegates {
+		repoCountries, err := repo.Countries(filter)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range repoCountries {
+			countries[k] += v
+		}
+	}
+
+	return countries, nil
 }

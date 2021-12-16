@@ -1463,6 +1463,92 @@
         }
       }
     },
+    "/proposals/countries": {
+      "get": {
+        "description": "Returns list of countries with a number of proposals",
+        "tags": [
+          "Countries"
+        ],
+        "summary": "Returns number of proposals per country",
+        "operationId": "listCountries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "id of provider proposals",
+            "name": "provider_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "the service type of the proposal. Possible values are \"openvpn\", \"wireguard\" and \"noop\"",
+            "name": "service_type",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "the access policy id to filter the proposals by",
+            "name": "access_policy",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "the access policy source to filter the proposals by",
+            "name": "access_policy_source",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "If given will filter proposals by node location country.",
+            "name": "country",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "IP Type (residential, datacenter, etc.).",
+            "name": "ip_type",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Minimum compatibility level of the proposal.",
+            "name": "compatibility_min",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Maximum compatibility level of the proposal.",
+            "name": "compatibility_max",
+            "in": "query"
+          },
+          {
+            "type": "number",
+            "description": "Minimum quality of the provider.",
+            "name": "quality_min",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Pick nodes compatible with NAT of specified type. Specify \"auto\" to probe NAT.",
+            "name": "nat_compatibility",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of countries",
+            "schema": {
+              "$ref": "#/definitions/ListProposalsCountiesResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/proposals/filter-presets": {
       "get": {
         "description": "Returns proposal filter presets",
@@ -3243,6 +3329,15 @@
           },
           "x-go-name": "Items"
         }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ListProposalsCountiesResponse": {
+      "type": "object",
+      "title": "ListProposalsCountiesResponse holds number of proposals per country.",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "int64"
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },

@@ -67,6 +67,31 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	return supported, nil
 }
 
+// QueryCountries returns active service proposals number per country.
+func (mApi *MysteriumAPI) QueryCountries(query ProposalsQuery) (map[string]int, error) {
+	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "countries", query.ToURLValues())
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := mApi.httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot fetch countries")
+	}
+	defer res.Body.Close()
+
+	if err := requests.ParseResponseError(res); err != nil {
+		return nil, err
+	}
+
+	countries := make(map[string]int, 0)
+	if err := requests.ParseResponseJSON(res, &countries); err != nil {
+		return nil, errors.Wrap(err, "cannot parse countries response")
+	}
+
+	return countries, nil
+}
+
 // GetPricing gets the pricing from discovery.
 func (mApi *MysteriumAPI) GetPricing() (market.LatestPrices, error) {
 	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "prices", nil)

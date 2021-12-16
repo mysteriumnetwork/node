@@ -273,6 +273,7 @@ func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 type proposalRepository interface {
 	Proposal(id market.ProposalID) (*proposal.PricedServiceProposal, error)
 	Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error)
+	Countries(filter *proposal.Filter) (map[string]int, error)
 	EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error)
 }
 

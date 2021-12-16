@@ -27,6 +27,7 @@ type Repository interface {
 	Proposal(id market.ProposalID) (*market.ServiceProposal, error)
 	// Proposals returns proposals matching the filter.
 	Proposals(filter *Filter) ([]market.ServiceProposal, error)
+	Countries(filter *Filter) (map[string]int, error)
 }
 
 // PricedServiceProposal enriches proposals with price data.

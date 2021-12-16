@@ -69,6 +69,11 @@ func (r *Repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposa
 	return r.storage.FindProposals(filter)
 }
 
+// Countries returns proposals per country matching the filter.
+func (r *Repository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	return r.storage.Countries(filter)
+}
+
 // Start begins proposals synchronization to storage
 func (r *Repository) Start() error {
 	err := r.receiver.Receive(&registerConsumer{Callback: r.proposalRegisterMessage})

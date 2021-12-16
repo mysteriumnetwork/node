@@ -18,9 +18,10 @@
 package discovery
 
 import (
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/rs/zerolog/log"
 )
 
 // PricedServiceProposalRepository enriches proposals with price data as pricing data is not available on raw proposals.
@@ -77,6 +78,11 @@ func (pspr *PricedServiceProposalRepository) Proposals(filter *proposal.Filter) 
 	}
 
 	return priced, nil
+}
+
+// Countries fetches number of proposals per country from base repository.
+func (pspr *PricedServiceProposalRepository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	return pspr.baseRepo.Countries(filter)
 }
 
 // EnrichProposalWithPrice adds pricing info to service proposal.
