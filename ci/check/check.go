@@ -86,17 +86,23 @@ func CheckDNSMaps() error {
 			return err
 		}
 
+		found := false
+
 		for _, ip := range v {
-			found := false
 			for i := range ips {
 				if ips[i].String() == ip {
 					found = true
 					break
 				}
 			}
-			if !found {
-				ipMissmatches = append(ipMissmatches, fmt.Sprintf("ip: %v, host: %v", ip, k))
+
+			if found {
+				break
 			}
+		}
+
+		if !found {
+			ipMissmatches = append(ipMissmatches, fmt.Sprintf("ip: %v, host: %v", ips, k))
 		}
 
 	}
