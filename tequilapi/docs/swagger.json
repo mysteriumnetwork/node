@@ -4342,6 +4342,10 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TotalPages"
+        },
+        "withdrawal_total": {
+          "type": "string",
+          "x-go-name": "WithdrawalTotal"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

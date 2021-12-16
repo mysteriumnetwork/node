@@ -350,14 +350,21 @@ func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
 		return
 	}
 
-	var settlements []pingpong.SettlementHistoryEntry
-	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), query.PageSize, query.PageSize)
-	if err := p.Results(&settlements); err != nil {
+	var pagedSettlements []pingpong.SettlementHistoryEntry
+	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), query.PageSize, query.Page)
+	if err := p.Results(&pagedSettlements); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	response := contract.NewSettlementListResponse(settlements, p)
+	WithdrawalTotal := big.NewInt(0)
+	for _, s := range settlementsAll {
+		if s.IsWithdrawal {
+			WithdrawalTotal.Add(WithdrawalTotal, s.Amount)
+		}
+	}
+
+	response := contract.NewSettlementListResponse(WithdrawalTotal, pagedSettlements, p)
 	utils.WriteAsJSON(response, resp)
 }
 
