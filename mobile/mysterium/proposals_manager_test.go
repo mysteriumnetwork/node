@@ -155,6 +155,10 @@ func (m *mockRepository) Proposals(filter *proposal.Filter) ([]proposal.PricedSe
 	return m.data, nil
 }
 
+func (m *mockRepository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	return nil, nil
+}
+
 type mockNATProber struct {
 	returnRes nat.NATType
 	returnErr error

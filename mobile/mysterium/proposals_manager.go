@@ -100,6 +100,8 @@ type getProposalsResponse struct {
 	Proposals []*proposalDTO `json:"proposals"`
 }
 
+type getCountriesResponse map[string]int
+
 type getProposalResponse struct {
 	Proposal *proposalDTO `json:"proposal"`
 }
@@ -110,6 +112,7 @@ type qualityFinder interface {
 
 type proposalRepository interface {
 	Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error)
+	Countries(filter *proposal.Filter) (map[string]int, error)
 	Proposal(market.ProposalID) (*proposal.PricedServiceProposal, error)
 }
 
@@ -142,6 +145,10 @@ type proposalsManager struct {
 
 func (m *proposalsManager) isCacheStale() bool {
 	return time.Now().After(m.cachedAt.Add(m.cacheTTL))
+}
+
+func (m *proposalsManager) getCountries(req *GetProposalsRequest) (getCountriesResponse, error) {
+	return m.getCountriesFromRepository(req)
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) (*getProposalsResponse, error) {
@@ -206,6 +213,24 @@ func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]propos
 		}
 	}
 	return res, nil
+}
+
+func (m *proposalsManager) getCountriesFromRepository(req *GetProposalsRequest) (getCountriesResponse, error) {
+	filter := req.toFilter()
+	if filter.NATCompatibility == AutoNATType {
+		natType, err := m.natProber.Probe(context.TODO())
+		if err != nil {
+			filter.NATCompatibility = ""
+		} else {
+			filter.NATCompatibility = natType
+		}
+	}
+	countries, err := m.repository.Countries(filter)
+	if err != nil {
+		return nil, fmt.Errorf("could not get proposals from repository: %w", err)
+	}
+
+	return countries, nil
 }
 
 func (m *proposalsManager) map2Response(serviceProposals []proposal.PricedServiceProposal) (*getProposalsResponse, error) {

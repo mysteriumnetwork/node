@@ -19,6 +19,16 @@ package mysterium
 
 import "encoding/json"
 
+// GetCountries returns service proposals number per country from API.
+// go mobile does not support complex slices.
+func (mb *MobileNode) GetCountries(req *GetProposalsRequest) ([]byte, error) {
+	countries, err := mb.proposalsManager.getCountries(req)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(countries)
+}
+
 // GetProposals returns service proposals from API or cache. Proposals returned as JSON byte array since
 // go mobile does not support complex slices.
 func (mb *MobileNode) GetProposals(req *GetProposalsRequest) ([]byte, error) {
