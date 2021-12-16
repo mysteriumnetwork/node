@@ -47,6 +47,11 @@ func (r *Repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposa
 	return []market.ServiceProposal{}, nil
 }
 
+// Countries returns proposals per country matching the filter.
+func (r *Repository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	return nil, nil
+}
+
 // Start begins proposals synchronization to storage.
 func (r *Repository) Start() error {
 	return nil

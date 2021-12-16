@@ -77,6 +77,21 @@ func (s *ProposalStorage) FindProposals(filter *proposal.Filter) ([]market.Servi
 	return s.MatchProposals(filter.Matches)
 }
 
+// Countries fetches currently active service proposals from storage by given filter
+func (s *ProposalStorage) Countries(filter *proposal.Filter) (map[string]int, error) {
+	proposals, err := s.MatchProposals(filter.Matches)
+	if err != nil {
+		return nil, err
+	}
+
+	countries := make(map[string]int, 0)
+	for _, p := range proposals {
+		countries[p.Location.Country]++
+	}
+
+	return countries, nil
+}
+
 // Set puts given list proposals to storage
 func (s *ProposalStorage) Set(proposals []market.ServiceProposal) {
 	s.mutex.Lock()
