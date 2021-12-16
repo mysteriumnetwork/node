@@ -22,9 +22,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/stretchr/testify/assert"
 )
 
 var mockProposal = market.ServiceProposal{
@@ -162,6 +163,10 @@ func (mr *mockRepository) Proposal(id market.ProposalID) (*market.ServiceProposa
 
 func (mr *mockRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
 	return mr.proposalsToReturn, mr.errToReturn
+}
+
+func (mr *mockRepository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	return nil, nil
 }
 
 type mockPriceInfoProvider struct {

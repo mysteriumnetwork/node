@@ -67,3 +67,8 @@ func (a *apiRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProp
 
 	return filteredProposals, nil
 }
+
+// Countries returns number of proposals matching filter per country.
+func (a *apiRepository) Countries(filter *proposal.Filter) (map[string]int, error) {
+	return a.discoveryAPI.QueryCountries(filter.ToAPIQuery())
+}
