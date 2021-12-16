@@ -124,6 +124,7 @@ func (q *SettlementListQuery) ToFilter() pingpong.SettlementHistoryFilter {
 
 // NewSettlementListResponse maps to API settlement list.
 func NewSettlementListResponse(
+	WithdrawalTotal *big.Int,
 	settlements []pingpong.SettlementHistoryEntry,
 	paginator *utils.Paginator,
 ) SettlementListResponse {
@@ -133,15 +134,17 @@ func NewSettlementListResponse(
 	}
 
 	return SettlementListResponse{
-		Items:       dtoArray,
-		PageableDTO: NewPageableDTO(paginator),
+		Items:           dtoArray,
+		PageableDTO:     NewPageableDTO(paginator),
+		WithdrawalTotal: WithdrawalTotal.String(),
 	}
 }
 
 // SettlementListResponse defines settlement list representable as json.
 // swagger:model SettlementListResponse
 type SettlementListResponse struct {
-	Items []SettlementDTO `json:"items"`
+	Items           []SettlementDTO `json:"items"`
+	WithdrawalTotal string          `json:"withdrawal_total"`
 	PageableDTO
 }
 
