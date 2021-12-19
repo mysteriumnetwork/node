@@ -346,7 +346,7 @@ func (c *cliApp) connect(args []string) (err error) {
 }
 
 func (c *cliApp) mmnApiKey(args []string) (err error) {
-	profileUrl := c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
+	profileUrl := c.config.GetStringByFlag(config.FlagMMNAddress) + "/me"
 	usage := "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
