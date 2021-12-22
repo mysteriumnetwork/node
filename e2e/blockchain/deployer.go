@@ -222,7 +222,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 
 	tx, err = ts.Mint(transactor, common.HexToAddress("0xa29fb77b25181df094908b027821a7492ca4245b"), mystToMint)
-	checkError("mint myst for future topups during tests", err)
+	checkError("mint myst for future top-ups during tests", err)
 	checkTxStatus(client, tx)
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 

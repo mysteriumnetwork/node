@@ -113,7 +113,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 		return fmt.Errorf("could not parse amount: %w", err)
 	}
 	if f <= 0 {
-		return errors.New("top up amount is required and must be greater than 0")
+		return errors.New("Top-up amount is required and must be greater than 0")
 	}
 
 	gws, err := c.tequilapi.PaymentOrderGateways()
@@ -134,7 +134,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 	}
 	if gw.OrderOptions.Minimum != 0 && f <= gw.OrderOptions.Minimum {
 		return fmt.Errorf(
-			"top up amount must be greater than %v%s",
+			"Top-up amount must be greater than %v%s",
 			gw.OrderOptions.Minimum,
 			config.GetString(config.FlagDefaultCurrency))
 	}

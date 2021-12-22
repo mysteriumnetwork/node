@@ -42,12 +42,12 @@ const CommandName = "account"
 var (
 	flagAmount = cli.Float64Flag{
 		Name:  "amount",
-		Usage: "Amount of MYST you want to top up in to your account",
+		Usage: "Amount of MYST for the top-up",
 	}
 
 	flagCurrency = cli.StringFlag{
 		Name:  "currency",
-		Usage: "Currency you want to use when paying for your top up",
+		Usage: "Currency you want to use when paying for your top-up",
 	}
 
 	flagGateway = cli.StringFlag{
@@ -62,7 +62,7 @@ var (
 
 	flagLastTopup = cli.BoolFlag{
 		Name:  "last-topup",
-		Usage: "Include last top up information",
+		Usage: "Include last top-up information",
 	}
 
 	flagToken = cli.StringFlag{
@@ -109,7 +109,7 @@ func NewCommand() *cli.Command {
 			},
 			{
 				Name:  "topup",
-				Usage: "Create a new top up for your account",
+				Usage: "Create a new top-up for your account",
 				Flags: []cli.Flag{&flagAmount, &flagCurrency, &flagGateway, &flagGwData},
 				Action: func(ctx *cli.Context) error {
 					cmd.topup(ctx)
@@ -169,7 +169,7 @@ func (c *command) info(ctx *cli.Context) {
 	c.infoGeneral(id.Address)
 
 	if ctx.Bool(flagLastTopup.Name) {
-		clio.Status("SECTION", "Last topup information:")
+		clio.Status("SECTION", "Last top-up information:")
 		c.infoTopUp(id.Address)
 	}
 }
@@ -209,14 +209,14 @@ func (c *command) topup(ctx *cli.Context) {
 
 	amountF, err := strconv.ParseFloat(amount, 64)
 	if amountF <= 0 {
-		clio.Warn("Top up amount is required and must be greater than 0")
+		clio.Warn("Top-up amount is required and must be greater than 0")
 		return
 	}
 
 	if gw.OrderOptions.Minimum != 0 && amountF <= gw.OrderOptions.Minimum {
 		clio.Error(
 			fmt.Sprintf(
-				"top up amount must be greater than %v%s",
+				"Top-up amount must be greater than %v%s",
 				gw.OrderOptions.Minimum,
 				config.GetString(config.FlagDefaultCurrency)))
 		return
@@ -266,11 +266,11 @@ func (c *command) topup(ctx *cli.Context) {
 		CallerData:  callerData,
 	})
 	if err != nil {
-		clio.Error("Failed to create an top up request, make sure your requested amount is equal or more than 0.0001 BTC")
+		clio.Error("Failed to create a top-up request, make sure your requested amount is equal or more than 0.0001 BTC")
 		return
 	}
 
-	clio.Info(fmt.Sprintf("New top up request for identity %s has been created: ", id.Address))
+	clio.Info(fmt.Sprintf("New top-up request for identity %s has been created: ", id.Address))
 	printOrder(resp)
 }
 
@@ -314,7 +314,7 @@ func (c *command) registerIdentity(identity string, token *string) {
 		return
 	}
 
-	msg := "Registration started. Topup the identities channel to finish it."
+	msg := "Registration started. Top up the identities channel to finish it."
 	clio.Success(msg)
 }
 
@@ -343,12 +343,12 @@ func (c *command) infoGeneral(identityAddress string) {
 func (c *command) infoTopUp(identityAddress string) {
 	resp, err := c.tequilapi.OrderGetAll(identity.FromAddress(identityAddress))
 	if err != nil {
-		clio.Error("Failed to get topup information")
+		clio.Error("Failed to get top-up information")
 		return
 	}
 
 	if len(resp) == 0 {
-		clio.Info("You have no topup requests")
+		clio.Info("You have no top-up requests")
 		return
 	}
 	printOrder(resp[len(resp)-1])

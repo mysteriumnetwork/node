@@ -289,7 +289,7 @@ func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, 
 func (cbt *ConsumerBalanceTracker) lifetimeBCSync(chainID int64, id identity.Identity) {
 	b, ok := cbt.getBalance(chainID, id)
 	if ok && b.IsOffchain {
-		log.Info().Bool("is_offchain", b.IsOffchain).Msg("skipping external channel topup tracking")
+		log.Info().Bool("is_offchain", b.IsOffchain).Msg("skipping external channel top-up tracking")
 		return
 	}
 
