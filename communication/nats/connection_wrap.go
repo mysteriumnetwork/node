@@ -98,6 +98,9 @@ func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options.MaxReconnect = -1
 	options.ReconnectWait = 1 * time.Second
 	options.PingInterval = 10 * time.Second
+	options.Timeout = 10 * time.Second
+	options.RetryOnFailedConnect = true
+
 	options.ClosedCB = func(conn *nats_lib.Conn) { log.Warn().Msg("NATS: connection closed") }
 	options.DisconnectedErrCB = func(nc *nats_lib.Conn, err error) { log.Warn().Err(err).Msg("NATS: disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: reconnected") }
