@@ -236,7 +236,7 @@ func (c *command) topup(ctx *cli.Context) {
 		for _, part := range parts {
 			kv := strings.Split(part, "=")
 			if len(kv) != 2 {
-				clio.Error("gateway data wrong, example: lightning_network=true,custom_id=123")
+				clio.Error("Gateway data wrong, example: lightning_network=true,custom_id=123")
 				return
 			}
 
@@ -255,7 +255,7 @@ func (c *command) topup(ctx *cli.Context) {
 
 		callerData, err = json.Marshal(data)
 		if err != nil {
-			clio.Error("failed to make caller data")
+			clio.Error("Failed to make caller data")
 			return
 		}
 	}
