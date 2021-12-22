@@ -222,7 +222,7 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 		clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", r.ID, r.Status))
 	}
 	clio.Info(
-		fmt.Sprintf("To explore additional order information use: '%s'", usageOrderGet),
+		fmt.Sprintf("To explore additional order information use: orders '%s'", usageOrderGet),
 	)
 	return nil
 }
