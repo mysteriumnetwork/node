@@ -98,7 +98,7 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 		return nil, err
 	}
 
-	if err := conn.Open(); err != nil {
+	if err := conn.open(); err != nil {
 		return nil, err
 	}
 
