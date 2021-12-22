@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 func (c *cliApp) identities(args []string) (err error) {
@@ -343,11 +344,11 @@ func (c *cliApp) withdraw(args []string) error {
 
 	var amount *big.Int
 	if len(args) == 4 {
-		a, ok := big.NewInt(0).SetString(args[3], 10)
-		if !ok {
-			return fmt.Errorf("%v is not a valid amount", args[3])
+		amf, err := strconv.ParseFloat(args[3], 64)
+		if err != nil {
+			return fmt.Errorf("%v is not a valid number", args[3])
 		}
-		amount = a
+		amount = crypto.FloatToBigMyst(amf)
 	}
 
 	clio.Info("Waiting for withdrawal to complete")
