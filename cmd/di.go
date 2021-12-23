@@ -168,8 +168,8 @@ type Dependencies struct {
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
 
-	BeneficiarySaver    beneficiary.Saver
-	BeneficiaryProvider beneficiary.Provider
+	BeneficiarySaver    *beneficiary.Saver
+	BeneficiaryProvider *beneficiary.Provider
 
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
@@ -495,10 +495,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	di.bootstrapBeneficiarySaver(nodeOptions)
-	di.bootstrapBeneficiaryProvider(nodeOptions)
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
-
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
 	}
@@ -527,6 +523,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+
 	di.HermesPromiseHandler = pingpong.NewHermesPromiseHandler(pingpong.HermesPromiseHandlerDeps{
 		HermesPromiseStorage: di.HermesPromiseStorage,
 		HermesCallerFactory: func(hermesURL string) pingpong.HermesHTTPRequester {
@@ -546,6 +545,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
+
+	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
