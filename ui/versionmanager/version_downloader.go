@@ -47,10 +47,6 @@ type Downloader struct {
 
 	status     Status
 	statusLock sync.Mutex
-	//dlStatus      dlStatus
-	//dlErr         error
-	//dlProgressPct int
-	//dlTag         string
 }
 
 // NewDownloader constructor for Downloader
