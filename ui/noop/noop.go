@@ -39,3 +39,8 @@ func (s *Server) Serve() {
 func (s *Server) Stop() {
 	log.Debug().Msg("Stop: NOOP UI server")
 }
+
+// SwitchUI switch nodeUI version
+func (s *Server) SwitchUI(path string) {
+	log.Debug().Msg("SwitchUI: NOOP UI server")
+}
