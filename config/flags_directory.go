@@ -35,6 +35,11 @@ var (
 		Name:  "data-dir",
 		Usage: "Data directory containing keystore & other persistent files",
 	}
+	// FlagNodeUIDir directory containing downloaded nodeUI releases
+	FlagNodeUIDir = cli.StringFlag{
+		Name:  "node-ui-dir",
+		Usage: "Directory containing downloaded nodeUI releases",
+	}
 	// FlagLogDir is a directory for storing log files.
 	FlagLogDir = cli.StringFlag{
 		Name:  "log-dir",
@@ -69,6 +74,7 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 	FlagLogDir.Value = filepath.Join(FlagDataDir.Value, "logs")
 	FlagRuntimeDir.Value = currentDir
 	FlagScriptDir.Value = filepath.Join(currentDir, "config")
+	FlagNodeUIDir.Value = filepath.Join(FlagDataDir.Value, "nodeui")
 
 	*flags = append(*flags,
 		&FlagConfigDir,
@@ -76,6 +82,7 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 		&FlagLogDir,
 		&FlagRuntimeDir,
 		&FlagScriptDir,
+		&FlagNodeUIDir,
 	)
 	return nil
 }
@@ -87,6 +94,7 @@ func ParseFlagsDirectory(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagLogDir)
 	Current.ParseStringFlag(ctx, FlagRuntimeDir)
 	Current.ParseStringFlag(ctx, FlagScriptDir)
+	Current.ParseStringFlag(ctx, FlagNodeUIDir)
 }
 
 func getExecutableDir() (string, error) {

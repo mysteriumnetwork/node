@@ -39,6 +39,8 @@ type OptionsDirectory struct {
 	Script string
 	// Runtime directory for various temp file - usually current working dir
 	Runtime string
+	// NodeUI directory for nodeUI releases
+	NodeUI string
 }
 
 const (
@@ -65,6 +67,7 @@ func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 		Keystore: GetOptionsDirectoryKeystore(dataDir),
 		Script:   config.GetString(config.FlagScriptDir),
 		Runtime:  config.GetString(config.FlagRuntimeDir),
+		NodeUI:   config.GetString(config.FlagNodeUIDir),
 	}
 }
 
