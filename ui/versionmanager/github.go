@@ -19,6 +19,7 @@ package versionmanager
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -33,11 +34,16 @@ const (
 	nodeUIPath             = "repos/mysteriumnetwork/dvpn-web"
 )
 
-type github struct {
-	http *requests.HTTPClient
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+	DoRequestAndParseResponse(req *http.Request, resp interface{}) error
 }
 
-func newGithub(httpClient *requests.HTTPClient) *github {
+type github struct {
+	http httpClient
+}
+
+func newGithub(httpClient httpClient) *github {
 	return &github{http: httpClient}
 }
 
@@ -50,7 +56,7 @@ func (g *github) nodeUIReleases(perPage int, page int) ([]GitHubRelease, error) 
 	}
 
 	if page != 0 {
-		q.Add("page", fmt.Sprint(perPage))
+		q.Add("page", fmt.Sprint(page))
 	}
 	req.URL.RawQuery = q.Encode()
 
