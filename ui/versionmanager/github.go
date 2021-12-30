@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -118,7 +117,7 @@ func (g *github) nodeUIDownloadURL(versionName string) (*url.URL, error) {
 
 	uiDist, ok := findNodeUIDist(assets)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("could not find nodeUI dist asset for release ID %d version %s", r.Id, versionName))
+		return nil, fmt.Errorf("could not find nodeUI dist asset for release ID %d version %s", r.Id, versionName)
 	}
 	return url.Parse(uiDist.BrowserDownloadUrl)
 }

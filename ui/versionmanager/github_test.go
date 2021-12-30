@@ -18,7 +18,6 @@
 package versionmanager
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,7 +45,7 @@ func (m *httpClientMock) Do(req *http.Request) (*http.Response, error) {
 	m.req = req
 	resp, ok := m.rMap[req.URL.Path]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("response for path: %s not found", req.URL.Path))
+		return nil, fmt.Errorf("response for path: %s not found", req.URL.Path)
 	}
 	return resp, nil
 }
