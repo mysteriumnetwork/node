@@ -78,6 +78,8 @@ func (d *Downloader) DownloadNodeUI(opts DownloadOpts) {
 		return
 	}
 
+	d.update(Status{Status: inProgress, Tag: opts.Tag})
+
 	go d.download(opts)
 }
 
@@ -112,8 +114,6 @@ func (d *Downloader) Status() Status {
 }
 
 func (d *Downloader) download(opts DownloadOpts) {
-	d.update(Status{Status: inProgress, Tag: opts.Tag})
-
 	head, err := d.http.Head(opts.URL.String())
 	if err != nil {
 		d.update(d.status.transitionWithErr(failed, err))
@@ -150,13 +150,15 @@ func (d *Downloader) download(opts DownloadOpts) {
 
 	close(doneChan)
 
-	if opts.Callback != nil {
+	if opts.Callback != nil && d.status.Status != failed {
 		log.Info().Msg("executing post download callback")
 		err := opts.Callback(opts)
 		if err != nil {
 			d.update(d.status.transitionWithErr(failed, err))
 			return
 		}
+	} else {
+		log.Warn().Msgf("download status is %s - skipping callback", d.status.Status)
 	}
 
 	d.update(d.status.transition(done))

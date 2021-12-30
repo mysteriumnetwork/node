@@ -72,7 +72,7 @@ func (n *NodeUIEndpoints) RemoteVersions(c *gin.Context) {
 
 	versions, err := n.versionManager.ListRemoteVersions(r)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, contract.InternalError(err))
+		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
 		return
 	}
 	c.JSON(http.StatusOK, contract.RemoteVersionsResponse{Versions: versions})
@@ -95,7 +95,7 @@ func (n *NodeUIEndpoints) RemoteVersions(c *gin.Context) {
 func (n *NodeUIEndpoints) LocalVersions(c *gin.Context) {
 	versions, err := n.versionManager.ListLocalVersions()
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, contract.InternalError(err))
+		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
 		return
 	}
 	c.JSON(http.StatusOK, contract.LocalVersionsResponse{Versions: versions})
@@ -120,21 +120,21 @@ func (n *NodeUIEndpoints) LocalVersions(c *gin.Context) {
 func (n *NodeUIEndpoints) SwitchVersion(c *gin.Context) {
 	var req contract.SwitchNodeUIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, contract.InvalidRequestError(err))
+		c.JSON(http.StatusBadRequest, contract.InvalidRequestError(err))
 		return
 	}
 
 	if err := req.Valid(); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, contract.WithErrorResponse(fmt.Sprintf("could not switch to node UI version: %s", req.Version), err))
+		c.JSON(http.StatusBadRequest, contract.WithErrorResponse(fmt.Sprintf("could not switch to node UI version: %s", req.Version), err))
 		return
 	}
 
 	if err := n.versionManager.SwitchTo(req.Version); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, contract.WithErrorResponse(fmt.Sprintf("could not switch to node UI version: %s", req.Version), err))
+		c.JSON(http.StatusBadRequest, contract.WithErrorResponse(fmt.Sprintf("could not switch to node UI version: %s", req.Version), err))
 		return
 	}
 
-	c.AbortWithStatus(200)
+	c.AbortWithStatus(http.StatusOK)
 }
 
 // Download download a remote node UI release
@@ -156,23 +156,23 @@ func (n *NodeUIEndpoints) SwitchVersion(c *gin.Context) {
 func (n *NodeUIEndpoints) Download(c *gin.Context) {
 	var req contract.DownloadNodeUIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, contract.WithErrorResponse("could not parse request", err))
+		c.JSON(http.StatusBadRequest, contract.WithErrorResponse("could not parse request", err))
 		return
 	}
 
 	if err := req.Valid(); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, contract.InvalidRequestError(err))
+		c.JSON(http.StatusBadRequest, contract.InvalidRequestError(err))
 		return
 	}
 
 	if err := n.versionManager.Download(req.Version); err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, contract.WithErrorResponse(
+		c.JSON(http.StatusInternalServerError, contract.WithErrorResponse(
 			fmt.Sprintf("could not download node UI version: %s", req.Version), err,
 		))
 		return
 	}
 
-	c.AbortWithStatus(200)
+	c.AbortWithStatus(http.StatusOK)
 }
 
 // DownloadStatus returns download status
@@ -190,7 +190,7 @@ func (n *NodeUIEndpoints) Download(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/ErrorResponse"
 func (n *NodeUIEndpoints) DownloadStatus(c *gin.Context) {
-	c.AbortWithStatusJSON(200, n.versionManager.DownloadStatus())
+	c.JSON(http.StatusOK, n.versionManager.DownloadStatus())
 }
 
 // UI returns download status
@@ -210,14 +210,16 @@ func (n *NodeUIEndpoints) DownloadStatus(c *gin.Context) {
 func (n *NodeUIEndpoints) UI(c *gin.Context) {
 	bundled, err := n.versionManager.BundledVersion()
 	if err != nil {
-		c.AbortWithStatusJSON(500, contract.InternalError(err))
+		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
+		return
 	}
 
 	used, err := n.versionManager.UsedVersion()
 	if err != nil {
-		c.AbortWithStatusJSON(500, contract.InternalError(err))
+		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
+		return
 	}
-	c.AbortWithStatusJSON(200, contract.UI{
+	c.JSON(http.StatusOK, contract.UI{
 		BundledVersion: bundled.Name,
 		UsedVersion:    used.Name,
 	})

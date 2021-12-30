@@ -121,11 +121,12 @@ func ginEngine(reverseProxy gin.HandlerFunc, uiAssetsPath string) *gin.Engine {
 	r.NoRoute(reverseProxy)
 	r.Use(cors.New(corsConfig))
 
+	var assets http.FileSystem = http.Dir(uiAssetsPath)
 	if uiAssetsPath == versionmanager.BundledVersionName {
-		r.StaticFS("/", godvpnweb.Assets)
-	} else {
-		r.StaticFS("/", http.Dir(uiAssetsPath))
+		assets = godvpnweb.Assets
 	}
+	r.StaticFS("/", assets)
+
 	return r
 }
 

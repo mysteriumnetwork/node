@@ -19,9 +19,9 @@ package versionmanager
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -68,6 +68,10 @@ func (vm *VersionConfig) exists() (bool, error) {
 		return false, nil
 	}
 
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 
@@ -87,19 +91,19 @@ func (vm *VersionConfig) read() (nodeUIVersion, error) {
 }
 
 func (vm *VersionConfig) whichFilePath() string {
-	return fmt.Sprintf("%s/%s", vm.nodeUIDir, fileName)
+	return filepath.Join(vm.nodeUIDir, fileName)
 }
 
 func (vm *VersionConfig) uiDistPath(versionName string) string {
-	return fmt.Sprintf("%s/%s", vm.nodeUIDir, versionName)
+	return filepath.Join(vm.nodeUIDir, versionName)
 }
 
 func (vm *VersionConfig) uiBuildPath(versionName string) string {
-	return fmt.Sprintf("%s/%s/build", vm.nodeUIDir, versionName)
+	return filepath.Join(vm.nodeUIDir, versionName, "build")
 }
 
 func (vm *VersionConfig) uiDistFile(versionName string) string {
-	return fmt.Sprintf("%s/%s", vm.uiDistPath(versionName), nodeUIAssetName)
+	return filepath.Join(vm.uiDistPath(versionName), nodeUIAssetName)
 }
 
 func (vm *VersionConfig) write(w nodeUIVersion) {

@@ -75,7 +75,7 @@ func (vm *VersionManager) ListLocalVersions() ([]LocalVersion, error) {
 		return nil, fmt.Errorf("could not read "+nodeUIPath+": %w", err)
 	}
 
-	var versions []LocalVersion
+	var versions = make([]LocalVersion, 0)
 	for _, f := range files {
 		if f.IsDir() {
 			versions = append(versions, LocalVersion{
@@ -134,7 +134,7 @@ func (vm *VersionManager) ListRemoteVersions(r RemoteVersionRequest) ([]RemoteVe
 }
 
 func remoteVersions(releases []GitHubRelease) []RemoteVersion {
-	var versions []RemoteVersion
+	var versions = make([]RemoteVersion, 0)
 	for _, release := range releases {
 		versions = append(versions, RemoteVersion{
 			Name:             release.Name,
@@ -157,7 +157,7 @@ func compatibilityAssetURL(r GitHubRelease) string {
 
 // TODO think about sending SSE to inform to nodeUI that a version has been downloaded
 
-// Download download and untar node UI dist
+// Download and untar node UI dist
 func (vm *VersionManager) Download(versionName string) error {
 	assetURL, err := vm.github.nodeUIDownloadURL(versionName)
 	if err != nil {

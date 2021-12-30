@@ -48,6 +48,9 @@ func newGithub(httpClient httpClient) *github {
 
 func (g *github) nodeUIReleases(perPage int, page int) ([]GitHubRelease, error) {
 	req, err := requests.NewGetRequest(apiURI, fmt.Sprintf("%s/releases", nodeUIPath), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create NodeUI releases fetch request: %w", err)
+	}
 
 	q := req.URL.Query()
 	if perPage != 0 {
@@ -58,10 +61,6 @@ func (g *github) nodeUIReleases(perPage int, page int) ([]GitHubRelease, error) 
 		q.Add("page", fmt.Sprint(page))
 	}
 	req.URL.RawQuery = q.Encode()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create NodeUI releases fetch request: %w", err)
-	}
 
 	res, err := g.http.Do(req)
 	if err != nil {
@@ -78,8 +77,6 @@ func (g *github) nodeUIReleases(perPage int, page int) ([]GitHubRelease, error) 
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	link := res.Header.Get("link")
-	fmt.Printf(link)
 	return releases, nil
 }
 
@@ -92,7 +89,7 @@ func (g *github) nodeUIReleaseByVersion(name string) (GitHubRelease, error) {
 	var release GitHubRelease
 	err = g.http.DoRequestAndParseResponse(req, &release)
 	if err != nil {
-		return GitHubRelease{}, fmt.Errorf("could not fetch version tagged "+name+": %w", err)
+		return GitHubRelease{}, fmt.Errorf("could not fetch version tagged %q: %w", name, err)
 	}
 
 	return release, nil
@@ -106,7 +103,7 @@ func (g *github) nodeUIDownloadURL(versionName string) (*url.URL, error) {
 
 	req, err := requests.NewGetRequest(apiURI, fmt.Sprintf("%s/releases/%d/assets", nodeUIPath, r.Id), nil)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("failed to create NodeUI assets ID %d, versionName %s", r.Id, r.Name)+": %w", err)
+		return nil, fmt.Errorf("failed to create NodeUI assets ID %d, versionName %q: %w", r.Id, r.Name, err)
 	}
 
 	var assets []GithubAsset
