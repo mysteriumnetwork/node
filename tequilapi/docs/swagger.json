@@ -3202,19 +3202,18 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/utils"
     },
     "ErrorResponse": {
-      "description": "ErrorResponse common error response",
+      "description": "ErrorResponse represent HTTP error payload",
       "type": "object",
       "properties": {
-        "message": {
-          "type": "string",
-          "x-go-name": "Message"
-        },
-        "original_error": {
-          "type": "string",
-          "x-go-name": "OriginalError"
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Error"
+          },
+          "x-go-name": "Errors"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
     },
     "FeesDTO": {
       "description": "FeesDTO represents the transactor fees",
