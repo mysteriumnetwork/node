@@ -98,7 +98,7 @@ func (vm *VersionConfig) uiDistPath(versionName string) string {
 	return filepath.Join(vm.nodeUIDir, versionName)
 }
 
-func (vm *VersionConfig) uiBuildPath(versionName string) string {
+func (vm *VersionConfig) UIBuildPath(versionName string) string {
 	return filepath.Join(vm.nodeUIDir, versionName, "build")
 }
 

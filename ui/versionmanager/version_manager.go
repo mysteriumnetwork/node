@@ -198,7 +198,7 @@ func (vm *VersionManager) SwitchTo(versionName string) error {
 	for _, lv := range local {
 		if lv.Name == versionName {
 			vm.versionConfig.write(nodeUIVersion{VersionName: versionName})
-			vm.uiServer.SwitchUI(vm.versionConfig.uiBuildPath(versionName))
+			vm.uiServer.SwitchUI(vm.versionConfig.UIBuildPath(versionName))
 			return nil
 		}
 	}

@@ -38,9 +38,10 @@ const tequilapiUrlPrefix = "/tequilapi"
 
 // Server represents our web UI server
 type Server struct {
-	servers      []*http.Server
-	discovery    discovery.LANDiscovery
-	reverseProxy gin.HandlerFunc
+	servers         []*http.Server
+	discovery       discovery.LANDiscovery
+	reverseProxy    gin.HandlerFunc
+	uiVersionConfig *versionmanager.VersionConfig
 }
 
 type jwtAuthenticator interface {
@@ -89,12 +90,15 @@ func NewServer(
 
 	var r *gin.Engine
 	version, err := uiVersionConfig.Version()
-	if err != nil {
+
+	var assets http.FileSystem = godvpnweb.Assets
+	if err != nil || version == versionmanager.BundledVersionName {
 		log.Error().Err(err).Msg("could not read node ui version config, falling back to bundled version")
-		r = ginEngine(reverseProxy, versionmanager.BundledVersionName)
 	} else {
-		r = ginEngine(reverseProxy, version)
+		assets = http.Dir(uiVersionConfig.UIBuildPath(version))
 	}
+
+	r = ginEngine(reverseProxy, assets)
 
 	addrs := strings.Split(bindAddress, ",")
 
@@ -108,32 +112,33 @@ func NewServer(
 	}
 
 	return &Server{
-		servers:      srvs,
-		discovery:    discovery.NewLANDiscoveryService(port, httpClient),
-		reverseProxy: reverseProxy,
+		servers:         srvs,
+		discovery:       discovery.NewLANDiscoveryService(port, httpClient),
+		reverseProxy:    reverseProxy,
+		uiVersionConfig: uiVersionConfig,
 	}
 }
 
-func ginEngine(reverseProxy gin.HandlerFunc, uiAssetsPath string) *gin.Engine {
+func ginEngine(reverseProxy gin.HandlerFunc, dir http.FileSystem) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.NoRoute(reverseProxy)
 	r.Use(cors.New(corsConfig))
 
-	var assets http.FileSystem = http.Dir(uiAssetsPath)
-	if uiAssetsPath == versionmanager.BundledVersionName {
-		assets = godvpnweb.Assets
-	}
-	r.StaticFS("/", assets)
+	r.StaticFS("/", dir)
 
 	return r
 }
 
 // SwitchUI switch nodeUI version
 func (s *Server) SwitchUI(path string) {
+	var assets http.FileSystem = http.Dir(path)
+	if path == versionmanager.BundledVersionName {
+		assets = godvpnweb.Assets
+	}
 	for i := range s.servers {
-		s.servers[i].Handler = ginEngine(s.reverseProxy, path)
+		s.servers[i].Handler = ginEngine(s.reverseProxy, assets)
 	}
 }
 
