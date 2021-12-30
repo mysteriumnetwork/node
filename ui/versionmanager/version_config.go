@@ -98,6 +98,7 @@ func (vm *VersionConfig) uiDistPath(versionName string) string {
 	return filepath.Join(vm.nodeUIDir, versionName)
 }
 
+// UIBuildPath build path to the assets of provided versionName
 func (vm *VersionConfig) UIBuildPath(versionName string) string {
 	return filepath.Join(vm.nodeUIDir, versionName, "build")
 }
