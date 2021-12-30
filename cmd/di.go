@@ -26,6 +26,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -91,6 +93,7 @@ import (
 // UIServer represents our web server
 type UIServer interface {
 	Serve()
+	SwitchUI(path string)
 	Stop()
 }
 
@@ -194,6 +197,7 @@ type Dependencies struct {
 
 	PayoutAddressStorage *payout.AddressStorage
 	NodeStatusTracker    *node.MonitoringStatusTracker
+	uiVersionConfig      *versionmanager.VersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -249,6 +253,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapAuthenticator(); err != nil {
 		return err
 	}
+
+	di.uiVersionConfig = versionmanager.NewVersionConfig(nodeOptions.Directories.NodeUI)
+
 	di.bootstrapUIServer(nodeOptions)
 	if err := di.bootstrapMMN(); err != nil {
 		return err

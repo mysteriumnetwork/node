@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
+
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
@@ -36,7 +38,15 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 
 func Test_Server_ServesHTML(t *testing.T) {
 	// given
-	s := NewServer("localhost", 55565, "localhost", 55564, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
+	s := NewServer(
+		"localhost",
+		55565,
+		"localhost",
+		55564,
+		&jwtAuth{},
+		requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout),
+		versionmanager.NewVersionConfig("/tmp"),
+	)
 	s.discovery = &mockDiscovery{}
 	s.Serve()
 	time.Sleep(time.Millisecond * 100)
