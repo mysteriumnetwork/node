@@ -23,12 +23,14 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/asdine/storm/v3"
 	"github.com/spf13/cast"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -67,6 +69,11 @@ type addressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
 }
 
+type beneficiarySaver interface {
+	SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error
+	CleanupAndGetChangeStatus(id identity.Identity, currentBeneficiary string) (*beneficiary.ChangeStatus, error)
+}
+
 type settlementHistoryProvider interface {
 	List(pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error)
 }
@@ -78,6 +85,8 @@ type transactorEndpoint struct {
 	settlementHistoryProvider settlementHistoryProvider
 	addressProvider           addressProvider
 	addressStorage            *payout.AddressStorage
+	bprovider                 beneficiaryProvider
+	bhandler                  beneficiarySaver
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
@@ -87,6 +96,8 @@ func NewTransactorEndpoint(
 	promiseSettler promiseSettler,
 	settlementHistoryProvider settlementHistoryProvider,
 	addressProvider addressProvider,
+	bprovider beneficiaryProvider,
+	bhandler beneficiarySaver,
 ) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
@@ -94,6 +105,8 @@ func NewTransactorEndpoint(
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
 		addressProvider:           addressProvider,
+		bprovider:                 bprovider,
+		bhandler:                  bhandler,
 	}
 }
 
@@ -682,6 +695,92 @@ func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context
 	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
 }
 
+// swagger:operation GET /identities/{id}/beneficiary-status
+// ---
+// summary: Returns beneficiary transaction status
+// description: Returns the last beneficiary transaction status for given identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity address to register
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Returns beneficiary transaction status
+//     schema:
+//       "$ref": "#/definitions/BeneficiaryTxStatus"
+//   404:
+//     description: Beneficiary change never recorded.
+func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
+	resp := c.Writer
+	params := c.Params
+
+	id := params.ByName("id")
+
+	identity := identity.FromAddress(id)
+	current, err := te.bprovider.GetBeneficiary(identity.ToCommonAddress())
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to parse get current beneficiary: %s", err), http.StatusInternalServerError)
+		return
+	}
+	status, err := te.bhandler.CleanupAndGetChangeStatus(identity, current.Hex())
+	if err != nil {
+		if errors.Is(err, storm.ErrNotFound) {
+			resp.WriteHeader(http.StatusNotFound)
+			return
+		}
+		utils.SendError(resp, fmt.Errorf("failed to get current transaction status: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(
+		&contract.BeneficiaryTxStatus{
+			State:    status.State,
+			Error:    status.Error,
+			ChangeTo: status.ChangeTo,
+		},
+		resp,
+	)
+}
+
+// swagger:operation POST /identities/{id}/beneficiary
+// ---
+// summary: Settle with Beneficiary
+// description: Change beneficiary and settle earnings to it. This is async method.
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity address to register
+//   type: string
+//   required: true
+// responses:
+//   202:
+//     description: settle request accepted
+func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
+	resp := c.Writer
+	params := c.Params
+	request := c.Request
+
+	id := params.ByName("id")
+
+	req := &contract.SettleWithBeneficiaryRequest{}
+	err := json.NewDecoder(request.Body).Decode(&req)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	go func() {
+		err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary))
+		if err != nil {
+			log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
+		}
+	}()
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
@@ -689,8 +788,10 @@ func AddRoutesForTransactor(
 	promiseSettler promiseSettler,
 	settlementHistoryProvider settlementHistoryProvider,
 	addressProvider addressProvider,
+	bprovider beneficiaryProvider,
+	bhandler beneficiarySaver,
 ) func(*gin.Engine) error {
-	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider)
+	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bprovider, bhandler)
 
 	return func(e *gin.Engine) error {
 		idGroup := e.Group("/identities")
@@ -698,6 +799,8 @@ func AddRoutesForTransactor(
 			idGroup.POST("/:id/register", te.RegisterIdentity)
 			idGroup.GET("/provider/eligibility", te.FreeProviderRegistrationEligibility)
 			idGroup.GET("/:id/eligibility", te.FreeRegistrationEligibility)
+			idGroup.GET("/:id/beneficiary-status", te.BeneficiaryTxStatus)
+			idGroup.POST("/:id/beneficiary", te.SettleWithBeneficiaryAsync)
 		}
 
 		transGroup := e.Group("/transactor")
