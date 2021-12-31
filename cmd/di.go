@@ -254,11 +254,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if versionConfig, err := versionmanager.NewVersionConfig(nodeOptions.Directories.NodeUI); err != nil {
+	versionConfig, err := versionmanager.NewVersionConfig(nodeOptions.Directories.NodeUI)
+	if err != nil {
 		return err
-	} else {
-		di.uiVersionConfig = versionConfig
 	}
+	di.uiVersionConfig = versionConfig
 
 	di.bootstrapUIServer(nodeOptions)
 	if err := di.bootstrapMMN(); err != nil {
