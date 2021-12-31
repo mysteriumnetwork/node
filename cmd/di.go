@@ -197,7 +197,7 @@ type Dependencies struct {
 
 	PayoutAddressStorage *payout.AddressStorage
 	NodeStatusTracker    *node.MonitoringStatusTracker
-	uiVersionConfig      *versionmanager.VersionConfig
+	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -254,11 +254,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	versionConfig, err := versionmanager.NewVersionConfig(nodeOptions.Directories.NodeUI)
-	if err != nil {
+	if err := di.bootstrapNodeUIVersionConfig(nodeOptions); err != nil {
 		return err
 	}
-	di.uiVersionConfig = versionConfig
 
 	di.bootstrapUIServer(nodeOptions)
 	if err := di.bootstrapMMN(); err != nil {

@@ -41,7 +41,7 @@ type Server struct {
 	servers         []*http.Server
 	discovery       discovery.LANDiscovery
 	reverseProxy    gin.HandlerFunc
-	uiVersionConfig *versionmanager.VersionConfig
+	uiVersionConfig versionmanager.NodeUIVersionConfig
 }
 
 type jwtAuthenticator interface {
@@ -83,7 +83,7 @@ func NewServer(
 	tequilapiPort int,
 	authenticator jwtAuthenticator,
 	httpClient *requests.HTTPClient,
-	uiVersionConfig *versionmanager.VersionConfig,
+	uiVersionConfig versionmanager.NodeUIVersionConfig,
 ) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	reverseProxy := ReverseTequilapiProxy(tequilapiAddress, tequilapiPort, authenticator)

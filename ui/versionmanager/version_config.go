@@ -31,6 +31,16 @@ const (
 	BundledVersionName = "bundled"
 )
 
+// NodeUIVersionConfig interface
+type NodeUIVersionConfig interface {
+	Version() (string, error)
+	UIBuildPath(versionName string) string
+	uiDir() string
+	uiDistPath(versionName string) string
+	uiDistFile(versionName string) string
+	write(w nodeUIVersion)
+}
+
 // VersionConfig ui version config
 type VersionConfig struct {
 	nodeUIDir string
@@ -120,6 +130,10 @@ func (vm *VersionConfig) write(w nodeUIVersion) {
 
 	err = ioutil.WriteFile(vm.whichFilePath(), json, 0644)
 	return
+}
+
+func (vm *VersionConfig) uiDir() string {
+	return vm.nodeUIDir
 }
 
 type nodeUIVersion struct {
