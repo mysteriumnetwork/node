@@ -1,4 +1,4 @@
-// +build ios !darwin,!windows
+//go:build ios || (!darwin && !windows)
 
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
