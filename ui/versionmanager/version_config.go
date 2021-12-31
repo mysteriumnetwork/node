@@ -37,8 +37,13 @@ type VersionConfig struct {
 }
 
 // NewVersionConfig constructor for VersionConfig
-func NewVersionConfig(nodeUIDir string) *VersionConfig {
-	return &VersionConfig{nodeUIDir: nodeUIDir}
+func NewVersionConfig(nodeUIDir string) (*VersionConfig, error) {
+	err := os.MkdirAll(nodeUIDir, 0700)
+	if err != nil {
+		return nil, err
+	}
+
+	return &VersionConfig{nodeUIDir: nodeUIDir}, nil
 }
 
 // Version returns version to be used
