@@ -48,9 +48,12 @@ func TestSwitchUI(t *testing.T) {
 	err = os.Mkdir(tmpDIr+"/1.1.1", 0644)
 	assert.NoError(t, err)
 
+	config, err := NewVersionConfig(tmpDIr)
+	assert.NoError(t, err)
+
 	var nvm = &VersionManager{
 		uiServer:      ms,
-		versionConfig: NewVersionConfig(tmpDIr),
+		versionConfig: config,
 	}
 
 	// when
@@ -97,9 +100,12 @@ func TestListLocal(t *testing.T) {
 	err = os.Mkdir(tmpDIr+"/1.2.2", 0644)
 	assert.NoError(t, err)
 
+	config, err := NewVersionConfig(tmpDIr)
+	assert.NoError(t, err)
+
 	var nvm = &VersionManager{
 		uiServer:      ms,
-		versionConfig: NewVersionConfig(tmpDIr),
+		versionConfig: config,
 	}
 
 	// when
@@ -121,9 +127,12 @@ func TestBundledVersion(t *testing.T) {
 	bundledNodeUIVersion, err := godvpnweb.Version()
 	assert.NoError(t, err)
 
+	config, err := NewVersionConfig(tmpDIr)
+	assert.NoError(t, err)
+
 	var nvm = &VersionManager{
 		uiServer:      ms,
-		versionConfig: NewVersionConfig(tmpDIr),
+		versionConfig: config,
 	}
 
 	// when

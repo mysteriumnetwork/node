@@ -43,7 +43,7 @@ type VersionManager struct {
 	uiServer      NodeUIServer
 	httpClient    *requests.HTTPClient
 	github        *github
-	versionConfig *VersionConfig
+	versionConfig NodeUIVersionConfig
 
 	remoteCacheExpiresAt time.Time
 	releasesCache        []GitHubRelease
@@ -55,7 +55,7 @@ type VersionManager struct {
 func NewVersionManager(
 	uiServer NodeUIServer,
 	http *requests.HTTPClient,
-	versionConfig *VersionConfig,
+	versionConfig NodeUIVersionConfig,
 ) *VersionManager {
 	return &VersionManager{
 		uiServer:      uiServer,
@@ -70,7 +70,7 @@ func NewVersionManager(
 
 // ListLocalVersions list downloaded Node UI versions
 func (vm *VersionManager) ListLocalVersions() ([]LocalVersion, error) {
-	files, err := ioutil.ReadDir(vm.versionConfig.nodeUIDir)
+	files, err := ioutil.ReadDir(vm.versionConfig.uiDir())
 	if err != nil {
 		return nil, fmt.Errorf("could not read "+nodeUIPath+": %w", err)
 	}

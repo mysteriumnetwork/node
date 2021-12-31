@@ -18,7 +18,9 @@
 package ui
 
 import (
+	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -38,6 +40,13 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 
 func Test_Server_ServesHTML(t *testing.T) {
 	// given
+	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	assert.NoError(t, err)
+	defer os.Remove(tmpDIr)
+
+	config, err := versionmanager.NewVersionConfig("/tmp")
+	assert.NoError(t, err)
+
 	s := NewServer(
 		"localhost",
 		55565,
@@ -45,7 +54,7 @@ func Test_Server_ServesHTML(t *testing.T) {
 		55564,
 		&jwtAuth{},
 		requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout),
-		versionmanager.NewVersionConfig("/tmp"),
+		config,
 	)
 	s.discovery = &mockDiscovery{}
 	s.Serve()
