@@ -225,7 +225,7 @@ var (
 		Usage: "The port to run Web UI on",
 		Value: 4449,
 	}
-	// FlagUserMode allows to run node under current user without sudo.
+	// FlagUserMode allows running node under current user without sudo.
 	FlagUserMode = cli.BoolFlag{
 		Name:  "usermode",
 		Usage: "Run as a regular user. Delegate elevated commands to the supervisor.",

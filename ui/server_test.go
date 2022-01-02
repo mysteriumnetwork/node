@@ -18,9 +18,13 @@
 package ui
 
 import (
+	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
 
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +40,22 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 
 func Test_Server_ServesHTML(t *testing.T) {
 	// given
-	s := NewServer("localhost", 55565, "localhost", 55564, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
+	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	assert.NoError(t, err)
+	defer os.Remove(tmpDIr)
+
+	config, err := versionmanager.NewVersionConfig("/tmp")
+	assert.NoError(t, err)
+
+	s := NewServer(
+		"localhost",
+		55565,
+		"localhost",
+		55564,
+		&jwtAuth{},
+		requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout),
+		config,
+	)
 	s.discovery = &mockDiscovery{}
 	s.Serve()
 	time.Sleep(time.Millisecond * 100)

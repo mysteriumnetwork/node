@@ -24,6 +24,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
+
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/utils"
 
@@ -75,8 +77,9 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForService(di.ServicesManager, services.JSONParsersByType, di.ProposalRepository),
 			tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, config.GetString(config.FlagAccessPolicyAddress)),
 			tequilapi_endpoints.AddRoutesForNAT(di.StateKeeper, di.NATProber),
+			tequilapi_endpoints.AddRoutesForNodeUI(versionmanager.NewVersionManager(di.UIServer, di.HTTPClient, di.uiVersionConfig)),
 			tequilapi_endpoints.AddRoutesForNode(di.NodeStatusTracker),
-			tequilapi_endpoints.AddRoutesForTransactor(di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider),
+			tequilapi_endpoints.AddRoutesForTransactor(di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiaryProvider, di.BeneficiarySaver),
 			tequilapi_endpoints.AddRoutesForConfig,
 			tequilapi_endpoints.AddRoutesForMMN(di.MMN),
 			tequilapi_endpoints.AddRoutesForFeedback(di.Reporter),
@@ -94,6 +97,21 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	)
 }
 
+func (di *Dependencies) bootstrapNodeUIVersionConfig(nodeOptions node.Options) error {
+	if !nodeOptions.TequilapiEnabled {
+		noopCfg, _ := versionmanager.NewNoOpVersionConfig()
+		di.uiVersionConfig = noopCfg
+		return nil
+	}
+
+	versionConfig, err := versionmanager.NewVersionConfig(nodeOptions.Directories.NodeUI)
+	if err != nil {
+		return err
+	}
+	di.uiVersionConfig = versionConfig
+	return nil
+}
+
 func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 	if !options.UI.UIEnabled {
 		di.UIServer = uinoop.NewServer()
@@ -108,6 +126,6 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 		}
 		bindAddress = bindAddress + ",127.0.0.1"
 	}
-	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
+	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient, di.uiVersionConfig)
 	return nil
 }

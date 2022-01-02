@@ -26,6 +26,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -91,6 +93,7 @@ import (
 // UIServer represents our web server
 type UIServer interface {
 	Serve()
+	SwitchUI(path string)
 	Stop()
 }
 
@@ -168,8 +171,8 @@ type Dependencies struct {
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
 
-	BeneficiarySaver    beneficiary.Saver
-	BeneficiaryProvider beneficiary.Provider
+	BeneficiarySaver    *beneficiary.Saver
+	BeneficiaryProvider *beneficiary.Provider
 
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
@@ -194,6 +197,7 @@ type Dependencies struct {
 
 	PayoutAddressStorage *payout.AddressStorage
 	NodeStatusTracker    *node.MonitoringStatusTracker
+	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -249,6 +253,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapAuthenticator(); err != nil {
 		return err
 	}
+
+	if err := di.bootstrapNodeUIVersionConfig(nodeOptions); err != nil {
+		return err
+	}
+
 	di.bootstrapUIServer(nodeOptions)
 	if err := di.bootstrapMMN(); err != nil {
 		return err
@@ -495,10 +504,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	di.bootstrapBeneficiarySaver(nodeOptions)
-	di.bootstrapBeneficiaryProvider(nodeOptions)
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
-
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
 	}
@@ -527,6 +532,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+
 	di.HermesPromiseHandler = pingpong.NewHermesPromiseHandler(pingpong.HermesPromiseHandlerDeps{
 		HermesPromiseStorage: di.HermesPromiseStorage,
 		HermesCallerFactory: func(hermesURL string) pingpong.HermesHTTPRequester {
@@ -546,6 +554,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
+
+	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(

@@ -2402,6 +2402,156 @@
         }
       }
     },
+    "/ui/download-status": {
+      "get": {
+        "description": "DownloadStatus can download one remote release at a time. This endpoint provides status of the download.",
+        "tags": [
+          "UI"
+        ],
+        "summary": "Download status",
+        "operationId": "uiDownloadStatus",
+        "responses": {
+          "200": {
+            "description": "download status",
+            "schema": {
+              "$ref": "#/definitions/DownloadStatus"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/ui/download-version": {
+      "post": {
+        "description": "download a remote node UI release",
+        "tags": [
+          "UI"
+        ],
+        "summary": "Download",
+        "operationId": "uiDownload",
+        "responses": {
+          "200": {
+            "description": "download in progress"
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/ui/info": {
+      "get": {
+        "description": "Node UI information",
+        "tags": [
+          "UI"
+        ],
+        "summary": "Node UI information",
+        "operationId": "ui",
+        "responses": {
+          "200": {
+            "description": "Node UI information",
+            "schema": {
+              "$ref": "#/definitions/UI"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/ui/local-versions": {
+      "get": {
+        "description": "provides a list of node UI releases that have been downloaded or bundled with node",
+        "tags": [
+          "UI"
+        ],
+        "summary": "List remote",
+        "operationId": "uiLocalVersions",
+        "responses": {
+          "200": {
+            "description": "Local version list",
+            "schema": {
+              "$ref": "#/definitions/LocalVersionsResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/ui/remote-versions": {
+      "get": {
+        "description": "provides a list of node UI releases from github repository",
+        "tags": [
+          "UI"
+        ],
+        "summary": "List local",
+        "operationId": "uiRemoteVersions",
+        "responses": {
+          "200": {
+            "description": "Remote version list",
+            "schema": {
+              "$ref": "#/definitions/RemoteVersionsResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/ui/switch-version": {
+      "post": {
+        "description": "switch node UI version to locally available one",
+        "tags": [
+          "UI"
+        ],
+        "summary": "Switch Version",
+        "operationId": "uiSwitchVersion",
+        "responses": {
+          "200": {
+            "description": "version switched"
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
     "/v2/identities/{id}/payment-order": {
       "get": {
         "description": "Gets all orders for a given identity from the pilvytis service",
@@ -2945,6 +3095,41 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "DownloadNodeUIRequest": {
+      "description": "DownloadNodeUIRequest request for downloading NodeUI version",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "x-go-name": "Version"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "DownloadStatus": {
+      "description": "Status download status",
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Err"
+        },
+        "progress_percent": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ProgressPct"
+        },
+        "status": {
+          "$ref": "#/definitions/dlStatus"
+        },
+        "tag": {
+          "type": "string",
+          "x-go-name": "Tag"
+        }
+      },
+      "x-go-name": "Status",
+      "x-go-package": "github.com/mysteriumnetwork/node/ui/versionmanager"
+    },
     "EligibilityResponse": {
       "description": "EligibilityResponse represents the eligibility response",
       "type": "object",
@@ -3017,18 +3202,19 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/utils"
     },
     "ErrorResponse": {
-      "description": "ErrorResponse represent HTTP error payload",
+      "description": "ErrorResponse common error response",
       "type": "object",
       "properties": {
-        "errors": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Error"
-          },
-          "x-go-name": "Errors"
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        },
+        "original_error": {
+          "type": "string",
+          "x-go-name": "OriginalError"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "FeesDTO": {
       "description": "FeesDTO represents the transactor fees",
@@ -3351,6 +3537,31 @@
             "$ref": "#/definitions/ProposalDTO"
           },
           "x-go-name": "Proposals"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "LocalVersion": {
+      "description": "LocalVersion it's a local version with extra indicator if it is in use",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/ui/versionmanager"
+    },
+    "LocalVersionsResponse": {
+      "description": "LocalVersionsResponse local version response",
+      "type": "object",
+      "properties": {
+        "versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LocalVersion"
+          },
+          "x-go-name": "Versions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3837,6 +4048,44 @@
         "token": {
           "type": "string",
           "x-go-name": "Token"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "RemoteVersion": {
+      "description": "RemoteVersion it's a version",
+      "type": "object",
+      "properties": {
+        "compatibility_url": {
+          "type": "string",
+          "x-go-name": "CompatibilityURL"
+        },
+        "is_pre_release": {
+          "type": "boolean",
+          "x-go-name": "IsPreRelease"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "released_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "PublishedAt"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/ui/versionmanager"
+    },
+    "RemoteVersionsResponse": {
+      "description": "RemoteVersionsResponse local version response",
+      "type": "object",
+      "properties": {
+        "versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RemoteVersion"
+          },
+          "x-go-name": "Versions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4350,6 +4599,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "SwitchNodeUIRequest": {
+      "description": "SwitchNodeUIRequest request for switching NodeUI version",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "x-go-name": "Version"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "TermsRequest": {
       "type": "object",
       "title": "TermsRequest object is accepted by terms endpoints.",
@@ -4405,6 +4665,21 @@
       "properties": {
         "amount": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "UI": {
+      "description": "UI ui information",
+      "type": "object",
+      "properties": {
+        "bundled_version": {
+          "type": "string",
+          "x-go-name": "BundledVersion"
+        },
+        "used_version": {
+          "type": "string",
+          "x-go-name": "UsedVersion"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4519,6 +4794,10 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+    },
+    "dlStatus": {
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/ui/versionmanager"
     },
     "sessionConnectivityStatus": {
       "type": "object",

@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
@@ -36,8 +38,10 @@ const tequilapiUrlPrefix = "/tequilapi"
 
 // Server represents our web UI server
 type Server struct {
-	srvs      []*http.Server
-	discovery discovery.LANDiscovery
+	servers         []*http.Server
+	discovery       discovery.LANDiscovery
+	reverseProxy    gin.HandlerFunc
+	uiVersionConfig versionmanager.NodeUIVersionConfig
 }
 
 type jwtAuthenticator interface {
@@ -72,14 +76,29 @@ var corsConfig = cors.Config{
 
 // NewServer creates a new instance of the server for the given port
 // you can chain addresses with ',' i.e. "192.168.0.1,127.0.0.1"
-func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
+func NewServer(
+	bindAddress string,
+	port int,
+	tequilapiAddress string,
+	tequilapiPort int,
+	authenticator jwtAuthenticator,
+	httpClient *requests.HTTPClient,
+	uiVersionConfig versionmanager.NodeUIVersionConfig,
+) *Server {
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.New()
-	r.Use(gin.Recovery())
-	r.NoRoute(ReverseTequilapiProxy(tequilapiAddress, tequilapiPort, authenticator))
-	r.Use(cors.New(corsConfig))
+	reverseProxy := ReverseTequilapiProxy(tequilapiAddress, tequilapiPort, authenticator)
 
-	r.StaticFS("/", godvpnweb.Assets)
+	var r *gin.Engine
+	version, err := uiVersionConfig.Version()
+
+	var assets http.FileSystem = godvpnweb.Assets
+	if err != nil || version == versionmanager.BundledVersionName {
+		log.Error().Err(err).Msg("could not read node ui version config, falling back to bundled version")
+	} else {
+		assets = http.Dir(uiVersionConfig.UIBuildPath(version))
+	}
+
+	r = ginEngine(reverseProxy, assets)
 
 	addrs := strings.Split(bindAddress, ",")
 
@@ -93,8 +112,33 @@ func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiP
 	}
 
 	return &Server{
-		srvs:      srvs,
-		discovery: discovery.NewLANDiscoveryService(port, httpClient),
+		servers:         srvs,
+		discovery:       discovery.NewLANDiscoveryService(port, httpClient),
+		reverseProxy:    reverseProxy,
+		uiVersionConfig: uiVersionConfig,
+	}
+}
+
+func ginEngine(reverseProxy gin.HandlerFunc, dir http.FileSystem) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.NoRoute(reverseProxy)
+	r.Use(cors.New(corsConfig))
+
+	r.StaticFS("/", dir)
+
+	return r
+}
+
+// SwitchUI switch nodeUI version
+func (s *Server) SwitchUI(path string) {
+	var assets http.FileSystem = http.Dir(path)
+	if path == versionmanager.BundledVersionName {
+		assets = godvpnweb.Assets
+	}
+	for i := range s.servers {
+		s.servers[i].Handler = ginEngine(s.reverseProxy, assets)
 	}
 }
 
@@ -107,7 +151,7 @@ func (s *Server) Serve() {
 		}
 	}()
 
-	for _, srv := range s.srvs {
+	for _, srv := range s.servers {
 		go startListen(srv)
 	}
 }
@@ -130,7 +174,7 @@ func (s *Server) Stop() {
 	// give the server a few seconds to shut down properly in case a request is waiting somewhere
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	for _, srv := range s.srvs {
+	for _, srv := range s.servers {
 		err = srv.Shutdown(ctx)
 		log.Info().Err(err).Msg("Server stopped")
 	}
