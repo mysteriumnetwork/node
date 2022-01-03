@@ -23,6 +23,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
 
@@ -43,7 +44,7 @@ func TestSwitchUI(t *testing.T) {
 	// given
 	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
 	assert.NoError(t, err)
-	defer os.Remove(tmpDIr)
+	defer os.RemoveAll(tmpDIr)
 
 	err = os.Mkdir(tmpDIr+"/1.1.1", 0644)
 	assert.NoError(t, err)
@@ -93,7 +94,7 @@ func TestListLocal(t *testing.T) {
 	// given
 	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
 	assert.NoError(t, err)
-	defer os.Remove(tmpDIr)
+	defer os.RemoveAll(tmpDIr)
 
 	err = os.Mkdir(tmpDIr+"/1.1.1", 0644)
 	assert.NoError(t, err)
@@ -122,7 +123,7 @@ func TestBundledVersion(t *testing.T) {
 	// given
 	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
 	assert.NoError(t, err)
-	defer os.Remove(tmpDIr)
+	defer os.RemoveAll(tmpDIr)
 
 	bundledNodeUIVersion, err := godvpnweb.Version()
 	assert.NoError(t, err)
@@ -141,6 +142,31 @@ func TestBundledVersion(t *testing.T) {
 	// then
 	assert.NoError(t, err)
 	assert.Equal(t, bundledNodeUIVersion, version.Name)
+}
+
+func TestListLocalDirectoryRemoved(t *testing.T) {
+	// given
+	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDIr)
+
+	config, err := NewVersionConfig(tmpDIr)
+	assert.NoError(t, err)
+
+	var nvm = &VersionManager{
+		uiServer:      ms,
+		versionConfig: config,
+	}
+
+	// when
+	err = os.RemoveAll(tmpDIr)
+	assert.NoError(t, err)
+
+	versions, err := nvm.ListLocalVersions()
+
+	// then
+	assert.Len(t, versions, 0)
+	assert.NoError(t, err)
 }
 
 func TestListRemoteVersions(t *testing.T) {
@@ -182,6 +208,17 @@ func TestListRemoteVersions(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(versionsBeforeFlush), len(nvm.releasesCache))
 	assert.Len(t, nvm.releasesCache, len(versionsFlushed))
+
+	// and
+	first := versionsFlushed[0]
+	assert.Equal(t, "Release Notes", first.ReleaseNotes)
+	assert.Equal(t, "1.0.1", first.Name)
+
+	expectedTime, err := time.Parse("2006-01-02T15:04:05Z", "2021-11-22T13:17:45Z")
+	assert.NoError(t, err)
+
+	assert.Equal(t, expectedTime, first.PublishedAt)
+	assert.False(t, first.IsPreRelease)
 }
 
 var singleReleaseJSON = `[
@@ -257,7 +294,7 @@ var singleReleaseJSON = `[
 		],
 		"tarball_url": "https://api.github.com/repos/mysteriumnetwork/dvpn-web/tarball/1.0.1",
 		"zipball_url": "https://api.github.com/repos/mysteriumnetwork/dvpn-web/zipball/1.0.1",
-		"body": "## What's Changed\r\n* Changed table to react table by @Guillembonet in https://github.com/mysteriumnetwork/dvpn-web/pull/214\r\n* Move everything into forms + refactors by @Guillembonet in https://github.com/mysteriumnetwork/dvpn-web/pull/215\r\n* Technical debt by @Guillembonet in https://github.com/mysteriumnetwork/dvpn-web/pull/216\r\n* Fix email optional text by @Guillembonet in https://github.com/mysteriumnetwork/dvpn-web/pull/218\r\n* Modified chart title to better describe it by @Guillembonet in https://github.com/mysteriumnetwork/dvpn-web/pull/222\r\n* Registration flow adjustments by @mdomasevicius in https://github.com/mysteriumnetwork/dvpn-web/pull/224\r\n* Bump mysterium-vpn-js by @mdomasevicius in https://github.com/mysteriumnetwork/dvpn-web/pull/225\r\n* fix authentication check bug by @Guillembonet in https://github.com/mysteriumnetwork/dvpn-web/pull/228\r\n* Fix mystnodes.com URL by @Donatas-MN in https://github.com/mysteriumnetwork/dvpn-web/pull/229\r\n\r\n## New Contributors\r\n* @Donatas-MN made their first contribution in https://github.com/mysteriumnetwork/dvpn-web/pull/229\r\n\r\n**Full Changelog**: https://github.com/mysteriumnetwork/dvpn-web/compare/0.4.6...1.0.1",
+		"body": "Release Notes", 
 		"mentions_count": 3
 	}
 ]
