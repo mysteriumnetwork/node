@@ -96,11 +96,6 @@ func TestListLocal(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDIr)
 
-	err = os.Mkdir(tmpDIr+"/1.1.1", 0644)
-	assert.NoError(t, err)
-	err = os.Mkdir(tmpDIr+"/1.2.2", 0644)
-	assert.NoError(t, err)
-
 	config, err := NewVersionConfig(tmpDIr)
 	assert.NoError(t, err)
 
@@ -111,9 +106,20 @@ func TestListLocal(t *testing.T) {
 
 	// when
 	versions, err := nvm.ListLocalVersions()
+	assert.NoError(t, err)
 
 	// then
+	assert.Len(t, versions, 0)
+
+	// when
+	err = os.Mkdir(tmpDIr+"/1.1.1", 0644)
 	assert.NoError(t, err)
+	err = os.Mkdir(tmpDIr+"/1.2.2", 0644)
+	assert.NoError(t, err)
+
+	versions, err = nvm.ListLocalVersions()
+
+	// then
 	for _, version := range []string{"1.1.1", "1.2.2"} {
 		assert.Contains(t, versions, LocalVersion{Name: version})
 	}
