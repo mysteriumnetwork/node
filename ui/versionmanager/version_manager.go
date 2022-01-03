@@ -70,12 +70,16 @@ func NewVersionManager(
 
 // ListLocalVersions list downloaded Node UI versions
 func (vm *VersionManager) ListLocalVersions() ([]LocalVersion, error) {
+	var versions = make([]LocalVersion, 0)
+
 	files, err := ioutil.ReadDir(vm.versionConfig.uiDir())
 	if err != nil {
+		if os.IsNotExist(err) {
+			return versions, nil
+		}
 		return nil, fmt.Errorf("could not read "+nodeUIPath+": %w", err)
 	}
 
-	var versions = make([]LocalVersion, 0)
 	for _, f := range files {
 		if f.IsDir() {
 			versions = append(versions, LocalVersion{
@@ -141,6 +145,7 @@ func remoteVersions(releases []GitHubRelease) []RemoteVersion {
 			PublishedAt:      release.PublishedAt,
 			CompatibilityURL: compatibilityAssetURL(release),
 			IsPreRelease:     release.Prerelease,
+			ReleaseNotes:     release.Body,
 		})
 	}
 	return versions
@@ -237,6 +242,7 @@ type RemoteVersion struct {
 	PublishedAt      time.Time `json:"released_at"`
 	CompatibilityURL string    `json:"compatibility_url,omitempty"`
 	IsPreRelease     bool      `json:"is_pre_release"`
+	ReleaseNotes     string    `json:"release_notes,omitempty"`
 }
 
 func untar(dst string, r io.Reader) error {
