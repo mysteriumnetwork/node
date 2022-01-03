@@ -4068,6 +4068,10 @@
           "type": "string",
           "x-go-name": "Name"
         },
+        "release_notes": {
+          "type": "string",
+          "x-go-name": "ReleaseNotes"
+        },
         "released_at": {
           "type": "string",
           "format": "date-time",
