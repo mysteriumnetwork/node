@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
 )
 
 func (di *Dependencies) bootstrapTequilapi(_ node.Options, _ net.Listener) (tequilapi.APIServer, error) {
@@ -33,5 +34,11 @@ func (di *Dependencies) bootstrapTequilapi(_ node.Options, _ net.Listener) (tequ
 
 func (di *Dependencies) bootstrapUIServer(_ node.Options) (err error) {
 	di.UIServer = uinoop.NewServer()
+	return nil
+}
+
+func (di *Dependencies) bootstrapNodeUIVersionConfig(_ node.Options) error {
+	noopCfg, _ := versionmanager.NewNoOpVersionConfig()
+	di.uiVersionConfig = noopCfg
 	return nil
 }
