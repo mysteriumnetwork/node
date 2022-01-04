@@ -18,4 +18,4 @@ exec /usr/bin/myst \
  --data-dir=$OS_DIR_DATA \
  --runtime-dir=$OS_DIR_RUN \
  --local-service-discovery=false \
- $@
+ "$@"
