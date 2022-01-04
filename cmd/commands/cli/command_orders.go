@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ func (c *cliApp) gateways(args []string) (err error) {
 
 	resp, err := c.tequilapi.PaymentOrderGateways()
 	if err != nil {
-		return fmt.Errorf("could not get currencies: %w", err)
+		return fmt.Errorf("Could not get currencies: %w", err)
 	}
 
 	for _, gw := range resp {
@@ -110,10 +110,10 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 
 	f, err := strconv.ParseFloat(argAmount, 64)
 	if err != nil {
-		return fmt.Errorf("could not parse amount: %w", err)
+		return fmt.Errorf("Could not parse amount: %w", err)
 	}
 	if f <= 0 {
-		return errors.New("top up amount is required and must be greater than 0")
+		return errors.New("Top-up amount is required and must be greater than 0")
 	}
 
 	gws, err := c.tequilapi.PaymentOrderGateways()
@@ -134,7 +134,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 	}
 	if gw.OrderOptions.Minimum != 0 && f <= gw.OrderOptions.Minimum {
 		return fmt.Errorf(
-			"top up amount must be greater than %v%s",
+			"Top-up amount must be greater than %v%s",
 			gw.OrderOptions.Minimum,
 			config.GetString(config.FlagDefaultCurrency))
 	}
@@ -144,7 +144,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 	for _, part := range parts {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
-			clio.Error("gateway data wrong, example: lightning_network=true,custom_id=\"123 11\"")
+			clio.Error("Gateway data wrong, example: lightning_network=true,custom_id=\"123 11\"")
 			return
 		}
 
@@ -163,7 +163,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 
 	callerData, err := json.Marshal(data)
 	if err != nil {
-		clio.Error("failed to make caller data")
+		clio.Error("Failed to make caller data")
 		return
 	}
 
@@ -177,7 +177,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 			CallerData:  callerData,
 		})
 	if err != nil {
-		return fmt.Errorf("could not create an order: %w", err)
+		return fmt.Errorf("Could not create an order: %w", err)
 	}
 
 	printOrder(resp, c.config)
@@ -194,7 +194,7 @@ func (c *cliApp) orderGet(args []string) (err error) {
 
 	resp, err := c.tequilapi.OrderGet(identity.FromAddress(args[0]), args[1])
 	if err != nil {
-		return fmt.Errorf("could not get an order: %w", err)
+		return fmt.Errorf("Could not get an order: %w", err)
 	}
 	printOrder(resp, c.config)
 	return nil
@@ -210,7 +210,7 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 
 	resp, err := c.tequilapi.OrderGetAll(identity.FromAddress(args[0]))
 	if err != nil {
-		return fmt.Errorf("could not get orders: %w", err)
+		return fmt.Errorf("Could not get orders: %w", err)
 	}
 
 	if len(resp) == 0 {
@@ -222,7 +222,7 @@ func (c *cliApp) orderGetAll(args []string) (err error) {
 		clio.Info(fmt.Sprintf("Order ID '%s' is in state: '%s'", r.ID, r.Status))
 	}
 	clio.Info(
-		fmt.Sprintf("To explore additional order information use: '%s'", usageOrderGet),
+		fmt.Sprintf("To explore additional order information use: orders '%s'", usageOrderGet),
 	)
 	return nil
 }
@@ -237,7 +237,7 @@ func (c *cliApp) invoice(args []string) (err error) {
 
 	resp, err := c.tequilapi.OrderInvoice(identity.FromAddress(args[0]), args[1])
 	if err != nil {
-		return fmt.Errorf("could not get an order invoice: %w", err)
+		return fmt.Errorf("Could not get an order invoice: %w", err)
 	}
 	filename := fmt.Sprintf("invoice-%v.pdf", args[1])
 	clio.Info("Writing invoice to", filename)
