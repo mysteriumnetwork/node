@@ -70,7 +70,7 @@ func GetProtobuf() error {
 func GenerateSwagger() error {
 	mg.Deps(GetSwagger)
 
-	return sh.RunV("swagger", "generate", "spec", "-o", "tequilapi/docs/swagger.json", "--scan-models")
+	return sh.RunV("swagger", "generate", "spec", "-o", "tequilapi/docs/swagger.json", "--scan-models", "-x", `\Agithub\.com/mysteriumnetwork/feedback(/[^/]*)*\z`)
 }
 
 // GenerateDocs generates Tequilapi documentation pages.
