@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -228,10 +228,10 @@ func (c *cliApp) registerIdentity(actionArgs []string) error {
 		return fmt.Errorf("could not register identity: %w", err)
 	}
 
-	msg := "Registration started. Topup the identities channel to finish it."
+	msg := "Registration started. Top up the identities channel to finish it."
 
 	clio.Info(msg)
-	clio.Info(fmt.Sprintf("To explore additional information about the identity use: %s", usageGetIdentity))
+	clio.Info(fmt.Sprintf("To explore additional information about the identity use: identities %s", usageGetIdentity))
 	return nil
 }
 

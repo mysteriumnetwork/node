@@ -82,7 +82,7 @@ var (
 	// FlagPaymentsZeroStakeUnsettledAmount determines the minimum amount of myst required before auto settling is triggered if zero stake is used.
 	FlagPaymentsZeroStakeUnsettledAmount = cli.Float64Flag{
 		Name:  "payments.zero-stake-unsettled-amount",
-		Value: 0.9,
+		Value: 3.0,
 		Usage: "The settling threshold if provider uses a zero stake",
 	}
 	// FlagPaymentsRegistryTransactorPollInterval The duration we'll wait before calling transactor to check for new status updates.
