@@ -28,6 +28,9 @@ If applicable, add screenshots to help explain your problem.
  - OS: [e.g. raspbian buster, debian 10]
  - Desktop app version (if applicable): [e.g. 2.0.4]
  - Docker (if applicable): specify docker version and image tag
+ - Your identity (if applicable): [e.g. 0xDb34233cf11Ac64a449144Ec8D8251268a4b168A]
+ - Payment (top-op) reference (if applicable): [e.g. 1118e94e-27fc-4fd2-b604-fd26008fb709]
+
 
 **Additional context**
 Add any other context about the problem here.
