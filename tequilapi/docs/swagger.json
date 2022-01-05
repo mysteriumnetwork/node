@@ -3178,17 +3178,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "Error": {
-      "description": "Error represents a single error in an ErrorResponse",
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "x-go-name": "Message"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
-    },
     "ErrorMessageDTO": {
       "type": "object",
       "properties": {
