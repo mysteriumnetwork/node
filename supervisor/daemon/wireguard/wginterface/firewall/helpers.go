@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	// name of exe
+	// MYST_EXECUTABLE name of exe
 	MYST_EXECUTABLE = "myst.exe"
 )
 
