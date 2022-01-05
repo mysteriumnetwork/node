@@ -103,6 +103,7 @@ func registerBaseObjects(session uintptr) (*baseObjects, error) {
 	return bo, nil
 }
 
+// EnableFirewall enable firewall
 func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []net.IP) error {
 	if wfpSession != 0 {
 		return errors.New("The firewall has already been enabled")
@@ -189,6 +190,7 @@ func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []net.
 	return nil
 }
 
+// DisableFirewall disable firewall
 func DisableFirewall() {
 	if wfpSession != 0 {
 		fwpmEngineClose0(wfpSession)
