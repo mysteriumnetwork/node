@@ -1,4 +1,4 @@
-// +build !linux
+//go:build !linux
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.

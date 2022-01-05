@@ -1,4 +1,4 @@
-// +build integration
+//go:build integration
 
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.

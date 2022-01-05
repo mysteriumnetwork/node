@@ -1,4 +1,4 @@
-// +build !darwin
+//go:build !darwin
 
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.

@@ -137,7 +137,7 @@ package:android:
 
 package:docker-alpine:
   stage: build
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v PackageDockerAlpine
 
 package:swagger-redoc-docker:

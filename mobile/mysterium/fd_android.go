@@ -1,4 +1,4 @@
-// +build android
+//go:build android
 
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.

@@ -1,4 +1,4 @@
-// +build windows
+//go:build windows
 
 /* SPDX-License-Identifier: MIT
  *
@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	// MYST_EXECUTABLE name of exe
 	MYST_EXECUTABLE = "myst.exe"
 )
 
