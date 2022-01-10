@@ -30,6 +30,17 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
+// HistoryType settlement history type
+// swagger:model HistoryType
+type HistoryType string
+
+const (
+	// SettlementType settlement type
+	SettlementType HistoryType = "settlement"
+	// WithdrawalType withdrawal type
+	WithdrawalType HistoryType = "withdrawal"
+)
+
 // SettlementHistoryStorage stores the settlement events for historical purposes.
 type SettlementHistoryStorage struct {
 	bolt *boltdb.Bolt
@@ -74,6 +85,7 @@ type SettlementHistoryFilter struct {
 	TimeTo     *time.Time
 	ProviderID *identity.Identity
 	HermesID   *common.Address
+	Types      []HistoryType
 }
 
 // List retrieves stored entries.
@@ -91,6 +103,14 @@ func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (resul
 	if filter.HermesID != nil {
 		where = append(where, q.Eq("HermesID", filter.HermesID))
 	}
+	if len(filter.Types) > 0 {
+		if contains(filter.Types, WithdrawalType) {
+			where = append(where, q.Eq("IsWithdrawal", true))
+		}
+		if contains(filter.Types, SettlementType) {
+			where = append(where, q.Eq("IsWithdrawal", false))
+		}
+	}
 
 	shs.bolt.RLock()
 	defer shs.bolt.RUnlock()
@@ -106,4 +126,14 @@ func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (resul
 	}
 
 	return result, err
+}
+
+func contains(sources []HistoryType, target HistoryType) bool {
+	for _, source := range sources {
+		if source == target {
+			return true
+		}
+	}
+
+	return false
 }
