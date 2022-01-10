@@ -68,6 +68,10 @@ type SettlementListQuery struct {
 	// Hermes ID to filter the sessions by.
 	// in: query
 	HermesID *string `json:"hermes_id"`
+
+	// Settlement type to filter the sessions by. "settlement" or "withdrawal"
+	// in: query
+	Types []string `json:"types"`
 }
 
 // Bind creates and validates query from API request.
@@ -97,6 +101,12 @@ func (q *SettlementListQuery) Bind(request *http.Request) *validation.FieldError
 		q.HermesID = &qStr
 	}
 
+	if types, ok := qs["types"]; ok {
+		for _, sv := range types {
+			q.Types = append(q.Types, sv)
+		}
+	}
+
 	return errs
 }
 
@@ -118,6 +128,11 @@ func (q *SettlementListQuery) ToFilter() pingpong.SettlementHistoryFilter {
 	if q.HermesID != nil {
 		hermesID := common.HexToAddress(*q.HermesID)
 		filter.HermesID = &hermesID
+	}
+	if q.Types != nil {
+		for _, qt := range q.Types {
+			filter.Types = append(filter.Types, pingpong.HistoryType(qt))
+		}
 	}
 	return filter
 }

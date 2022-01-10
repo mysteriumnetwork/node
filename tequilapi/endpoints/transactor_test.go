@@ -306,7 +306,7 @@ func Test_SettleHistory(t *testing.T) {
 
 		req, err := http.NewRequest(
 			http.MethodGet,
-			"/transactor/settle/history?date_from=2020-09-19&date_to=2020-09-20&provider_id=0xab1&hermes_id=0xaB2",
+			"/transactor/settle/history?date_from=2020-09-19&date_to=2020-09-20&provider_id=0xab1&hermes_id=0xaB2&types=settlement&types=withdrawal",
 			nil,
 		)
 		assert.Nil(t, err)
@@ -318,6 +318,7 @@ func Test_SettleHistory(t *testing.T) {
 		expectedTimeTo := time.Date(2020, 9, 20, 23, 59, 59, 0, time.UTC)
 		expectedProviderID := identity.FromAddress("0xab1")
 		expectedHermesID := common.HexToAddress("0xaB2")
+		expectedTypes := []pingpong.HistoryType{pingpong.SettlementType, pingpong.WithdrawalType}
 		assert.Equal(
 			t,
 			&pingpong.SettlementHistoryFilter{
@@ -325,6 +326,7 @@ func Test_SettleHistory(t *testing.T) {
 				TimeTo:     &expectedTimeTo,
 				ProviderID: &expectedProviderID,
 				HermesID:   &expectedHermesID,
+				Types:      expectedTypes,
 			},
 			mockStorage.calledWithFilter,
 		)

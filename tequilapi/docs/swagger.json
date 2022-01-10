@@ -2046,6 +2046,16 @@
             "description": "Hermes ID to filter the sessions by.",
             "name": "hermes_id",
             "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "Types",
+            "description": "Settlement type to filter the sessions by. \"settlement\" or \"withdrawal\"",
+            "name": "types",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3293,6 +3303,11 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "HistoryType": {
+      "description": "HistoryType settlement history type",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/session/pingpong"
     },
     "IPDTO": {
       "type": "object",
