@@ -258,8 +258,20 @@ func (registry *contractRegistry) subscribeToRegistrationEventViaTransactor(ev I
 				registry.resyncWithBC(ev.ChainID, ev.Identity)
 				return
 			case TransactorRegistrationEntryStatusFailed:
-				log.Error().Msg("registration reported as failed by transactor")
-				registry.saveRegistrationStatus(ev.ChainID, ev.Identity, RegistrationError)
+				log.Error().Msg("registration reported as failed by transactor, will check in bc just in case")
+				bcStatus, err := registry.bcRegistrationStatus(ev.ChainID, identity.FromAddress(ev.Identity))
+				if err != nil {
+					log.Err(err).Msg("got registration failed from transactor and failed to check registration status")
+					registry.saveRegistrationStatus(ev.ChainID, ev.Identity, RegistrationError)
+					return
+				}
+
+				statusToWrite := Registered
+				if bcStatus != Registered {
+					statusToWrite = RegistrationError
+				}
+
+				registry.saveRegistrationStatus(ev.ChainID, ev.Identity, statusToWrite)
 				return
 			}
 		}
