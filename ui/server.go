@@ -93,7 +93,7 @@ func NewServer(
 
 	var assets http.FileSystem = godvpnweb.Assets
 	if err != nil || version == versionmanager.BundledVersionName {
-		log.Error().Err(err).Msg("could not read node ui version config, falling back to bundled version")
+		log.Warn().Err(err).Msg("could not read node ui version config, falling back to bundled version")
 	} else {
 		assets = http.Dir(uiVersionConfig.UIBuildPath(version))
 	}
