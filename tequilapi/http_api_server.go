@@ -35,6 +35,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var RestartRequestErr = errors.New("Node Restart Requested")
+
 var corsConfig = cors.Config{
 	MaxAge: 30 * 24 * time.Hour,
 	AllowOriginFunc: func(_ string) bool {
@@ -48,6 +50,7 @@ type APIServer interface {
 	StartServing()
 	Stop()
 	Address() (string, error)
+	AddRestartRequestHandler(rh func(e *gin.Engine, restart func()) error) error
 }
 
 type apiServer struct {
@@ -80,8 +83,7 @@ func NewServer(
 	server := apiServer{
 		errorChannel: make(chan error, 1),
 		listener:     listener,
-
-		gin: g,
+		gin:          g,
 	}
 
 	return &server, nil
@@ -98,6 +100,15 @@ func modeFromOptions(options node.Options) string {
 // Stop method stops underlying http server
 func (server *apiServer) Stop() {
 	server.listener.Close()
+}
+
+// AddRestartRequestHandler restart request handler
+func (server *apiServer) AddRestartRequestHandler(rh func(e *gin.Engine, restart func()) error) error {
+	return rh(server.gin, server.requestRestart)
+}
+
+func (server *apiServer) requestRestart() {
+	server.errorChannel <- RestartRequestErr
 }
 
 // Wait method waits for http server to finish handling requests (i.e. when Stop() was called)

@@ -17,6 +17,8 @@
 
 package tequilapi
 
+import "github.com/gin-gonic/gin"
+
 // NewNoopAPIServer returns noop api server which is used to disable tequilapi HTTP server.
 func NewNoopAPIServer() APIServer {
 	return &noopAPIServer{}
@@ -32,6 +34,10 @@ func (n noopAPIServer) StartServing() {
 }
 
 func (n noopAPIServer) Stop() {
+}
+
+func (n noopAPIServer) AddRestartRequestHandler(rh func(e *gin.Engine, restart func()) error) error {
+	return nil
 }
 
 func (n noopAPIServer) Address() (string, error) {

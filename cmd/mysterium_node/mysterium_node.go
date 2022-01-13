@@ -21,6 +21,9 @@ import (
 	"os"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/tequilapi"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/cmd/commands/account"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	command_cfg "github.com/mysteriumnetwork/node/cmd/commands/config"
@@ -56,17 +59,22 @@ var (
 )
 
 func main() {
-	logconfig.Bootstrap()
-	app, err := NewCommand()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create command: ")
-		os.Exit(1)
-	}
+	for {
+		logconfig.Bootstrap()
+		app, err := NewCommand()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create command: ")
+			os.Exit(1)
+		}
 
-	err = app.Run(os.Args)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to execute command: ")
-		os.Exit(1)
+		err = app.Run(os.Args)
+		if errors.Is(err, tequilapi.RestartRequestErr) {
+			continue
+		}
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to execute command: ")
+			os.Exit(1)
+		}
 	}
 }
 

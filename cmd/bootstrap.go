@@ -47,7 +47,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 		return tequilapi.NewNoopAPIServer(), nil
 	}
 
-	return tequilapi.NewServer(
+	tequila, err := tequilapi.NewServer(
 		listener,
 		nodeOptions,
 		[]func(engine *gin.Engine) error{
@@ -95,6 +95,16 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForValidator,
 		},
 	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tequila.AddRestartRequestHandler(tequilapi_endpoints.AddRoutesForRestart()); err != nil {
+		return nil, err
+	}
+
+	return tequila, err
 }
 
 func (di *Dependencies) bootstrapNodeUIVersionConfig(nodeOptions node.Options) error {
