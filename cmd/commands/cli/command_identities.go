@@ -440,6 +440,10 @@ func (c *cliApp) withdraw(args []string) error {
 		if err != nil {
 			return fmt.Errorf("%v is not a valid number", args[3])
 		}
+		if amf > 99 {
+			return errors.New("max withdrawal amount is 99 MYST")
+		}
+
 		amount = crypto.FloatToBigMyst(amf)
 	}
 

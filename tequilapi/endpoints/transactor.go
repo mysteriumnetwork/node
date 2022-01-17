@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/vcraescu/go-paginator/adapter"
@@ -462,6 +463,11 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 	amount, err := te.parseWithdrawalAmount(req.Amount)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	if amount != nil && amount.Cmp(crypto.FloatToBigMyst(99)) > 0 {
+		utils.SendError(resp, errors.New("withdrawal amount cannot be more than 99 MYST"), http.StatusBadRequest)
 		return
 	}
 
