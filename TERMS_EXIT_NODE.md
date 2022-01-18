@@ -139,7 +139,7 @@ You agree that these Terms and our rights hereunder may be assigned, in whole or
 
 **PRIVACY POLICY & NO-LOGS PLEDGE**
 
-Effective date: November 22, 2021
+Effective date: January 18, 2022
 
 Netsys Inc. ("us", "we", or "our") operates the Mysterium network (the “Network”).
 
@@ -149,7 +149,7 @@ This Privacy Policy supplements our [Terms of Use](#TERMS-OF-USE) (“ToU”) an
 
 A. NO-LOGS PLEDGE   
 
-We will not collect any information or store any logs about your browsing activity, queries, data destinations, IP addresses or timestamps. We are based in a jurisdiction (Panama) which laws do not require us to retain any of such data. The only information we collect in connection to your use of the Network is the information listed in this Privacy Policy below.
+We will not collect any information or store any logs about your browsing activity (including queries, data destinations, IP addresses or timestamps). We are based in a jurisdiction (Panama) which laws do not require us to retain any of such data. The only information we collect in connection to your use of the Network is the information listed in this Privacy Policy below.
 
 Additionally, as we provide the Network by creating virtual tunnels through one or more connections to other users of the Network (i.e. the Nodes, as defined in the ToU) and by using their equipment and resources to route you to your destination, it is not technically possible for us monitor your activities in the Network.
 In addition to our no-logs pledge this creates an additional layer of privacy for you.
