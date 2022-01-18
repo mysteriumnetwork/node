@@ -33,7 +33,6 @@ type NetworkDefinition struct {
 	DefaultChainID            int64
 	DefaultCurrency           string
 	LocationAddress           string
-	Testnet3HermesURL         string
 	Payments                  Payments
 }
 
@@ -66,7 +65,7 @@ var MainnetDefinition = NetworkDefinition{
 	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
 	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
-	Chain1: ChainDefinition{ // TODO: Update when mainnet deployed.
+	Chain1: ChainDefinition{
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
 		ChannelImplAddress: "0xbd20839b331a7a8d10e34cdf7219edf334814c4f",
 		HermesID:           "0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
@@ -98,10 +97,9 @@ var MainnetDefinition = NetworkDefinition{
 		"transactor.mysterium.network": {"51.15.116.186", "51.15.72.87"},
 		"pilvytis.mysterium.network":   {"51.15.116.186", "51.15.72.87"},
 	},
-	DefaultChainID:    137,
-	DefaultCurrency:   "MYST",
-	LocationAddress:   "https://location.mysterium.network/api/v1/location",
-	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
+	DefaultChainID:  137,
+	DefaultCurrency: "MYST",
+	LocationAddress: "https://location.mysterium.network/api/v1/location",
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,
@@ -148,10 +146,9 @@ var Testnet3Definition = NetworkDefinition{
 		"testnet3-broker.mysterium.network":     {"167.233.11.60"},
 		"testnet3-transactor.mysterium.network": {"167.233.11.60"},
 	},
-	DefaultChainID:    80001,
-	DefaultCurrency:   "MYSTT",
-	LocationAddress:   "https://testnet3-location.mysterium.network/api/v1/location",
-	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
+	DefaultChainID:  80001,
+	DefaultCurrency: "MYSTT",
+	LocationAddress: "https://testnet3-location.mysterium.network/api/v1/location",
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,
