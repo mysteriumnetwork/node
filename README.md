@@ -23,7 +23,7 @@ Currently node supports WireGuard as its underlying VPN transport.
 
 ### Debian / Ubuntu / Raspbian
 
-Install latest stable testnet3 release:
+Install latest stable mainnet release:
 ```bash
 sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
