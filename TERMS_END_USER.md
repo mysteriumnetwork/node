@@ -1,4 +1,4 @@
-**MYSTERIUM NETWORK BETA** 
+**MYSTERIUM NETWORK** 
 
 **This document includes:**
 
@@ -11,15 +11,13 @@
 
 **SHORT VERSION IN HUMAN LANGUAGE:**
 
- - Mysterium Network is still in beta stage. We will do our best to develop it further, but we cannot guarantee this.
-
  - You cannot use or encourage or assist others to use the network in any way which violates any laws or rights of any party, including intellectual property rights. 
 
  - Your use of the network is at your own risk. We provide it to you “as is” without any warranties. 
 
  - You are responsible for all the content that you receive, distribute or otherwise transmit through the network. 
 
- - You can use the network with our Mysterium software ([https://github.com/mysteriumnetwork/](https://github.com/mysteriumnetwork/)) or any other compatible software.
+ - You can use the network with our Mysterium software ([https://github.com/mysteriumnetwork](https://github.com/mysteriumnetwork)) or any other compatible software.
 
  - In no event will we be liable for any damages which you may incur. 
 
@@ -29,11 +27,11 @@
 
 1\. ACCEPTANCE OF TERMS
 
-These terms and conditions (the “Terms”) is a binding legal agreement between you and Netsys Inc. (“Mysterium Networks” or “we”) that governs your participation in the early open alpha testing program (the “Program”) of the Mysterium network (the “Network”). 
+These terms and conditions (the “Terms”) are a binding legal agreement between you and NetSys Inc. (“Mysterium Networks” or “we”) that governs your use of the Mysterium network (the “Network”).
 
-Your enrolment and participation in the Program and access to and use of the Network is subject to these Terms. By participating in the Program or using the Network you are fully accepting the terms, conditions and disclaimers contained in this document and all policies and guidelines that are incorporated by reference. If you do not accept these terms and conditions you must immediately stop using the  Network. You shall not enroll into the Program or use the Network in contradiction with these Terms or any applicable law or regulation of the country or territory you originate from or reside in or any applicable jurisdiction (the “Applicable Law”). For the purposes of these Terms, the term “using the Network” means accessing, connecting to or utilizing the Network in any other way.
+Your use of the Network is subject to these Terms. By using the Network you are fully accepting the terms, conditions and disclaimers contained in this document and all policies and guidelines that are incorporated by reference. If you do not accept these terms and conditions you must immediately stop using the Network. You shall not use the Network in contradiction with these Terms or any applicable law or regulation of the country or territory you originate from or reside in or any applicable jurisdiction (the “Applicable Law”). For the purposes of these Terms, the term “using the Network” means accessing, connecting to or utilizing the Network in any other way.
 
-You may not sign up for and participate in the Program (a) if you have not reached the age of majority in your territory of residence (in most cases, 18 to 21) or if you do not have the ability to form binding contracts under the Applicable law or (b) if you are not the owner of the device on which you use the Network. 
+You may not use the Network (a) if you have not reached the age of majority in your territory of residence (in most cases, 18 to 21) or if you do not have the ability to form binding contracts under the Applicable law or (b) if you are not the owner of the device on which you use the Network. 
 
 2\. CHANGED TERMS
 
@@ -45,27 +43,19 @@ The Network allows you to enhance your security and increase privacy while using
 
 The Network is not designed or intended to circumvent any access control or security measures and should not be used for such purposes.
 
-4\. OPEN ALPHA AND FEEDBACK
-
-The Network is still in its early development stage. The sole purpose of the Program is to obtain feedback on the performance of the Network and to identify its defects. You expressly acknowledge that the Network is a test product and may contain bugs, errors and other problems that could cause loss of data store in the platform, inconsistent performance and other failures including but not limited to systems crashes, interruptions and data loss. You are advised to use caution and not to rely in any way on the performance and functioning of the Network. The Network is made available to you free of charge and no warranty shall be provided for the Network.
-
-We do not guarantee that the Network will be developed to reach any subsequent development stage (e.g. release version) or that any subsequent versions will have the same or similar functionality and characteristics to the ones that the Network have. 
-
-To maintain and develop the Network we may collect limited and anonymized information and performance data.
-
-5\. EQUIPMENT
+4\. EQUIPMENT
 
 You shall be responsible for obtaining and maintaining all hardware, software and other equipment needed for access to and use of the Network and all charges related thereto. Should you need any licenses, equipment or software to access and/or use the resources or services which are made conditional upon prior authorization, you shall be solely responsible for obtaining and maintaining such licenses, equipment and software.
 
-As an option, you can use Mysterium software ([https://github.com/mysteriumnetwork/](https://github.com/mysteriumnetwork/)) to use the Network.
+As an option, you can use Mysterium software ([https://github.com/mysteriumnetwork](https://github.com/mysteriumnetwork)) to use the Network.
 
-6\. RESTRICTED CONDUCT
+5\. RESTRICTED CONDUCT
 
-We do not encourage, support and contribute to illegal activities and we are resolved to keep the Network operating legally.  
+We do not encourage, support and contribute to illegal activities and we are resolved to keep the Network operating legally.
 
-You shall use the Network for any purpose that is unlawful or prohibited by these Terms or any Applicable Law. 
+You shall use the Network for any purpose that is unlawful or prohibited by these Terms or any Applicable Law.
 
-You shall not request, receive, post, upload, download, display, distribute, transmit or make available through the Network (“Communicate”) any information and material which violates or infringes in any way upon the rights of others, which is unlawful, threatening, abusive, defamatory, invasive of privacy or publicity rights, which encourages conduct that would constitute a criminal offense, give rise to civil liability or otherwise violate the Applicable Law. 
+You shall not request, receive, post, upload, download, display, distribute, transmit or make available through the Network (“Communicate”) any information and material which violates or infringes in any way upon the rights of others, which is unlawful, threatening, abusive, defamatory, invasive of privacy or publicity rights, which encourages conduct that would constitute a criminal offense, give rise to civil liability or otherwise violate the Applicable Law.
 
 You may not use or encourage or assist others to use the Network in any manner that could damage, disable, overburden, or impair the servers and other resources of Network or of the Nodes, or interfere with any third party’s use of the Network. You may not attempt to gain unauthorized access to any aspect of the Network or to information for which you have not been granted access.
 
@@ -82,55 +72,54 @@ Without limiting the generality of the foregoing, you shall not use or to encour
  - connecting to the Network any devices, software and/or hardware which does or may do any of the above;
  - any other activities that are against the Applicable Law, and/or any other activities that are not compatible with the principles of democracy, freedom of speech, freedom of expression, and human rights.
 
-7\. YOUR ID AND SECURITY
+6\. YOUR ID AND SECURITY
 
-An ID and a private key (jointly, the “ID Data”) will be automatically created for your when you use the Network for the first time. You are entirely responsible for maintaining the confidentiality of your ID Data. Furthermore, you are entirely responsible for any activities that occur under your ID Data. You agree to notify us immediately of any unauthorized use of your account or any other breach of security. We will not be liable for any loss that you may incur as a result of someone else using your ID Data, either with or without your knowledge. However, you could be held liable for losses incurred by us or another party due to someone else using your account. You may not use anyone else's ID Data at any time, without the permission of the account holder. 
+An ID and a private key (jointly, the “ID Data”) will be automatically created for you when you use the Network for the first time. You are entirely responsible for maintaining the confidentiality of your ID Data. Furthermore, you are entirely responsible for any activities that occur under your ID Data. You agree to notify us immediately of any unauthorized use of your account or any other breach of security. We will not be liable for any loss that you may incur as a result of someone else using your ID Data, either with or without your knowledge. However, you could be held liable for losses incurred by us or another party due to someone else using your account. You may not use anyone else's ID Data at any time, without the permission of the account holder.  
 
-8\. COPYRIGHT NOTICE 
+7\. COPYRIGHT NOTICE 
 
 Our logos are our trademarks. All rights reserved. All other trademarks appearing on the Network are the property of their respective owners. 
 
-9\. DISCLAIMER OF WARRANTY; LIMITATION OF LIABILITY
+8\. DISCLAIMER OF WARRANTY; LIMITATION OF LIABILITY
 
-YOU EXPRESSLY AGREE THAT USE OF THE NETWORK IS AT YOUR SOLE RISK. NEITHER WE, OUR AFFILIATES NOR ANY OF THEIR RESPECTIVE EMPLOYEES, AGENTS, THIRD PARTY CONTENT PROVIDERS OR LICENSORS WARRANT THAT THE NETWORK WILL BE UNINTERRUPTED OR ERROR FREE; NOR DO THEY MAKE ANY WARRANTY AS TO THE RESULTS THAT MAY BE OBTAINED FROM USE OF THE NETWORK, OR AS TO THE ACCURACY, RELIABILITY OR CONTENT OF ANY INFORMATION, SERVICE, OR MERCHANDISE PROVIDED THROUGH THE NETWORK. 
+YOU EXPRESSLY AGREE THAT USE OF THE NETWORK IS AT YOUR SOLE RISK. NEITHER WE, OUR AFFILIATES NOR ANY OF THEIR RESPECTIVE EMPLOYEES, AGENTS, THIRD PARTY CONTENT PROVIDERS OR LICENSORS WARRANT THAT THE NETWORK WILL BE UNINTERRUPTED OR ERROR FREE; NOR DO THEY MAKE ANY WARRANTY AS TO THE RESULTS THAT MAY BE OBTAINED FROM USE OF THE NETWORK, OR AS TO THE ACCURACY, RELIABILITY OR CONTENT OF ANY INFORMATION, SERVICE, OR MERCHANDISE PROVIDED THROUGH THE NETWORK.
 
-THE NETWORK IS PROVIDED ON AN "AS IS" BASIS WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF TITLE OR IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OTHER THAN THOSE WARRANTIES WHICH ARE IMPLIED BY AND INCAPABLE OF EXCLUSION, RESTRICTION OR MODIFICATION UNDER THE LAWS APPLICABLE TO THIS AGREEMENT. 
+THE NETWORK IS PROVIDED ON AN "AS IS" BASIS WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF TITLE OR IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OTHER THAN THOSE WARRANTIES WHICH ARE IMPLIED BY AND INCAPABLE OF EXCLUSION, RESTRICTION OR MODIFICATION UNDER THE LAWS APPLICABLE TO THIS AGREEMENT.
 
-THIS DISCLAIMER OF LIABILITY APPLIES TO ANY DAMAGES OR INJURY CAUSED BY ANY FAILURE OF PERFORMANCE, ERROR, OMISSION, INTERRUPTION, DELETION, DEFECT, DELAY IN OPERATION OR TRANSMISSION, COMPUTER VIRUS, COMMUNICATION LINE FAILURE, THEFT OR DESTRUCTION OR UNAUTHORIZED ACCESS TO, ALTERATION OF, OR USE OF RECORD, WHETHER FOR BREACH OF CONTRACT, TORTIOUS BEHAVIOR, NEGLIGENCE, OR UNDER ANY OTHER CAUSE OF ACTION. YOU SPECIFICALLY ACKNOWLEDGE THAT WE IS NOT LIABLE FOR THE DEFAMATORY, OFFENSIVE OR ILLEGAL CONDUCT OF OTHER USERS OR THIRD-PARTIES AND THAT THE RISK OF INJURY FROM THE FOREGOING RESTS ENTIRELY WITH YOU. 
+THIS DISCLAIMER OF LIABILITY APPLIES TO ANY DAMAGES OR INJURY CAUSED BY ANY FAILURE OF PERFORMANCE, ERROR, OMISSION, INTERRUPTION, DELETION, DEFECT, DELAY IN OPERATION OR TRANSMISSION, COMPUTER VIRUS, COMMUNICATION LINE FAILURE, THEFT OR DESTRUCTION OR UNAUTHORIZED ACCESS TO, ALTERATION OF, OR USE OF RECORD, WHETHER FOR BREACH OF CONTRACT, TORTIOUS BEHAVIOR, NEGLIGENCE, OR UNDER ANY OTHER CAUSE OF ACTION. YOU SPECIFICALLY ACKNOWLEDGE THAT WE IS NOT LIABLE FOR THE DEFAMATORY, OFFENSIVE OR ILLEGAL CONDUCT OF OTHER USERS OR THIRD-PARTIES AND THAT THE RISK OF INJURY FROM THE FOREGOING RESTS ENTIRELY WITH YOU.
 
-IN NO EVENT WILL WE, OR ANY PERSON OR ENTITY INVOLVED IN CREATING, DEVELOPING OR MAINTAINING THE NETWORK, BE LIABLE FOR ANY DAMAGES, INCLUDING, WITHOUT LIMITATION, DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES ARISING OUT OF THE USE OF OR INABILITY TO USE THE NETWORK. 
+IN NO EVENT WILL WE, OR ANY PERSON OR ENTITY INVOLVED IN CREATING, DEVELOPING OR MAINTAINING THE NETWORK, BE LIABLE FOR ANY DAMAGES, INCLUDING, WITHOUT LIMITATION, DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES ARISING OUT OF THE USE OF OR INABILITY TO USE THE NETWORK.
 
-IN ADDITION TO THE TERMS SET FORTH ABOVE NEITHER, WE, NOR OUR AFFILIATES OR CONTENT PARTNERS SHALL BE LIABLE REGARDLESS OF THE CAUSE OR DURATION, FOR ANY ERRORS, INACCURACIES, OMISSIONS, OR OTHER DEFECTS IN, OR UNTIMELINESS OR UNAUTHENTICITY OF, THE INFORMATION CONTAINED WITHIN THE NETWORK, OR FOR ANY DELAY OR INTERRUPTION IN THE TRANSMISSION THEREOF TO YOU, OR FOR ANY CLAIMS OR LOSSES ARISING THEREFROM OR OCCASIONED THEREBY. NONE OF THE FOREGOING PARTIES SHALL BE LIABLE FOR ANY THIRD-PARTY CLAIMS OR LOSSES OF ANY NATURE, INCLUDING, BUT NOT LIMITED TO, LOST PROFITS, PUNITIVE OR CONSEQUENTIAL DAMAGES. 
+IN ADDITION TO THE TERMS SET FORTH ABOVE NEITHER, WE, NOR OUR AFFILIATES OR CONTENT PARTNERS SHALL BE LIABLE REGARDLESS OF THE CAUSE OR DURATION, FOR ANY ERRORS, INACCURACIES, OMISSIONS, OR OTHER DEFECTS IN, OR UNTIMELINESS OR UNAUTHENTICITY OF, THE INFORMATION CONTAINED WITHIN THE NETWORK, OR FOR ANY DELAY OR INTERRUPTION IN THE TRANSMISSION THEREOF TO YOU, OR FOR ANY CLAIMS OR LOSSES ARISING THEREFROM OR OCCASIONED THEREBY. NONE OF THE FOREGOING PARTIES SHALL BE LIABLE FOR ANY THIRD-PARTY CLAIMS OR LOSSES OF ANY NATURE, INCLUDING, BUT NOT LIMITED TO, LOST PROFITS, PUNITIVE OR CONSEQUENTIAL DAMAGES.
 
-FORCE MAJEURE. NEITHER PARTY WILL BE RESPONSIBLE FOR ANY FAILURE OR DELAY IN PERFORMANCE DUE TO CIRCUMSTANCES BEYOND ITS REASONABLE CONTROL, INCLUDING, WITHOUT LIMITATION, ACTS OF GOD, WAR, RIOT, EMBARGOES, ACTS OF CIVIL OR MILITARY AUTHORITIES, FIRE, FLOODS, ACCIDENTS, SERVICE OUTAGES RESULTING FROM EQUIPMENT AND/OR SOFTWARE FAILURE AND/OR TELECOMMUNICATIONS FAILURES, POWER FAILURES, NETWORK FAILURES, FAILURES OF THIRD PARTY SERVICE PROVIDERS (INCLUDING PROVIDERS OF INTERNET SERVICES AND TELECOMMUNICATIONS). THE PARTY AFFECTED BY ANY SUCH EVENT SHALL NOTIFY THE OTHER PARTY WITHIN A MAXIMUM OF FIFTEEN (15) DAYS FROM ITS OCCURENCE. THE PERFORMANCE OF THS AGREEMENT SHALL THEN BE SUSPENDED FOR AS LONG AS ANY SUCH EVENT SHALL PREVENT THE AFFECTED PARTY FROM PERFORMING ITS OBLIGATIONS UNDER THIS AGREEMENT. 
+FORCE MAJEURE. NEITHER PARTY WILL BE RESPONSIBLE FOR ANY FAILURE OR DELAY IN PERFORMANCE DUE TO CIRCUMSTANCES BEYOND ITS REASONABLE CONTROL, INCLUDING, WITHOUT LIMITATION, ACTS OF GOD, WAR, RIOT, EMBARGOES, ACTS OF CIVIL OR MILITARY AUTHORITIES, FIRE, FLOODS, ACCIDENTS, SERVICE OUTAGES RESULTING FROM EQUIPMENT AND/OR SOFTWARE FAILURE AND/OR TELECOMMUNICATIONS FAILURES, POWER FAILURES, NETWORK FAILURES, FAILURES OF THIRD PARTY SERVICE PROVIDERS (INCLUDING PROVIDERS OF INTERNET SERVICES AND TELECOMMUNICATIONS). THE PARTY AFFECTED BY ANY SUCH EVENT SHALL NOTIFY THE OTHER PARTY WITHIN A MAXIMUM OF FIFTEEN (15) DAYS FROM ITS OCCURENCE. THE PERFORMANCE OF THIS AGREEMENT SHALL THEN BE SUSPENDED FOR AS LONG AS ANY SUCH EVENT SHALL PREVENT THE AFFECTED PARTY FROM PERFORMING ITS OBLIGATIONS UNDER THIS AGREEMENT.  
 
-10\. INDEMNIFICATION
+9\. INDEMNIFICATION
 
 You agree to defend, indemnify and hold harmless us, our affiliates and their respective directors, officers, employees and agents from and against all loss, claim, damage, expense or liability (including all reasonable attorneys’ fees and other expenses reasonably incurred in investigating, preparing or defending against litigation, commenced or threatened), incurred by the aggrieved party as a result of, or arising out of, or relating to (a) any misrepresentation or breach of any representation or warranty made by you, (b) any breach of these Terms by you, (c) your violation of the Applicable Law or any rights of another, including any intellectual property rights, or (c) any cause of action, suit or claim brought or made against us and arising out of or resulting from your use of the Network. 
 
-11\. TERMINATION
+10\. TERMINATION
 
-You may terminate the Terms at any time by ceasing your use of the Network and closing your account with us. 
+You may terminate the Terms at any time by ceasing your use of the Network and closing your account with us.
 
-We may terminate these Terms at any time for any reason whatsoever, including without limitation if you breach the Terms or the Applicable Law. 
+We may terminate these Terms at any time for any reason whatsoever, including without limitation if you breach the Terms or the Applicable Law.
 
-Upon termination we may delete your data which is under our control. 
+Upon termination we may delete your data which is under our control.
 
-12\. MISCELLANEOUS
+11\. MISCELLANEOUS
 
 You agree to comply with all applicable export laws and restrictions and regulations and agree that you will not export, or allow the export or re-export of the Network or any part of it in violation of the Applicable Law.
 
-The Terms constitute the entire agreement of the parties with respect to the subject matter hereof, and supersede all previous written or oral agreements between the parties with respect to such subject matter. This Agreement shall be construed in accordance with the laws of the Republic of Panama without regard to its conflict of laws rules. 
+The Terms constitute the entire agreement of the parties with respect to the subject matter hereof, and supersede all previous written or oral agreements between the parties with respect to such subject matter. This Agreement shall be construed in accordance with the laws of the Republic of Panama without regard to its conflict of laws rules.
 
 You agree that any legal action arising out of or relating to these Terms shall be filed exclusively in the competent courts of the Republic of Panama.
-
-No waiver by either party of any breach or default hereunder shall be deemed to be a waiver of any preceding or subsequent breach or default. The section headings used herein are for convenience only and shall not be given any legal importance. 
+No waiver by either party of any breach or default hereunder shall be deemed to be a waiver of any preceding or subsequent breach or default. The section headings used herein are for convenience only and shall not be given any legal importance.
 
 You agree that these Terms and our rights hereunder may be assigned, in whole or in part, by us or our affiliate to any third party, at our sole discretion, including an assignment in connection with a merger, acquisition, reorganization or sale of substantially all of our assets, or otherwise, in whole or in part. You may not delegate, sublicense or assign your rights under these Terms.
 
 **PRIVACY POLICY & NO-LOGS PLEDGE**
 
-Effective date: May 22, 2020
+Effective date: January 18, 2022
 
 Netsys Inc. ("us", "we", or "our") operates the Mysterium network (the “Network”). 
 
@@ -140,7 +129,7 @@ This Privacy Policy supplements our [Terms of Use](#TERMS-OF-USE) (“ToU”) an
 
 A. NO-LOGS PLEDGE   
 
-We will not collect any information or store any logs about your browsing activity, queries, data destinations, IP addresses or timestamps. We are based in a jurisdiction (Panama) which laws do not require us to retain any of such data. The only information we collect in connection to your use of the Network is the information listed in this Privacy Policy below.
+We will not collect any information or store any logs about your browsing activity (including queries, data destinations, IP addresses or timestamps). We are based in a jurisdiction (Panama) which laws do not require us to retain any of such data. The only information we collect in connection to your use of the Network is the information listed in this Privacy Policy below.
 
 Additionally, as we provide the Network by creating virtual tunnels through one or more connections to other users of the Network (i.e. the Nodes, as defined in the ToU) and by using their equipment and resources to route you to your destination, it is not technically possible for us monitor your activities in the Network.
 
@@ -162,4 +151,4 @@ We may update our Privacy Policy from time to time. Such changes, modifications,
 
 D. CONTACT US
 
- If you have any questions about this Privacy Policy, please contact us by email: support@netsys.technology
+If you have any questions about this Privacy Policy, please contact us by email: support@netsys.technology
