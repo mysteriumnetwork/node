@@ -23,7 +23,7 @@ Currently node supports WireGuard as its underlying VPN transport.
 
 ### Debian / Ubuntu / Raspbian
 
-Install latest stable testnet3 release:
+Install latest stable release:
 ```bash
 sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
@@ -43,7 +43,7 @@ Service status:
 sudo systemctl status mysterium-node.service
 ```
 
-Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Debian 10_, _Ubuntu 18.04_ and _Ubuntu 20.04_ .
+Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Debian 10_, _Ubuntu 18.04_ and _Ubuntu 20.04_.
 
 ### Docker
 
