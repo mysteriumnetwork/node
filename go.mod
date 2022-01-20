@@ -34,7 +34,7 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
-	github.com/mysteriumnetwork/feedback v1.1.1
+	github.com/mysteriumnetwork/feedback v1.1.2-0.20211228095831-9dfca34c9ab7
 	github.com/mysteriumnetwork/go-ci v0.0.0-20211124142828-37ca8ff3ef34
 	github.com/mysteriumnetwork/go-dvpn-web v1.6.3
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
@@ -47,7 +47,7 @@ require (
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/pion/stun v0.3.5
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.17.2
+	github.com/rs/zerolog v1.26.1
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
 	github.com/spf13/cast v1.3.1
@@ -58,9 +58,9 @@ require (
 	github.com/xtaci/kcp-go/v5 v5.5.8
 	go.etcd.io/bbolt v1.3.4
 	go.mongodb.org/mongo-driver v1.7.0
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
-	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
+	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20210816183151-1e6c022a8912
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
@@ -210,7 +210,7 @@ require (
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
-	go.opencensus.io v0.22.2 // indirect
+	go.opencensus.io v0.22.4 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
