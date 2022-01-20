@@ -491,12 +491,12 @@
     },
     "/feedback/issue": {
       "post": {
-        "description": "Reports user issue",
+        "description": "Reports user issue to github",
         "tags": [
           "Feedback"
         ],
-        "summary": "Reports user issue",
-        "operationId": "reportIssue",
+        "summary": "Reports user issue to github",
+        "operationId": "reportIssueGithub",
         "parameters": [
           {
             "description": "Report issue request",
@@ -513,6 +513,49 @@
             "schema": {
               "$ref": "#/definitions/ReportIssueSuccess"
             }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ReportIssueError"
+            }
+          },
+          "429": {
+            "description": "Too many requests (max. 1/minute)",
+            "schema": {
+              "$ref": "#/definitions/ReportIssueError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ReportIssueError"
+            }
+          }
+        }
+      }
+    },
+    "/feedback/issue/intercom": {
+      "post": {
+        "description": "Reports user user to intercom",
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Reports user issue to intercom",
+        "operationId": "reportIssueIntercom",
+        "parameters": [
+          {
+            "description": "Report issue request",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/ReportIntercomIssueRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Issue reported"
           },
           "400": {
             "description": "Bad request",
@@ -4097,6 +4140,29 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ReportIntercomIssueRequest": {
+      "description": "ReportIntercomIssueRequest params for intercom issue report",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "email": {
+          "type": "string",
+          "x-go-name": "Email"
+        },
+        "user_id": {
+          "type": "string",
+          "x-go-name": "UserId"
+        },
+        "user_type": {
+          "type": "string",
+          "x-go-name": "UserType"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
     "ReportIssueError": {
       "description": "ReportIssueError issue report error",

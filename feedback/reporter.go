@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/feedback/client"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -32,12 +33,14 @@ type Reporter struct {
 	logCollector     logCollector
 	identityProvider identityProvider
 	feedbackAPI      *client.FeedbackAPI
+	originResolver   location.OriginResolver
 }
 
 // NewReporter constructs a new Reporter
 func NewReporter(
 	logCollector logCollector,
 	identityProvider identityProvider,
+	originResolver location.OriginResolver,
 	feedbackURL string,
 ) (*Reporter, error) {
 	log.Info().Msg("Using feedback API at: " + feedbackURL)
@@ -48,6 +51,7 @@ func NewReporter(
 	return &Reporter{
 		logCollector:     logCollector,
 		identityProvider: identityProvider,
+		originResolver:   originResolver,
 		feedbackAPI:      api,
 	}, nil
 }
@@ -64,6 +68,8 @@ type identityProvider interface {
 type UserReport struct {
 	Email       string `json:"email"`
 	Description string `json:"description"`
+	UserId      string `json:"user_id"`
+	UserType    string `json:"user_type"`
 }
 
 // Validate validate UserReport
@@ -102,6 +108,37 @@ func (r *Reporter) NewIssue(report UserReport) (result *client.CreateGithubIssue
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create github issue")
+	}
+	return result, nil
+}
+
+// NewIntercomIssue sends node logs, Identity and UserReport to intercom
+func (r *Reporter) NewIntercomIssue(report UserReport) (result *client.CreateIntercomIssueResult, err error) {
+	if err := report.Validate(); err != nil {
+		return nil, err
+	}
+
+	nodeID := r.currentIdentity()
+	location := r.originResolver.GetOrigin()
+
+	archiveFilepath, err := r.logCollector.Archive()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create log archive")
+	}
+
+	result, err = r.feedbackAPI.CreateIntercomIssue(client.CreateIntercomIssueRequest{
+		UserId:       report.UserId,
+		Description:  report.Description,
+		Email:        report.Email,
+		Filepath:     archiveFilepath,
+		NodeIdentity: nodeID,
+		NodeCountry:  location.Country,
+		IpType:       location.IPType,
+		Ip:           location.IP,
+		UserType:     report.UserType,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create intercom issue")
 	}
 	return result, nil
 }

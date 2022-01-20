@@ -58,11 +58,11 @@ type ReportIssueError struct {
 	} `json:"errors"`
 }
 
-// ReportIssue reports user issue
-// swagger:operation POST /feedback/issue Feedback reportIssue
+// ReportIssueGithub reports user issue to github
+// swagger:operation POST /feedback/issue Feedback reportIssueGithub
 // ---
-// summary: Reports user issue
-// description: Reports user issue
+// summary: Reports user issue to github
+// description: Reports user issue to github
 // parameters:
 //   - in: body
 //     name: body
@@ -86,7 +86,7 @@ type ReportIssueError struct {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ReportIssueError"
-func (api *feedbackAPI) ReportIssue(c *gin.Context) {
+func (api *feedbackAPI) ReportIssueGithub(c *gin.Context) {
 	httpReq := c.Request
 	httpRes := c.Writer
 
@@ -113,13 +113,74 @@ func (api *feedbackAPI) ReportIssue(c *gin.Context) {
 	utils.WriteAsJSON(result.Response, httpRes)
 }
 
+// ReportIntercomIssueRequest params for intercom issue report
+// swagger:model
+type ReportIntercomIssueRequest struct {
+	Email       string `json:"email"`
+	Description string `json:"description"`
+	UserId      string `json:"user_id"`
+	UserType    string `json:"user_type"`
+}
+
+// ReportIssueIntercom reports user issue to intercom
+// swagger:operation POST /feedback/issue/intercom Feedback reportIssueIntercom
+// ---
+// summary: Reports user issue to intercom
+// description: Reports user user to intercom
+// parameters:
+//   - in: body
+//     name: body
+//     description: Report issue request
+//     schema:
+//       $ref: "#/definitions/ReportIntercomIssueRequest"
+// responses:
+//   201:
+//     description: Issue reported
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ReportIssueError"
+//   429:
+//     description: Too many requests (max. 1/minute)
+//     schema:
+//       "$ref": "#/definitions/ReportIssueError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ReportIssueError"
+func (api *feedbackAPI) ReportIssueIntercom(c *gin.Context) {
+	httpReq := c.Request
+	httpRes := c.Writer
+
+	req := feedback.UserReport{}
+	err := json.NewDecoder(httpReq.Body).Decode(&req)
+	if err != nil {
+		utils.SendError(httpRes, errors.Wrap(err, "could not read message body"), http.StatusBadRequest)
+		return
+	}
+
+	result, err := api.reporter.NewIntercomIssue(req)
+	if err != nil {
+		log.Error().Stack().Err(err).Msg("Could not create an issue for feedback")
+		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		return
+	}
+
+	if !result.Success {
+		log.Error().Stack().Err(err).Msg("Submitting an issue failed")
+		utils.WriteAsJSON(result.Errors, httpRes, result.HTTPResponse.StatusCode)
+		return
+	}
+}
+
 // AddRoutesForFeedback registers feedback routes
 func AddRoutesForFeedback(
 	reporter *feedback.Reporter,
 ) func(*gin.Engine) error {
 	api := newFeedbackAPI(reporter)
 	return func(g *gin.Engine) error {
-		g.POST("/feedback/issue", api.ReportIssue)
+		g.POST("/feedback/issue", api.ReportIssueGithub)
+		g.POST("/feedback/issue/intercom", api.ReportIssueIntercom)
 		return nil
 	}
 }
