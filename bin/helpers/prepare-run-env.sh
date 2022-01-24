@@ -23,7 +23,7 @@ function ensure_paths {
 
     iptables_required_path="/usr/sbin/iptables"
 
-    if ! command [ -x "${iptables_required_path}" ]; then
+    if ! env [ -x "${iptables_required_path}" ]; then
         ln -s ${iptables_path} ${iptables_required_path}
     fi
 }
