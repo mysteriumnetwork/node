@@ -191,7 +191,7 @@ release-tag:avado:
 
 release-tag:docker:
   stage: release-tag
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v ReleaseDockerTag
 
 release-tag:debian-ppa:
