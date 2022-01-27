@@ -135,11 +135,6 @@ package:android:
   tags: [go]
   script: go run mage.go -v PackageAndroid
 
-package:docker-alpine:
-  stage: build
-  tags: [go,high_performance]
-  script: go run mage.go -v PackageDockerAlpine
-
 package:swagger-redoc-docker:
   stage: build
   tags: [go]
@@ -196,7 +191,7 @@ release-tag:avado:
 
 release-tag:docker:
   stage: release-tag
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v ReleaseDockerTag
 
 release-tag:debian-ppa:
