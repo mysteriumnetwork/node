@@ -122,7 +122,7 @@ func (ce *connectionEndpoint) InterfaceName() string {
 }
 
 // PeerStats returns stats information about connected peer.
-func (ce *connectionEndpoint) PeerStats() (*wgcfg.Stats, error) {
+func (ce *connectionEndpoint) PeerStats() (wgcfg.Stats, error) {
 	return ce.wgClient.PeerStats(ce.cfg.IfaceName)
 }
 

@@ -79,18 +79,18 @@ func (m *Monitor) Down(interfaceName string) error {
 }
 
 // Stats requests interface statistics.
-func (m *Monitor) Stats(interfaceName string) (*wgcfg.Stats, error) {
+func (m *Monitor) Stats(interfaceName string) (wgcfg.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	iface, ok := m.interfaces[interfaceName]
 	if !ok {
-		return nil, fmt.Errorf("interface %s not found", interfaceName)
+		return wgcfg.Stats{}, fmt.Errorf("interface %s not found", interfaceName)
 	}
 
 	deviceState, err := userspace.ParseUserspaceDevice(iface.Device.IpcGetOperation)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse device state: %w", err)
+		return wgcfg.Stats{}, fmt.Errorf("could not parse device state: %w", err)
 	}
 
 	for start := time.Now(); time.Since(start) < 10*time.Second; time.Sleep(time.Second) {
@@ -103,5 +103,5 @@ func (m *Monitor) Stats(interfaceName string) (*wgcfg.Stats, error) {
 		}
 	}
 
-	return nil, err
+	return wgcfg.Stats{}, err
 }

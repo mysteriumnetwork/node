@@ -79,17 +79,17 @@ func (c *client) DestroyDevice(iface string) error {
 	return nil
 }
 
-func (c *client) PeerStats(iface string) (*wgcfg.Stats, error) {
+func (c *client) PeerStats(iface string) (wgcfg.Stats, error) {
 	statsJSON, err := supervisorclient.Command("wg-stats", "-iface", iface)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get wg stats: %w", err)
+		return wgcfg.Stats{}, fmt.Errorf("failed to get wg stats: %w", err)
 	}
 
 	stats := wgcfg.Stats{}
 	if err := json.Unmarshal([]byte(statsJSON), &stats); err != nil {
-		return nil, fmt.Errorf("could not unmarshal stats: %w", err)
+		return wgcfg.Stats{}, fmt.Errorf("could not unmarshal stats: %w", err)
 	}
-	return &stats, nil
+	return stats, nil
 }
 
 func (c *client) Close() (err error) {

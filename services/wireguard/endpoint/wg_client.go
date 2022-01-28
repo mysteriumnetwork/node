@@ -35,7 +35,7 @@ type WgClient interface {
 	ConfigureDevice(config wgcfg.DeviceConfig) error
 	ReConfigureDevice(config wgcfg.DeviceConfig) error
 	DestroyDevice(name string) error
-	PeerStats(iface string) (*wgcfg.Stats, error)
+	PeerStats(iface string) (wgcfg.Stats, error)
 	Close() error
 }
 

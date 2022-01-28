@@ -108,14 +108,14 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) PeerStats(string) (*wgcfg.Stats, error) {
+func (c *client) PeerStats(string) (wgcfg.Stats, error) {
 	deviceState, err := ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
-		return nil, err
+		return wgcfg.Stats{}, err
 	}
 	stats, err := ParseDevicePeerStats(deviceState)
 	if err != nil {
-		return nil, err
+		return wgcfg.Stats{}, err
 	}
 	return stats, nil
 }

@@ -22,12 +22,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
 	"time"
 
-	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -91,7 +91,7 @@ type UserspaceDevicePeer struct {
 }
 
 // ParseUserspaceDevice parses WireGuard device state buffer.
-func ParseUserspaceDevice(ipcGetOp func(w *bufio.Writer) *device.IPCError) (*UserspaceDevice, error) {
+func ParseUserspaceDevice(ipcGetOp func(w io.Writer) error) (*UserspaceDevice, error) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 	if err := ipcGetOp(writer); err != nil {

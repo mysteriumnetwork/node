@@ -24,13 +24,13 @@ import (
 )
 
 // ParseDevicePeerStats parses current active consumer stats.
-func ParseDevicePeerStats(d *UserspaceDevice) (*wgcfg.Stats, error) {
+func ParseDevicePeerStats(d *UserspaceDevice) (wgcfg.Stats, error) {
 	if len(d.Peers) != 1 {
-		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
+		return wgcfg.Stats{}, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
 	}
 
 	p := d.Peers[0]
-	return &wgcfg.Stats{
+	return wgcfg.Stats{
 		BytesSent:     uint64(p.TransmitBytes),
 		BytesReceived: uint64(p.ReceiveBytes),
 		LastHandshake: p.LastHandshakeTime,
