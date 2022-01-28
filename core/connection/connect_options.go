@@ -33,6 +33,8 @@ type ConnectParams struct {
 	DisableKillSwitch bool
 	// DNS servers to use
 	DNS DNSOption
+
+	ProxyPort int
 }
 
 // ConnectOptions represents the params we need to ensure a successful connection

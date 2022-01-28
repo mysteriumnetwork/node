@@ -56,10 +56,18 @@ func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 	if err := ce.cleanAbandonedInterfaces(); err != nil {
 		return err
 	}
-	iface, err := ce.resourceAllocator.AllocateInterface()
-	if err != nil {
-		return errors.Wrap(err, "could not allocate interface")
+
+	var iface string
+	var err error
+	if cfg.ProxyPort > 0 {
+		iface = fmt.Sprintf("myst%d", cfg.ProxyPort)
+	} else {
+		iface, err = ce.resourceAllocator.AllocateInterface()
+		if err != nil {
+			return errors.Wrap(err, "could not allocate interface")
+		}
 	}
+
 	log.Debug().Msgf("Allocated interface: %s", iface)
 
 	cfg.IfaceName = iface

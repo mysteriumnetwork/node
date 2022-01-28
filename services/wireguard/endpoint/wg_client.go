@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
@@ -40,6 +41,9 @@ type WgClient interface {
 }
 
 func newWGClient() (WgClient, error) {
+	if config.GetBool(config.FlagProxyMode) {
+		return proxyclient.New()
+	}
 	if config.GetBool(config.FlagUserMode) {
 		return remoteclient.New()
 	}

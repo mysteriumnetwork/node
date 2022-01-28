@@ -48,6 +48,8 @@ type DeviceConfig struct {
 
 	Peer         Peer `json:"peer"`
 	ReplacePeers bool `json:"replace_peers,omitempty"`
+
+	ProxyPort int `json:"proxy_port"`
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
@@ -68,6 +70,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 		DNSScriptDir string   `json:"dns_script_dir"`
 		Peer         peer     `json:"peer"`
 		ReplacePeers bool     `json:"replace_peers,omitempty"`
+		ProxyPort    int      `json:"proxy_port"`
 	}
 
 	var peerEndpoint string
@@ -89,6 +92,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 			KeepAlivePeriodSeconds: dc.Peer.KeepAlivePeriodSeconds,
 		},
 		ReplacePeers: dc.ReplacePeers,
+		ProxyPort:    dc.ProxyPort,
 	})
 }
 
@@ -110,6 +114,7 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 		DNSScriptDir string   `json:"dns_script_dir"`
 		Peer         peer     `json:"peer"`
 		ReplacePeers bool     `json:"replace_peers,omitempty"`
+		ProxyPort    int      `json:"proxy_port"`
 	}
 
 	cfg := deviceConfig{}
@@ -145,6 +150,7 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 		KeepAlivePeriodSeconds: cfg.Peer.KeepAlivePeriodSeconds,
 	}
 	dc.ReplacePeers = cfg.ReplacePeers
+	dc.ProxyPort = cfg.ProxyPort
 
 	return nil
 }

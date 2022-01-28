@@ -231,6 +231,14 @@ var (
 		Usage: "Run as a regular user. Delegate elevated commands to the supervisor.",
 		Value: false,
 	}
+
+	// FlagProxyMode allows running node under current user as a proxy.
+	FlagProxyMode = cli.BoolFlag{
+		Name:  "proxymode",
+		Usage: "Run as a regular user as a proxy",
+		Value: false,
+	}
+
 	// FlagVendorID identifies 3rd party vendor (distributor) of Mysterium node.
 	FlagVendorID = cli.StringFlag{
 		Name: "vendor.id",
@@ -335,6 +343,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagUIAddress,
 		&FlagUIPort,
 		&FlagUserMode,
+		&FlagProxyMode,
 		&FlagVendorID,
 		&FlagLauncherVersion,
 		&FlagP2PListenPorts,
@@ -391,6 +400,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagUIAddress)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
+	Current.ParseBoolFlag(ctx, FlagProxyMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagLauncherVersion)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
