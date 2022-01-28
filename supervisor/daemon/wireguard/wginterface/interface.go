@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
@@ -46,11 +47,11 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("failed to create TUN device %s: %w", cfg.IfaceName, err)
 	}
 
-	logger := newLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", interfaceName))
-	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
+	logger := device.NewLogger(device.LogLevelVerbose, fmt.Sprintf("(%s) ", interfaceName))
+	logger.Verbosef("Starting wireguard-go")
 
-	logger.Info.Println("Starting device")
-	wgDevice := device.NewDevice(tunnel, logger)
+	logger.Verbosef("Starting device")
+	wgDevice := device.NewDevice(tunnel, conn.NewDefaultBind(), logger)
 
 	log.Info().Msg("Creating UAPI listener")
 	uapi, err := newUAPIListener(interfaceName)
