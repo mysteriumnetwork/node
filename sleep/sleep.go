@@ -21,9 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/context"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -54,11 +53,11 @@ type Notifier struct {
 
 type connectionManager interface {
 	// Status queries current status of connection
-	Status() connectionstate.Status
+	Status(int) connectionstate.Status
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
 	CheckChannel(context.Context) error
 	// Reconnect reconnects current session
-	Reconnect()
+	Reconnect(int)
 }
 
 // NewNotifier create sleep events notifier
@@ -77,14 +76,14 @@ func (n *Notifier) handleSleepEvent(e Event) {
 		log.Info().Msg("Got sleep notification during live vpn session")
 	case EventWakeup:
 		log.Info().Msg("Got wake-up from sleep notification - checking if need to reconnect")
-		if n.connectionManager.Status().State != connectionstate.Connected {
+		if n.connectionManager.Status(0).State != connectionstate.Connected {
 			return
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
 		if err := n.connectionManager.CheckChannel(ctx); err != nil {
 			log.Info().Msgf("Channel dead - reconnecting: %s", err)
-			n.connectionManager.Reconnect()
+			n.connectionManager.Reconnect(0)
 		} else {
 			log.Info().Msg("Channel still alive - no need to reconnect")
 		}

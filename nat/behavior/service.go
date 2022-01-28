@@ -54,7 +54,7 @@ type NATProber interface {
 // ConnectionStatusProvider is a subset of connection.Manager methods
 // to provide gatedNATProber with current connection status
 type ConnectionStatusProvider interface {
-	Status() connectionstate.Status
+	Status(int) connectionstate.Status
 }
 
 // NewNATProber constructs some suitable NATProber without any implementation
@@ -99,7 +99,7 @@ func newGatedNATProber(connStatusProvider ConnectionStatusProvider, eventbus eve
 }
 
 func (p *gatedNATProber) Probe(ctx context.Context) (nat.NATType, error) {
-	if p.connStatusProvider.Status().State != connectionstate.NotConnected {
+	if p.connStatusProvider.Status(0).State != connectionstate.NotConnected {
 		return "", ErrInappropriateState
 	}
 

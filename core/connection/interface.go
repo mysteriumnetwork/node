@@ -55,3 +55,17 @@ type Manager interface {
 	// Reconnect reconnects current session
 	Reconnect()
 }
+
+// MultiManager interface provides methods to manage connection
+type MultiManager interface {
+	// Connect creates new connection from given consumer to provider, reports error if connection already exists
+	Connect(consumerID identity.Identity, hermesID common.Address, proposal ProposalLookup, params ConnectParams) error
+	// Status queries current status of connection
+	Status(n int) connectionstate.Status
+	// Disconnect closes established connection, reports error if no connection
+	Disconnect(n int) error
+	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
+	CheckChannel(context.Context) error
+	// Reconnect reconnects current session
+	Reconnect(n int)
+}

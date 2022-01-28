@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -276,8 +277,9 @@ func (client *Client) SmartConnectionCreate(consumerID, hermesID, serviceType st
 }
 
 // ConnectionDestroy terminates current connection
-func (client *Client) ConnectionDestroy() (err error) {
-	response, err := client.http.Delete("connection", nil)
+func (client *Client) ConnectionDestroy(port int) (err error) {
+	url := fmt.Sprintf("connection?%s", url.Values{"id": []string{strconv.Itoa(port)}}.Encode())
+	response, err := client.http.Delete(url, nil)
 	if err != nil {
 		return
 	}
@@ -299,8 +301,8 @@ func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStat
 }
 
 // ConnectionStatus returns connection status
-func (client *Client) ConnectionStatus() (status contract.ConnectionInfoDTO, err error) {
-	response, err := client.http.Get("connection", url.Values{})
+func (client *Client) ConnectionStatus(port int) (status contract.ConnectionInfoDTO, err error) {
+	response, err := client.http.Get("connection", url.Values{"id": []string{strconv.Itoa(port)}})
 	if err != nil {
 		return status, err
 	}

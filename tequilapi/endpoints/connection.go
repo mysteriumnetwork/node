@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -56,7 +57,7 @@ type identityRegistry interface {
 
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
-	manager       connection.Manager
+	manager       connection.MultiManager
 	publisher     eventbus.Publisher
 	stateProvider stateProvider
 	// TODO connection should use concrete proposal from connection params and avoid going to marketplace
@@ -66,7 +67,7 @@ type ConnectionEndpoint struct {
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.MultiManager, stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:            manager,
 		publisher:          publisher,
@@ -92,7 +93,8 @@ func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvid
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Status(c *gin.Context) {
-	status := ce.manager.Status()
+	n, _ := strconv.Atoi(c.Query("id"))
+	status := ce.manager.Status(n)
 	statusResponse := contract.NewConnectionInfoDTO(status)
 	utils.WriteAsJSON(statusResponse, c.Writer)
 }
@@ -214,7 +216,10 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 
 	ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionOK, ""))
 	resp.WriteHeader(http.StatusCreated)
-	ce.Status(c)
+
+	statusResp := ce.manager.Status(cr.ConnectOptions.ProxyPort)
+	statusResponse := contract.NewConnectionInfoDTO(statusResp)
+	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
 // Kill stops connection
@@ -236,7 +241,8 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 	resp := c.Writer
 
-	err := ce.manager.Disconnect()
+	n, _ := strconv.Atoi(c.Query("id"))
+	err := ce.manager.Disconnect(n)
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:
@@ -279,7 +285,7 @@ type proposalRepository interface {
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(
-	manager connection.Manager,
+	manager connection.MultiManager,
 	stateProvider stateProvider,
 	proposalRepository proposalRepository,
 	identityRegistry identityRegistry,
@@ -323,6 +329,7 @@ func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectP
 	return connection.ConnectParams{
 		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
 		DNS:               dns,
+		ProxyPort:         cr.ConnectOptions.ProxyPort,
 	}
 }
 

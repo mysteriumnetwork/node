@@ -62,7 +62,7 @@ type MobileNode struct {
 	shutdown                  func() error
 	node                      *cmd.Node
 	stateKeeper               *state.Keeper
-	connectionManager         connection.Manager
+	connectionManager         connection.MultiManager
 	locationResolver          *location.Cache
 	natProber                 natprobe.NATProber
 	identitySelector          selector.Handler
@@ -277,7 +277,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		shutdown:                  di.Shutdown,
 		node:                      di.Node,
 		stateKeeper:               di.StateKeeper,
-		connectionManager:         di.ConnectionManager,
+		connectionManager:         di.MultiConnectionManager,
 		locationResolver:          di.LocationResolver,
 		natProber:                 di.NATProber,
 		identitySelector:          di.IdentitySelector,
@@ -363,7 +363,7 @@ type GetStatusResponse struct {
 
 // GetStatus returns current connection state and provider info if connected to VPN.
 func (mb *MobileNode) GetStatus() *GetStatusResponse {
-	status := mb.connectionManager.Status()
+	status := mb.connectionManager.Status(0)
 
 	return &GetStatusResponse{
 		State:       string(status.State),
@@ -527,7 +527,7 @@ func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
 
 // Disconnect disconnects or cancels current connection.
 func (mb *MobileNode) Disconnect() error {
-	if err := mb.connectionManager.Disconnect(); err != nil {
+	if err := mb.connectionManager.Disconnect(0); err != nil {
 		return fmt.Errorf("could not disconnect: %w", err)
 	}
 
