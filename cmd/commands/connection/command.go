@@ -23,6 +23,7 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -31,8 +32,10 @@ import (
 	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
@@ -316,28 +319,28 @@ func (c *command) info(ctx *cli.Context) {
 		inf.set(infSessionID, status.SessionID)
 	}
 
-	// ip, err := c.tequilapi.ConnectionIP()
-	// if err == nil {
-	// 	inf.set(infIP, ip.IP)
-	// }
+	ip, err := c.tequilapi.ConnectionIP()
+	if err == nil {
+		inf.set(infIP, ip.IP)
+	}
 
-	// location, err := c.tequilapi.ConnectionLocation()
-	// if err == nil {
-	// 	inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.IPType, location.ISP))
-	// }
+	location, err := c.tequilapi.ConnectionLocation()
+	if err == nil {
+		inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.IPType, location.ISP))
+	}
 
-	// if status.Status != string(connectionstate.Connected) {
-	// 	inf.printAll()
-	// 	return
-	// }
+	if status.Status != string(connectionstate.Connected) {
+		inf.printAll()
+		return
+	}
 
-	// statistics, err := c.tequilapi.ConnectionStatistics()
-	// if err == nil {
-	// 	inf.set(infDuration, fmt.Sprint(time.Duration(statistics.Duration)*time.Second))
-	// 	inf.set(infTransferred, fmt.Sprintf("%s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
-	// 	inf.set(infThroughput, fmt.Sprintf("%s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
-	// 	inf.set(infSpent, money.New(statistics.TokensSpent).String())
-	// }
+	statistics, err := c.tequilapi.ConnectionStatistics()
+	if err == nil {
+		inf.set(infDuration, fmt.Sprint(time.Duration(statistics.Duration)*time.Second))
+		inf.set(infTransferred, fmt.Sprintf("%s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
+		inf.set(infThroughput, fmt.Sprintf("%s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
+		inf.set(infSpent, money.New(statistics.TokensSpent).String())
+	}
 
 	inf.printAll()
 }
