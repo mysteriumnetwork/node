@@ -164,6 +164,7 @@ release-snapshot:debian-ppa:
 release-snapshot:goreport:
   stage: release-snapshot
   tags: [go]
+  retry: 1
   script: bin/release_goreport
   only:
     - master
