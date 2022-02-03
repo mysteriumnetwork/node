@@ -3415,6 +3415,9 @@
         "balance": {
           "$ref": "#/definitions/Int"
         },
+        "balance_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "channel_address": {
           "type": "string",
           "x-go-name": "ChannelAddress"
@@ -4739,6 +4742,25 @@
       "properties": {
         "amount": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "Tokens": {
+      "description": "Tokens a common response for ethereum blockchain monetary amount",
+      "type": "object",
+      "properties": {
+        "ether": {
+          "type": "string",
+          "x-go-name": "Ether"
+        },
+        "human": {
+          "type": "string",
+          "x-go-name": "Human"
+        },
+        "wei": {
+          "type": "string",
+          "x-go-name": "Wei"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

@@ -376,6 +376,7 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     channelAddress.Hex(),
 		Balance:            balance,
+		BalanceTokens:      contract.NewTokens(balance),
 		Earnings:           settlement.UnsettledBalance,
 		EarningsTotal:      settlement.LifetimeBalance,
 		Stake:              stake,

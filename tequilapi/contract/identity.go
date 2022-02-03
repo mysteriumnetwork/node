@@ -50,6 +50,7 @@ type IdentityDTO struct {
 	RegistrationStatus string   `json:"registration_status"`
 	ChannelAddress     string   `json:"channel_address"`
 	Balance            *big.Int `json:"balance"`
+	BalanceTokens      Tokens   `json:"balance_tokens"`
 	Earnings           *big.Int `json:"earnings"`
 	EarningsTotal      *big.Int `json:"earnings_total"`
 	Stake              *big.Int `json:"stake"`
