@@ -351,7 +351,23 @@ func Test_IdentityGet(t *testing.T) {
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(t,
-		`{"id":"0x000000000000000000000000000000000000000a","registration_status":"Registered","channel_address":"0x100000000000000000000000000000000000000A","balance":25,"earnings":50,"earnings_total":100,"stake":2,"hermes_id":"0x200000000000000000000000000000000000000A"}`,
+		`
+{
+  "id": "0x000000000000000000000000000000000000000a",
+  "registration_status": "Registered",
+  "channel_address": "0x100000000000000000000000000000000000000A",
+  "balance": 25,
+  "balance_tokens": {
+    "wei": "25",
+    "ether": "0.000000000000000025",
+    "human": "0"
+  },
+  "earnings": 50,
+  "earnings_total": 100,
+  "stake": 2,
+  "hermes_id": "0x200000000000000000000000000000000000000A"
+}
+`,
 		resp.Body.String())
 }
 

@@ -239,6 +239,7 @@ func mapState(event stateEvent.State) stateRes {
 			RegistrationStatus: identity.RegistrationStatus.String(),
 			ChannelAddress:     identity.ChannelAddress.Hex(),
 			Balance:            identity.Balance,
+			BalanceTokens:      contract.NewTokens(identity.Balance),
 			Earnings:           identity.Earnings,
 			EarningsTotal:      identity.EarningsTotal,
 			Stake:              stake,

@@ -227,6 +227,11 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
         "channel_address": "0x000000000000000000000000000000000000000A",
         "hermes_id": "0x0000000000000000000000000000000000000000",
         "balance": 50,
+		"balance_tokens": {
+			"wei": "50",
+			"ether": "0.00000000000000005",
+			"human": "0"
+		},
         "earnings": 1,
 		"earnings_total": 100,
 		"stake": 0
