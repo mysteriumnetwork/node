@@ -18,6 +18,7 @@
 package logconfig
 
 import (
+	"io/fs"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -65,10 +66,18 @@ func (c *Collector) logFilepaths() (result []string, err error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read directory: "+dir)
 	}
+
+	var mostRecent fs.FileInfo
 	for _, f := range files {
-		if strings.Contains(f.Name(), filename) {
+		if f.Name() == filename+".log" {
 			result = append(result, path.Join(dir, f.Name()))
+		} else if strings.Contains(f.Name(), ".log.gz") && f.Mode().IsRegular() &&
+			(mostRecent == nil || f.ModTime().After(mostRecent.ModTime())) {
+			mostRecent = f
 		}
+	}
+	if mostRecent != nil {
+		result = append(result, path.Join(dir, mostRecent.Name()))
 	}
 	return result, nil
 }
