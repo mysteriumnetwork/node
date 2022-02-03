@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -31,16 +32,27 @@ func TestCollector_List_ListsAllLogFilesMatchingPattern(t *testing.T) {
 	assert := assert.New(t)
 
 	// given
-	baseName := "mysterium-test.log"
-	fn1 := NewTempFileName(t, baseName)
-	defer os.Remove(fn1)
+	baseName := "mysterium-test"
+	dn1 := NewTempDirName(t, "")
+	logFilename := baseName + ".log"
+	f1, err := os.Create(path.Join(dn1, logFilename))
+	assert.NoError(err)
+	defer os.Remove(f1.Name())
 
-	fn2 := NewTempFileName(t, baseName)
+	fn2 := NewTempFileName(t, dn1, logFilename+".gz")
 	defer os.Remove(fn2)
+
+	fn3 := NewTempFileName(t, dn1, logFilename+".gz")
+	defer os.Remove(fn3)
+
+	// ensure this is the file with the most recent modified time
+	time.Sleep(time.Millisecond * 2)
+	fn4 := NewTempFileName(t, dn1, logFilename+".gz")
+	defer os.Remove(fn4)
 
 	opts := LogOptions{
 		LogLevel: zerolog.DebugLevel,
-		Filepath: path.Join(path.Dir(fn1), baseName),
+		Filepath: path.Join(path.Dir(f1.Name()), baseName),
 	}
 	collector := NewCollector(&opts)
 
@@ -49,24 +61,28 @@ func TestCollector_List_ListsAllLogFilesMatchingPattern(t *testing.T) {
 
 	// then
 	assert.NoError(err)
-	assert.Contains(logFiles, fn1)
-	assert.Contains(logFiles, fn2)
+	assert.Contains(logFiles, f1.Name())
+	assert.Contains(logFiles, fn4)
+	assert.Len(logFiles, 2)
 }
 
 func TestCollector_Archive(t *testing.T) {
 	assert := assert.New(t)
 
 	// given
-	baseName := "mysterium-test.log"
-	fn1 := NewTempFileName(t, baseName)
-	defer os.Remove(fn1)
+	baseName := "mysterium-test"
+	dn1 := NewTempDirName(t, "")
+	logFilename := baseName + ".log"
+	f1, err := os.Create(path.Join(dn1, logFilename))
+	assert.NoError(err)
+	defer os.Remove(f1.Name())
 
-	fn2 := NewTempFileName(t, baseName)
+	fn2 := NewTempFileName(t, dn1, logFilename+".gz")
 	defer os.Remove(fn2)
 
 	opts := LogOptions{
 		LogLevel: zerolog.DebugLevel,
-		Filepath: path.Join(path.Dir(fn1), baseName),
+		Filepath: path.Join(path.Dir(f1.Name()), baseName),
 	}
 	collector := NewCollector(&opts)
 
@@ -79,8 +95,14 @@ func TestCollector_Archive(t *testing.T) {
 	assert.NotEmpty(zipFilename)
 }
 
-func NewTempFileName(t *testing.T, pattern string) string {
-	file, err := ioutil.TempFile("", pattern)
+func NewTempFileName(t *testing.T, dir, pattern string) string {
+	file, err := ioutil.TempFile(dir, pattern)
 	assert.NoError(t, err)
 	return file.Name()
+}
+
+func NewTempDirName(t *testing.T, pattern string) string {
+	dir, err := ioutil.TempDir("", pattern)
+	assert.NoError(t, err)
+	return dir
 }
