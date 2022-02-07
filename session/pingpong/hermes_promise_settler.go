@@ -504,6 +504,12 @@ func (aps *hermesPromiseSettler) Withdraw(
 
 	if amountToWithdraw == nil {
 		amountToWithdraw = new(big.Int).Sub(data.Balance, new(big.Int).Sub(data.LatestPromise.Amount, data.Settled))
+
+		// TODO: Pull this from hermes contract in the future.
+		maxWithdraw := crypto.FloatToBigMyst(99)
+		if amountToWithdraw.Cmp(maxWithdraw) > 0 {
+			amountToWithdraw = maxWithdraw
+		}
 	}
 
 	err = aps.validateWithdrawalAmount(amountToWithdraw, toChainID)
