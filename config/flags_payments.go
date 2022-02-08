@@ -131,14 +131,6 @@ var (
 		Usage:  "after syncing offchain balance, how long should node wait for next check to occur",
 		Value:  time.Minute * 30,
 	}
-	// FlagTestnet3HermesURL sets the default value for legacy (testnet3) hermes URL.
-	// TODO: Remove after migrations are considered done.
-	FlagTestnet3HermesURL = cli.StringFlag{
-		Name:   "payments.testnet3-hermes-url",
-		Usage:  "sets the URL for legacy testnet3 hermes",
-		Value:  metadata.Testnet3Definition.Testnet3HermesURL,
-		Hidden: true,
-	}
 	// FlagPaymentsDuringSessionDebug sets if we're in debug more for the payments done in a VPN session.
 	FlagPaymentsDuringSessionDebug = cli.BoolFlag{
 		Name:   "payments.during-session-debug",
@@ -174,7 +166,6 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
 		&FlagOffchainBalanceExpiration,
-		&FlagTestnet3HermesURL,
 		&FlagPaymentsZeroStakeUnsettledAmount,
 		&FlagPaymentsDuringSessionDebug,
 		&FlagPaymentsAmountDuringSessionDebug,
@@ -199,7 +190,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
 	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
-	Current.ParseStringFlag(ctx, FlagTestnet3HermesURL)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
 	Current.ParseBoolFlag(ctx, FlagPaymentsDuringSessionDebug)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsAmountDuringSessionDebug)
