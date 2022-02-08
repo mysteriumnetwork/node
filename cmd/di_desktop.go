@@ -137,10 +137,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
 	}
 
-	fact := func(hermesURL string) registry.ProviderPromiseQuerier {
-		return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
-	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg, fact)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 

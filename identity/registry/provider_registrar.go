@@ -52,13 +52,7 @@ type bc interface {
 	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
 
-// ProviderPromiseQuerier is responsible for checking provider promises.
-type ProviderPromiseQuerier interface {
-	ProviderPromiseAmountUnsafe(chainID int64, id string) (*big.Int, error)
-}
-
 // HermesCallerFactory allows tu produce hermes clients
-type HermesCallerFactory func(hermesURL string) ProviderPromiseQuerier
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
 type ProviderRegistrar struct {
@@ -70,7 +64,6 @@ type ProviderRegistrar struct {
 	stopChan                  chan struct{}
 	queue                     chan queuedEvent
 	registeredIdentities      map[string]struct{}
-	hf                        HermesCallerFactory
 
 	cfg ProviderRegistrarConfig
 }
@@ -93,7 +86,6 @@ func NewProviderRegistrar(
 	multiChainAddressKeeper multiChainAddressKeeper,
 	bc bc,
 	prc ProviderRegistrarConfig,
-	fact HermesCallerFactory,
 ) *ProviderRegistrar {
 	return &ProviderRegistrar{
 		stopChan:                  make(chan struct{}),
@@ -104,7 +96,6 @@ func NewProviderRegistrar(
 		txer:                      transactor,
 		multiChainAddressKeeper:   multiChainAddressKeeper,
 		bc:                        bc,
-		hf:                        fact,
 	}
 }
 
@@ -205,12 +196,6 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 	}
 }
 
-const oldTestnet3ChainID = 80001
-
-func (pr *ProviderRegistrar) testnet3HermesURL() string {
-	return config.GetString(config.FlagTestnet3HermesURL)
-}
-
 func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 	id := identity.FromAddress(qe.event.ProviderID)
 
@@ -221,16 +206,6 @@ func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 	}
 
 	if eligible {
-		return pr.registerIdentity(qe, id)
-	}
-
-	amount, err := pr.hf(pr.testnet3HermesURL()).ProviderPromiseAmountUnsafe(oldTestnet3ChainID, id.Address)
-	if err != nil {
-		log.Error().Err(err).Msgf("tried to check legacy hermes in auto registration, but failed: %q", id.Address)
-		return errors.Wrap(err, "could not check eligibility for auto-registration")
-	}
-
-	if amount != nil && amount.Cmp(new(big.Int)) > 0 {
 		return pr.registerIdentity(qe, id)
 	}
 
