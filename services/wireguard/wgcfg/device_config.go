@@ -49,7 +49,7 @@ type DeviceConfig struct {
 	Peer         Peer `json:"peer"`
 	ReplacePeers bool `json:"replace_peers,omitempty"`
 
-	ProxyPort int `json:"proxy_port"`
+	ProxyPort int `json:"proxy_port,omitempty"`
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
@@ -70,7 +70,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 		DNSScriptDir string   `json:"dns_script_dir"`
 		Peer         peer     `json:"peer"`
 		ReplacePeers bool     `json:"replace_peers,omitempty"`
-		ProxyPort    int      `json:"proxy_port"`
+		ProxyPort    int      `json:"proxy_port,omitempty"`
 	}
 
 	var peerEndpoint string
