@@ -67,7 +67,9 @@ func (mcm *multiConnectionManager) Status(id int) connectionstate.Status {
 		return m.Status()
 	}
 
-	return connectionstate.Status{}
+	return connectionstate.Status{
+		State: connectionstate.NotConnected,
+	}
 }
 
 // Disconnect closes established connection, reports error if no connection.
