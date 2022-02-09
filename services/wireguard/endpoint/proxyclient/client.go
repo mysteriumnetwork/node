@@ -19,10 +19,13 @@ package proxyclient
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/conn"
@@ -36,7 +39,7 @@ import (
 type client struct {
 	mu         sync.Mutex
 	Device     *device.Device
-	proxyClose func() error
+	proxyClose func(context.Context) error
 }
 
 // New create new remote WireGuard client which communicates with supervisor.
@@ -108,12 +111,14 @@ func (c *client) Close() (err error) {
 	defer c.mu.Unlock()
 
 	if c.proxyClose != nil {
-		c.proxyClose()
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		c.proxyClose(ctx)
 	}
 	if c.Device != nil {
+		c.Device.Down()
 		c.Device.Close()
 	}
-
 	return nil
 }
 
@@ -121,19 +126,20 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", proxyPort))
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to listen for proxy connections")
-		return err
+	server := http.Server{
+		Addr:              fmt.Sprintf(":%d", proxyPort),
+		Handler:           newProxyHandler(60*time.Second, tnet),
+		ReadTimeout:       0,
+		ReadHeaderTimeout: 0,
+		WriteTimeout:      0,
+		IdleTimeout:       0,
 	}
 
-	server := newProxy(tnet, ln)
 	log.Info().Msgf("Starting proxy server at :%d ...", proxyPort)
-
-	c.proxyClose = ln.Close
+	c.proxyClose = server.Shutdown
 
 	go func() {
-		err = server.Serve()
+		err := server.ListenAndServe()
 		log.Error().Err(err).Msg("Shutting down proxy server...")
 	}()
 
