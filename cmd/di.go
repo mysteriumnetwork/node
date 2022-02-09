@@ -900,9 +900,11 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 
 	di.LocationResolver = location.NewCache(resolver, di.EventBus, time.Minute*5)
 
-	err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
-	if err != nil {
-		return err
+	if !config.GetBool(config.FlagProxyMode) {
+		err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.LocationResolver.HandleNodeEvent)
@@ -984,6 +986,10 @@ func (di *Dependencies) handleConnStateChange() error {
 
 	latestState := connectionstate.NotConnected
 	return di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
+		if config.GetBool(config.FlagProxyMode) {
+			return // Proxy mode doesn't establish system wide tunnels, no reconnect required.
+		}
+
 		// Here we care only about connected and disconnected events.
 		if e.State != connectionstate.Connected && e.State != connectionstate.NotConnected {
 			return

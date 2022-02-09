@@ -344,7 +344,6 @@ func (m *connectionManager) priceFromProposal(proposal proposal.PricedServicePro
 	}
 
 	return p
-
 }
 
 func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) (sessionID session.ID, err error) {
@@ -398,6 +397,10 @@ func (m *connectionManager) handleStartError(sessionID session.ID, err error) er
 }
 
 func (m *connectionManager) clearIPCache() {
+	if config.GetBool(config.FlagProxyMode) {
+		return
+	}
+
 	if cr, ok := m.ipResolver.(*ip.CachedResolver); ok {
 		cr.ClearCache()
 	}
@@ -405,6 +408,10 @@ func (m *connectionManager) clearIPCache() {
 
 // checkSessionIP checks if IP has changed after connection was established.
 func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
+	if config.GetBool(config.FlagProxyMode) {
+		return
+	}
+
 	for i := 1; i <= m.config.IPCheck.MaxAttempts; i++ {
 		// Skip check if not connected. This may happen when context was canceled via Disconnect.
 		if m.Status().State != connectionstate.Connected {
