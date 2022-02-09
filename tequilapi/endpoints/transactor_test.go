@@ -383,9 +383,9 @@ func Test_Withdrawal(t *testing.T) {
 		t.Run(fmt.Sprintf("succeed withdrawal with fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
 			// when
 			body, err := json.Marshal(contract.WithdrawRequest{
-				HermesID:    "ignored",
-				ProviderID:  "ignored",
-				Beneficiary: "ignored",
+				HermesID:    "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
+				ProviderID:  "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
+				Beneficiary: "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
 				ToChainID:   data.toChainID,
 				FromChainID: data.fromChainID,
 			})
@@ -418,9 +418,9 @@ func Test_Withdrawal(t *testing.T) {
 		t.Run(fmt.Sprintf("fail withdrawal with unsuported fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
 			// when
 			body, err := json.Marshal(contract.WithdrawRequest{
-				HermesID:    "ignored",
-				ProviderID:  "ignored",
-				Beneficiary: "ignored",
+				HermesID:    "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
+				ProviderID:  "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
+				Beneficiary: "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
 				ToChainID:   data.toChainID,
 				FromChainID: data.fromChainID,
 			})

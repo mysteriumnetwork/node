@@ -18,11 +18,14 @@
 package contract
 
 import (
+	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/beneficiary"
+	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-openapi/strfmt"
@@ -233,6 +236,47 @@ type WithdrawRequest struct {
 	FromChainID int64  `json:"from_chain_id"`
 	ToChainID   int64  `json:"to_chain_id"`
 	Amount      string `json:"amount,omitempty"`
+}
+
+// Validate will validate a given request
+func (w *WithdrawRequest) Validate() error {
+	zeroAddr := common.HexToAddress("").Hex()
+	if !common.IsHexAddress(w.HermesID) || w.HermesID == zeroAddr {
+		return errors.New("hermesID should be a valid hex address")
+	}
+	if !common.IsHexAddress(w.ProviderID) || w.ProviderID == zeroAddr {
+		return errors.New("providerID should be a valid hex address")
+	}
+	if !common.IsHexAddress(w.Beneficiary) || w.Beneficiary == zeroAddr {
+		return errors.New("beneficiary should be a valid hex address")
+	}
+
+	amount, err := w.AmountInMYST()
+	if err != nil {
+		return err
+	}
+
+	if amount != nil && amount.Cmp(crypto.FloatToBigMyst(99)) > 0 {
+		return errors.New("withdrawal amount cannot be more than 99 MYST")
+	}
+
+	return nil
+}
+
+// AmountInMYST will return the amount value converted to big.Int MYST.
+//
+// Amount can be `nil`
+func (w *WithdrawRequest) AmountInMYST() (*big.Int, error) {
+	if w.Amount == "" {
+		return nil, nil
+	}
+
+	res, ok := big.NewInt(0).SetString(w.Amount, 10)
+	if !ok {
+		return nil, fmt.Errorf("%v is not a valid integer", w.Amount)
+	}
+
+	return res, nil
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
