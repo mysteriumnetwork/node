@@ -517,6 +517,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 		return err
 	}
 
+	currentPromise, err := aps.promiseStorage.Get(toChainID, chid)
+	if err != nil {
+		if !errors.Is(err, ErrNotFound) {
+			return err
+		}
+	}
+
 	// 2. issue a self promise
 	promisedAmount := data.LatestPromise.Amount
 	if promisedAmount.Cmp(data.Settled) < 0 {
@@ -537,25 +544,23 @@ func (aps *hermesPromiseSettler) Withdraw(
 	}
 
 	// 4. fetch the promise from storage
-	promiseFromStorage, err := aps.promiseStorage.Get(toChainID, chid)
+	latestPromise, err := aps.promiseStorage.Get(toChainID, chid)
 	if err != nil {
 		return err
 	}
 
-	decodedR, err := hex.DecodeString(promiseFromStorage.R)
+	if latestPromise.Promise.GetSignatureHexString() == currentPromise.Promise.GetSignatureHexString() {
+		log.Warn().Msg("hermes promise was not updated, was not able to complete the withdrawal")
+		return errors.New("promise was not updated, please request again")
+	}
+
+	decodedR, err := hex.DecodeString(latestPromise.R)
 	if err != nil {
 		return fmt.Errorf("could not decode R %w", err)
 	}
-	promiseFromStorage.Promise.R = decodedR
+	latestPromise.Promise.R = decodedR
 
-	return aps.payAndSettleTransactor(toChainID, amountToWithdraw, beneficiary, providerID, chid, promiseFromStorage, fromChainID)
-}
-
-func (aps *hermesPromiseSettler) deleteWithdrawnPromise(promiseFromStorage HermesPromise) {
-	err := aps.promiseStorage.Delete(promiseFromStorage)
-	if err != nil {
-		log.Err(err).Msg("could not delete withdrawal promise")
-	}
+	return aps.payAndSettleTransactor(toChainID, amountToWithdraw, beneficiary, providerID, chid, latestPromise, fromChainID)
 }
 
 func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
@@ -580,7 +585,7 @@ func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountT
 	})
 
 	go func() {
-		log.Info().Msg("caling mister transactor")
+		log.Info().Msg("calling transactor")
 		err := aps.payAndSettle(
 			func(promise crypto.Promise) (string, error) {
 				return aps.transactor.PayAndSettle(promiseFromStorage.HermesID.Hex(), providerID.Address, promise, payload.Beneficiary.Hex(), hex.EncodeToString(payload.Signature))
@@ -593,7 +598,7 @@ func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountT
 			promiseFromStorage,
 		)
 		if err != nil {
-			log.Err(err).Msg("could not withdraw")
+			log.Err(err).Msg("could not withdraw, failed to call transactor")
 			return
 		}
 		log.Info().Msg("withdrawal complete")

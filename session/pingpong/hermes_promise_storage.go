@@ -74,7 +74,7 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 		promise.Promise.Amount = big.NewInt(0)
 	}
 
-	if previousPromise.Promise.Amount != nil && previousPromise.Promise.Amount.Cmp(promise.Promise.Amount) >= 0 {
+	if !aps.shouldOverride(previousPromise, promise) {
 		return ErrAttemptToOverwrite
 	}
 
@@ -82,6 +82,23 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 		return fmt.Errorf("could not store hermes promise: %w", err)
 	}
 	return nil
+}
+
+func (aps *HermesPromiseStorage) shouldOverride(old, new HermesPromise) bool {
+	if old.Promise.Amount == nil {
+		return true
+	}
+
+	// If amount if less or equal we need to check if the promise is correct.
+	if old.Promise.Amount.Cmp(new.Promise.Amount) >= 0 {
+		// If amounts are equal, but it's just a reveal, then we can allow an override
+		if old.Promise.Amount.Cmp(new.Promise.Amount) == 0 && !old.Revealed && new.Revealed {
+			return true
+		}
+		return false
+	}
+
+	return true
 }
 
 // Delete deletes the given hermes promise.
