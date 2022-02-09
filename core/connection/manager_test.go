@@ -38,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -46,7 +45,6 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/trace"
 )
 
@@ -204,49 +202,6 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 		},
 		tc.connManager.Status(),
 	)
-}
-
-func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
-	tc.connManager.eventBus = eventbus.New()
-
-	sleepNotifier := sleep.NewNotifier(NewMultiConnectionManager(func() Manager { return tc.connManager }), tc.connManager.eventBus)
-	sleepNotifier.Subscribe()
-
-	err := tc.connManager.Connect(consumerID, hermesID, activeProposalLookup, ConnectParams{})
-	assert.NoError(tc.T(), err)
-	assert.Equal(
-		tc.T(),
-		connectionstate.Status{
-			StartedAt:        tc.mockTime,
-			ConsumerID:       consumerID,
-			ConsumerLocation: consumerLocation,
-			HermesID:         hermesID,
-			State:            connectionstate.Connected,
-			SessionID:        establishedSessionID,
-			Proposal:         activeProposal,
-		},
-		tc.connManager.Status(),
-	)
-
-	stateCh := make(chan connectionstate.State, 2)
-	tc.connManager.eventBus.Subscribe(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
-		fmt.Println("got state: ", e)
-
-		if e.State == connectionstate.Connecting {
-			fmt.Println("got connecting state")
-			stateCh <- connectionstate.Connecting
-		}
-		if e.State == connectionstate.Connected {
-			fmt.Println("got connected state")
-			stateCh <- connectionstate.Connected
-		}
-	})
-
-	fmt.Println("sending wakeup event")
-	tc.connManager.eventBus.Publish(sleep.AppTopicSleepNotification, sleep.EventWakeup)
-
-	assert.Equal(tc.T(), <-stateCh, connectionstate.Connecting)
-	assert.Equal(tc.T(), <-stateCh, connectionstate.Connected)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
