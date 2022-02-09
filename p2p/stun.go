@@ -43,6 +43,10 @@ type STUNDetectionStatus struct {
 
 func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPorts ...int) (remotePorts []int) {
 	serverList := config.GetStringSlice(config.FlagSTUNservers)
+	if len(serverList) == 0 {
+		return localPorts
+	}
+
 	m := make(map[int]int)
 
 	mu := sync.Mutex{}
