@@ -2,6 +2,8 @@ module github.com/mysteriumnetwork/node
 
 go 1.17
 
+replace github.com/arthurkiller/rollingwriter => github.com/mysteriumnetwork/rollingwriter v1.1.5
+
 require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/Microsoft/go-winio v0.5.0
