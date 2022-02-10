@@ -136,14 +136,14 @@ func (m mockWireGuardDevice) Start(_ string, _ wg.ServiceConfig, _ *net.UDPConn,
 func (m mockWireGuardDevice) Stop() {
 }
 
-func (m mockWireGuardDevice) Stats() (*wgcfg.Stats, error) {
-	return &wgcfg.Stats{BytesSent: 10, BytesReceived: 11}, nil
+func (m mockWireGuardDevice) Stats() (wgcfg.Stats, error) {
+	return wgcfg.Stats{BytesSent: 10, BytesReceived: 11}, nil
 }
 
 type mockHandshakeWaiter struct {
 	err error
 }
 
-func (m *mockHandshakeWaiter) Wait(ctx context.Context, statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
+func (m *mockHandshakeWaiter) Wait(ctx context.Context, statsFetch func() (wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
 	return m.err
 }

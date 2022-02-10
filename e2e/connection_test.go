@@ -530,7 +530,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 }
 
 func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, hermesID, serviceType string, proposal contract.ProposalDTO) *big.Int {
-	connectionStatus, err := tequilapi.ConnectionStatus()
+	connectionStatus, err := tequilapi.ConnectionStatus(0)
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
 
@@ -539,7 +539,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	log.Info().Msg("Original consumer IP: " + nonVpnIP.IP)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.ConnectionStatus()
+		status, err := tequilapi.ConnectionStatus(0)
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)
@@ -551,7 +551,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.ConnectionStatus()
+		status, err := tequilapi.ConnectionStatus(0)
 		return status.Status == "Connected", err
 	})
 	assert.NoError(t, err)
@@ -575,11 +575,11 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	// Wait some time for session to collect stats.
 	assert.Eventually(t, sessionStatsReceived(tequilapi, serviceType), 60*time.Second, 1*time.Second, serviceType)
 
-	err = tequilapi.ConnectionDestroy()
+	err = tequilapi.ConnectionDestroy(0)
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.ConnectionStatus()
+		status, err := tequilapi.ConnectionStatus(0)
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)
@@ -612,7 +612,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 }
 
 func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) {
-	connectionStatus, err := tequilapi.ConnectionStatus()
+	connectionStatus, err := tequilapi.ConnectionStatus(0)
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
 
@@ -621,7 +621,7 @@ func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Cli
 	log.Info().Msg("Original consumer IP: " + nonVpnIP.IP)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.ConnectionStatus()
+		status, err := tequilapi.ConnectionStatus(0)
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)

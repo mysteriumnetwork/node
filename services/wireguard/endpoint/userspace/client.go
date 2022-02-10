@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 
@@ -51,7 +52,7 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 		return errors.Wrap(err, "failed to create TUN device")
 	}
 
-	devAPI := device.NewDevice(c.tun, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+	devAPI := device.NewDevice(c.tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelVerbose, "[userspace-wg]"))
 	c.devAPI = devAPI
 	rollback.Push(func() {
 		devAPI.Close()
@@ -107,14 +108,14 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) PeerStats(string) (*wgcfg.Stats, error) {
+func (c *client) PeerStats(string) (wgcfg.Stats, error) {
 	deviceState, err := ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
-		return nil, err
+		return wgcfg.Stats{}, err
 	}
 	stats, err := ParseDevicePeerStats(deviceState)
 	if err != nil {
-		return nil, err
+		return wgcfg.Stats{}, err
 	}
 	return stats, nil
 }

@@ -203,4 +203,6 @@ type ConnectOptions struct {
 	// default: auto
 	// example: auto, provider, system, "1.1.1.1,8.8.8.8"
 	DNS connection.DNSOption `json:"dns"`
+
+	ProxyPort int `json:"proxy_port"`
 }

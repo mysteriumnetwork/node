@@ -26,8 +26,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/mysteriumnetwork/node/ui/versionmanager"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -84,6 +82,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
@@ -145,8 +144,8 @@ type Dependencies struct {
 
 	EventBus eventbus.EventBus
 
-	ConnectionManager  connection.Manager
-	ConnectionRegistry *connection.Registry
+	MultiConnectionManager connection.MultiManager
+	ConnectionRegistry     *connection.Registry
 
 	ServicesManager *service.Manager
 	ServiceRegistry *service.Registry
@@ -558,31 +557,33 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.ConnectionRegistry = connection.NewRegistry()
-	di.ConnectionManager = connection.NewManager(
-		pingpong.ExchangeFactoryFunc(
-			di.Keystore,
-			di.SignerFactory,
-			di.ConsumerTotalsStorage,
-			di.AddressProvider,
+	di.MultiConnectionManager = connection.NewMultiConnectionManager(func() connection.Manager {
+		return connection.NewManager(
+			pingpong.ExchangeFactoryFunc(
+				di.Keystore,
+				di.SignerFactory,
+				di.ConsumerTotalsStorage,
+				di.AddressProvider,
+				di.EventBus,
+				nodeOptions.Payments.ConsumerDataLeewayMegabytes,
+			),
+			di.ConnectionRegistry.CreateConnection,
 			di.EventBus,
-			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
-		),
-		di.ConnectionRegistry.CreateConnection,
-		di.EventBus,
-		di.IPResolver,
-		di.LocationResolver,
-		connection.DefaultConfig(),
-		connection.DefaultStatsReportInterval,
-		connection.NewValidator(
-			di.ConsumerBalanceTracker,
-			di.IdentityManager,
-		),
-		di.P2PDialer,
-		di.allowTrustedDomainBypassTunnel,
-		di.disallowTrustedDomainBypassTunnel,
-	)
+			di.IPResolver,
+			di.LocationResolver,
+			connection.DefaultConfig(),
+			connection.DefaultStatsReportInterval,
+			connection.NewValidator(
+				di.ConsumerBalanceTracker,
+				di.IdentityManager,
+			),
+			di.P2PDialer,
+			di.allowTrustedDomainBypassTunnel,
+			di.disallowTrustedDomainBypassTunnel,
+		)
+	})
 
-	di.NATProber = natprobe.NewNATProber(di.ConnectionManager, di.EventBus)
+	di.NATProber = natprobe.NewNATProber(di.MultiConnectionManager, di.EventBus)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, di.LocationResolver, nodeOptions.FeedbackURL)
@@ -614,10 +615,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	sleepNotifier := sleep.NewNotifier(di.ConnectionManager, di.EventBus)
+	sleepNotifier := sleep.NewNotifier(di.MultiConnectionManager, di.EventBus)
 	sleepNotifier.Subscribe()
 
-	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
+	di.Node = NewNode(di.MultiConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
 	return nil
 }
@@ -899,9 +900,11 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 
 	di.LocationResolver = location.NewCache(resolver, di.EventBus, time.Minute*5)
 
-	err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
-	if err != nil {
-		return err
+	if !config.GetBool(config.FlagProxyMode) {
+		err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.LocationResolver.HandleNodeEvent)
@@ -983,6 +986,10 @@ func (di *Dependencies) handleConnStateChange() error {
 
 	latestState := connectionstate.NotConnected
 	return di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
+		if config.GetBool(config.FlagProxyMode) {
+			return // Proxy mode doesn't establish system wide tunnels, no reconnect required.
+		}
+
 		// Here we care only about connected and disconnected events.
 		if e.State != connectionstate.Connected && e.State != connectionstate.NotConnected {
 			return

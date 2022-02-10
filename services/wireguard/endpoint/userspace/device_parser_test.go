@@ -18,13 +18,12 @@
 package userspace
 
 import (
-	"bufio"
+	"io"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.zx2c4.com/wireguard/device"
 )
 
 // Example string source (with some slight modifications to use all fields):
@@ -166,7 +165,7 @@ func TestParseDevice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d, err := ParseUserspaceDevice(func(w *bufio.Writer) *device.IPCError {
+			d, err := ParseUserspaceDevice(func(w io.Writer) error {
 				_, _ = w.Write(tt.res)
 				return nil
 			})

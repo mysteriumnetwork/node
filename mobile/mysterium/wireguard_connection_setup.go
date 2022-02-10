@@ -29,6 +29,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 
@@ -180,7 +181,7 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 type wireguardDevice interface {
 	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn, dns connection.DNSOption) error
 	Stop()
-	Stats() (*wgcfg.Stats, error)
+	Stats() (wgcfg.Stats, error)
 }
 
 func newWireguardDevice(tunnelSetup WireguardTunnelSetup) wireguardDevice {
@@ -207,7 +208,7 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 		}
 	}()
 
-	w.device = device.NewDevice(tunDevice, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+	w.device = device.NewDevice(tunDevice, conn.NewDefaultBind(), device.NewLogger(device.LogLevelVerbose, "[userspace-wg]"))
 
 	err = w.applyConfig(w.device, privateKey, config)
 	if err != nil {
@@ -244,17 +245,17 @@ func (w *wireguardDeviceImpl) Stop() {
 	}
 }
 
-func (w *wireguardDeviceImpl) Stats() (*wgcfg.Stats, error) {
+func (w *wireguardDeviceImpl) Stats() (wgcfg.Stats, error) {
 	if w.device == nil {
-		return nil, errors.New("device is not started")
+		return wgcfg.Stats{}, errors.New("device is not started")
 	}
 	deviceState, err := userspace.ParseUserspaceDevice(w.device.IpcGetOperation)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not parse userspace wg device state")
+		return wgcfg.Stats{}, errors.Wrap(err, "could not parse userspace wg device state")
 	}
 	stats, err := userspace.ParseDevicePeerStats(deviceState)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get userspace wg peer stats")
+		return wgcfg.Stats{}, errors.Wrap(err, "could not get userspace wg peer stats")
 	}
 	return stats, nil
 }

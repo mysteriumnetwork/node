@@ -24,22 +24,18 @@ import (
 	"os"
 	"time"
 
-	"github.com/mysteriumnetwork/node/ui/versionmanager"
-
-	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/utils"
-
-	"github.com/mysteriumnetwork/node/consumer/entertainment"
-
 	"github.com/gin-gonic/gin"
 
-	"github.com/mysteriumnetwork/node/ui"
-	uinoop "github.com/mysteriumnetwork/node/ui/noop"
-
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/consumer/entertainment"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/ui"
+	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+	"github.com/mysteriumnetwork/node/ui/versionmanager"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener) (tequilapi.APIServer, error) {
@@ -70,7 +66,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRouteForStop(utils.SoftKiller(di.Shutdown)),
 			tequilapi_endpoints.AddRoutesForAuthentication(di.Authenticator, di.JWTAuthenticator),
 			tequilapi_endpoints.AddRoutesForIdentities(di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor, di.BeneficiaryProvider, di.IdentityMover, di.PayoutAddressStorage),
-			tequilapi_endpoints.AddRoutesForConnection(di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry, di.EventBus, di.AddressProvider),
+			tequilapi_endpoints.AddRoutesForConnection(di.MultiConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry, di.EventBus, di.AddressProvider),
 			tequilapi_endpoints.AddRoutesForSessions(di.SessionStorage),
 			tequilapi_endpoints.AddRoutesForConnectionLocation(di.IPResolver, di.LocationResolver, di.LocationResolver),
 			tequilapi_endpoints.AddRoutesForProposals(di.ProposalRepository, di.PricingHelper, di.LocationResolver, di.FilterPresetStorage, di.NATProber),

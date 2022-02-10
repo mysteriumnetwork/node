@@ -145,14 +145,14 @@ func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)    { retur
 func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wgcfg.Peer) error { return nil }
 func (mce *mockConnectionEndpoint) RemovePeer(_ string) error            { return nil }
 func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error       { return nil }
-func (mce *mockConnectionEndpoint) PeerStats() (*wgcfg.Stats, error) {
-	return &wgcfg.Stats{LastHandshake: time.Now(), BytesSent: 10, BytesReceived: 11}, nil
+func (mce *mockConnectionEndpoint) PeerStats() (wgcfg.Stats, error) {
+	return wgcfg.Stats{LastHandshake: time.Now(), BytesSent: 10, BytesReceived: 11}, nil
 }
 
 type mockHandshakeWaiter struct {
 	err error
 }
 
-func (m *mockHandshakeWaiter) Wait(ctx context.Context, statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
+func (m *mockHandshakeWaiter) Wait(ctx context.Context, statsFetch func() (wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
 	return m.err
 }

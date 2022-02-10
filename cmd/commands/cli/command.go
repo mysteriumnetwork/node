@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	nattype "github.com/mysteriumnetwork/node/nat"
-
 	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
@@ -43,6 +41,7 @@ import (
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
+	nattype "github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -368,7 +367,7 @@ func (c *cliApp) mmnApiKey(args []string) (err error) {
 }
 
 func (c *cliApp) disconnect() (err error) {
-	err = c.tequilapi.ConnectionDestroy()
+	err = c.tequilapi.ConnectionDestroy(0)
 	if err != nil {
 		return err
 	}
@@ -378,7 +377,7 @@ func (c *cliApp) disconnect() (err error) {
 }
 
 func (c *cliApp) status() (err error) {
-	status, err := c.tequilapi.ConnectionStatus()
+	status, err := c.tequilapi.ConnectionStatus(0)
 	if err != nil {
 		clio.Warn(err)
 	} else {
@@ -438,7 +437,7 @@ func (c *cliApp) nodeMonitoringStatus() (err error) {
 
 	clio.Infof("Node Monitoring Status: %q\n", status.Status)
 
-	connStatus, err := c.tequilapi.ConnectionStatus()
+	connStatus, err := c.tequilapi.ConnectionStatus(0)
 	if err != nil {
 		clio.Warn(err)
 		return

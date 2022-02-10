@@ -21,14 +21,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/session/event"
-	"github.com/rs/zerolog/log"
 )
 
 type statsSupplier interface {
-	PeerStats() (*wgcfg.Stats, error)
+	PeerStats() (wgcfg.Stats, error)
 }
 
 type statsPublisher struct {

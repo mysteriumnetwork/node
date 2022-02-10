@@ -68,11 +68,11 @@ func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID 
 	return cm.onConnectReturn
 }
 
-func (cm *mockConnectionManager) Status() connectionstate.Status {
+func (cm *mockConnectionManager) Status(int) connectionstate.Status {
 	return cm.onStatusReturn
 }
 
-func (cm *mockConnectionManager) Disconnect() error {
+func (cm *mockConnectionManager) Disconnect(int) error {
 	cm.disconnectCount++
 	return cm.onDisconnectReturn
 }
@@ -81,7 +81,7 @@ func (cm *mockConnectionManager) CheckChannel(context.Context) error {
 	return cm.onCheckChannelReturn
 }
 
-func (cm *mockConnectionManager) Reconnect() {
+func (cm *mockConnectionManager) Reconnect(int) {
 	return
 }
 

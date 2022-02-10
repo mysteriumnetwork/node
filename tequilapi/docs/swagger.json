@@ -2902,6 +2902,11 @@
           "type": "boolean",
           "x-go-name": "DisableKillSwitch",
           "example": true
+        },
+        "proxy_port": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ProxyPort"
         }
       },
       "x-go-name": "ConnectOptions",

@@ -54,11 +54,11 @@ func createTunnel(interfaceName string, dns []string) (tunnel tun.Device, _ stri
 		log.Warn().Err(err).Msg("Unable to enable DNS firewall rules")
 	}
 
-	wintunVersion, ndisVersion, err := nativeTun.Version()
+	wintunVersion, err := nativeTun.RunningVersion()
 	if err != nil {
 		log.Warn().Err(err).Msg("Unable to determine Wintun version")
 	} else {
-		log.Info().Msgf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
+		log.Info().Msgf("Using Wintun/%s", wintunVersion)
 	}
 	return wintun, interfaceName, nil
 }
