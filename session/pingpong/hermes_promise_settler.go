@@ -924,6 +924,16 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					if err != nil {
 						log.Error().Err(err).Msg("Could not store settlement history")
 					}
+
+					aps.publisher.Publish(event.AppTopicSettlementComplete, event.AppEventSettlementComplete{
+						ProviderID:          provider,
+						HermesID:            hermesID,
+						BlockExplorerURL:    uri,
+						TxHash:              res.Hash,
+						ChainID:             promise.ChainID,
+						CompletedWithErrors: true,
+					})
+
 					errCh <- fmt.Errorf("transactor reported queue error for id %v: %v", queueID, res.Error)
 					return
 				}
@@ -979,11 +989,12 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 				log.Info().Msgf("Settling complete for provider %v", provider)
 
 				aps.publisher.Publish(event.AppTopicSettlementComplete, event.AppEventSettlementComplete{
-					ProviderID:       provider,
-					HermesID:         hermesID,
-					BlockExplorerURL: uri,
-					TxHash:           res.Hash,
-					ChainID:          promise.ChainID,
+					ProviderID:          provider,
+					HermesID:            hermesID,
+					BlockExplorerURL:    uri,
+					TxHash:              res.Hash,
+					ChainID:             promise.ChainID,
+					CompletedWithErrors: false,
 				})
 				return
 			}
