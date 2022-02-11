@@ -2,13 +2,11 @@ module github.com/mysteriumnetwork/node
 
 go 1.17
 
-replace github.com/arthurkiller/rollingwriter => github.com/mysteriumnetwork/rollingwriter v1.1.5
-
 require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/Microsoft/go-winio v0.5.0
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
-	github.com/arthurkiller/rollingwriter v1.1.2
+	github.com/arthurkiller/rollingwriter v1.1.3-0.20220211070658-c19a8e8b35be
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm/v3 v3.1.1
 	github.com/aws/aws-sdk-go-v2 v1.3.2
