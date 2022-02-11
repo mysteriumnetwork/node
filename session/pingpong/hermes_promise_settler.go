@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
@@ -577,19 +578,26 @@ func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountT
 		return fmt.Errorf("could not sign pay and settle payload: %w", err)
 	}
 
-	aps.publisher.Publish(event.AppTopicWithdrawalRequested, event.AppEventWithdrawalRequested{
-		ProviderID: providerID,
-		HermesID:   promiseFromStorage.HermesID,
-		FromChain:  fromChain,
-		ToChain:    promiseFromStorage.Promise.ChainID,
-	})
+	settleFunc := func(promise crypto.Promise) (string, error) {
+		id, err := aps.transactor.PayAndSettle(promiseFromStorage.HermesID.Hex(), providerID.Address, promise, payload.Beneficiary.Hex(), hex.EncodeToString(payload.Signature))
+		if err != nil {
+			return "", err
+		}
+
+		aps.publisher.Publish(event.AppTopicWithdrawalRequested, event.AppEventWithdrawalRequested{
+			ProviderID: providerID,
+			HermesID:   promiseFromStorage.HermesID,
+			FromChain:  fromChain,
+			ToChain:    promiseFromStorage.Promise.ChainID,
+		})
+
+		return id, nil
+	}
 
 	go func() {
 		log.Info().Msg("calling transactor")
 		err := aps.payAndSettle(
-			func(promise crypto.Promise) (string, error) {
-				return aps.transactor.PayAndSettle(promiseFromStorage.HermesID.Hex(), providerID.Address, promise, payload.Beneficiary.Hex(), hex.EncodeToString(payload.Signature))
-			},
+			settleFunc,
 			providerID,
 			promiseFromStorage.HermesID,
 			promiseFromStorage.Promise,
@@ -641,23 +649,9 @@ func (aps *hermesPromiseSettler) payAndSettle(
 	withdrawalAmount *big.Int,
 	promiseFromStorage HermesPromise,
 ) error {
-	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not update promise fee")
-		return err
-	}
 
-	if updatedPromise.Fee.Cmp(withdrawalAmount) > 0 {
-		log.Error().Fields(map[string]interface{}{
-			"promiseAmount": updatedPromise.Amount.String(),
-			"transactorFee": updatedPromise.Fee.String(),
-		}).Err(err).Msg("Earned amount too small for withdrawal")
-		return fmt.Errorf("amount too small for withdrawal. Need at least %v, have %v", updatedPromise.Fee.String(), withdrawalAmount.String())
-	}
-
-	id, err := settleFunc(updatedPromise)
+	id, err := aps.settlePayAndSettleWithRetry(settleFunc, withdrawalAmount, promiseFromStorage)
 	if err != nil {
-		log.Error().Err(err).Msgf("Could not settle promise for %v", provider)
 		return err
 	}
 
@@ -666,8 +660,76 @@ func (aps *hermesPromiseSettler) payAndSettle(
 		return fmt.Errorf("could not generate provider channel address: %w", err)
 	}
 
-	errCh := aps.listenForSettlement(hermesID, beneficiary, updatedPromise, provider, aps.toBytes32(channelID), id, true)
+	errCh := aps.listenForSettlement(hermesID, beneficiary, promise, provider, aps.toBytes32(channelID), id, true)
 	return <-errCh
+}
+
+func payAndSettleErrorShouldRetry(err error) bool {
+	var httpErr *requests.ErrorHTTP
+	if errors.As(err, &httpErr) {
+		return httpErr.Code == 409 || httpErr.Code >= 500
+	}
+
+	return false
+}
+
+func (aps *hermesPromiseSettler) settlePayAndSettleWithRetry(
+	settleFunc func(promise crypto.Promise) (string, error),
+	withdrawalAmount *big.Int,
+	promiseFromStorage HermesPromise,
+) (string, error) {
+	promise, err := aps.updatePromiseWithLatestFee(promiseFromStorage.HermesID, promiseFromStorage.Promise)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not update promise fee")
+		return "", err
+	}
+
+	if promise.Fee.Cmp(withdrawalAmount) > 0 {
+		log.Error().Fields(map[string]interface{}{
+			"promiseAmount": promise.Amount.String(),
+			"transactorFee": promise.Fee.String(),
+		}).Err(err).Msg("Earned amount too small for withdrawal")
+		return "", fmt.Errorf("amount too small for settlement. Need at least %v, have %v", promise.Fee.String(), withdrawalAmount.String())
+	}
+
+	id, err := settleFunc(promise)
+	if err == nil {
+		return id, nil
+	}
+
+	if err != nil && !payAndSettleErrorShouldRetry(err) {
+		log.Err(err).Msg("tried to settle withdrawal but failed")
+		return "", err
+	}
+
+	log.Warn().Err(err).Msg("got an error for which we can retry a withdrawal, will do that")
+	// Retry 10 times incase transactor failed to accept our settlement request.
+	// There is no point in going for longer than 5 minutes, after that fees
+	// will expire and there will be a different amount of fees to pay meaning
+	// user would get a different amount of money after the withdrawal.
+	// It would be rather strange from users perspective if he ends up paying
+	// way more than he agreed when creating the request.
+	for i := 0; i < 10; i++ {
+		select {
+		case <-time.After(time.Second * 30):
+			log.Info().Int("count", i+1).Msg("retrying a call to settle withdrawal")
+
+			id, err := settleFunc(promise)
+			if err != nil {
+				if payAndSettleErrorShouldRetry(err) {
+					log.Warn().Err(err).Msg("failed when retrying withdrawal")
+					continue
+				}
+				return "", err
+			}
+
+			return id, nil
+		case <-aps.stop:
+			return "", errors.New("stopped trying to withdraw, will not finish")
+		}
+	}
+
+	return "", errors.New("out of retries, transactor never accepted our request to pay and settle")
 }
 
 func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
