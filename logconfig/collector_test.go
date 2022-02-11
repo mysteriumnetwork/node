@@ -46,7 +46,7 @@ func TestCollector_List_ListsAllLogFilesMatchingPattern(t *testing.T) {
 	defer os.Remove(fn3)
 
 	// ensure this is the file with the most recent modified time
-	time.Sleep(time.Millisecond * 2)
+	time.Sleep(time.Millisecond * 10)
 	fn4 := NewTempFileName(t, dn1, logFilename+".gz")
 	defer os.Remove(fn4)
 
