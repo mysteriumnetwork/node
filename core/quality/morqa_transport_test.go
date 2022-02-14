@@ -46,7 +46,7 @@ var (
 )
 
 func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
-	var events metrics.Batch
+	var events metrics.SignedBatch
 
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		body, _ := ioutil.ReadAll(request.Body)
@@ -65,22 +65,27 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
-		_ = morqa.sendMetrics()
+		morqa.sendAll()
 
-		return len(events.Events) > 0
+		return len(events.Batch.Events) > 0
 	}, 2*time.Second, 10*time.Millisecond)
 
 	assert.Exactly(
 		t,
+		"c2lnbmVkChAiDgoMdGVzdCB2ZXJzaW9u",
+		events.Signature,
+	)
+
+	assert.Exactly(
+		t,
 		&metrics.Event{
-			Signature:  "c2lnbmVkIg4KDHRlc3QgdmVyc2lvbg==",
 			IsProvider: false,
 			TargetId:   "",
 			Version: &metrics.VersionPayload{
 				Version: "test version",
 			},
 		},
-		events.Events[0],
+		events.Batch.Events[0],
 	)
 }
 
@@ -93,8 +98,10 @@ func TestMORQAT_sendMetrics_HandlesErrorsWithMessages(t *testing.T) {
 	}))
 
 	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
-	morqa.addMetric(&metrics.Event{})
-	err := morqa.sendMetrics()
+	morqa.addMetric(metric{
+		event: &metrics.Event{},
+	})
+	err := morqa.sendMetrics("")
 
 	assert.EqualError(t, err, fmt.Sprintf(
 		"server response invalid: 400 Bad Request (%s/batch). Possible error: invalid payload given",
@@ -114,8 +121,10 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 	}))
 
 	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
-	morqa.addMetric(&metrics.Event{})
-	err := morqa.sendMetrics()
+	morqa.addMetric(metric{
+		event: &metrics.Event{},
+	})
+	err := morqa.sendMetrics("")
 
 	assert.EqualError(t, err, fmt.Sprintf(
 		"server response invalid: 422 Unprocessable Entity (%s/batch). Possible error: validation problems",
