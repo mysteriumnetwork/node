@@ -321,14 +321,21 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 	expectedChannel, err := hex.DecodeString("d0bb35eb0e4a0c972f2c154f91cf676b804762bef69c7fe4cef38642c3ac7ffc")
 	assert.NoError(t, err)
 
+	expectedR, err := hex.DecodeString("d56e23228dc2c7d2cc2e0ee08d7d6e5be6aa196c9f95046d83fab06913d2a9c2")
+	assert.NoError(t, err)
+
 	var arr [32]byte
 	copy(arr[:], expectedChannel)
+
+	var r [32]byte
+	copy(r[:], expectedR)
 	bc := &mockProviderChannelStatusProvider{
 		calculatedFees: hermesFee,
 		subCancel:      func() {},
 		promiseEventsToReturn: []bindings.HermesImplementationPromiseSettled{
 			{
 				ChannelId: arr,
+				Lock:      r,
 			},
 		},
 		headerToReturn: &types.Header{
@@ -364,6 +371,7 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 	mockPromise := crypto.Promise{
 		Fee:    transactorFee,
 		Amount: big.NewInt(35000),
+		R:      r[:],
 	}
 
 	settled := big.NewInt(6000)
@@ -438,6 +446,12 @@ type mockProviderChannelStatusProvider struct {
 	errorToReturn         error
 	promiseEventsToReturn []bindings.HermesImplementationPromiseSettled
 	promiseError          error
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) TransactionReceipt(chainID int64, hash common.Hash) (*types.Receipt, error) {
+	r := &types.Receipt{}
+	r.Status = types.ReceiptStatusSuccessful
+	return r, nil
 }
 
 func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {

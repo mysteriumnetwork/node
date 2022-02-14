@@ -56,6 +56,7 @@ type providerChannelStatusProvider interface {
 	GetProvidersWithdrawalChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 	FilterPromiseSettledEventByChannelID(chainID int64, from uint64, to *uint64, hermesID common.Address, providerAddresses [][32]byte) ([]bindings.HermesImplementationPromiseSettled, error)
 	HeaderByNumber(chainID int64, number *big.Int) (*types.Header, error)
+	TransactionReceipt(chainID int64, hash common.Hash) (*types.Receipt, error)
 }
 
 type paySettler interface {
@@ -893,12 +894,7 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					log.Err(err).Str("queueID", queueID).Msg("could not get queue status")
 					break
 				}
-				hash := common.HexToHash(res.Hash)
 				state := strings.ToLower(res.State)
-				uri, err := formTXUrl(hash.Hex(), promise.ChainID)
-				if err != nil {
-					log.Err(err).Msg("could not generate tx uri")
-				}
 
 				// if queued, continue
 				if state == "queue" {
@@ -908,8 +904,8 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 				// if error, don't wait as it will never complete
 				if state == "error" {
 					she := SettlementHistoryEntry{
-						TxHash:           hash,
-						BlockExplorerURL: uri,
+						TxHash:           common.HexToHash(""),
+						BlockExplorerURL: "",
 						ProviderID:       provider,
 						HermesID:         hermesID,
 						// TODO: this should probably be either provider channel address or the consumer address from the promise, not truncated provider channel address.
@@ -934,19 +930,19 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					return
 				}
 
-				info, err := aps.findSettlementInBCLogs(promise.ChainID, hermesID, providerChannelID)
+				filtered, err := aps.findSettlementInBCLogs(promise.ChainID, hermesID, providerChannelID, aps.toBytes32(common.Bytes2Hex(promise.R)))
 				if err != nil {
-					if errors.Is(err, errNoSettlementFound) {
-						log.Warn().Fields(map[string]interface{}{
-							"hermesID": hermesID.Hex(),
-							"provider": provider.Address,
-							"queueID":  queueID,
-						}).Err(err).Msg("no settlement found, will try again later")
-						break
-					} else {
-						errCh <- fmt.Errorf("could not get settlement event from bc: %w", err)
-						return
-					}
+					errCh <- fmt.Errorf("could not get settlement event from bc: %w", err)
+					return
+				}
+
+				if len(filtered) == 0 {
+					log.Warn().Fields(map[string]interface{}{
+						"hermesID": hermesID.Hex(),
+						"provider": provider.Address,
+						"queueID":  queueID,
+					}).Err(err).Msg("no settlement found, will try again later")
+					break
 				}
 
 				ch, err := aps.channelProvider.Fetch(promise.ChainID, provider, hermesID)
@@ -956,35 +952,43 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 					log.Info().Msgf("Resync success for provider %v", provider)
 				}
 
-				she := SettlementHistoryEntry{
-					TxHash:           hash,
-					BlockExplorerURL: uri,
-					ProviderID:       provider,
-					HermesID:         hermesID,
-					// TODO: this should probably be either provider channel address or the consumer address from the promise, not truncated provider channel address.
-					ChannelAddress: common.BytesToAddress(providerChannelID[:]),
-					Time:           time.Now().UTC(),
-					Promise:        promise,
-					Beneficiary:    beneficiary,
-					Amount:         info.AmountSentToBeneficiary,
-					Fees:           info.Fees,
-					TotalSettled:   ch.Channel.Settled,
-					IsWithdrawal:   isWithdrawal,
-				}
+				for _, info := range filtered {
+					uri, err := formTXUrl(info.Raw.TxHash.Hex(), promise.ChainID)
+					if err != nil {
+						log.Err(err).Msg("could not generate tx uri")
+					}
 
-				err = aps.settlementHistoryStorage.Store(she)
-				if err != nil {
-					log.Error().Err(err).Msg("Could not store settlement history")
+					she := SettlementHistoryEntry{
+						TxHash:           info.Raw.TxHash,
+						BlockExplorerURL: uri,
+						ProviderID:       provider,
+						HermesID:         hermesID,
+						// TODO: this should probably be either provider channel address or the consumer address from the promise, not truncated provider channel address.
+						ChannelAddress: common.BytesToAddress(providerChannelID[:]),
+						Time:           time.Now().UTC(),
+						Promise:        promise,
+						Beneficiary:    beneficiary,
+						Amount:         info.AmountSentToBeneficiary,
+						Fees:           info.Fees,
+						TotalSettled:   ch.Channel.Settled,
+						Error:          aps.generateSettlementErrorMsg(promise.ChainID, info.Raw.TxHash),
+						IsWithdrawal:   isWithdrawal,
+					}
+
+					err = aps.settlementHistoryStorage.Store(she)
+					if err != nil {
+						log.Error().Err(err).Msg("Could not store settlement history")
+					}
+
+					log.Debug().Str("tx_hash", info.Raw.TxHash.Hex()).Msg("saved a settlement")
 				}
-				log.Info().Msgf("Settling complete for provider %v", provider)
 
 				aps.publisher.Publish(event.AppTopicSettlementComplete, event.AppEventSettlementComplete{
-					ProviderID:       provider,
-					HermesID:         hermesID,
-					BlockExplorerURL: uri,
-					TxHash:           res.Hash,
-					ChainID:          promise.ChainID,
+					ProviderID: provider,
+					HermesID:   hermesID,
+					ChainID:    promise.ChainID,
 				})
+				log.Info().Msgf("Settling complete for provider %v", provider)
 				return
 			}
 		}
@@ -992,35 +996,63 @@ func (aps *hermesPromiseSettler) listenForSettlement(hermesID, beneficiary commo
 	return errCh
 }
 
-func (aps *hermesPromiseSettler) toBytes32(providerAddress string) [32]byte {
+func (aps *hermesPromiseSettler) generateSettlementErrorMsg(chainID int64, hash common.Hash) string {
+	receipt, err := aps.bc.TransactionReceipt(chainID, hash)
+	if err != nil {
+		log.Err(err).Msg("failed to get receipt for settlemnt")
+		return "Could not get receipt"
+	}
+
+	if receipt.Status == types.ReceiptStatusFailed {
+		return "Transaction was reverted"
+	}
+
+	return ""
+}
+
+func (aps *hermesPromiseSettler) toBytes32(hexValue string) [32]byte {
 	var arr [32]byte
-	copy(arr[:], crypto.HexToBytes(providerAddress)[:32])
+	copy(arr[:], crypto.HexToBytes(hexValue)[:32])
 	return arr
 }
 
 var errNoSettlementFound = errors.New("no settlement found")
 
-func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, hermesID common.Address, providerAddress [32]byte) (bindings.HermesImplementationPromiseSettled, error) {
+func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, hermesID common.Address, providerAddress, r [32]byte) ([]bindings.HermesImplementationPromiseSettled, error) {
 	latest, err := aps.bc.HeaderByNumber(chainID, nil)
 	if err != nil {
-		return bindings.HermesImplementationPromiseSettled{}, err
+		return nil, err
 	}
 	blockNo := latest.Number.Uint64()
 	from := aps.safeSub(blockNo, 800)
 
 	filtered, err := aps.bc.FilterPromiseSettledEventByChannelID(chainID, from, nil, hermesID, [][32]byte{providerAddress})
 	if err != nil {
-		return bindings.HermesImplementationPromiseSettled{}, err
+		return nil, err
 	}
 
+	match := func(v bindings.HermesImplementationPromiseSettled) bool {
+		if !bytes.EqualFold(v.ChannelId[:], providerAddress[:]) {
+			return false
+		}
+		if !bytes.EqualFold(v.Lock[:], r[:]) {
+			return false
+		}
+
+		return true
+	}
+
+	matched := make([]bindings.HermesImplementationPromiseSettled, 0)
 	for _, v := range filtered {
 		log.Info().Str("expected", hex.EncodeToString(providerAddress[:])).Str("got", hex.EncodeToString(v.ChannelId[:])).Msg("filtering")
-		if bytes.EqualFold(v.ChannelId[:], providerAddress[:]) {
-			return v, nil
+
+		if match(v) {
+			matched = append(matched, v)
+			log.Debug().Str("tx_hash", v.Raw.TxHash.Hex()).Msg("matched a settlement")
 		}
 	}
 
-	return bindings.HermesImplementationPromiseSettled{}, errNoSettlementFound
+	return matched, nil
 }
 
 func (aps *hermesPromiseSettler) safeSub(a uint64, b uint64) uint64 {
