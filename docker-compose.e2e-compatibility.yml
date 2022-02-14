@@ -197,7 +197,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --payments.provider.invoice-frequency=1s
       --stun-servers=""
       service
@@ -240,7 +240,7 @@ services:
       --ether.client.rpc=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       daemon
 
@@ -281,7 +281,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       service
       --agreed-terms-and-conditions
@@ -324,7 +324,7 @@ services:
       --ether.client.rpc=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       --local-service-discovery=true
       daemon

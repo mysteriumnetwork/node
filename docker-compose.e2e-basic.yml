@@ -348,7 +348,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/
       --access-policy.fetch=1s
@@ -411,7 +411,7 @@ services:
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
@@ -461,7 +461,7 @@ services:
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
@@ -511,7 +511,7 @@ services:
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
@@ -561,7 +561,7 @@ services:
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v2
+      --quality.address=http://morqa:8085/api/v3
       --stun-servers=""
       --local-service-discovery=true
       --payments.registry-transactor-poll.interval=1s
