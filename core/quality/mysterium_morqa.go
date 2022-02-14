@@ -52,8 +52,8 @@ type MysteriumMORQA struct {
 	client  *requests.HTTPClient
 	signer  identity.SignerFactory
 
-	batch    metrics.Batch
-	eventsMu sync.Mutex
+	batch    map[string]metrics.Batch
+	eventsMu sync.RWMutex
 	metrics  chan metric
 
 	once sync.Once
@@ -67,6 +67,7 @@ func NewMorqaClient(httpClient *requests.HTTPClient, baseURL string, signer iden
 		client:  httpClient,
 		signer:  signer,
 
+		batch:   make(map[string]metrics.Batch),
 		metrics: make(chan metric, maxBatchMetricsToKeep),
 		stop:    make(chan struct{}),
 	}
@@ -81,18 +82,11 @@ func (m *MysteriumMORQA) Start() {
 	for {
 		select {
 		case metric := <-m.metrics:
-			event, err := m.signMetric(metric)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to sign metrics event")
+			m.addMetric(metric)
 
-				continue
-			}
-
-			m.addMetric(event)
-
-			m.eventsMu.Lock()
-			size := len(m.batch.Events)
-			m.eventsMu.Unlock()
+			m.eventsMu.RLock()
+			size := len(m.batch[metric.owner].Events)
+			m.eventsMu.RUnlock()
 
 			if size < maxBatchMetricsToKeep {
 				continue
@@ -102,29 +96,25 @@ func (m *MysteriumMORQA) Start() {
 			return
 		}
 
-		if err := m.sendMetrics(); err != nil {
-			log.Error().Err(err).Msg("Failed to sent batch metrics request")
-		}
+		m.sendAll()
 
 		trigger = time.After(maxBatchMetricsToWait)
 	}
 }
 
-// signMetric creates signature and adds to to the metrics event.
-func (m *MysteriumMORQA) signMetric(metric metric) (*metrics.Event, error) {
-	bin, err := proto.Marshal(metric.event)
+// signBatch creates signature for the metrics batch.
+func (m *MysteriumMORQA) signBatch(owner string, batch metrics.Batch) (string, error) {
+	bin, err := proto.Marshal(&batch)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal metrics event: %w", err)
+		return "", fmt.Errorf("failed to marshal metrics event: %w", err)
 	}
 
-	signature, err := m.signer(identity.FromAddress(metric.owner)).Sign(bin)
+	signature, err := m.signer(identity.FromAddress(owner)).Sign(bin)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sing metrics event: %w", err)
+		return "", fmt.Errorf("failed to sing metrics event: %w", err)
 	}
 
-	metric.event.Signature = signature.Base64()
-
-	return metric.event, nil
+	return signature.Base64(), nil
 }
 
 // Stop sends the final metrics to the MORQA and stops the sending process.
@@ -133,44 +123,65 @@ func (m *MysteriumMORQA) Stop() {
 		close(m.stop)
 	})
 
-	if err := m.sendMetrics(); err != nil {
-		log.Error().Err(err).Msg("Failed to sent batch metrics request on close")
-	}
+	m.sendAll()
 }
 
-func (m *MysteriumMORQA) addMetric(event *metrics.Event) {
+func (m *MysteriumMORQA) addMetric(metric metric) {
 	m.eventsMu.Lock()
 	defer m.eventsMu.Unlock()
 
-	switch event.Metric.(type) {
+	switch metric.event.Metric.(type) {
 	case *metrics.Event_SessionStatisticsPayload: // Allow sending only the last session statistics payload in a single batch.
-		for i, e := range m.batch.Events {
+		for i, e := range m.batch[metric.owner].Events {
 			if _, ok := e.Metric.(*metrics.Event_SessionStatisticsPayload); ok {
-				m.batch.Events[i] = event
+				m.batch[metric.owner].Events[i] = metric.event
 				return
 			}
 		}
 	case *metrics.Event_PingEvent: // Allow sending only the last ping event in a single batch.
-		for i, e := range m.batch.Events {
+		for i, e := range m.batch[metric.owner].Events {
 			if _, ok := e.Metric.(*metrics.Event_PingEvent); ok {
-				m.batch.Events[i] = event
+				m.batch[metric.owner].Events[i] = metric.event
 				return
 			}
 		}
 	}
 
-	m.batch.Events = append(m.batch.Events, event)
+	batch := m.batch[metric.owner]
+	batch.Events = append(batch.Events, metric.event)
+	m.batch[metric.owner] = batch
 }
 
-func (m *MysteriumMORQA) sendMetrics() error {
+func (m *MysteriumMORQA) sendAll() {
 	m.eventsMu.Lock()
 	defer m.eventsMu.Unlock()
 
-	if len(m.batch.Events) == 0 {
+	for owner, _ := range m.batch {
+		err := m.sendMetrics(owner)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to sent batch metrics request")
+		}
+	}
+}
+
+func (m *MysteriumMORQA) sendMetrics(owner string) error {
+	if len(m.batch[owner].Events) == 0 {
 		return nil
 	}
 
-	request, err := m.newRequestBinary(http.MethodPost, "batch", &m.batch)
+	batch := m.batch[owner]
+
+	signature, err := m.signBatch(owner, batch)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to sign metrics event")
+	}
+
+	sb := &metrics.SignedBatch{
+		Signature: signature,
+		Batch:     &batch,
+	}
+
+	request, err := m.newRequestBinary(http.MethodPost, "batch", sb)
 	if err != nil {
 		return err
 	}
@@ -187,7 +198,7 @@ func (m *MysteriumMORQA) sendMetrics() error {
 		return err
 	}
 
-	m.batch = metrics.Batch{}
+	delete(m.batch, owner)
 
 	return nil
 }
