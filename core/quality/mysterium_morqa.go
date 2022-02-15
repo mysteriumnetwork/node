@@ -52,7 +52,7 @@ type MysteriumMORQA struct {
 	client  *requests.HTTPClient
 	signer  identity.SignerFactory
 
-	batch    map[string]metrics.Batch
+	batch    map[string]*metrics.Batch
 	eventsMu sync.RWMutex
 	metrics  chan metric
 
@@ -67,7 +67,7 @@ func NewMorqaClient(httpClient *requests.HTTPClient, baseURL string, signer iden
 		client:  httpClient,
 		signer:  signer,
 
-		batch:   make(map[string]metrics.Batch),
+		batch:   make(map[string]*metrics.Batch),
 		metrics: make(chan metric, maxBatchMetricsToKeep),
 		stop:    make(chan struct{}),
 	}
@@ -103,8 +103,8 @@ func (m *MysteriumMORQA) Start() {
 }
 
 // signBatch creates signature for the metrics batch.
-func (m *MysteriumMORQA) signBatch(owner string, batch metrics.Batch) (string, error) {
-	bin, err := proto.Marshal(&batch)
+func (m *MysteriumMORQA) signBatch(owner string, batch *metrics.Batch) (string, error) {
+	bin, err := proto.Marshal(batch)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal metrics event: %w", err)
 	}
@@ -130,6 +130,12 @@ func (m *MysteriumMORQA) addMetric(metric metric) {
 	m.eventsMu.Lock()
 	defer m.eventsMu.Unlock()
 
+	batch, ok := m.batch[metric.owner]
+	if !ok || batch == nil {
+		batch = &metrics.Batch{}
+		m.batch[metric.owner] = batch
+	}
+
 	switch metric.event.Metric.(type) {
 	case *metrics.Event_SessionStatisticsPayload: // Allow sending only the last session statistics payload in a single batch.
 		for i, e := range m.batch[metric.owner].Events {
@@ -147,7 +153,6 @@ func (m *MysteriumMORQA) addMetric(metric metric) {
 		}
 	}
 
-	batch := m.batch[metric.owner]
 	batch.Events = append(batch.Events, metric.event)
 	m.batch[metric.owner] = batch
 }
@@ -156,7 +161,7 @@ func (m *MysteriumMORQA) sendAll() {
 	m.eventsMu.Lock()
 	defer m.eventsMu.Unlock()
 
-	for owner, _ := range m.batch {
+	for owner := range m.batch {
 		err := m.sendMetrics(owner)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to sent batch metrics request")
@@ -178,7 +183,7 @@ func (m *MysteriumMORQA) sendMetrics(owner string) error {
 
 	sb := &metrics.SignedBatch{
 		Signature: signature,
-		Batch:     &batch,
+		Batch:     batch,
 	}
 
 	request, err := m.newRequestBinary(http.MethodPost, "batch", sb)
