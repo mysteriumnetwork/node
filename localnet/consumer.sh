@@ -20,5 +20,5 @@ exec /node/build/myst/myst \
   --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10 \
   --hermes.hermes-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8 \
   --transactor.address=http://transactor:8888/api/v1 \
-  --quality.address=http://morqa:8085/api/v2 \
+  --quality.address=http://morqa:8085/api/v3 \
   daemon

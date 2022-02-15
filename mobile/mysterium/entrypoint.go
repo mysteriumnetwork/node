@@ -129,7 +129,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		EtherClientRPCL1:               metadata.MainnetDefinition.Chain1.EtherClientRPC,
 		EtherClientRPCL2:               metadata.MainnetDefinition.Chain2.EtherClientRPC,
 		FeedbackURL:                    "https://feedback.mysterium.network",
-		QualityOracleURL:               "https://quality.mysterium.network/api/v2",
+		QualityOracleURL:               "https://quality.mysterium.network/api/v3",
 		IPDetectorURL:                  "https://location.mysterium.network/api/v1/location",
 		LocationDetectorURL:            "https://location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:      metadata.MainnetDefinition.TransactorAddress,

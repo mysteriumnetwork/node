@@ -44,7 +44,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		EtherClientRPCL1:               []string{"http://ganache:8545"},
 		EtherClientRPCL2:               []string{"ws://ganache2:8545"},
 		FeedbackURL:                    "TODO",
-		QualityOracleURL:               "http://morqa:8085/api/v2",
+		QualityOracleURL:               "http://morqa:8085/api/v3",
 		IPDetectorURL:                  "http://ipify:3000/?format=json",
 		LocationDetectorURL:            "https://location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:      "http://transactor:8888/api/v1",
