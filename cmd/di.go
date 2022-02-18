@@ -928,7 +928,7 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 
 func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory, di.LocationResolver, di.AddressProvider)
-	di.PilvytisTracker = pilvytis.NewStatusTracker(di.PilvytisAPI, di.IdentityManager, di.EventBus, 30*time.Second)
+	di.PilvytisTracker = pilvytis.NewStatusTracker(di.PilvytisAPI, di.IdentityManager, di.EventBus, time.Minute)
 	di.PilvytisOrderIssuer = pilvytis.NewOrderIssuer(di.PilvytisAPI, di.PilvytisTracker)
 
 	go di.PilvytisTracker.Track()
