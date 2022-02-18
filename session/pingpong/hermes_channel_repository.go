@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -211,6 +212,21 @@ func (hcr *HermesChannelRepository) fetchKnownChannels(chainID int64) {
 	}
 
 	for _, promise := range promises {
+		gen, err := crypto.GenerateProviderChannelID(promise.Identity.Address, promise.HermesID.Hex())
+		if err != nil {
+			log.Err(err).Msg("could not generate a provider channel address")
+			continue
+		}
+		if strings.ToLower(gen) != strings.ToLower(promise.ChannelID) {
+			log.Debug().Fields(map[string]interface{}{
+				"identity":           promise.Identity.Address,
+				"expected_channelID": gen,
+				"got_channelID":      promise.ChannelID,
+				"hermes":             promise.HermesID.Hex(),
+			}).Msg("promise channel ID did not match provider channel ID, skipping")
+			continue
+		}
+
 		if _, err := hcr.fetchChannel(chainID, promise.ChannelID, promise.Identity, promise.HermesID, promise); err != nil {
 			log.Error().Err(err).Msg("could not load initial earnings state")
 		}
