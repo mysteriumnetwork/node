@@ -144,6 +144,9 @@ func (t *StatusTracker) refreshAndUpdate(id identity.Identity) {
 	}
 
 	if len(newOrders) == 0 {
+		if _, ok := t.orders[id.Address]; !ok {
+			t.orders[id.Address] = map[string]OrderSummary{}
+		}
 		return
 	}
 
