@@ -39,6 +39,8 @@ const (
 
 	maxBatchMetricsToKeep = 100
 	maxBatchMetricsToWait = 30 * time.Second
+
+	maxBatchSentFails = 3
 )
 
 type metric struct {
@@ -52,12 +54,18 @@ type MysteriumMORQA struct {
 	client  *requests.HTTPClient
 	signer  identity.SignerFactory
 
-	batch    map[string]*metrics.Batch
+	batch    map[string]*batchWithTimeout
 	eventsMu sync.RWMutex
 	metrics  chan metric
 
 	once sync.Once
 	stop chan struct{}
+}
+
+type batchWithTimeout struct {
+	batch    *metrics.Batch
+	failed   int
+	lastFail time.Time
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication.
@@ -67,7 +75,7 @@ func NewMorqaClient(httpClient *requests.HTTPClient, baseURL string, signer iden
 		client:  httpClient,
 		signer:  signer,
 
-		batch:   make(map[string]*metrics.Batch),
+		batch:   make(map[string]*batchWithTimeout),
 		metrics: make(chan metric, maxBatchMetricsToKeep),
 		stop:    make(chan struct{}),
 	}
@@ -85,12 +93,25 @@ func (m *MysteriumMORQA) Start() {
 			m.addMetric(metric)
 
 			m.eventsMu.RLock()
-			size := len(m.batch[metric.owner].Events)
+			size := len(m.batch[metric.owner].batch.Events)
+			failed := m.batch[metric.owner].failed
+			lastFailed := m.batch[metric.owner].lastFail
 			m.eventsMu.RUnlock()
 
 			if size < maxBatchMetricsToKeep {
 				continue
 			}
+
+			if failed > maxBatchSentFails {
+				m.eventsMu.Lock()
+				delete(m.batch, metric.owner)
+				m.eventsMu.Unlock()
+			}
+
+			if time.Now().Before(lastFailed.Add(maxBatchMetricsToWait)) {
+				continue
+			}
+
 		case <-trigger:
 		case <-m.stop:
 			return
@@ -132,28 +153,30 @@ func (m *MysteriumMORQA) addMetric(metric metric) {
 
 	batch, ok := m.batch[metric.owner]
 	if !ok || batch == nil {
-		batch = &metrics.Batch{}
+		batch = &batchWithTimeout{
+			batch: &metrics.Batch{},
+		}
 		m.batch[metric.owner] = batch
 	}
 
 	switch metric.event.Metric.(type) {
 	case *metrics.Event_SessionStatisticsPayload: // Allow sending only the last session statistics payload in a single batch.
-		for i, e := range m.batch[metric.owner].Events {
+		for i, e := range m.batch[metric.owner].batch.Events {
 			if _, ok := e.Metric.(*metrics.Event_SessionStatisticsPayload); ok {
-				m.batch[metric.owner].Events[i] = metric.event
+				m.batch[metric.owner].batch.Events[i] = metric.event
 				return
 			}
 		}
 	case *metrics.Event_PingEvent: // Allow sending only the last ping event in a single batch.
-		for i, e := range m.batch[metric.owner].Events {
+		for i, e := range m.batch[metric.owner].batch.Events {
 			if _, ok := e.Metric.(*metrics.Event_PingEvent); ok {
-				m.batch[metric.owner].Events[i] = metric.event
+				m.batch[metric.owner].batch.Events[i] = metric.event
 				return
 			}
 		}
 	}
 
-	batch.Events = append(batch.Events, metric.event)
+	batch.batch.Events = append(batch.batch.Events, metric.event)
 	m.batch[metric.owner] = batch
 }
 
@@ -164,17 +187,19 @@ func (m *MysteriumMORQA) sendAll() {
 	for owner := range m.batch {
 		err := m.sendMetrics(owner)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to sent batch metrics request")
+			log.Error().Err(err).Msgf("Failed to sent batch metrics request, %v", len(m.batch[owner].batch.GetEvents()))
+			m.batch[owner].failed++
+			m.batch[owner].lastFail = time.Now()
 		}
 	}
 }
 
 func (m *MysteriumMORQA) sendMetrics(owner string) error {
-	if len(m.batch[owner].Events) == 0 {
+	if len(m.batch[owner].batch.Events) == 0 {
 		return nil
 	}
 
-	batch := m.batch[owner]
+	batch := m.batch[owner].batch
 
 	signature, err := m.signBatch(owner, batch)
 	if err != nil {
