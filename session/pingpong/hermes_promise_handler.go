@@ -292,12 +292,17 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	promise, err := er.requestFunc(request)
 	err = aph.handleHermesError(err, providerID, er.em.ChainID, hermesID)
 	if err != nil {
-		if errors.Is(err, errRrecovered) {
-			log.Info().Msgf("r recovered")
+		if !errors.Is(err, errRrecovered) {
+			er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 			return
 		}
-		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
-		return
+		log.Info().Msgf("r recovered, will request again")
+
+		promise, err = er.requestFunc(request)
+		if err != nil {
+			er.errChan <- fmt.Errorf("attempted to request promise again and got an error: %w", err)
+			return
+		}
 	}
 
 	if promise.ChainID != request.ExchangeMessage.ChainID {
