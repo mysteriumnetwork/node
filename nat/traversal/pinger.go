@@ -40,7 +40,7 @@ import (
 const StageName = "hole_punching"
 
 const (
-	bufferLen = 2048 * 1024
+	bufferLen = 64
 
 	maxTTL            = 128
 	msgOK             = "OK"
@@ -244,7 +244,6 @@ func (p *Pinger) PingProviderPeer(ctx context.Context, localIP, remoteIP string,
 
 	cleanupConnections(pings)
 	return nil, ErrTooFew
-
 }
 
 // sendConnACK notifies peer that we are using this connection
