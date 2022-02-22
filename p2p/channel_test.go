@@ -221,11 +221,12 @@ func TestChannel_Send_To_When_Peer_Starts_Later(t *testing.T) {
 	// they will not reach provider peer, but since kcp will try
 	// keep resending packets they will finally reach opened
 	// provider peer.
+	addr := provider.(*channel).tr.remoteConn.LocalAddr().(*net.UDPAddr)
 	err = provider.Close()
 	require.NoError(t, err)
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		provider, err := reopenChannel(provider.(*channel))
+		provider, err := reopenChannel(provider.(*channel), addr)
 
 		require.NoError(t, err)
 		provider.Handle("timeout", func(c Context) error {
@@ -278,8 +279,8 @@ func BenchmarkChannel_Send(b *testing.B) {
 	}
 }
 
-func reopenChannel(c *channel) (*channel, error) {
-	punchedConn, err := net.DialUDP("udp4", c.tr.remoteConn.LocalAddr().(*net.UDPAddr), c.peer.addr())
+func reopenChannel(c *channel, addr *net.UDPAddr) (*channel, error) {
+	punchedConn, err := net.DialUDP("udp4", addr, c.peer.addr())
 	if err != nil {
 		return nil, err
 	}
