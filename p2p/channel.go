@@ -129,6 +129,7 @@ type transport struct {
 	// remoteConn is initial conn which should be created from NAT hole punching or manually. It contains
 	// initial local and remote peer addresses.
 	remoteConn *net.UDPConn
+	localConn  *net.UDPConn
 
 	// proxyConn is used for KCP session as a remote. Since KCP doesn't expose it's data read loop
 	// this is needed to detect remote peer address changes as we can simply use conn.ReadFromUDP and
@@ -203,7 +204,7 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 	}
 
 	// Setup KCP session. It will write to proxy conn only.
-	udpSession, sessAddr, err := listenUDPSession(proxyConn.LocalAddr(), privateKey, peerPubKey)
+	udpSession, localConn, err := listenUDPSession(proxyConn.LocalAddr(), privateKey, peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create KCP UDP session: %w", err)
 	}
@@ -215,6 +216,7 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		wireWriter: newCompatibleWireWriter(udpSession, peerCompatibility),
 		session:    udpSession,
 		remoteConn: remoteConn,
+		localConn:  localConn,
 		proxyConn:  proxyConn,
 	}
 
@@ -229,7 +231,7 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		streams:          make(map[uint64]*stream),
 		privateKey:       privateKey,
 		peer:             &peer,
-		localSessionAddr: sessAddr,
+		localSessionAddr: localConn.LocalAddr().(*net.UDPAddr),
 		serviceConn:      nil,
 		stop:             make(chan struct{}, 1),
 		sendQueue:        make(chan *transportMsg, 100),
@@ -243,15 +245,18 @@ func (c *channel) ID() string {
 }
 
 func (c *channel) launchReadSendLoops() {
-	go c.remoteReadLoop()
-	go c.remoteSendLoop()
-	go c.localReadLoop()
-	go c.localSendLoop()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	go c.remoteReadLoop(c.tr)
+	go c.remoteSendLoop(c.tr)
+	go c.localReadLoop(c.tr)
+	go c.localSendLoop(c.tr)
 }
 
 // remoteReadLoop reads from remote conn and writes to local KCP UDP conn.
 // If remote peer addr changes it will be updated and next send will use new addr.
-func (c *channel) remoteReadLoop() {
+func (c *channel) remoteReadLoop(tr *transport) {
 	buf := make([]byte, mtuLimit)
 	latestPeerAddr := c.peer.addr()
 
@@ -262,7 +267,7 @@ func (c *channel) remoteReadLoop() {
 		default:
 		}
 
-		n, addr, err := c.tr.remoteConn.ReadFrom(buf)
+		n, addr, err := tr.remoteConn.ReadFrom(buf)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Read from remote conn failed")
@@ -280,7 +285,7 @@ func (c *channel) remoteReadLoop() {
 			}
 		}
 
-		_, err = c.tr.proxyConn.WriteToUDP(buf[:n], c.localSessionAddr)
+		_, err = tr.proxyConn.WriteToUDP(buf[:n], c.localSessionAddr)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Write to local udp session failed")
@@ -293,8 +298,9 @@ func (c *channel) remoteReadLoop() {
 
 // remoteSendLoop reads from proxy conn and writes to remote conn.
 // Packets to proxy conn are written by local KCP UDP session from localSendLoop.
-func (c *channel) remoteSendLoop() {
+func (c *channel) remoteSendLoop(tr *transport) {
 	buf := make([]byte, mtuLimit)
+
 	for {
 		select {
 		case <-c.stop:
@@ -302,26 +308,28 @@ func (c *channel) remoteSendLoop() {
 		default:
 		}
 
-		n, err := c.tr.proxyConn.Read(buf)
+		n, err := tr.proxyConn.Read(buf)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Read from proxy conn failed")
 			}
+
 			return
 		}
 
-		_, err = c.tr.remoteConn.WriteToUDP(buf[:n], c.peer.addr())
+		_, err = tr.remoteConn.WriteToUDP(buf[:n], c.peer.addr())
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msgf("Write to remote peer conn failed")
 			}
+
 			return
 		}
 	}
 }
 
 // localReadLoop reads incoming requests or replies to initiated requests.
-func (c *channel) localReadLoop() {
+func (c *channel) localReadLoop(tr *transport) {
 	for {
 		select {
 		case <-c.stop:
@@ -330,7 +338,7 @@ func (c *channel) localReadLoop() {
 		}
 
 		var msg transportMsg
-		if err := msg.readFrom(c.tr.wireReader); err != nil {
+		if err := msg.readFrom(tr.wireReader); err != nil {
 			if !errPipeClosed(err) && !errNetClose(err) {
 				log.Err(err).Msg("Read from wireproto reader failed")
 			}
@@ -338,7 +346,7 @@ func (c *channel) localReadLoop() {
 		}
 
 		if debugTransport {
-			fmt.Printf("recv from %s: %+v\n", c.tr.session.RemoteAddr(), msg)
+			fmt.Printf("recv from %s: %+v\n", tr.session.RemoteAddr(), msg)
 		}
 
 		// If message contains topic it means that peer is making a request
@@ -353,7 +361,7 @@ func (c *channel) localReadLoop() {
 }
 
 // localSendLoop sends data to local proxy conn.
-func (c *channel) localSendLoop() {
+func (c *channel) localSendLoop(tr *transport) {
 	for {
 		select {
 		case <-c.stop:
@@ -364,10 +372,10 @@ func (c *channel) localSendLoop() {
 			}
 
 			if debugTransport {
-				fmt.Printf("send to %s: %+v\n", c.tr.session.RemoteAddr(), msg)
+				fmt.Printf("send to %s: %+v\n", tr.session.RemoteAddr(), msg)
 			}
 
-			if err := msg.writeTo(c.tr.wireWriter); err != nil {
+			if err := msg.writeTo(tr.wireWriter); err != nil {
 				if !errPipeClosed(err) && !errNetClose(err) {
 					log.Err(err).Msg("Write to wireproto writer failed")
 				}
@@ -453,6 +461,10 @@ func (c *channel) Close() error {
 			c.upnpPortsRelease()
 		}
 
+		if err := c.tr.localConn.Close(); err != nil {
+			closeErr = fmt.Errorf("could not close remote conn: %w", err)
+		}
+
 		if err := c.tr.remoteConn.Close(); err != nil {
 			closeErr = fmt.Errorf("could not close remote conn: %w", err)
 		}
@@ -472,6 +484,8 @@ func (c *channel) Close() error {
 				}
 			}
 		}
+
+		c.tr = nil
 	})
 
 	if err := router.RemoveExcludedIP(c.peer.remoteAddr.IP); err != nil {
@@ -590,7 +604,7 @@ func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
 	return conn, nil
 }
 
-func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey PublicKey) (sess *kcp.UDPSession, localAddr *net.UDPAddr, err error) {
+func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey PublicKey) (sess *kcp.UDPSession, localconn *net.UDPConn, err error) {
 	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not create block crypt: %w", err)
@@ -601,8 +615,6 @@ func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey Publ
 		return nil, nil, fmt.Errorf("could not create UDP conn: %w", err)
 	}
 
-	localAddr = localConn.LocalAddr().(*net.UDPAddr)
-
 	sess, err = kcp.NewConn3(1, proxyAddr, blockCrypt, 10, 3, localConn)
 	if err != nil {
 		localConn.Close()
@@ -611,7 +623,7 @@ func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey Publ
 
 	sess.SetMtu(kcpMTUSize)
 
-	return sess, localAddr, nil
+	return sess, localConn, nil
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {
