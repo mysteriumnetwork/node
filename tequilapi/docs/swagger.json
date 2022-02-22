@@ -3071,6 +3071,9 @@
           "x-go-name": "Duration",
           "example": 60
         },
+        "spent_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "throughput_received": {
           "description": "Download speed in bits per second",
           "type": "integer",
@@ -3270,16 +3273,28 @@
         "decreaseStake": {
           "$ref": "#/definitions/Int"
         },
+        "decrease_stake_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "hermes": {
           "type": "integer",
           "format": "uint16",
           "x-go-name": "Hermes"
         },
+        "hermes_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "registration": {
           "$ref": "#/definitions/Int"
         },
+        "registration_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "settlement": {
           "$ref": "#/definitions/Int"
+        },
+        "settlement_tokens": {
+          "$ref": "#/definitions/Tokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4019,10 +4034,16 @@
           "format": "uint64",
           "x-go-name": "PerGiB"
         },
+        "per_gib_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "per_hour": {
           "type": "integer",
           "format": "uint64",
           "x-go-name": "PerHour"
+        },
+        "per_hour_tokens": {
+          "$ref": "#/definitions/Tokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

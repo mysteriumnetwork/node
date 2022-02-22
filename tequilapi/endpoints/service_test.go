@@ -28,7 +28,6 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
@@ -124,8 +123,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := gin.Default()
 	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
 		priceToAdd: market.Price{
-			PricePerHour: big.NewInt(1),
-			PricePerGiB:  big.NewInt(2),
+			PricePerHour: big.NewInt(500_000_000_000_000_000),
+			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
 	})(router)
 	assert.NoError(t, err)
@@ -163,9 +162,19 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
@@ -198,9 +207,19 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		              "bandwidth": 10
 		            },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
@@ -233,9 +252,19 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		              "bandwidth": 10
 		            },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
 				},
 				"connection_statistics": {"attempted":0, "successful":0}
@@ -408,8 +437,8 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		fakeOptionsParser,
 		&mockProposalRepository{
 			priceToAdd: market.Price{
-				PricePerHour: big.NewInt(1),
-				PricePerGiB:  big.NewInt(2),
+				PricePerHour: big.NewInt(500_000_000_000_000_000),
+				PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 			},
 		},
 	)(g)
@@ -442,10 +471,20 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				  "bandwidth": 10
 				},
 				"price": {
-					"currency": "MYST",
-					"per_gib": 2.0,
-					"per_hour": 1.0
-				}
+                  "currency": "MYST",
+                  "per_gib": 1000000000000000000,
+                  "per_gib_tokens": {
+                    "ether": "1",
+                    "human": "1",
+                    "wei": "1000000000000000000"
+                  },
+                  "per_hour": 500000000000000000,
+                  "per_hour_tokens": {
+                    "ether": "0.5",
+                    "human": "0.5",
+                    "wei": "500000000000000000"
+                  }
+                }
 			},
 			"connection_statistics": {"attempted":0, "successful":0}
 		}`,
@@ -512,8 +551,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 	g := gin.Default()
 	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
 		priceToAdd: market.Price{
-			PricePerHour: big.NewInt(1),
-			PricePerGiB:  big.NewInt(2),
+			PricePerHour: big.NewInt(500_000_000_000_000_000),
+			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
 	})(g)
 	assert.NoError(t, err)
@@ -545,10 +584,20 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				  "bandwidth": 10
 				},
 				"price": {
-					"currency": "MYST",
-					"per_gib": 2.0,
-					"per_hour": 1.0
-				},
+                  "currency": "MYST",
+                  "per_gib": 1000000000000000000,
+                  "per_gib_tokens": {
+                    "ether": "1",
+                    "human": "1",
+                    "wei": "1000000000000000000"
+                  },
+                  "per_hour": 500000000000000000,
+                  "per_hour_tokens": {
+                    "ether": "0.5",
+                    "human": "0.5",
+                    "wei": "500000000000000000"
+                  }
+                },
 				"access_policies": [
 					{
 						"id":"verified-traffic",

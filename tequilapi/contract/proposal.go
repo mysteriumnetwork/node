@@ -45,9 +45,11 @@ func NewProposalDTO(p proposal.PricedServiceProposal) ProposalDTO {
 			Bandwidth: p.Quality.Bandwidth,
 		},
 		Price: Price{
-			Currency: money.CurrencyMyst.String(),
-			PerHour:  p.Price.PricePerHour.Uint64(),
-			PerGiB:   p.Price.PricePerGiB.Uint64(),
+			Currency:      money.CurrencyMyst.String(),
+			PerHour:       p.Price.PricePerHour.Uint64(),
+			PerHourTokens: NewTokens(p.Price.PricePerHour),
+			PerGiB:        p.Price.PricePerGiB.Uint64(),
+			PerGiBTokens:  NewTokens(p.Price.PricePerGiB),
 		},
 	}
 }
@@ -107,9 +109,11 @@ type ProposalDTO struct {
 // Price represents the service price.
 // swagger:model Price
 type Price struct {
-	Currency string `json:"currency"`
-	PerHour  uint64 `json:"per_hour"`
-	PerGiB   uint64 `json:"per_gib"`
+	Currency      string `json:"currency"`
+	PerHour       uint64 `json:"per_hour"`
+	PerHourTokens Tokens `json:"per_hour_tokens"`
+	PerGiB        uint64 `json:"per_gib"`
+	PerGiBTokens  Tokens `json:"per_gib_tokens"`
 }
 
 func (p ProposalDTO) String() string {

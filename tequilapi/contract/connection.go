@@ -102,6 +102,7 @@ func NewConnectionStatisticsDTO(session connectionstate.Status, statistics conne
 		ThroughputSent:     datasize.BitSize(throughput.Up).Bits(),
 		ThroughputReceived: datasize.BitSize(throughput.Down).Bits(),
 		TokensSpent:        agreementTotal,
+		SpentTokens:        NewTokens(agreementTotal),
 	}
 }
 
@@ -128,6 +129,8 @@ type ConnectionStatisticsDTO struct {
 
 	// example: 500000
 	TokensSpent *big.Int `json:"tokens_spent"`
+
+	SpentTokens Tokens `json:"spent_tokens"`
 }
 
 // ConnectionCreateRequest request used to start a connection.

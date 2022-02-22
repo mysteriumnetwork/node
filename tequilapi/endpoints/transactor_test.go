@@ -75,14 +75,14 @@ func Test_RegisterIdentity(t *testing.T) {
 }
 
 func Test_Get_TransactorFees(t *testing.T) {
-	mockResponse := `{ "fee": 1 }`
+	mockResponse := `{ "fee": 1000000000000000000 }`
 	server := newTestTransactorServer(http.StatusOK, mockResponse)
 
 	router := gin.Default()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
 	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, &mockSettler{
-		feeToReturn: 11,
+		feeToReturn: 11_000,
 	}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, nil, nil)(router)
 	assert.NoError(t, err)
 
@@ -97,7 +97,35 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"registration":1, "settlement":1, "hermes":11, "decreaseStake":1}`, resp.Body.String())
+	assert.JSONEq(t,
+		`{
+	  "registration": 1000000000000000000,
+	  "registration_tokens": {
+		"ether": "1",
+		"human": "1",
+		"wei": "1000000000000000000"
+	  },
+	  "settlement": 1000000000000000000,
+	  "settlement_tokens": {
+		"ether": "1",
+		"human": "1",
+		"wei": "1000000000000000000"
+	  },
+	  "hermes": 11000,
+	  "hermes_tokens": {
+		"ether": "0.000000000000011",
+		"human": "0",
+		"wei": "11000"
+	  },
+	  "decreaseStake": 1000000000000000000,
+	  "decrease_stake_tokens": {
+		"ether": "1",
+		"human": "1",
+		"wei": "1000000000000000000"
+	  }
+	}
+	`,
+		resp.Body.String())
 }
 
 func Test_SettleAsync_OK(t *testing.T) {
