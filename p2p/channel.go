@@ -245,19 +245,20 @@ func (c *channel) ID() string {
 }
 
 func (c *channel) launchReadSendLoops() {
-	go c.remoteReadLoop()
-	go c.remoteSendLoop()
-	go c.localReadLoop()
-	go c.localSendLoop()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	go c.remoteReadLoop(c.tr)
+	go c.remoteSendLoop(c.tr)
+	go c.localReadLoop(c.tr)
+	go c.localSendLoop(c.tr)
 }
 
 // remoteReadLoop reads from remote conn and writes to local KCP UDP conn.
 // If remote peer addr changes it will be updated and next send will use new addr.
-func (c *channel) remoteReadLoop() {
+func (c *channel) remoteReadLoop(tr *transport) {
 	buf := make([]byte, mtuLimit)
 	latestPeerAddr := c.peer.addr()
-
-	tr := c.tr
 
 	for {
 		select {
@@ -297,10 +298,8 @@ func (c *channel) remoteReadLoop() {
 
 // remoteSendLoop reads from proxy conn and writes to remote conn.
 // Packets to proxy conn are written by local KCP UDP session from localSendLoop.
-func (c *channel) remoteSendLoop() {
+func (c *channel) remoteSendLoop(tr *transport) {
 	buf := make([]byte, mtuLimit)
-
-	tr := c.tr
 
 	for {
 		select {
@@ -330,9 +329,7 @@ func (c *channel) remoteSendLoop() {
 }
 
 // localReadLoop reads incoming requests or replies to initiated requests.
-func (c *channel) localReadLoop() {
-	tr := c.tr
-
+func (c *channel) localReadLoop(tr *transport) {
 	for {
 		select {
 		case <-c.stop:
@@ -364,9 +361,7 @@ func (c *channel) localReadLoop() {
 }
 
 // localSendLoop sends data to local proxy conn.
-func (c *channel) localSendLoop() {
-	tr := c.tr
-
+func (c *channel) localSendLoop(tr *transport) {
 	for {
 		select {
 		case <-c.stop:
