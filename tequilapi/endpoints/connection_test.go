@@ -140,7 +140,12 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 				"throughput_received": 0,
 				"throughput_sent": 0,
 				"duration": 0,
-				"tokens_spent": 0
+				"tokens_spent": 0,
+				"spent_tokens": {
+					"ether": "0",
+					"human": "0",
+					"wei": "0"
+				}
 			}`,
 		},
 	}
@@ -424,7 +429,12 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 			"throughput_sent": 1000,
 			"throughput_received": 2000,
 			"duration": 0,
-			"tokens_spent": 10001
+			"tokens_spent": 10001,
+			"spent_tokens": {
+				"ether": "0.000000000000010001",
+				"human": "0",
+				"wei": "10001"
+			}
 		}`,
 		resp.Body.String(),
 	)

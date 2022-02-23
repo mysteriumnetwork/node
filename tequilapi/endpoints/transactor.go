@@ -160,10 +160,14 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 	}
 
 	f := contract.FeesDTO{
-		Registration:  registrationFees.Fee,
-		Settlement:    settlementFees.Fee,
-		Hermes:        hermesFees,
-		DecreaseStake: decreaseStakeFees.Fee,
+		Registration:        registrationFees.Fee,
+		RegistrationTokens:  contract.NewTokens(registrationFees.Fee),
+		Settlement:          settlementFees.Fee,
+		SettlementTokens:    contract.NewTokens(settlementFees.Fee),
+		Hermes:              hermesFees,
+		HermesTokens:        contract.NewTokens(big.NewInt(int64(hermesFees))),
+		DecreaseStake:       decreaseStakeFees.Fee,
+		DecreaseStakeTokens: contract.NewTokens(decreaseStakeFees.Fee),
 	}
 
 	utils.WriteAsJSON(f, resp)

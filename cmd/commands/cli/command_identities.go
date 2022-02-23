@@ -244,10 +244,8 @@ func (c *cliApp) settle(args []string) (err error) {
 		if err != nil {
 			clio.Warn("could not get transactor fee: ", err)
 		}
-		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
-		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
-		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
-		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
+		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", fees.SettlementTokens.Human))
+		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", fees.HermesTokens.Human))
 		return errWrongArgumentCount
 	}
 	hermesID, err := c.config.GetHermesID()
@@ -405,10 +403,8 @@ func (c *cliApp) withdraw(args []string) error {
 		if err != nil {
 			clio.Warn("could not get transactor fee: ", err)
 		}
-		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
-		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
-		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
-		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
+		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", fees.SettlementTokens.Human))
+		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", fees.HermesTokens.Human))
 		return errWrongArgumentCount
 	}
 	hermesID, err := c.config.GetHermesID()

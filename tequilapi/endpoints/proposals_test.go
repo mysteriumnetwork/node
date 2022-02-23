@@ -51,8 +51,8 @@ var serviceProposals = []proposal.PricedServiceProposal{
 			Quality:  &mockQuality,
 		}),
 		Price: market.Price{
-			PricePerHour: big.NewInt(1),
-			PricePerGiB:  big.NewInt(2),
+			PricePerHour: big.NewInt(500_000_000_000_000_000),
+			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
 	},
 	{
@@ -61,8 +61,8 @@ var serviceProposals = []proposal.PricedServiceProposal{
 			Quality:  &mockQuality,
 		}),
 		Price: market.Price{
-			PricePerHour: big.NewInt(1),
-			PricePerGiB:  big.NewInt(2),
+			PricePerHour: big.NewInt(500_000_000_000_000_000),
+			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
 	},
 }
@@ -122,9 +122,19 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
                 }
             ]
@@ -182,9 +192,19 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
                 }
             ]
@@ -249,9 +269,19 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
                 },
                 {
@@ -270,9 +300,19 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "bandwidth": 10
                     },
 					"price": {
-						"currency": "MYST",
-						"per_gib": 2.0,
-						"per_hour": 1.0
+					  "currency": "MYST",
+					  "per_gib": 1000000000000000000,
+					  "per_gib_tokens": {
+						"ether": "1",
+						"human": "1",
+						"wei": "1000000000000000000"
+					  },
+					  "per_hour": 500000000000000000,
+					  "per_hour_tokens": {
+						"ether": "0.5",
+						"human": "0.5",
+						"wei": "500000000000000000"
+					  }
 					}
                 }
             ]
