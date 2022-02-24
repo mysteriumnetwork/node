@@ -32,5 +32,10 @@ docker run --rm \
     -e GOFLAGS=-mod=mod \
     mysteriumnetwork/xgomobile:1.17.3 ./mobile/mysterium
 
-print_success "Android package '$PACKAGE_FILE' complete!"
-exit 0
+if [[ -f build/package/Mysterium.aar ]]; then
+    print_success "Android package build/package/Mysterium.aar build complete!"
+    exit 0
+fi
+
+print_error "Failed to build Android package."
+exit 1
