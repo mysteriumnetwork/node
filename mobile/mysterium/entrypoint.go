@@ -44,7 +44,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	natprobe "github.com/mysteriumnetwork/node/nat/behavior"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -433,12 +432,14 @@ func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
  *  - "system" uses DNS servers from client's system configuration
  */
 type ConnectRequest struct {
-	IdentityAddress   string
-	ProviderID        string
-	ServiceType       string
-	DNSOption         string
-	DisableKillSwitch bool
-	ForceReconnect    bool
+	Providers               []string
+	IdentityAddress         string
+	ServiceType             string
+	CountryCode             string
+	IPType                  string
+	SortBy                  string
+	DNSOption               string
+	IncludeMonitoringFailed bool
 }
 
 func (cr *ConnectRequest) dnsOption() (connection.DNSOption, error) {
@@ -463,17 +464,24 @@ const (
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
-	proposalLookup := func() (proposal *proposal.PricedServiceProposal, err error) {
-		return mb.proposalsManager.repository.Proposal(market.ProposalID{
-			ProviderID:  req.ProviderID,
-			ServiceType: req.ServiceType,
-		})
+	f := &proposal.Filter{
+		ServiceType:             req.ServiceType,
+		LocationCountry:         req.CountryCode,
+		ProviderIDs:             req.Providers,
+		IPType:                  req.IPType,
+		IncludeMonitoringFailed: req.IncludeMonitoringFailed,
+		AccessPolicy:            "all",
 	}
+
+	proposalLookup := connection.FilteredProposals(f, req.SortBy, mb.proposalsManager.repository)
 
 	qualityEvent := quality.ConnectionEvent{
 		ServiceType: req.ServiceType,
 		ConsumerID:  req.IdentityAddress,
-		ProviderID:  req.ProviderID,
+	}
+
+	if len(req.Providers) == 1 {
+		qualityEvent.ProviderID = req.Providers[0]
 	}
 
 	dnsOption, err := req.dnsOption()
@@ -484,8 +492,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		}
 	}
 	connectOptions := connection.ConnectParams{
-		DisableKillSwitch: req.DisableKillSwitch,
-		DNS:               dnsOption,
+		DNS: dnsOption,
 	}
 
 	hermes, err := mb.identityChannelCalculator.GetActiveHermes(mb.chainID)

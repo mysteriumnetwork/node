@@ -28,6 +28,7 @@ type proposalRepository interface {
 	Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error)
 }
 
+// FilteredProposals create an function to keep getting proposals from the discovery based on the provided filters.
 func FilteredProposals(f *proposal.Filter, sortBy string, repo proposalRepository) func() (*proposal.PricedServiceProposal, error) {
 	usedProposals := make(map[string]time.Time)
 
