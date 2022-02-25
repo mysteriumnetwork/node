@@ -22,14 +22,10 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
-	"github.com/mysteriumnetwork/node/market"
 )
 
 type proposalRepository interface {
-	Proposal(id market.ProposalID) (*proposal.PricedServiceProposal, error)
 	Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error)
-	Countries(filter *proposal.Filter) (map[string]int, error)
-	EnrichProposalWithPrice(in market.ServiceProposal) (proposal.PricedServiceProposal, error)
 }
 
 func FilteredProposals(f *proposal.Filter, sortBy string, repo proposalRepository) func() (*proposal.PricedServiceProposal, error) {
