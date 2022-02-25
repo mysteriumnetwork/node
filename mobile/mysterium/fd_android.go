@@ -20,13 +20,20 @@
 package mysterium
 
 import (
+	"fmt"
 	"net"
 
+	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 )
 
 func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
-	return d.PeekLookAtSocketFd4()
+	bind, ok := d.Bind().(*conn.StdNetBind)
+	if !ok {
+		return 0, fmt.Errorf("failed to peek socket fd")
+	}
+
+	return bind.PeekLookAtSocketFd4()
 }
 
 func peekLookAtSocketFd4From(conn *net.UDPConn) (fd int, err error) {
