@@ -145,12 +145,13 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 	}
 
 	order, err := mb.pilvytisOrderIssuer.CreatePaymentGatewayOrder(
-		identity.FromAddress(req.IdentityAddress),
-		req.Gateway,
-		req.MystAmount,
-		req.PayCurrency,
-		req.Country,
-		req.GatewayCallerData,
+		pilvytis.CreateGatewayOrder{Identity: identity.FromAddress(req.IdentityAddress),
+			Gateway:     req.Gateway,
+			MystAmount:  req.MystAmount,
+			PayCurrency: req.PayCurrency,
+			Country:     req.Country,
+			CallerData:  req.GatewayCallerData,
+		},
 	)
 	if err != nil {
 		return nil, err

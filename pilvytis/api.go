@@ -367,30 +367,43 @@ type paymentOrderRequest struct {
 	PayCurrency    string `json:"pay_currency"`
 	Country        string `json:"country"`
 	ChainID        int64  `json:"chain_id"`
+	ProjectId      string `json:"project_id"`
 
 	GatewayCallerData json.RawMessage `json:"gateway_caller_data"`
 }
 
+// CreateGatewayOrder for creating payment gateway order
+type CreateGatewayOrder struct {
+	Identity    identity.Identity
+	Gateway     string
+	MystAmount  string
+	PayCurrency string
+	Country     string
+	ProjectID   string
+	CallerData  json.RawMessage
+}
+
 // createPaymentOrder creates a new payment order in the API service.
-func (a *API) createPaymentGatewayOrder(id identity.Identity, gateway string, mystAmount string, payCurrency string, country string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
+func (a *API) createPaymentGatewayOrder(cgo CreateGatewayOrder) (*PaymentOrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
-	ch, err := a.channelCalculator.GetChannelAddress(chainID, id)
+	ch, err := a.channelCalculator.GetChannelAddress(chainID, cgo.Identity)
 	if err != nil {
 		return nil, fmt.Errorf("could get channel address: %w", err)
 	}
 
 	payload := paymentOrderRequest{
 		ChannelAddress:    ch.Hex(),
-		MystAmount:        mystAmount,
-		PayCurrency:       payCurrency,
-		Country:           country,
+		MystAmount:        cgo.MystAmount,
+		PayCurrency:       cgo.PayCurrency,
+		Country:           cgo.Country,
 		ChainID:           chainID,
-		GatewayCallerData: callerData,
+		GatewayCallerData: cgo.CallerData,
+		ProjectId:         cgo.ProjectID,
 	}
 
-	path := fmt.Sprintf("api/v2/payment/%s/orders", gateway)
-	req, err := requests.NewSignedPostRequest(a.url, path, payload, a.signer(id))
+	path := fmt.Sprintf("api/v2/payment/%s/orders", cgo.Gateway)
+	req, err := requests.NewSignedPostRequest(a.url, path, payload, a.signer(cgo.Identity))
 	if err != nil {
 		return nil, err
 	}

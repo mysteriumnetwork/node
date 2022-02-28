@@ -18,8 +18,6 @@
 package pilvytis
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/identity"
 )
 
@@ -50,12 +48,12 @@ func (o *OrderIssuer) CreatePaymentOrder(id identity.Identity, mystAmount float6
 }
 
 // CreatePaymentGatewayOrder will create a new payment order and send a notification to start tracking it.
-func (o *OrderIssuer) CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency, country string, callerData json.RawMessage) (*PaymentOrderResponse, error) {
-	resp, err := o.api.createPaymentGatewayOrder(id, gw, mystAmount, payCurrency, country, callerData)
+func (o *OrderIssuer) CreatePaymentGatewayOrder(cgo CreateGatewayOrder) (*PaymentOrderResponse, error) {
+	resp, err := o.api.createPaymentGatewayOrder(cgo)
 	if err != nil {
 		return nil, err
 	}
-	o.tracker.UpdateOrdersFor(id)
+	o.tracker.UpdateOrdersFor(cgo.Identity)
 
 	return resp, err
 }

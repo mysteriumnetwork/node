@@ -20,6 +20,8 @@ package contract
 import (
 	"encoding/json"
 
+	"github.com/mysteriumnetwork/node/identity"
+
 	"github.com/mysteriumnetwork/node/pilvytis"
 )
 
@@ -201,6 +203,22 @@ type PaymentOrderRequest struct {
 	// example: US
 	Country string `json:"country"`
 
+	// example: mysteriumvpn, mystnodes
+	ProjectID string `json:"project_id"`
+
 	// example: {}
 	CallerData json.RawMessage `json:"gateway_caller_data"`
+}
+
+// GatewayOrderRequest convenience mapper
+func (o *PaymentOrderRequest) GatewayOrderRequest(identity identity.Identity, gateway string) pilvytis.CreateGatewayOrder {
+	return pilvytis.CreateGatewayOrder{
+		Identity:    identity,
+		Gateway:     gateway,
+		MystAmount:  o.MystAmount,
+		PayCurrency: o.PayCurrency,
+		Country:     o.Country,
+		ProjectID:   o.ProjectID,
+		CallerData:  o.CallerData,
+	}
 }
