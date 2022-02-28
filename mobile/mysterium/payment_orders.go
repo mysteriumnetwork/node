@@ -44,7 +44,7 @@ type PaymentOrderResponse struct {
 	PublicGatewayData json.RawMessage `json:"public_gateway_data"`
 }
 
-func newPaymentOrderResponse(r pilvytis.PaymentOrderResponse) PaymentOrderResponse {
+func newPaymentOrderResponse(r pilvytis.GatewayOrderResponse) PaymentOrderResponse {
 	return PaymentOrderResponse{
 		ID:                r.ID,
 		Status:            r.Status.Status(),
@@ -145,7 +145,7 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 	}
 
 	order, err := mb.pilvytisOrderIssuer.CreatePaymentGatewayOrder(
-		pilvytis.CreateGatewayOrder{Identity: identity.FromAddress(req.IdentityAddress),
+		pilvytis.GatewayOrderRequest{Identity: identity.FromAddress(req.IdentityAddress),
 			Gateway:     req.Gateway,
 			MystAmount:  req.MystAmount,
 			PayCurrency: req.PayCurrency,

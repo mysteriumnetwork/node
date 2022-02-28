@@ -258,8 +258,8 @@ func (a *API) GetPaymentGateways() ([]GatewaysResponse, error) {
 	return resp, a.sendRequestAndParseResp(req, &resp)
 }
 
-// PaymentOrderResponse is a response for a payment order.
-type PaymentOrderResponse struct {
+// GatewayOrderResponse is a response for a payment order.
+type GatewayOrderResponse struct {
 	ID     string             `json:"id"`
 	Status PaymentOrderStatus `json:"status"`
 
@@ -324,25 +324,25 @@ func (p PaymentOrderStatus) Status() string {
 }
 
 // GetPaymentGatewayOrders returns a list of payment orders from the API service made by a given identity.
-func (a *API) GetPaymentGatewayOrders(id identity.Identity) ([]PaymentOrderResponse, error) {
+func (a *API) GetPaymentGatewayOrders(id identity.Identity) ([]GatewayOrderResponse, error) {
 	req, err := requests.NewSignedGetRequest(a.url, "api/v2/payment/orders", a.signer(id))
 	if err != nil {
 		return nil, err
 	}
 
-	var resp []PaymentOrderResponse
+	var resp []GatewayOrderResponse
 	return resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // GetPaymentGatewayOrder returns a payment order by ID from the API
 // service that belongs to a given identity.
-func (a *API) GetPaymentGatewayOrder(id identity.Identity, oid string) (*PaymentOrderResponse, error) {
+func (a *API) GetPaymentGatewayOrder(id identity.Identity, oid string) (*GatewayOrderResponse, error) {
 	req, err := requests.NewSignedGetRequest(a.url, fmt.Sprintf("api/v2/payment/orders/%s", oid), a.signer(id))
 	if err != nil {
 		return nil, err
 	}
 
-	var resp PaymentOrderResponse
+	var resp GatewayOrderResponse
 	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 
@@ -372,8 +372,8 @@ type paymentOrderRequest struct {
 	GatewayCallerData json.RawMessage `json:"gateway_caller_data"`
 }
 
-// CreateGatewayOrder for creating payment gateway order
-type CreateGatewayOrder struct {
+// GatewayOrderRequest for creating payment gateway order
+type GatewayOrderRequest struct {
 	Identity    identity.Identity
 	Gateway     string
 	MystAmount  string
@@ -384,14 +384,14 @@ type CreateGatewayOrder struct {
 }
 
 // createPaymentOrder creates a new payment order in the API service.
-func (a *API) createPaymentGatewayOrder(cgo CreateGatewayOrder) (*PaymentOrderResponse, error) {
+func (a *API) createPaymentGatewayOrder(cgo GatewayOrderRequest) (*GatewayOrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
 	ch, err := a.channelCalculator.GetChannelAddress(chainID, cgo.Identity)
 	if err != nil {
 		return nil, fmt.Errorf("could get channel address: %w", err)
 	}
-
+	//https: //sandbox-pilvytis.mysterium.network
 	payload := paymentOrderRequest{
 		ChannelAddress:    ch.Hex(),
 		MystAmount:        cgo.MystAmount,
@@ -408,7 +408,7 @@ func (a *API) createPaymentGatewayOrder(cgo CreateGatewayOrder) (*PaymentOrderRe
 		return nil, err
 	}
 
-	var resp PaymentOrderResponse
+	var resp GatewayOrderResponse
 	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 

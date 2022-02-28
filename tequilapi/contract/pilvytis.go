@@ -139,7 +139,7 @@ type PaymentOrderResponse struct {
 }
 
 // NewPaymentOrderResponse creates an instance of PaymentOrderResponse
-func NewPaymentOrderResponse(r *pilvytis.PaymentOrderResponse) PaymentOrderResponse {
+func NewPaymentOrderResponse(r *pilvytis.GatewayOrderResponse) PaymentOrderResponse {
 	return PaymentOrderResponse{
 		ID:                r.ID,
 		Status:            string(r.Status),
@@ -161,7 +161,7 @@ func NewPaymentOrderResponse(r *pilvytis.PaymentOrderResponse) PaymentOrderRespo
 }
 
 // NewPaymentOrdersResponse creates a slice of orders response
-func NewPaymentOrdersResponse(r []pilvytis.PaymentOrderResponse) []PaymentOrderResponse {
+func NewPaymentOrdersResponse(r []pilvytis.GatewayOrderResponse) []PaymentOrderResponse {
 	result := make([]PaymentOrderResponse, len(r))
 	for i := range r {
 		result[i] = NewPaymentOrderResponse(&r[i])
@@ -211,8 +211,8 @@ type PaymentOrderRequest struct {
 }
 
 // GatewayOrderRequest convenience mapper
-func (o *PaymentOrderRequest) GatewayOrderRequest(identity identity.Identity, gateway string) pilvytis.CreateGatewayOrder {
-	return pilvytis.CreateGatewayOrder{
+func (o *PaymentOrderRequest) GatewayOrderRequest(identity identity.Identity, gateway string) pilvytis.GatewayOrderRequest {
+	return pilvytis.GatewayOrderRequest{
 		Identity:    identity,
 		Gateway:     gateway,
 		MystAmount:  o.MystAmount,

@@ -48,7 +48,7 @@ func (o *OrderIssuer) CreatePaymentOrder(id identity.Identity, mystAmount float6
 }
 
 // CreatePaymentGatewayOrder will create a new payment order and send a notification to start tracking it.
-func (o *OrderIssuer) CreatePaymentGatewayOrder(cgo CreateGatewayOrder) (*PaymentOrderResponse, error) {
+func (o *OrderIssuer) CreatePaymentGatewayOrder(cgo GatewayOrderRequest) (*GatewayOrderResponse, error) {
 	resp, err := o.api.createPaymentGatewayOrder(cgo)
 	if err != nil {
 		return nil, err

@@ -42,15 +42,15 @@ type api interface {
 	GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error)
 	// =================
 
-	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.PaymentOrderResponse, error)
+	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.GatewayOrderResponse, error)
 	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
-	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.PaymentOrderResponse, error)
+	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.GatewayOrderResponse, error)
 	GetPaymentGateways() ([]pilvytis.GatewaysResponse, error)
 }
 
 type paymentsIssuer interface {
 	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
-	CreatePaymentGatewayOrder(cgo pilvytis.CreateGatewayOrder) (*pilvytis.PaymentOrderResponse, error)
+	CreatePaymentGatewayOrder(cgo pilvytis.GatewayOrderRequest) (*pilvytis.GatewayOrderResponse, error)
 }
 
 type paymentLocationFallback interface {
