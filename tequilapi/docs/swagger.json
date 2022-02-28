@@ -3934,6 +3934,11 @@
           "type": "string",
           "x-go-name": "PayCurrency",
           "example": "EUR"
+        },
+        "project_id": {
+          "type": "string",
+          "x-go-name": "ProjectID",
+          "example": "mysteriumvpn, mystnodes"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

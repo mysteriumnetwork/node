@@ -29,7 +29,7 @@ import (
 
 type orderProvider interface {
 	GetPaymentOrders(id identity.Identity) ([]OrderResponse, error)
-	GetPaymentGatewayOrders(id identity.Identity) ([]PaymentOrderResponse, error)
+	GetPaymentGatewayOrders(id identity.Identity) ([]GatewayOrderResponse, error)
 }
 
 type identityProvider interface {

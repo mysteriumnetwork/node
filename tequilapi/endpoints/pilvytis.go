@@ -42,15 +42,15 @@ type api interface {
 	GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error)
 	// =================
 
-	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.PaymentOrderResponse, error)
+	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.GatewayOrderResponse, error)
 	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
-	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.PaymentOrderResponse, error)
+	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.GatewayOrderResponse, error)
 	GetPaymentGateways() ([]pilvytis.GatewaysResponse, error)
 }
 
 type paymentsIssuer interface {
 	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
-	CreatePaymentGatewayOrder(id identity.Identity, gw, mystAmount, payCurrency, country string, callerData json.RawMessage) (*pilvytis.PaymentOrderResponse, error)
+	CreatePaymentGatewayOrder(cgo pilvytis.GatewayOrderRequest) (*pilvytis.GatewayOrderResponse, error)
 }
 
 type paymentLocationFallback interface {
@@ -465,13 +465,8 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 	}
 
 	rid := identity.FromAddress(params.ByName("id"))
-	resp, err := e.pt.CreatePaymentGatewayOrder(
-		rid,
-		params.ByName("gw"),
-		req.MystAmount,
-		req.PayCurrency,
-		req.Country,
-		req.CallerData)
+
+	resp, err := e.pt.CreatePaymentGatewayOrder(req.GatewayOrderRequest(rid, params.ByName("gw")))
 	if err != nil {
 		utils.SendError(w, err, http.StatusInternalServerError)
 		return
