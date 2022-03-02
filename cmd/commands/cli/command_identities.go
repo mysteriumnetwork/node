@@ -209,21 +209,26 @@ func (c *cliApp) unlockIdentity(actionArgs []string) (err error) {
 	return nil
 }
 
-const usageRegisterIdentity = "register <identity> [referralcode]"
+const usageRegisterIdentity = "register <identity> [beneficiary] [referralcode]"
 
 func (c *cliApp) registerIdentity(actionArgs []string) error {
-	if len(actionArgs) < 1 || len(actionArgs) > 2 {
+	if len(actionArgs) < 1 || len(actionArgs) > 3 {
 		clio.Info("Usage: " + usageRegisterIdentity)
 		return errWrongArgumentCount
 	}
 
 	address := actionArgs[0]
-	var token *string
+	var beneficiary string
 	if len(actionArgs) >= 2 {
-		token = &actionArgs[1]
+		beneficiary = actionArgs[1]
 	}
 
-	err := c.tequilapi.RegisterIdentity(address, token)
+	var token *string
+	if len(actionArgs) >= 3 {
+		token = &actionArgs[2]
+	}
+
+	err := c.tequilapi.RegisterIdentity(address, beneficiary, token)
 	if err != nil {
 		return fmt.Errorf("could not register identity: %w", err)
 	}

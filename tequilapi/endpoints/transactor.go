@@ -324,7 +324,7 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 		regFee = rf.Fee
 	}
 
-	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, "", chainID, req.ReferralToken)
+	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, req.Beneficiary, chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
