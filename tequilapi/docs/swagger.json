@@ -3516,6 +3516,11 @@
       "description": "IdentityRegisterRequest represents the identity registration user input parameters",
       "type": "object",
       "properties": {
+        "beneficiary": {
+          "description": "Beneficiary: beneficiary to set during registration. Optional.",
+          "type": "string",
+          "x-go-name": "Beneficiary"
+        },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
           "type": "string",
