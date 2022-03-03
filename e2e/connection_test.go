@@ -315,7 +315,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, nil)
+			err = c.tequila().RegisterIdentity(id.Address, "", nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -341,7 +341,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, nil)
+			err = c.tequila().RegisterIdentity(id.Address, "", nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -457,7 +457,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, nil)
+	err = tequilapi.RegisterIdentity(id, "", nil)
 	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
 
 	assert.Eventually(t, func() bool {
@@ -494,7 +494,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, nil)
+	err = tequilapi.RegisterIdentity(id, "", nil)
 	assert.NoError(t, err)
 
 	// now we check identity again

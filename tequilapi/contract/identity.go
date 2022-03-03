@@ -130,6 +130,8 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 type IdentityRegisterRequest struct {
 	// Token: referral token, if the user has one
 	ReferralToken *string `json:"referral_token,omitempty"`
+	// Beneficiary: beneficiary to set during registration. Optional.
+	Beneficiary string `json:"beneficiary,omitempty"`
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity

@@ -217,9 +217,10 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address string, token *string) error {
+func (client *Client) RegisterIdentity(address, beneficiary string, token *string) error {
 	payload := contract.IdentityRegisterRequest{
 		ReferralToken: token,
+		Beneficiary:   beneficiary,
 	}
 
 	response, err := client.http.Post("identities/"+address+"/register", payload)
