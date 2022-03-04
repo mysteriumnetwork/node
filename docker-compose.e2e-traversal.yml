@@ -192,7 +192,7 @@ services:
     image: mysteriumnetwork/trust-oracle:latest
     command: >
       -swaggerHost=trust
-      -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
+      -fallbackTrustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
     dns: 172.30.0.254
     sysctls:
       - net.ipv4.conf.default.rp_filter=0

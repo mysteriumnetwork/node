@@ -37,7 +37,8 @@ type IdentityRefDTO struct {
 // BalanceDTO holds balance information.
 // swagger:model BalanceDTO
 type BalanceDTO struct {
-	Balance *big.Int
+	Balance       *big.Int `json:"balance"`
+	BalanceTokens Tokens   `json:"balance_tokens"`
 }
 
 // IdentityDTO holds identity information.

@@ -29,7 +29,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
@@ -136,11 +135,8 @@ func (c *cliApp) getBalance(actionArgs []string) (err error) {
 	if err != nil {
 		return err
 	}
-	if balance.Balance == nil {
-		balance.Balance = new(big.Int)
-	}
 
-	clio.Info(fmt.Sprintf("Balance: %s", money.New(balance.Balance)))
+	clio.Info(fmt.Sprintf("Balance: %s MYST", balance.BalanceTokens))
 	return nil
 }
 
@@ -159,7 +155,7 @@ func (c *cliApp) getIdentity(actionArgs []string) (err error) {
 	}
 	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
 	clio.Info("Channel address:", identityStatus.ChannelAddress)
-	clio.Info(fmt.Sprintf("Balance: %s", money.New(identityStatus.Balance)))
+	clio.Info(fmt.Sprintf("Balance: %s MYST", identityStatus.BalanceTokens))
 	clio.Info(fmt.Sprintf("Earnings: %s", money.New(identityStatus.Earnings)))
 	clio.Info(fmt.Sprintf("Earnings total: %s", money.New(identityStatus.EarningsTotal)))
 	return nil
@@ -249,8 +245,8 @@ func (c *cliApp) settle(args []string) (err error) {
 		if err != nil {
 			clio.Warn("could not get transactor fee: ", err)
 		}
-		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", fees.SettlementTokens.Human))
-		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", fees.HermesTokens.Human))
+		clio.Info(fmt.Sprintf("Transactor fee: %s MYST", fees.SettlementTokens))
+		clio.Info(fmt.Sprintf("Hermes fee: %s MYST", fees.HermesTokens))
 		return errWrongArgumentCount
 	}
 	hermesID, err := c.config.GetHermesID()
@@ -408,8 +404,8 @@ func (c *cliApp) withdraw(args []string) error {
 		if err != nil {
 			clio.Warn("could not get transactor fee: ", err)
 		}
-		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", fees.SettlementTokens.Human))
-		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", fees.HermesTokens.Human))
+		clio.Info(fmt.Sprintf("Transactor fee: %s MYST", fees.SettlementTokens))
+		clio.Info(fmt.Sprintf("Hermes fee: %s MYST", fees.HermesTokens))
 		return errWrongArgumentCount
 	}
 	hermesID, err := c.config.GetHermesID()

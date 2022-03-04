@@ -50,3 +50,7 @@ func NewTokens(amount *big.Int) Tokens {
 		Human: ethers.Truncate(HumanPrecision).String(),
 	}
 }
+
+func (t Tokens) String() string {
+	return t.Human
+}

@@ -304,8 +304,10 @@ func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
 		return
 	}
 	chainID := config.GetInt64(config.FlagChainID)
+	balance := ia.balanceProvider.ForceBalanceUpdateCached(chainID, id)
 	status := contract.BalanceDTO{
-		Balance: ia.balanceProvider.ForceBalanceUpdateCached(chainID, id),
+		Balance:       balance,
+		BalanceTokens: contract.NewTokens(balance),
 	}
 	utils.WriteAsJSON(status, resp)
 }
