@@ -17,7 +17,11 @@
 
 package metadata
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/mysteriumnetwork/terms/terms-go"
+)
 
 // Version comes from BUILD_VERSION env variable (set via linker flags)
 var Version = ""
@@ -51,6 +55,6 @@ func VersionAsSummary(licenseCopyright string) string {
 		VersionAsString(),
 		BuildAsString(),
 		licenseCopyright,
-		termsAndConditions,
+		string(terms.TermsNodeShort),
 	)
 }

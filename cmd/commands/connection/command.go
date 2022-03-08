@@ -25,6 +25,8 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/mysteriumnetwork/terms/terms-go"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
@@ -34,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -203,8 +204,8 @@ func (c *command) handleTOS(ctx *cli.Context) error {
 	}
 
 	version := c.cfg.GetString(contract.TermsVersion)
-	if version != metadata.CurrentTermsVersion {
-		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	if version != terms.TermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
 	}
 
 	return nil
@@ -214,7 +215,7 @@ func (c *command) acceptTOS() {
 	t := true
 	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
 		AgreedConsumer: &t,
-		AgreedVersion:  metadata.CurrentTermsVersion,
+		AgreedVersion:  terms.TermsVersion,
 	}); err != nil {
 		clio.Info("Failed to save terms of use agreement, you will have to re-agree on next launch")
 	}
