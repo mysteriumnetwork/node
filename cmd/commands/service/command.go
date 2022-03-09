@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/terms/terms-go"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -32,7 +34,6 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
@@ -166,7 +167,7 @@ func (sc *serviceCommand) tryRememberTOS(ctx *cli.Context, errCh chan error) {
 			if err := sc.tequilapi.UpdateTerms(contract.TermsRequest{
 				AgreedProvider: &t,
 				AgreedConsumer: &t,
-				AgreedVersion:  metadata.CurrentTermsVersion,
+				AgreedVersion:  terms.TermsVersion,
 			}); err == nil {
 				return
 			}
@@ -202,8 +203,8 @@ func hasAcceptedTOS(ctx *cli.Context) error {
 	}
 
 	version := config.Current.GetString(contract.TermsVersion)
-	if version != metadata.CurrentTermsVersion {
-		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	if version != terms.TermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
 	}
 
 	return nil

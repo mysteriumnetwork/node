@@ -19,7 +19,7 @@ package contract
 
 import (
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/terms/terms-go"
 )
 
 // TermsRequest object is accepted by terms endpoints.
@@ -69,7 +69,7 @@ func NewTermsResp() *TermsResponse {
 		AgreedProvider: config.Current.GetBool(TermsProviderAgreed),
 		AgreedConsumer: config.Current.GetBool(TermsConsumerAgreed),
 		AgreedVersion:  config.Current.GetString(TermsVersion),
-		CurrentVersion: metadata.CurrentTermsVersion,
+		CurrentVersion: terms.TermsVersion,
 	}
 }
 
