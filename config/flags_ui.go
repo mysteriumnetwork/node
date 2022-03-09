@@ -20,8 +20,8 @@ package config
 import "github.com/urfave/cli/v2"
 
 var (
-	// FlagFeatureRestart restart feature toggle
-	FlagFeatureRestart = cli.StringFlag{
+	// FlagFeatures toggle NodeUI features
+	FlagFeatures = cli.StringFlag{
 		Name:  "ui.features",
 		Usage: "Enable NodeUI features. Multiple features are joined by string (e.g feature1,feature2,...",
 		Value: "",
@@ -50,7 +50,7 @@ var (
 func RegisterFlagsUI(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		&FlagFeatureRestart,
+		&FlagFeatures,
 		&FlagUIEnable,
 		&FlagUIAddress,
 		&FlagUIPort,
@@ -59,7 +59,7 @@ func RegisterFlagsUI(flags *[]cli.Flag) {
 
 // ParseFlagsUI parse Node UI flags
 func ParseFlagsUI(ctx *cli.Context) {
-	Current.ParseStringFlag(ctx, FlagFeatureRestart)
+	Current.ParseStringFlag(ctx, FlagFeatures)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseStringFlag(ctx, FlagUIAddress)
 	Current.ParseIntFlag(ctx, FlagUIPort)
