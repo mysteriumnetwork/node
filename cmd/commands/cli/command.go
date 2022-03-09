@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/terms/terms-go"
+
 	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
@@ -148,8 +150,8 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 	}
 
 	version := c.config.GetString(contract.TermsVersion)
-	if version != metadata.CurrentTermsVersion {
-		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	if version != terms.TermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
 	}
 
 	return nil
@@ -160,7 +162,7 @@ func (c *cliApp) acceptTOS() {
 	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
 		AgreedConsumer: &t,
 		AgreedProvider: &t,
-		AgreedVersion:  metadata.CurrentTermsVersion,
+		AgreedVersion:  terms.TermsVersion,
 	}); err != nil {
 		clio.Info("Failed to save terms of use agreement, you will have to re-agree on next launch")
 	}
