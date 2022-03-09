@@ -311,6 +311,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsMMN(flags)
 	RegisterFlagsPilvytis(flags)
 	RegisterFlagsChains(flags)
+	RegisterFlagsUI(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -369,6 +370,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsMMN(ctx)
 	ParseFlagPilvytis(ctx)
 	ParseFlagsChains(ctx)
+	ParseFlagsUI(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
