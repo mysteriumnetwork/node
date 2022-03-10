@@ -58,6 +58,7 @@ func (c *cliApp) identities(args []string) (err error) {
 		"  " + usageExportIdentity,
 		"  " + usageImportIdentity,
 		"  " + usageWithdraw,
+		"  " + usageLastWithdrawal,
 	}, "\n")
 
 	if len(args) == 0 {
@@ -99,6 +100,8 @@ func (c *cliApp) identities(args []string) (err error) {
 		return c.importIdentity(actionArgs)
 	case "withdraw":
 		return c.withdraw(actionArgs)
+	case "last-withdrawal":
+		return c.lastWithdrawal(actionArgs)
 	default:
 		fmt.Println(usage)
 		return errUnknownSubCommand(args[0])
@@ -567,5 +570,39 @@ func (c *cliApp) importIdentity(actionsArgs []string) (err error) {
 	}
 
 	clio.Success("Identity imported:", id.Address)
+	return nil
+}
+
+const usageLastWithdrawal = "last-withdrawal <identity>"
+
+func (c *cliApp) lastWithdrawal(actionArgs []string) error {
+	if len(actionArgs) != 1 {
+		clio.Info("Usage: " + usageGetReferralCode)
+		return errWrongArgumentCount
+	}
+
+	address := actionArgs[0]
+	history, err := c.tequilapi.WithdrawalHistory(address)
+	if err != nil {
+		return fmt.Errorf("Could not get last withdrawal: %w", err)
+	}
+	if history.TotalItems == 0 {
+		clio.Info("No withdrawals found")
+		return nil
+	}
+
+	lastWithdrawal := history.Items[0]
+
+	clio.Info("Tx hash: ", lastWithdrawal.TxHash)
+	clio.Info("DateTime: ", lastWithdrawal.SettledAt)
+	clio.Info("Beneficiary: ", lastWithdrawal.Beneficiary)
+	clio.Info("Amount: ", money.New(lastWithdrawal.Amount))
+	clio.Info("Fees: ", money.New(lastWithdrawal.Fees))
+	clio.Info("Blockchain explorer Url: ", lastWithdrawal.BlockExplorerURL)
+	if lastWithdrawal.Error != "" {
+		clio.Warn(fmt.Sprintf("Error: %s", lastWithdrawal.Error))
+	} else {
+		clio.Info(fmt.Sprintf("Error: none"))
+	}
 	return nil
 }
