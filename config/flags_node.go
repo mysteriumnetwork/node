@@ -207,24 +207,6 @@ var (
 		Usage: "Enables pprof",
 		Value: false,
 	}
-	// FlagUIEnable enables built-in web UI for node.
-	FlagUIEnable = cli.BoolFlag{
-		Name:  "ui.enable",
-		Usage: "Enables the Web UI",
-		Value: true,
-	}
-	// FlagUIAddress IP address of interface to listen for incoming connections.
-	FlagUIAddress = cli.StringFlag{
-		Name:  "ui.address",
-		Usage: "IP address to bind Web UI to. Address can be comma delimited: '192.168.1.10,192.168.1.20'. (default - 127.0.0.1 and local LAN IP)",
-		Value: "",
-	}
-	// FlagUIPort runs web UI on the specified port.
-	FlagUIPort = cli.IntFlag{
-		Name:  "ui.port",
-		Usage: "The port to run Web UI on",
-		Value: 4449,
-	}
 	// FlagUserMode allows running node under current user without sudo.
 	FlagUserMode = cli.BoolFlag{
 		Name:  "usermode",
@@ -311,6 +293,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsMMN(flags)
 	RegisterFlagsPilvytis(flags)
 	RegisterFlagsChains(flags)
+	RegisterFlagsUI(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -339,9 +322,6 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagTequilapiUsername,
 		&FlagTequilapiPassword,
 		&FlagPProfEnable,
-		&FlagUIEnable,
-		&FlagUIAddress,
-		&FlagUIPort,
 		&FlagUserMode,
 		&FlagProxyMode,
 		&FlagVendorID,
@@ -369,6 +349,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsMMN(ctx)
 	ParseFlagPilvytis(ctx)
 	ParseFlagsChains(ctx)
+	ParseFlagsUI(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
@@ -396,9 +377,6 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTequilapiUsername)
 	Current.ParseStringFlag(ctx, FlagTequilapiPassword)
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
-	Current.ParseBoolFlag(ctx, FlagUIEnable)
-	Current.ParseStringFlag(ctx, FlagUIAddress)
-	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseBoolFlag(ctx, FlagProxyMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)

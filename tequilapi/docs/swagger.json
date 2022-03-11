@@ -2809,8 +2809,11 @@
       "type": "object",
       "title": "BalanceDTO holds balance information.",
       "properties": {
-        "Balance": {
+        "balance": {
           "$ref": "#/definitions/Int"
+        },
+        "balance_tokens": {
+          "$ref": "#/definitions/Tokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

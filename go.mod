@@ -7,7 +7,7 @@ require (
 	github.com/Microsoft/go-winio v0.5.0
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/arthurkiller/rollingwriter v1.1.3-0.20220211070658-c19a8e8b35be
-	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
+	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/asdine/storm/v3 v3.1.1
 	github.com/aws/aws-sdk-go-v2 v1.3.2
 	github.com/aws/aws-sdk-go-v2/config v1.1.6
@@ -180,6 +180,7 @@ require (
 	github.com/multiformats/go-multihash v0.0.13 // indirect
 	github.com/multiformats/go-multistream v0.1.1 // indirect
 	github.com/multiformats/go-varint v0.0.5 // indirect
+	github.com/mysteriumnetwork/terms v0.0.40 // indirect
 	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
