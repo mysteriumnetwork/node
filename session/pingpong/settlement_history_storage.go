@@ -98,7 +98,8 @@ func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (resul
 		where = append(where, q.Lte("Time", filter.TimeTo.UTC()))
 	}
 	if filter.ProviderID != nil {
-		where = append(where, q.Eq("ProviderID", filter.ProviderID))
+		id := filter.ProviderID
+		where = append(where, q.Eq("ProviderID", *id))
 	}
 	if filter.HermesID != nil {
 		where = append(where, q.Eq("HermesID", filter.HermesID))

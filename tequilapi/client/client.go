@@ -730,6 +730,24 @@ func (client *Client) DecreaseStake(ID identity.Identity, amount *big.Int) error
 	return nil
 }
 
+// WithdrawalHistory returns latest withdrawals for identity
+func (client *Client) WithdrawalHistory(address string) (res contract.SettlementListResponse, err error) {
+	params := url.Values{
+		"types":       []string{"withdrawal"},
+		"provider_id": []string{address},
+	}
+
+	path := fmt.Sprintf("transactor/settle/history?%s", params.Encode())
+	response, err := client.http.Get(path, nil)
+	if err != nil {
+		return contract.SettlementListResponse{}, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	return res, err
+}
+
 // Beneficiary gets beneficiary address for the provided identity.
 func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponse, err error) {
 	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
