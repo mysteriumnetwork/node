@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -432,7 +433,7 @@ func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
  *  - "system" uses DNS servers from client's system configuration
  */
 type ConnectRequest struct {
-	Providers               []string
+	Providers               string // comma separated list of providers that will be used for the connection.
 	IdentityAddress         string
 	ServiceType             string
 	CountryCode             string
@@ -464,10 +465,12 @@ const (
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
+	providers := strings.Split(req.Providers, ",")
+
 	f := &proposal.Filter{
 		ServiceType:             req.ServiceType,
 		LocationCountry:         req.CountryCode,
-		ProviderIDs:             req.Providers,
+		ProviderIDs:             providers,
 		IPType:                  req.IPType,
 		IncludeMonitoringFailed: req.IncludeMonitoringFailed,
 		AccessPolicy:            "all",
@@ -481,7 +484,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 	}
 
 	if len(req.Providers) == 1 {
-		qualityEvent.ProviderID = req.Providers[0]
+		qualityEvent.ProviderID = providers[0]
 	}
 
 	dnsOption, err := req.dnsOption()
