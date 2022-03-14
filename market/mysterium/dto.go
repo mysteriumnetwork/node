@@ -39,6 +39,7 @@ type ProposalsQuery struct {
 	NATCompatibility        nat.NATType
 	QualityMin              float32
 	IncludeMonitoringFailed bool
+	PresetID                int
 }
 
 // ToURLValues converts the query to url.Values.
@@ -78,5 +79,9 @@ func (q ProposalsQuery) ToURLValues() url.Values {
 	if q.IncludeMonitoringFailed {
 		values.Set("include_monitoring_failed", fmt.Sprint(q.IncludeMonitoringFailed))
 	}
+	if q.PresetID != 0 {
+		values.Set("preset_id", strconv.Itoa(q.PresetID))
+	}
+
 	return values
 }

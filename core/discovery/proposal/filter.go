@@ -89,6 +89,7 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 // ToAPIQuery serialises filter to query of Mysterium API
 func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 	query := mysterium.ProposalsQuery{
+		PresetID:                filter.PresetID,
 		ProviderID:              filter.ProviderID,
 		ProviderIDs:             filter.ProviderIDs,
 		ServiceType:             filter.ServiceType,
