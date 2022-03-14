@@ -66,6 +66,7 @@ type GetProposalsRequest struct {
 
 func (r GetProposalsRequest) toFilter() *proposal.Filter {
 	return &proposal.Filter{
+		PresetID:           r.PresetID,
 		ServiceType:        r.ServiceType,
 		LocationCountry:    r.LocationCountry,
 		IPType:             r.IPType,
