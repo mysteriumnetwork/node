@@ -208,7 +208,7 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 		}
 	}()
 
-	w.device = device.NewDevice(tunDevice, conn.NewDefaultBind(), device.NewLogger(device.LogLevelVerbose, "[userspace-wg]"))
+	w.device = device.NewDevice(tunDevice, conn.NewStdNetBind(), device.NewLogger(device.LogLevelVerbose, "[userspace-wg]"))
 
 	err = w.applyConfig(w.device, privateKey, config)
 	if err != nil {
