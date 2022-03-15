@@ -465,7 +465,10 @@ const (
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
-	providers := strings.Split(req.Providers, ",")
+	var providers []string
+	if len(req.Providers) > 0 {
+		providers = strings.Split(req.Providers, ",")
+	}
 
 	f := &proposal.Filter{
 		ServiceType:             req.ServiceType,
