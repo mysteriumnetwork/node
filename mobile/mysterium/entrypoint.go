@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -356,19 +357,30 @@ func (mb *MobileNode) SetUserConfig(key, value string) error {
 
 // GetStatusResponse represents status response.
 type GetStatusResponse struct {
-	State       string
-	ProviderID  string
-	ServiceType string
+	State    string
+	Proposal proposalDTO
 }
 
 // GetStatus returns current connection state and provider info if connected to VPN.
 func (mb *MobileNode) GetStatus() *GetStatusResponse {
 	status := mb.connectionManager.Status(0)
+	perGib, _ := big.NewFloat(0).SetInt(status.Proposal.Price.PricePerGiB).Float64()
+	perHour, _ := big.NewFloat(0).SetInt(status.Proposal.Price.PricePerHour).Float64()
 
 	return &GetStatusResponse{
-		State:       string(status.State),
-		ProviderID:  status.Proposal.ProviderID,
-		ServiceType: status.Proposal.ServiceType,
+		State: string(status.State),
+		Proposal: proposalDTO{
+			ProviderID:   status.Proposal.ProviderID,
+			ServiceType:  status.Proposal.ServiceType,
+			Country:      status.Proposal.Location.Country,
+			IPType:       status.Proposal.Location.IPType,
+			QualityLevel: proposalQualityLevel(status.Proposal.Quality.Quality),
+			Price: proposalPrice{
+				Currency: mb.GetDefaultCurrency(),
+				PerGiB:   perGib,
+				PerHour:  perHour,
+			},
+		},
 	}
 }
 
