@@ -23,7 +23,7 @@ var (
 	// FlagFeatures toggle NodeUI features
 	FlagFeatures = cli.StringFlag{
 		Name:  "ui.features",
-		Usage: "Enable NodeUI features. Multiple features are joined by string (e.g feature1,feature2,...",
+		Usage: "Enable NodeUI features. Multiple features are joined by comma (e.g feature1,feature2,...)",
 		Value: "",
 	}
 	// FlagUIEnable enables built-in web UI for node.
