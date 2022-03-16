@@ -63,7 +63,14 @@ func TestMobileNodeConsumer(t *testing.T) {
 	require.NotNil(t, node)
 
 	t.Run("Test status", func(t *testing.T) {
-		status := node.GetStatus()
+		resp, err := node.GetStatus()
+		require.NoError(t, err)
+
+		var status mysterium.GetStatusResponse
+		err = json.Unmarshal(resp, &status)
+
+		require.NoError(t, err)
+
 		require.Equal(t, "NotConnected", status.State)
 		require.Equal(t, "", status.Proposal.ProviderID)
 		require.Equal(t, "", status.Proposal.ServiceType)

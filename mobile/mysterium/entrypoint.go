@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -362,7 +363,7 @@ type GetStatusResponse struct {
 }
 
 // GetStatus returns current connection state and provider info if connected to VPN.
-func (mb *MobileNode) GetStatus() *GetStatusResponse {
+func (mb *MobileNode) GetStatus() ([]byte, error) {
 	status := mb.connectionManager.Status(0)
 
 	resp := &GetStatusResponse{
@@ -384,7 +385,7 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 		resp.Proposal.Price.PerHour, _ = big.NewFloat(0).SetInt(status.Proposal.Price.PricePerHour).Float64()
 	}
 
-	return resp
+	return json.Marshal(resp)
 }
 
 // GetNATType return current NAT type after a probe.
