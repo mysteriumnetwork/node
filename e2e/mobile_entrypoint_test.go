@@ -65,8 +65,8 @@ func TestMobileNodeConsumer(t *testing.T) {
 	t.Run("Test status", func(t *testing.T) {
 		status := node.GetStatus()
 		require.Equal(t, "NotConnected", status.State)
-		require.Equal(t, "", status.ProviderID)
-		require.Equal(t, "", status.ServiceType)
+		require.Equal(t, "", status.Proposal.ProviderID)
+		require.Equal(t, "", status.Proposal.ServiceType)
 	})
 
 	t.Run("Test identity registration", func(t *testing.T) {
