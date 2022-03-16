@@ -364,10 +364,8 @@ type GetStatusResponse struct {
 // GetStatus returns current connection state and provider info if connected to VPN.
 func (mb *MobileNode) GetStatus() *GetStatusResponse {
 	status := mb.connectionManager.Status(0)
-	perGib, _ := big.NewFloat(0).SetInt(status.Proposal.Price.PricePerGiB).Float64()
-	perHour, _ := big.NewFloat(0).SetInt(status.Proposal.Price.PricePerHour).Float64()
 
-	return &GetStatusResponse{
+	resp := &GetStatusResponse{
 		State: string(status.State),
 		Proposal: proposalDTO{
 			ProviderID:   status.Proposal.ProviderID,
@@ -377,11 +375,16 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 			QualityLevel: proposalQualityLevel(status.Proposal.Quality.Quality),
 			Price: proposalPrice{
 				Currency: mb.GetDefaultCurrency(),
-				PerGiB:   perGib,
-				PerHour:  perHour,
 			},
 		},
 	}
+
+	if status.Proposal.Price.PricePerGiB != nil && status.Proposal.Price.PricePerHour != nil {
+		resp.Proposal.Price.PerGiB, _ = big.NewFloat(0).SetInt(status.Proposal.Price.PricePerGiB).Float64()
+		resp.Proposal.Price.PerHour, _ = big.NewFloat(0).SetInt(status.Proposal.Price.PricePerHour).Float64()
+	}
+
+	return resp
 }
 
 // GetNATType return current NAT type after a probe.
