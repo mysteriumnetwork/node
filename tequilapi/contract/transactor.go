@@ -43,9 +43,7 @@ type FeesDTO struct {
 	Settlement         *big.Int `json:"settlement"`
 	SettlementTokens   Tokens   `json:"settlement_tokens"`
 	// deprecated - confusing name
-	Hermes uint16 `json:"hermes"`
-	//deprecated - not tokens
-	HermesTokens        Tokens   `json:"hermes_tokens"`
+	Hermes              uint16   `json:"hermes"`
 	HermesPercent       string   `json:"hermes_percent"`
 	DecreaseStake       *big.Int `json:"decreaseStake"`
 	DecreaseStakeTokens Tokens   `json:"decrease_stake_tokens"`

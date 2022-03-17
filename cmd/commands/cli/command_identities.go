@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
@@ -249,7 +251,12 @@ func (c *cliApp) settle(args []string) (err error) {
 			clio.Warn("could not get transactor fee: ", err)
 		}
 		clio.Info(fmt.Sprintf("Transactor fee: %s MYST", fees.SettlementTokens))
-		clio.Info(fmt.Sprintf("Hermes fee: %s MYST", fees.HermesTokens))
+
+		hermesPct, err := decimal.NewFromString(fees.HermesPercent)
+		if err != nil {
+			clio.Info(fmt.Sprintf("Hermes fee: COULD NOT RETIREVE"))
+		}
+		clio.Info(fmt.Sprintf("Hermes fee: %s%%", hermesPct.Mul(decimal.NewFromInt(100)).StringFixed(2)))
 		return errWrongArgumentCount
 	}
 	hermesID, err := c.config.GetHermesID()
@@ -408,7 +415,11 @@ func (c *cliApp) withdraw(args []string) error {
 			clio.Warn("could not get transactor fee: ", err)
 		}
 		clio.Info(fmt.Sprintf("Transactor fee: %s MYST", fees.SettlementTokens))
-		clio.Info(fmt.Sprintf("Hermes fee: %s MYST", fees.HermesTokens))
+		hermesPct, err := decimal.NewFromString(fees.HermesPercent)
+		if err != nil {
+			clio.Info(fmt.Sprintf("Hermes fee: COULD NOT RETIREVE"))
+		}
+		clio.Info(fmt.Sprintf("Hermes fee: %s%%", hermesPct.Mul(decimal.NewFromInt(100)).StringFixed(2)))
 		return errWrongArgumentCount
 	}
 	hermesID, err := c.config.GetHermesID()

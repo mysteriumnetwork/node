@@ -169,7 +169,6 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 		SettlementTokens:    contract.NewTokens(settlementFees.Fee),
 		HermesPercent:       hermesPercent.StringFixed(4),
 		Hermes:              hermesFeePerMyriad,
-		HermesTokens:        contract.NewTokens(big.NewInt(int64(hermesFeePerMyriad))),
 		DecreaseStake:       decreaseStakeFees.Fee,
 		DecreaseStakeTokens: contract.NewTokens(decreaseStakeFees.Fee),
 	}
