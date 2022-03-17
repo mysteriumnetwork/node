@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/asdine/storm/v3"
 	"github.com/spf13/cast"
 
@@ -153,19 +155,21 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 		return
 	}
 
-	hermesFees, err := te.promiseSettler.GetHermesFee(chainID, hermes)
+	hermesFeePerMyriad, err := te.promiseSettler.GetHermesFee(chainID, hermes)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
+	hermesPercent := decimal.NewFromInt(int64(hermesFeePerMyriad)).Div(decimal.NewFromInt(10000))
 	f := contract.FeesDTO{
 		Registration:        registrationFees.Fee,
 		RegistrationTokens:  contract.NewTokens(registrationFees.Fee),
 		Settlement:          settlementFees.Fee,
 		SettlementTokens:    contract.NewTokens(settlementFees.Fee),
-		Hermes:              hermesFees,
-		HermesTokens:        contract.NewTokens(big.NewInt(int64(hermesFees))),
+		HermesPercent:       hermesPercent.StringFixed(4),
+		Hermes:              hermesFeePerMyriad,
+		HermesTokens:        contract.NewTokens(big.NewInt(int64(hermesFeePerMyriad))),
 		DecreaseStake:       decreaseStakeFees.Fee,
 		DecreaseStakeTokens: contract.NewTokens(decreaseStakeFees.Fee),
 	}

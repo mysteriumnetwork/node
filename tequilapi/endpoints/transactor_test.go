@@ -117,6 +117,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 		"human": "0",
 		"wei": "11000"
 	  },
+	  "hermes_percent": "1.1000",
 	  "decreaseStake": 1000000000000000000,
 	  "decrease_stake_tokens": {
 		"ether": "1",
