@@ -986,8 +986,8 @@ github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269/go.mod h1:G
 github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-ci v0.0.0-20211124142828-37ca8ff3ef34 h1:dL47AATo/r5osw1K3vzneYrv4In4nJ170S1WorrnfQc=
 github.com/mysteriumnetwork/go-ci v0.0.0-20211124142828-37ca8ff3ef34/go.mod h1:FdrIqN3Z27igwo8A4aKZcmds7q894iGcdUIPz0+vOXY=
-github.com/mysteriumnetwork/go-dvpn-web v1.7.3 h1:+hMXoNoxKjawXDkSddYBdACiZmDLgsVvvzvK/Jhehjc=
-github.com/mysteriumnetwork/go-dvpn-web v1.7.3/go.mod h1:EflugstrqapwAGF/Jgekw70mhyJbkFlQZGflQ+MILcc=
+github.com/mysteriumnetwork/go-dvpn-web v1.8.0 h1:Q9InMG8mKDC0gy/AVvlvWxYQZ9E367EyorgDFqSHMjM=
+github.com/mysteriumnetwork/go-dvpn-web v1.8.0/go.mod h1:EflugstrqapwAGF/Jgekw70mhyJbkFlQZGflQ+MILcc=
 github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/XZPDpElfzFjxM=
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N1RaVBCEBLi1VhmIrI=
@@ -998,12 +998,6 @@ github.com/mysteriumnetwork/metrics v0.0.19 h1:sqmUVStDWQOSUUxKTrEnxOZs6dy9nKrlI
 github.com/mysteriumnetwork/metrics v0.0.19/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v1.0.1-0.20211025073343-0b355972a602 h1:Su9N4SQca2OICEPLXTNfMHTKJrPFPKwm0E4HX2XZ7jY=
 github.com/mysteriumnetwork/payments v1.0.1-0.20211025073343-0b355972a602/go.mod h1:dS9ux8H00YhsgBrsqT5pAcaQrcnSGHdLrwy+e+8a7U0=
-github.com/mysteriumnetwork/terms v0.0.36 h1:iHjvXb+AYcwOInlpev/WWSkbGfdS6xMfCRmIq83nP/k=
-github.com/mysteriumnetwork/terms v0.0.36/go.mod h1:HT76gKdQ4q9ZOVVczVc6Qdbz2jMlT7uxMIJXgk1FX3k=
-github.com/mysteriumnetwork/terms v0.0.38 h1:BZ5Eg5OwUPCWQ4q5BJlSA38V8/lkUlw2tH++BcUBE+k=
-github.com/mysteriumnetwork/terms v0.0.38/go.mod h1:HT76gKdQ4q9ZOVVczVc6Qdbz2jMlT7uxMIJXgk1FX3k=
-github.com/mysteriumnetwork/terms v0.0.39 h1:zFY+jST/Tyg+XO3HqIPFxJ+93xPmjNVRgQ1fSXyqjiQ=
-github.com/mysteriumnetwork/terms v0.0.39/go.mod h1:HT76gKdQ4q9ZOVVczVc6Qdbz2jMlT7uxMIJXgk1FX3k=
 github.com/mysteriumnetwork/terms v0.0.40 h1:Rv0ElMiiPcT3E3D4uvkxKzgJIE2J2x3uJoz9nfid2qc=
 github.com/mysteriumnetwork/terms v0.0.40/go.mod h1:HT76gKdQ4q9ZOVVczVc6Qdbz2jMlT7uxMIJXgk1FX3k=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
