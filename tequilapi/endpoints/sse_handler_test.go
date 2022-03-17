@@ -233,7 +233,17 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 			"human": "0"
 		},
         "earnings": 1,
+		"earnings_tokens": {
+			"wei": "1",
+			"ether": "0.000000000000000001",
+			"human": "0"
+		},
 		"earnings_total": 100,
+		"earnings_total_tokens": {
+			"wei": "100",
+			"ether": "0.0000000000000001",
+			"human": "0"
+		},
 		"stake": 0
       }
     ],

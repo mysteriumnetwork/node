@@ -235,15 +235,17 @@ func mapState(event stateEvent.State) stateRes {
 		}
 
 		identitiesRes[idx] = contract.IdentityDTO{
-			Address:            identity.Address,
-			RegistrationStatus: identity.RegistrationStatus.String(),
-			ChannelAddress:     identity.ChannelAddress.Hex(),
-			Balance:            identity.Balance,
-			BalanceTokens:      contract.NewTokens(identity.Balance),
-			Earnings:           identity.Earnings,
-			EarningsTotal:      identity.EarningsTotal,
-			Stake:              stake,
-			HermesID:           identity.HermesID.Hex(),
+			Address:             identity.Address,
+			RegistrationStatus:  identity.RegistrationStatus.String(),
+			ChannelAddress:      identity.ChannelAddress.Hex(),
+			Balance:             identity.Balance,
+			BalanceTokens:       contract.NewTokens(identity.Balance),
+			Earnings:            identity.Earnings,
+			EarningsTokens:      contract.NewTokens(identity.Earnings),
+			EarningsTotal:       identity.EarningsTotal,
+			EarningsTotalTokens: contract.NewTokens(identity.EarningsTotal),
+			Stake:               stake,
+			HermesID:            identity.HermesID.Hex(),
 		}
 	}
 

@@ -47,15 +47,24 @@ type IdentityDTO struct {
 	// identity in Ethereum address format
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
-	Address            string   `json:"id"`
-	RegistrationStatus string   `json:"registration_status"`
-	ChannelAddress     string   `json:"channel_address"`
-	Balance            *big.Int `json:"balance"`
-	BalanceTokens      Tokens   `json:"balance_tokens"`
-	Earnings           *big.Int `json:"earnings"`
-	EarningsTotal      *big.Int `json:"earnings_total"`
-	Stake              *big.Int `json:"stake"`
-	HermesID           string   `json:"hermes_id"`
+	Address            string `json:"id"`
+	RegistrationStatus string `json:"registration_status"`
+	ChannelAddress     string `json:"channel_address"`
+
+	// deprecated
+	Balance       *big.Int `json:"balance"`
+	BalanceTokens Tokens   `json:"balance_tokens"`
+
+	// deprecated
+	Earnings       *big.Int `json:"earnings"`
+	EarningsTokens Tokens   `json:"earnings_tokens"`
+
+	// deprecated
+	EarningsTotal       *big.Int `json:"earnings_total"`
+	EarningsTotalTokens Tokens   `json:"earnings_total_tokens"`
+
+	Stake    *big.Int `json:"stake"`
+	HermesID string   `json:"hermes_id"`
 }
 
 // NewIdentityDTO maps to API identity.
