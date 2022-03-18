@@ -23,7 +23,6 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/shurcooL/vfsgen"
 )
 
@@ -53,12 +52,7 @@ func GenerateProtobuf() error {
 
 // GetProtobuf installs protobuf golang compiler.
 func GetProtobuf() error {
-	path, _ := util.GetGoBinaryPath("protoc-gen-go")
-	if path != "" {
-		fmt.Println("Tool 'protoc-gen-go' already installed")
-		return nil
-	}
-	err := sh.RunV("go", "get", "-u", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.25.0")
+	err := sh.RunV("go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.25.0")
 	if err != nil {
 		fmt.Println("could not go get 'protoc-gen-go'")
 		return err
@@ -92,12 +86,7 @@ func GenerateDocs() error {
 
 // GetSwagger installs swagger tool.
 func GetSwagger() error {
-	path, _ := util.GetGoBinaryPath("swagger")
-	if path != "" {
-		fmt.Println("Tool 'swagger' already installed")
-		return nil
-	}
-	err := sh.RunV("go", "get", "-u", "github.com/go-swagger/go-swagger/cmd/swagger")
+	err := sh.RunV("go", "install", "github.com/go-swagger/go-swagger/cmd/swagger@v0.29.0")
 	if err != nil {
 		fmt.Println("could not go get swagger")
 		return err

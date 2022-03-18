@@ -21,8 +21,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -53,10 +53,15 @@ func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
 }
 
 func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
-	tunnel, tnet, err := netstack.CreateNetTUN(
-		[]net.IP{cfg.Subnet.IP},
-		[]net.IP{net.ParseIP(cfg.DNS[0])},
-		device.DefaultMTU)
+	localAddr, err := netip.ParseAddr(cfg.Subnet.IP.String())
+	if err != nil {
+		return fmt.Errorf("could not parse local addr: %w", err)
+	}
+	dnsAddr, err := netip.ParseAddr(cfg.DNS[0])
+	if err != nil {
+		return fmt.Errorf("could not parse DNS addr: %w", err)
+	}
+	tunnel, tnet, err := netstack.CreateNetTUN([]netip.Addr{localAddr}, []netip.Addr{dnsAddr}, device.DefaultMTU)
 	if err != nil {
 		return fmt.Errorf("failed to create netstack device %s: %w", cfg.IfaceName, err)
 	}

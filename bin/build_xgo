@@ -27,7 +27,7 @@ DIR_BUILD="build/myst"
 mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
-IMAGE="mysteriumnetwork/xgo:1.17.3"
+IMAGE="mysteriumnetwork/xgo:1.18.0"
 
 docker run --rm \
     -v "$PWD"/$DIR_TEMP:/build \
