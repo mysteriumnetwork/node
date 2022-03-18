@@ -272,7 +272,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 
 // Start stars the invoice tracker
 func (it *InvoiceTracker) Start() error {
-	log.Debug().Msg("Starting...")
+	log.Debug().Msgf("Starting invoice tracker for session %s", it.deps.SessionID)
 	it.deps.TimeTracker.StartTracking()
 
 	if err := it.deps.EventBus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
@@ -634,7 +634,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 // Stop stops the invoice tracker.
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
-		log.Debug().Msg("Stopping...")
+		log.Debug().Msgf("Stopping invoice tracker for session %s", it.deps.SessionID)
 		_ = it.deps.EventBus.Unsubscribe(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent)
 		close(it.stop)
 	})
