@@ -1,10 +1,10 @@
 module github.com/mysteriumnetwork/node
 
-go 1.17
+go 1.18
 
 require (
 	github.com/BurntSushi/toml v0.4.1
-	github.com/Microsoft/go-winio v0.5.0
+	github.com/Microsoft/go-winio v0.5.1
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/arthurkiller/rollingwriter v1.1.3-0.20220211070658-c19a8e8b35be
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
@@ -30,7 +30,7 @@ require (
 	github.com/koron/go-ssdp v0.0.2
 	github.com/libp2p/go-libp2p v0.5.2
 	github.com/libp2p/go-libp2p-core v0.3.0
-	github.com/magefile/mage v1.11.0
+	github.com/magefile/mage v1.13.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
@@ -39,7 +39,7 @@ require (
 	github.com/mysteriumnetwork/go-dvpn-web v1.8.0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
-	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
+	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
 	github.com/mysteriumnetwork/payments v1.0.1-0.20211025073343-0b355972a602
 	github.com/mysteriumnetwork/terms v0.0.40
@@ -59,14 +59,14 @@ require (
 	github.com/xtaci/kcp-go/v5 v5.6.1
 	go.etcd.io/bbolt v1.3.5
 	go.mongodb.org/mongo-driver v1.7.0
-	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
-	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
+	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
-	golang.org/x/sys v0.0.0-20211214234402-4825e8c3871d
-	golang.zx2c4.com/wireguard v0.0.0-20220117163742-e0b8f11489c5
-	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20211017052713-f87e87af0d9a
+	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86
+	golang.zx2c4.com/wireguard v0.0.0-20220318042302-193cf8d6a5d6
+	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 )
 
 require (
@@ -222,15 +222,14 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
-	golang.org/x/tools v0.1.8 // indirect
+	golang.org/x/tools v0.1.9 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	golang.zx2c4.com/go118/netip v0.0.0-20211111135330-a4a02eeacf9d // indirect
 	golang.zx2c4.com/wintun v0.0.0-20211104114900-415007cec224 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	gvisor.dev/gvisor v0.0.0-20210506004418-fbfeba3024f0 // indirect
+	gvisor.dev/gvisor v0.0.0-20211020211948-f76a604701b6 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
 )
