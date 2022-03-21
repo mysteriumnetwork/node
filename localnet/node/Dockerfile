@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine
+FROM golang:1.18-alpine
 
 # Install packages
 RUN apk add --no-cache iptables ipset ca-certificates openvpn wireguard-tools bash sudo openresolv gcc musl-dev make linux-headers vim curl tcpdump
