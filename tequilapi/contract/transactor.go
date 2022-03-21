@@ -38,12 +38,13 @@ import (
 // FeesDTO represents the transactor fees
 // swagger:model FeesDTO
 type FeesDTO struct {
-	Registration        *big.Int `json:"registration"`
-	RegistrationTokens  Tokens   `json:"registration_tokens"`
-	Settlement          *big.Int `json:"settlement"`
-	SettlementTokens    Tokens   `json:"settlement_tokens"`
+	Registration       *big.Int `json:"registration"`
+	RegistrationTokens Tokens   `json:"registration_tokens"`
+	Settlement         *big.Int `json:"settlement"`
+	SettlementTokens   Tokens   `json:"settlement_tokens"`
+	// deprecated - confusing name
 	Hermes              uint16   `json:"hermes"`
-	HermesTokens        Tokens   `json:"hermes_tokens"`
+	HermesPercent       string   `json:"hermes_percent"`
 	DecreaseStake       *big.Int `json:"decreaseStake"`
 	DecreaseStakeTokens Tokens   `json:"decrease_stake_tokens"`
 }

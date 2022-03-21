@@ -363,7 +363,17 @@ func Test_IdentityGet(t *testing.T) {
     "human": "0"
   },
   "earnings": 50,
+  "earnings_tokens": {
+  	"wei": "50",
+  	"ether": "0.00000000000000005",
+  	"human": "0"
+  },
   "earnings_total": 100,
+  "earnings_total_tokens": {
+  	"wei": "100",
+  	"ether": "0.0000000000000001",
+  	"human": "0"
+  },
   "stake": 2,
   "hermes_id": "0x200000000000000000000000000000000000000A"
 }

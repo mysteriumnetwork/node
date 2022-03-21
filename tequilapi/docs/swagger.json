@@ -3280,12 +3280,14 @@
           "$ref": "#/definitions/Tokens"
         },
         "hermes": {
+          "description": "deprecated - confusing name",
           "type": "integer",
           "format": "uint16",
           "x-go-name": "Hermes"
         },
-        "hermes_tokens": {
-          "$ref": "#/definitions/Tokens"
+        "hermes_percent": {
+          "type": "string",
+          "x-go-name": "HermesPercent"
         },
         "registration": {
           "$ref": "#/definitions/Int"
@@ -3448,8 +3450,14 @@
         "earnings": {
           "$ref": "#/definitions/Int"
         },
+        "earnings_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "earnings_total": {
           "$ref": "#/definitions/Int"
+        },
+        "earnings_total_tokens": {
+          "$ref": "#/definitions/Tokens"
         },
         "hermes_id": {
           "type": "string",

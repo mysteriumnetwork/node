@@ -374,15 +374,17 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 	balance := ia.balanceProvider.GetBalance(chainID, id)
 	settlement := ia.earningsProvider.GetEarnings(chainID, id)
 	status := contract.IdentityDTO{
-		Address:            address,
-		RegistrationStatus: regStatus.String(),
-		ChannelAddress:     channelAddress.Hex(),
-		Balance:            balance,
-		BalanceTokens:      contract.NewTokens(balance),
-		Earnings:           settlement.UnsettledBalance,
-		EarningsTotal:      settlement.LifetimeBalance,
-		Stake:              stake,
-		HermesID:           hermesID.Hex(),
+		Address:             address,
+		RegistrationStatus:  regStatus.String(),
+		ChannelAddress:      channelAddress.Hex(),
+		Balance:             balance,
+		BalanceTokens:       contract.NewTokens(balance),
+		Earnings:            settlement.UnsettledBalance,
+		EarningsTokens:      contract.NewTokens(settlement.UnsettledBalance),
+		EarningsTotal:       settlement.LifetimeBalance,
+		EarningsTotalTokens: contract.NewTokens(settlement.LifetimeBalance),
+		Stake:               stake,
+		HermesID:            hermesID.Hex(),
 	}
 	utils.WriteAsJSON(status, resp)
 }
