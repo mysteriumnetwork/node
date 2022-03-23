@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mysteriumnetwork/node/p2p"
@@ -65,6 +66,9 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 		HermesID:       em.HermesID,
 		ChainID:        em.ChainID,
 	}
+	fmt.Println("=============")
+	fmt.Println(em.HermesID)
+	fmt.Println("=============")
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

@@ -167,6 +167,10 @@ func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
 		}
 
+		fmt.Println("================================")
+		fmt.Println("exchange hermes ID", msg.GetHermesID())
+		fmt.Println("promise channel ID", msg.GetPromise().GetChannelID())
+		fmt.Println("================================")
 		mng.paymentEngineChan <- crypto.ExchangeMessage{
 			Promise: crypto.Promise{
 				ChannelID: msg.GetPromise().GetChannelID(),
