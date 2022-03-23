@@ -143,6 +143,9 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("---------------")
+	fmt.Println("chain", config.FlagChainID)
+	fmt.Println("hermes", hermes)
 
 	cr, err := toConnectionRequest(req, hermes.Hex())
 	if err != nil {
