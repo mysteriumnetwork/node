@@ -19,6 +19,7 @@ package connection
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -55,6 +56,7 @@ func (mcm *multiConnectionManager) Connect(consumerID identity.Identity, hermesI
 	}
 	mcm.mu.Unlock()
 
+	fmt.Println("in connect", hermesID.Hex())
 	return m.Connect(consumerID, hermesID, proposalLookup, params)
 }
 

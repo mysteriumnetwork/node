@@ -599,6 +599,7 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 		ProposalID: opts.Proposal.ID,
 		Config:     config,
 	}
+	fmt.Println("session create", sessionRequest.Consumer.HermesID)
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
 	ctx, cancel := context.WithTimeout(m.currentCtx(), 20*time.Second)
 	defer cancel()
@@ -672,6 +673,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	trace := tracer.StartStage("Consumer start connection")
 	defer tracer.EndStage(trace)
 
+	fmt.Println("in start", connectOptions.HermesID)
 	if err = start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -717,6 +719,7 @@ func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)
 
 func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal proposal.PricedServiceProposal) {
 	m.setStatus(func(status *connectionstate.Status) {
+		fmt.Println("settings status", accountantID)
 		*status = connectionstate.Status{
 			StartedAt:        m.timeGetter(),
 			ConsumerID:       consumerID,
