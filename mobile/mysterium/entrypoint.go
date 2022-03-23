@@ -492,7 +492,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		ProviderIDs:             providers,
 		IPType:                  req.IPType,
 		IncludeMonitoringFailed: req.IncludeMonitoringFailed,
-		AccessPolicy:            "all",
+		ExcludeUnsupported:      true,
 	}
 
 	proposalLookup := connection.FilteredProposals(f, req.SortBy, mb.proposalsManager.repository)

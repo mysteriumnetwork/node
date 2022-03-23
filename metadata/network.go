@@ -111,56 +111,6 @@ var MainnetDefinition = NetworkDefinition{
 	},
 }
 
-// Testnet3Definition defines parameters for testnet3 network
-var Testnet3Definition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://testnet3-discovery.mysterium.network/api/v3",
-	AccessPolicyOracleAddress: "https://testnet3-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://testnet3-broker.mysterium.network"},
-	TransactorIdentity:        "0x7d72db0c2db675ea5107caba80acac2154ca362b",
-	TransactorAddress:         "https://testnet3-transactor.mysterium.network/api/v1",
-	Chain1: ChainDefinition{
-		RegistryAddress:    "0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39",
-		ChannelImplAddress: "0x1aDF7Ef34b9d48DCc8EBC47D989bfdE55933B6ea",
-		HermesID:           "0x7119442C7E627438deb0ec59291e31378F88DD06",
-		ChainID:            5,
-		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
-		EtherClientRPC: []string{
-			"https://goerli1.mysterium.network/",
-		},
-	},
-	Chain2: ChainDefinition{
-		RegistryAddress:    "0xDFAB03C9fbDbef66dA105B88776B35bfd7743D39",
-		ChannelImplAddress: "0xf8982Ba93D3d9182D095B892DE2A7963eF9807ee",
-		HermesID:           "0x7119442C7E627438deb0ec59291e31378F88DD06",
-		ChainID:            80001,
-		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
-		EtherClientRPC: []string{
-			"https://mumbai1.mysterium.network/",
-			"https://mumbai2.mysterium.network/",
-		},
-	},
-	MMNAddress:      "https://my.mysterium.network/",
-	MMNAPIAddress:   "https://my.mysterium.network/api/v1",
-	PilvytisAddress: "https://testnet3-pilvytis.mysterium.network",
-	DNSMap: map[string][]string{
-		"testnet3-discovery.mysterium.network":  {"167.233.11.60"},
-		"testnet3-trust.mysterium.network":      {"167.233.11.60"},
-		"testnet3-broker.mysterium.network":     {"167.233.11.60"},
-		"testnet3-transactor.mysterium.network": {"167.233.11.60"},
-	},
-	DefaultChainID:    80001,
-	DefaultCurrency:   "MYSTT",
-	LocationAddress:   "https://testnet3-location.mysterium.network/api/v1/location",
-	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
-	Payments: Payments{
-		Consumer: Consumer{
-			DataLeewayMegabytes: 20,
-			PriceGiBMax:         "500000000000000000", // 0.5 MYSTT
-			PriceHourMax:        "180000000000000",    // 0.0018 MYSTT
-		},
-	},
-}
-
 // LocalnetDefinition defines parameters for local network
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
