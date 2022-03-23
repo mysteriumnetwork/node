@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"encoding/hex"
 	stdErr "errors"
@@ -604,30 +603,30 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
-	registry, err := it.deps.AddressProvider.GetRegistryAddress(em.ChainID)
-	if err != nil {
-		return errors.Wrap(err, "could not get registry address")
-	}
+	// registry, err := it.deps.AddressProvider.GetRegistryAddress(em.ChainID)
+	// if err != nil {
+	// 	return errors.Wrap(err, "could not get registry address")
+	// }
 
-	chimp, err := it.deps.AddressProvider.GetChannelImplementation(em.ChainID)
-	if err != nil {
-		return errors.Wrap(err, "could not get channel implementation")
-	}
+	// chimp, err := it.deps.AddressProvider.GetChannelImplementation(em.ChainID)
+	// if err != nil {
+	// 	return errors.Wrap(err, "could not get channel implementation")
+	// }
 
-	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer)
-	if err != nil {
-		return errors.Wrap(err, "could not generate channel address")
-	}
+	// addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer)
+	// if err != nil {
+	// 	return errors.Wrap(err, "could not generate channel address")
+	// }
 
-	expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr.Hex(), "0x"))
-	if err != nil {
-		return errors.Wrap(err, "could not decode expected chanel")
-	}
+	// expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr.Hex(), "0x"))
+	// if err != nil {
+	// 	return errors.Wrap(err, "could not decode expected chanel")
+	// }
 
-	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
-		log.Warn().Msgf("Consumer sent an invalid channel address. Expected %q, got %q", addr.Hex(), hex.EncodeToString(em.Promise.ChannelID))
-		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
-	}
+	// if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
+	// 	log.Warn().Msgf("Consumer sent an invalid channel address. Expected %q, got %q", addr.Hex(), hex.EncodeToString(em.Promise.ChannelID))
+	// 	return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
+	// }
 	return nil
 }
 
