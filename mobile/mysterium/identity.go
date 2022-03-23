@@ -52,7 +52,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 		return nil, fmt.Errorf("could not unlock identity: %w", err)
 	}
 
-	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(mb.chainID, id)
+	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(mb.chainID, id.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could not generate channel address: %w", err)
 	}

@@ -205,7 +205,7 @@ func (mak *mockAddressKeeper) GetRegistryAddress(chainID int64) (common.Address,
 	return mak.addrToReturn, mak.errToReturn
 }
 
-func (mak *mockAddressKeeper) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
+func (mak *mockAddressKeeper) GetChannelAddress(chainID int64, id common.Address) (common.Address, error) {
 	return common.Address{}, nil
 }
 

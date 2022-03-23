@@ -84,7 +84,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	psort "github.com/mysteriumnetwork/payments/client/sort"
 )
@@ -183,7 +182,7 @@ type Dependencies struct {
 	HermesCaller             *pingpong.HermesCaller
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
-	AddressProvider          *client.MultiChainAddressProvider
+	AddressProvider          *paymentClient.MultiChainAddressProvider
 	HermesStatusChecker      *pingpong.HermesStatusChecker
 
 	MMN *mmn.MMN
@@ -301,7 +300,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	ch1 := nodeOptions.Chains.Chain1
 	ch2 := nodeOptions.Chains.Chain2
-	addresses := map[int64]client.SmartContractAddresses{
+	addresses := map[int64]paymentClient.SmartContractAddresses{
 		ch1.ChainID: {
 			Registry:              common.HexToAddress(ch1.RegistryAddress),
 			Myst:                  common.HexToAddress(ch1.MystAddress),
@@ -316,8 +315,8 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 		},
 	}
 
-	keeper := client.NewMultiChainAddressKeeper(addresses)
-	di.AddressProvider = client.NewMultiChainAddressProvider(keeper, di.BCHelper)
+	keeper := paymentClient.NewMultiChainAddressKeeper(addresses)
+	di.AddressProvider = paymentClient.NewMultiChainAddressProvider(keeper, di.BCHelper)
 }
 
 func (di *Dependencies) bootstrapP2P() {

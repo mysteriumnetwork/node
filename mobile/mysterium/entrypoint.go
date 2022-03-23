@@ -56,6 +56,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -77,7 +78,7 @@ type MobileNode struct {
 	feedbackReporter          *feedback.Reporter
 	transactor                *registry.Transactor
 	identityRegistry          registry.IdentityRegistry
-	identityChannelCalculator *pingpong.AddressProvider
+	identityChannelCalculator *paymentClient.MultiChainAddressProvider
 	consumerBalanceTracker    *pingpong.ConsumerBalanceTracker
 	pilvytis                  *pilvytis.API
 	pilvytisOrderIssuer       *pilvytis.OrderIssuer
