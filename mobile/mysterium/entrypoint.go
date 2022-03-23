@@ -517,6 +517,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		DNS: dnsOption,
 	}
 
+	fmt.Println("use ch", mb.chainID)
 	hermes, err := mb.identityChannelCalculator.GetActiveHermes(mb.chainID)
 	if err != nil {
 		return &ConnectResponse{
@@ -524,6 +525,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 			ErrorMessage: err.Error(),
 		}
 	}
+	fmt.Println("got", hermes)
 
 	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), hermes, proposalLookup, connectOptions); err != nil {
 		qualityEvent.Stage = quality.StageConnectionUnknownError

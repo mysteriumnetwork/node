@@ -319,6 +319,8 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	}
 
 	keeper := client.NewMultiChainAddressKeeper(addresses)
+	fmt.Println(keeper.GetActiveHermes(137))
+	fmt.Println(keeper.GetActiveHermes(1))
 	di.AddressProvider = pingpong.NewAddressProvider(keeper)
 }
 
