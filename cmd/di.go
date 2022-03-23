@@ -183,7 +183,7 @@ type Dependencies struct {
 	HermesCaller             *pingpong.HermesCaller
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
-	AddressProvider          *pingpong.AddressProvider
+	AddressProvider          *client.MultiChainAddressProvider
 	HermesStatusChecker      *pingpong.HermesStatusChecker
 
 	MMN *mmn.MMN
@@ -224,8 +224,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapEventBus()
-
-	di.bootstrapAddressProvider(nodeOptions)
 
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
@@ -319,7 +317,7 @@ func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	}
 
 	keeper := client.NewMultiChainAddressKeeper(addresses)
-	di.AddressProvider = pingpong.NewAddressProvider(keeper)
+	di.AddressProvider = client.NewMultiChainAddressProvider(keeper, di.BCHelper)
 }
 
 func (di *Dependencies) bootstrapP2P() {
@@ -748,6 +746,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	clients[options.Chains.Chain2.ChainID] = bcL2
 
 	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
+	di.bootstrapAddressProvider(options)
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)

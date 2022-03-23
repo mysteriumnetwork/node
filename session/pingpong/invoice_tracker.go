@@ -609,12 +609,12 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(err, "could not get registry address")
 	}
 
-	chimp, err := it.deps.AddressProvider.GetChannelImplementation(em.ChainID)
+	chimp, err := it.deps.AddressProvider.GetChannelImplementationForHermes(em.ChainID, common.HexToAddress(em.HermesID))
 	if err != nil {
 		return errors.Wrap(err, "could not get channel implementation")
 	}
 
-	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer)
+	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer.ToCommonAddress())
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}

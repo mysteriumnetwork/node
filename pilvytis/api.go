@@ -56,7 +56,7 @@ const (
 )
 
 type addressProvider interface {
-	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetChannelAddress(chainID int64, id common.Address) (common.Address, error)
 }
 
 // NewAPI returns a new API instance.
@@ -143,7 +143,7 @@ type orderRequest struct {
 func (a *API) createPaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
-	ch, err := a.channelCalculator.GetChannelAddress(chainID, id)
+	ch, err := a.channelCalculator.GetChannelAddress(chainID, id.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could get channel address: %w", err)
 	}
@@ -387,7 +387,7 @@ type GatewayOrderRequest struct {
 func (a *API) createPaymentGatewayOrder(cgo GatewayOrderRequest) (*GatewayOrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
-	ch, err := a.channelCalculator.GetChannelAddress(chainID, cgo.Identity)
+	ch, err := a.channelCalculator.GetChannelAddress(chainID, cgo.Identity.ToCommonAddress())
 	if err != nil {
 		return nil, fmt.Errorf("could get channel address: %w", err)
 	}

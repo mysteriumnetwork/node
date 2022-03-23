@@ -47,7 +47,7 @@ type settler interface {
 type addressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
-	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetChannelAddress(chainID int64, id common.Address) (common.Address, error)
 }
 
 // NewSaver returns a new beneficiary saver according to the given chain.
