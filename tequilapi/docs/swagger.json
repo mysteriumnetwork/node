@@ -988,64 +988,6 @@
         }
       }
     },
-    "/identities/{id}/referral": {
-      "get": {
-        "description": "Gets a referral token for the given identity if a campaign exists",
-        "summary": "Gets referral token",
-        "operationId": "Referral",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to get a token",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Token response"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
-    "/identities/{id}/referral-available": {
-      "get": {
-        "description": "Verifies user's eligibility and the presence of an applicable public campaign",
-        "tags": [
-          "Referral",
-          "availability"
-        ],
-        "summary": "Checks if the user can obtain a referral token",
-        "operationId": "check",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to get a token",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/identities/{id}/register": {
       "post": {
         "description": "Registers identity on Mysterium Network smart contracts using Transactor",
@@ -2416,35 +2358,6 @@
         "responses": {
           "202": {
             "description": "settle request accepted"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
-    "/transactor/token/{token}/reward": {
-      "post": {
-        "summary": "Returns the amount of reward for a token",
-        "operationId": "Reward",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Token for which to lookup the reward",
-            "name": "token",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Token Reward",
-            "schema": {
-              "$ref": "#/definitions/TokenRewardAmount"
-            }
           },
           "500": {
             "description": "Internal server error",
