@@ -488,7 +488,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 		return err
 	}
 
-	consumerChannelAddress, err := aps.addressProvider.GetArbitraryChannelAddress(hermesID, registry, channel, providerID)
+	consumerChannelAddress, err := aps.addressProvider.GetArbitraryChannelAddress(hermesID, registry, channel, providerID.ToCommonAddress())
 	if err != nil {
 		return fmt.Errorf("could not generate channel address: %w", err)
 	}
@@ -793,7 +793,7 @@ func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, id commo
 		return nil, err
 	}
 
-	channelAddress, err := aps.addressProvider.GetChannelAddress(chainID, identity.FromAddress(id.Hex()))
+	channelAddress, err := aps.addressProvider.GetChannelAddress(chainID, id)
 	if err != nil {
 		return nil, err
 	}

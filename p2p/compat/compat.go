@@ -18,7 +18,7 @@
 package compat
 
 // Compatibility level of P2P protocol
-const Compatibility = 1
+const Compatibility = 2
 
 // FeaturePBP2P reports whether peer supports new wire format
 // for transportMsg envelopes

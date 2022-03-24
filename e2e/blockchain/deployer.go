@@ -148,7 +148,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		transactor.From,
 		stake,
 		400,
-		big.NewInt(1000),
+		big.NewInt(0),
 		maxStake,
 		[]byte("http://hermes:8889"),
 	)
@@ -279,7 +279,6 @@ func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAd
 	rt, err := bindings.NewRegistryTransactor(registryAddress, client)
 	checkError("registry transactor", err)
 
-	minStake, _ := big.NewInt(0).SetString("1000000000000000000", 10)
 	maxStake, _ := big.NewInt(0).SetString("62000000000000000000", 10)
 	stake, _ := big.NewInt(0).SetString("100000000000000000000", 10)
 
@@ -290,7 +289,7 @@ func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAd
 		transactor.From,
 		stake,
 		400,
-		minStake,
+		big.NewInt(0),
 		maxStake,
 		[]byte("http://hermes2:8889"),
 	)

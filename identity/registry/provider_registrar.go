@@ -45,7 +45,7 @@ type txer interface {
 
 type multiChainAddressKeeper interface {
 	GetRegistryAddress(chainID int64) (common.Address, error)
-	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetChannelAddress(chainID int64, id common.Address) (common.Address, error)
 }
 
 type bc interface {
@@ -228,7 +228,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identi
 	}
 
 	// If chain is l2 (matic) beneficiary should be set to channel address
-	settleBeneficiary, err := pr.multiChainAddressKeeper.GetChannelAddress(pr.chainID(), id)
+	settleBeneficiary, err := pr.multiChainAddressKeeper.GetChannelAddress(pr.chainID(), id.ToCommonAddress())
 	if err != nil {
 		log.Error().Err(err).Msg("Registration failed for could not generate channel address")
 		return err

@@ -148,7 +148,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"status": "NotRunning",
 				"proposal": {
                     "format": "service-proposal/v3",
-                    "compatibility": 1,
+                    "compatibility": 2,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"location": {
@@ -193,7 +193,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"status": "Running",
 				"proposal": {
 		            "format": "service-proposal/v3",
-		            "compatibility": 1,
+		            "compatibility": 2,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"location": {
@@ -238,7 +238,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"status": "Running",
 				"proposal": {
 		            "format": "service-proposal/v3",
-		            "compatibility": 1,
+		            "compatibility": 2,
 					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"location": {
@@ -457,7 +457,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 			"status": "Running",
 			"proposal": {
 				"format": "service-proposal/v3",
-				"compatibility": 1,
+				"compatibility": 2,
 				"provider_id": "0xproviderid",
 				"service_type": "testprotocol",
 				"location": {
@@ -570,7 +570,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			"status": "Running",
 			"proposal": {
 				"format": "service-proposal/v3",
-				"compatibility": 1,
+				"compatibility": 2,
 				"provider_id": "0xproviderid",
 				"service_type": "mockAccessPolicyService",
 				"location": {

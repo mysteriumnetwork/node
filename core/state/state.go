@@ -60,7 +60,7 @@ type identityProvider interface {
 }
 
 type channelAddressCalculator interface {
-	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetChannelAddress(chainID int64, id common.Address) (common.Address, error)
 	GetActiveHermes(chainID int64) (common.Address, error)
 }
 
@@ -155,7 +155,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			log.Warn().Err(err).Msgf("Could not retrieve hermesID for %s", id.Address)
 		}
 
-		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(k.deps.ChainID, id)
+		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(k.deps.ChainID, id.ToCommonAddress())
 		if err != nil {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
 		}

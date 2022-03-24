@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -76,7 +75,7 @@ type identitiesAPI struct {
 // AddressProvider provides sc addresses.
 type AddressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
-	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetChannelAddress(chainID int64, id common.Address) (common.Address, error)
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -349,7 +348,7 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		return
 	}
 
-	channelAddress, err := ia.channelCalculator.GetChannelAddress(chainID, id)
+	channelAddress, err := ia.channelCalculator.GetChannelAddress(chainID, id.ToCommonAddress())
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
 		return
@@ -672,7 +671,7 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
 	balanceProvider balanceProvider,
-	channelAddressCalculator *pingpong.AddressProvider,
+	channelAddressCalculator *client.MultiChainAddressProvider,
 	earningsProvider earningsProvider,
 	bc providerChannel,
 	transactor Transactor,

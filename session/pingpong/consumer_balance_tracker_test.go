@@ -467,7 +467,7 @@ type mockAddressProvider struct {
 	addrToReturn common.Address
 }
 
-func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
+func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id common.Address) (common.Address, error) {
 	return ma.addrToReturn, nil
 }
 func (ma *mockAddressProvider) GetChannelImplementation(chainID int64) (common.Address, error) {
@@ -482,6 +482,10 @@ func (ma *mockAddressProvider) GetActiveHermes(chainID int64) (common.Address, e
 func (ma *mockAddressProvider) GetRegistryAddress(chainID int64) (common.Address, error) {
 	return common.Address{}, nil
 }
-func (ma *mockAddressProvider) GetArbitraryChannelAddress(hermes, registry, channel common.Address, id identity.Identity) (common.Address, error) {
+func (ma *mockAddressProvider) GetArbitraryChannelAddress(hermes, registry, channel common.Address, id common.Address) (common.Address, error) {
 	return ma.addrToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetChannelImplementationForHermes(chainID int64, hermes common.Address) (common.Address, error) {
+	return common.Address{}, nil
 }

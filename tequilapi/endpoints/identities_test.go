@@ -400,7 +400,7 @@ func (ma *mockAddressProvider) GetRegistryAddress(chainID int64) (common.Address
 	return ma.registryToReturn, nil
 }
 
-func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
+func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id common.Address) (common.Address, error) {
 	return ma.channelAddressToReturn, nil
 }
 
