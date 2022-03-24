@@ -108,7 +108,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
             "proposals": [
                 {
                     "format": "service-proposal/v3",
-                    "compatibility": 1,
+                    "compatibility": 2,
                     "provider_id": "0xProviderId",
                     "service_type": "testprotocol",
                     "location": {
@@ -178,7 +178,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
             "proposals": [
                 {
                     "format": "service-proposal/v3",
-                    "compatibility": 1,
+                    "compatibility": 2,
                     "provider_id": "0xProviderId",
                     "service_type": "testprotocol",
                     "location": {
@@ -255,7 +255,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
             "proposals": [
                 {
                     "format": "service-proposal/v3",
-                    "compatibility": 1,
+                    "compatibility": 2,
                     "provider_id": "0xProviderId",
                     "service_type": "testprotocol",
                     "location": {
@@ -286,7 +286,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                 },
                 {
                     "format": "service-proposal/v3",
-                    "compatibility": 1,
+                    "compatibility": 2,
                     "provider_id": "other_provider",
                     "service_type": "testprotocol",
                     "location": {

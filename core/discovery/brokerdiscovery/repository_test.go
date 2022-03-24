@@ -63,7 +63,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 		{
 		  "proposal": {
 			"format": "service-proposal/v3",
-			"compatibility": 1,
+			"compatibility": 2,
 			"provider_id": "0x1",
 			"service_type": "mock_service",
 			"contacts": [
@@ -133,7 +133,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	proposalRegister(connection, `{
 	  "proposal": {
 		"format": "service-proposal/v3",
-		"compatibility": 1,
+		"compatibility": 2,
 		"provider_id": "0x1",
 		"service_type": "mock_service",
 		"contacts": [
@@ -147,7 +147,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	proposalPing(connection, `{
 	  "proposal": {
         "format": "service-proposal/v3",
-		"compatibility": 1,
+		"compatibility": 2,
 		"provider_id": "0x1",
 		"service_type": "mock_service",
 		"contacts": [
