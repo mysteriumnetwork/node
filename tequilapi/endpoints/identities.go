@@ -25,6 +25,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/payments/client"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
@@ -33,8 +36,6 @@ import (
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/payments/client"
-	"github.com/pkg/errors"
 )
 
 type balanceProvider interface {
@@ -467,67 +468,6 @@ func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
-// swagger:operation GET /identities/{id}/referral Referral
-// ---
-// summary: Gets referral token
-// description: Gets a referral token for the given identity if a campaign exists
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get a token
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Token response
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) GetReferralToken(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	id := params.ByName("id")
-	tkn, err := ia.transactor.GetReferralToken(common.HexToAddress(id))
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-	utils.WriteAsJSON(contract.ReferralTokenResponse{
-		Token: tkn,
-	}, resp)
-}
-
-// swagger:operation GET /identities/{id}/referral-available Referral availability check
-// ---
-// summary: Checks if the user can obtain a referral token
-// description: Verifies user's eligibility and the presence of an applicable public campaign
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get a token
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Success
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (ia *identitiesAPI) ReferralTokenAvailable(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	id := params.ByName("id")
-	err := ia.transactor.ReferralTokenAvailable(common.HexToAddress(id))
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-}
-
 // swagger:operation POST /identities-import Identities importIdentity
 // ---
 // summary: Imports a given identity.
@@ -703,8 +643,6 @@ func AddRoutesForIdentities(
 			identityGroup.PUT("/:id/unlock", idAPI.Unlock)
 			identityGroup.GET("/:id/registration", idAPI.RegistrationStatus)
 			identityGroup.GET("/:id/beneficiary", idAPI.Beneficiary)
-			identityGroup.GET("/:id/referral", idAPI.GetReferralToken)
-			identityGroup.GET("/:id/referral-available", idAPI.ReferralTokenAvailable)
 			identityGroup.GET("/:id/payout-address", idAPI.GetPayoutAddress)
 			identityGroup.PUT("/:id/payout-address", idAPI.SavePayoutAddress)
 			identityGroup.PUT("/:id/balance/refresh", idAPI.BalanceRefresh)

@@ -31,6 +31,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/vcraescu/go-paginator/adapter"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/payout"
@@ -39,9 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/vcraescu/go-paginator/adapter"
 )
 
 // Transactor represents interface to Transactor service
@@ -51,10 +52,6 @@ type Transactor interface {
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
-	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
-	GetReferralToken(id common.Address) (string, error)
-	ReferralTokenAvailable(id common.Address) error
-	RegistrationTokenReward(token string) (*big.Int, error)
 	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 	GetFreeProviderRegistrationEligibility() (bool, error)
 }
@@ -586,44 +583,6 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 	resp.WriteHeader(http.StatusOK)
 }
 
-// swagger:operation POST /transactor/token/{token}/reward Reward
-// ---
-// summary: Returns the amount of reward for a token
-// parameters:
-// - in: path
-//   name: token
-//   description: Token for which to lookup the reward
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Token Reward
-//     schema:
-//       "$ref": "#/definitions/TokenRewardAmount"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
-	resp := c.Writer
-	params := c.Params
-
-	token := params.ByName("token")
-	reward, err := te.transactor.RegistrationTokenReward(token)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-	if reward == nil {
-		utils.SendError(resp, errors.New("no reward for token"), http.StatusInternalServerError)
-		return
-	}
-
-	utils.WriteAsJSON(contract.TokenRewardAmount{
-		Amount: reward,
-	}, resp)
-}
-
 // swagger:operation GET /transactor/chains-summary Chains
 // ---
 // summary: Returns available chain map
@@ -824,7 +783,6 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/increase/async", te.SettleIntoStakeAsync)
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
-			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
 			transGroup.GET("/chain-summary", te.ChainSummary)
 		}
 		return nil
