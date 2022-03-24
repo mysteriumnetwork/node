@@ -44,6 +44,7 @@ type balanceProvider interface {
 
 type earningsProvider interface {
 	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
+	GetEarningsInHermes(chainID int64, id identity.Identity, hermesID common.Address) pingpong_event.Earnings
 }
 
 type beneficiaryProvider interface {
@@ -58,6 +59,10 @@ type identityMover interface {
 	Import(blob []byte, currPass, newPass string) (identity.Identity, error)
 }
 
+type promiseStorage interface {
+	ListAllHermesIDs(chainID int64, id identity.Identity) ([]common.Address, error)
+}
+
 type identitiesAPI struct {
 	mover             identityMover
 	idm               identity.Manager
@@ -70,6 +75,7 @@ type identitiesAPI struct {
 	transactor        Transactor
 	bprovider         beneficiaryProvider
 	addressStorage    *payout.AddressStorage
+	ps                promiseStorage
 }
 
 // AddressProvider provides sc addresses.
@@ -355,14 +361,15 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 	}
 
 	var stake = new(big.Int)
-	hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
+
+	defaultHermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
 		return
 	}
 
 	if regStatus == registry.Registered {
-		data, err := ia.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
+		data, err := ia.bc.GetProviderChannel(chainID, defaultHermesID, common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return
@@ -371,19 +378,30 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 	}
 
 	balance := ia.balanceProvider.GetBalance(chainID, id)
-	settlement := ia.earningsProvider.GetEarnings(chainID, id)
+	totalSettlement := ia.earningsProvider.GetEarnings(chainID, id)
+
+	hermeses, err := ia.ps.ListAllHermesIDs(chainID, id)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("could not get all hermeses %w", err), http.StatusInternalServerError)
+	}
+
+	settlementsPerHermes := make(map[string]pingpong_event.Earnings)
+	for _, h := range hermeses {
+		settlementsPerHermes[h.Hex()] = ia.earningsProvider.GetEarningsInHermes(chainID, id, h)
+	}
 	status := contract.IdentityDTO{
 		Address:             address,
 		RegistrationStatus:  regStatus.String(),
 		ChannelAddress:      channelAddress.Hex(),
 		Balance:             balance,
 		BalanceTokens:       contract.NewTokens(balance),
-		Earnings:            settlement.UnsettledBalance,
-		EarningsTokens:      contract.NewTokens(settlement.UnsettledBalance),
-		EarningsTotal:       settlement.LifetimeBalance,
-		EarningsTotalTokens: contract.NewTokens(settlement.LifetimeBalance),
+		Earnings:            totalSettlement.UnsettledBalance,
+		EarningsTokens:      contract.NewTokens(totalSettlement.UnsettledBalance),
+		EarningsTotal:       totalSettlement.LifetimeBalance,
+		EarningsTotalTokens: contract.NewTokens(totalSettlement.LifetimeBalance),
 		Stake:               stake,
-		HermesID:            hermesID.Hex(),
+		HermesID:            defaultHermesID.Hex(),
+		EarningsPerHermes:   settlementsPerHermes,
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -678,6 +696,7 @@ func AddRoutesForIdentities(
 	bprovider beneficiaryProvider,
 	mover identityMover,
 	addressStorage *payout.AddressStorage,
+	ps promiseStorage,
 ) func(*gin.Engine) error {
 	idAPI := &identitiesAPI{
 		mover:             mover,
@@ -691,6 +710,7 @@ func AddRoutesForIdentities(
 		transactor:        transactor,
 		bprovider:         bprovider,
 		addressStorage:    addressStorage,
+		ps:                ps,
 	}
 	return func(e *gin.Engine) error {
 		identityGroup := e.Group("/identities")

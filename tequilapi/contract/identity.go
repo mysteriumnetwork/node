@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
@@ -63,8 +64,9 @@ type IdentityDTO struct {
 	EarningsTotal       *big.Int `json:"earnings_total"`
 	EarningsTotalTokens Tokens   `json:"earnings_total_tokens"`
 
-	Stake    *big.Int `json:"stake"`
-	HermesID string   `json:"hermes_id"`
+	Stake             *big.Int                  `json:"stake"`
+	HermesID          string                    `json:"hermes_id"`
+	EarningsPerHermes map[string]event.Earnings `json:"earnings_per_hermes"`
 }
 
 // NewIdentityDTO maps to API identity.

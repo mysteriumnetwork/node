@@ -136,6 +136,33 @@ func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Ident
 	return hcr.sumChannels(chainID, id)
 }
 
+func (hcr *HermesChannelRepository) GetEarningsInHermes(chainID int64, id identity.Identity, hermesID common.Address) event.Earnings {
+	var lifetimeBalance = new(big.Int)
+	var unsettledBalance = new(big.Int)
+	hcr.lock.RLock()
+	defer hcr.lock.RUnlock()
+
+	v, ok := hcr.channels[chainID]
+	if !ok {
+		return event.Earnings{
+			LifetimeBalance:  new(big.Int),
+			UnsettledBalance: new(big.Int),
+		}
+	}
+
+	for _, channel := range v {
+		if channel.Identity == id && channel.HermesID == hermesID {
+			lifetimeBalance = new(big.Int).Add(lifetimeBalance, channel.LifetimeBalance())
+			unsettledBalance = new(big.Int).Add(unsettledBalance, channel.UnsettledBalance())
+		}
+	}
+
+	return event.Earnings{
+		LifetimeBalance:  lifetimeBalance,
+		UnsettledBalance: unsettledBalance,
+	}
+}
+
 func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Identity) event.Earnings {
 	var lifetimeBalance = new(big.Int)
 	var unsettledBalance = new(big.Int)

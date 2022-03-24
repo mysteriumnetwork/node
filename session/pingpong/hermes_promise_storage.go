@@ -137,6 +137,31 @@ func (aps *HermesPromiseStorage) getBucketName(chainID int64) string {
 	return fmt.Sprintf("%v_%v", hermesPromiseBucketName, chainID)
 }
 
+func (aps *HermesPromiseStorage) ListAllHermesIDs(chainID int64, id identity.Identity) ([]common.Address, error) {
+	got, err := aps.List(HermesPromiseFilter{
+		Identity: &id,
+		ChainID:  chainID,
+	})
+	if err != nil {
+		if err.Error() == errBoltNotFound {
+			return []common.Address{}, nil
+		}
+		return nil, err
+	}
+
+	f := make(map[common.Address]struct{})
+	for _, h := range got {
+		f[h.HermesID] = struct{}{}
+	}
+
+	result := make([]common.Address, 0)
+	for h := range f {
+		result = append(result, h)
+	}
+
+	return result, nil
+}
+
 // List fetches the promise for the given hermes.
 func (aps *HermesPromiseStorage) List(filter HermesPromiseFilter) ([]HermesPromise, error) {
 	aps.lock.Lock()
