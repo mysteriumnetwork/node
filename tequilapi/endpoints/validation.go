@@ -25,11 +25,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 type validationEndpoints struct {
@@ -40,19 +40,18 @@ type validationEndpoints struct {
 // ---
 // summary: validates list of RPC Chain2 urls
 // description: validates list of RPC Chain2 urls
-// response:
-//	200:
-//    description: Validation success
-//  400:
-//	  description: validation failed
+// responses:
+//	 200:
+//     description: Validation success
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (e validationEndpoints) ValidateRPCChain2URLS(c *gin.Context) {
-	req := c.Request
-	resp := c.Writer
-
 	var rpcURLS []string
-	err := json.NewDecoder(req.Body).Decode(&rpcURLS)
+	err := json.NewDecoder(c.Request.Body).Decode(&rpcURLS)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
@@ -62,23 +61,23 @@ func (e validationEndpoints) ValidateRPCChain2URLS(c *gin.Context) {
 
 		client, err := ethclient.DialContext(ctx, rpc)
 		if err != nil {
-			utils.SendError(resp, err, http.StatusInternalServerError)
+			c.Error(err)
 			return
 		}
 
 		rpcURLChainID, err := client.ChainID(ctx)
 		if err != nil {
-			utils.SendError(resp, err, http.StatusInternalServerError)
+			c.Error(err)
 			return
 		}
 
 		chain2ID := config.GetInt64(config.FlagChain2ChainID)
 		if rpcURLChainID.Int64() != chain2ID {
-			utils.SendError(resp, fmt.Errorf("URL: %s chainID missmatch - expected: %d but got: %d", rpc, chain2ID, rpcURLChainID), http.StatusBadRequest)
+			c.Error(apierror.BadRequest(fmt.Sprintf("URL: %s chainID missmatch - expected: %d but got: %d", rpc, chain2ID, rpcURLChainID), apierror.ValidateErrInvalidVal))
 			return
 		}
 	}
-	resp.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // AddRoutesForValidator register /validation endpoint

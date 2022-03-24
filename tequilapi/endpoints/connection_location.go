@@ -18,9 +18,8 @@
 package endpoints
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -71,26 +70,21 @@ func NewConnectionLocationEndpoint(
 //     description: Public IP address
 //     schema:
 //       "$ref": "#/definitions/IPDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (le *ConnectionLocationEndpoint) GetConnectionIP(c *gin.Context) {
-	writer := c.Writer
 	ipAddress, err := le.ipResolver.GetPublicIP()
 	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		c.Error(apierror.ServiceUnavailable())
 		return
 	}
 
 	response := contract.IPDTO{
 		IP: ipAddress,
 	}
-	utils.WriteAsJSON(response, writer)
+	utils.WriteAsJSON(response, c.Writer)
 }
 
 // GetConnectionLocation responds with current connection location
@@ -106,16 +100,14 @@ func (le *ConnectionLocationEndpoint) GetConnectionIP(c *gin.Context) {
 //   503:
 //     description: Service unavailable
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (le *ConnectionLocationEndpoint) GetConnectionLocation(c *gin.Context) {
-	writer := c.Writer
 	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		c.Error(apierror.ServiceUnavailable())
 		return
 	}
-
-	utils.WriteAsJSON(locationToRes(currentLocation), writer)
+	utils.WriteAsJSON(locationToRes(currentLocation), c.Writer)
 }
 
 // GetOriginLocation responds with original locations
@@ -128,10 +120,6 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(c *gin.Context) {
 //     description: Original locations
 //     schema:
 //       "$ref": "#/definitions/LocationDTO"
-//   503:
-//     description: Service unavailable
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetOriginLocation(c *gin.Context) {
 	originLocation := le.locationOriginResolver.GetOrigin()
 

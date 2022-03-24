@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/client"
@@ -50,6 +51,12 @@ var (
 )
 
 type selectorFake struct {
+}
+
+func summonTestGin() *gin.Engine {
+	g := gin.Default()
+	g.Use(apierror.ErrorHandler)
+	return g
 }
 
 func (hf *selectorFake) UseOrCreate(address, _ string, _ int64) (identity.Identity, error) {
@@ -79,7 +86,7 @@ func TestCurrentIdentitySuccess(t *testing.T) {
 		selector: &selectorFake{},
 	}
 
-	g := gin.Default()
+	g := summonTestGin()
 	g.PUT("/identities/current", endpoint.Current)
 
 	g.ServeHTTP(resp, req)
@@ -106,7 +113,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 
 	endpoint := &identitiesAPI{idm: mockIdm}
 
-	g := gin.Default()
+	g := summonTestGin()
 	g.PUT("/identities/:id/unlock", endpoint.Unlock)
 
 	g.ServeHTTP(resp, req)
@@ -129,7 +136,7 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.PUT("/identities/:id/unlock", endpoint.Unlock)
 
 	g.ServeHTTP(resp, req)
@@ -148,20 +155,29 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	assert.NoError(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.PUT("/identities/:id/unlock", endpoint.Unlock)
 
 	g.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	assert.JSONEq(
 		t,
 		`{
-			"message": "validation_error",
-			"errors" : {
-				"passphrase": [ {"code" : "required" , "message" : "Field is required" } ]
-			}
-		}`,
+  "error": {
+    "code": "validation_failed",
+    "message": "Request validation failed",
+    "detail": "Request validation failed: passphrase: 'passphrase' is required [required]",
+    "fields": {
+      "passphrase": {
+        "code": "required",
+        "message": "'passphrase' is required"
+      }
+    }
+  },
+  "status": 400,
+  "path": "/identities/0x000000000000000000000000000000000000000a/unlock"
+}`,
 		resp.Body.String(),
 	)
 }
@@ -179,7 +195,7 @@ func TestUnlockFailure(t *testing.T) {
 	mockIdm.MarkUnlockToFail()
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.PUT("/identities/:id/unlock", endpoint.Unlock)
 
 	g.ServeHTTP(resp, req)
@@ -202,7 +218,7 @@ func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.POST("/identities", endpoint.Create)
 
 	g.ServeHTTP(resp, req)
@@ -221,20 +237,30 @@ func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.POST("/identities", endpoint.Create)
 
 	g.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	fmt.Println(resp.Body.String())
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	assert.JSONEq(
 		t,
 		`{
-			"message": "validation_error",
-			"errors" : {
-				"passphrase": [ {"code" : "required" , "message" : "Field is required" } ]
-			}
-		}`,
+  "error": {
+    "code": "validation_failed",
+    "message": "Request validation failed",
+    "detail": "Request validation failed: passphrase: 'passphrase' is required [required]",
+    "fields": {
+      "passphrase": {
+        "code": "required",
+        "message": "'passphrase' is required"
+      }
+    }
+  },
+  "status": 400,
+  "path": "/identities"
+}`,
 		resp.Body.String(),
 	)
 }
@@ -250,7 +276,7 @@ func TestCreateNewIdentity(t *testing.T) {
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.POST("/identities", endpoint.Create)
 
 	g.ServeHTTP(resp, req)
@@ -271,7 +297,7 @@ func TestListIdentities(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	g := gin.Default()
+	g := summonTestGin()
 	g.GET(path, endpoint.List)
 
 	g.ServeHTTP(resp, req)

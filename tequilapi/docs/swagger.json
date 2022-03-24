@@ -25,10 +25,16 @@
               "$ref": "#/definitions/AccessPolicies"
             }
           },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -53,24 +59,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Authentication succeeded"
+            "description": "Authentication succeeded",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
           },
           "400": {
-            "description": "Body parsing error",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "401": {
             "description": "Authentication failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -95,24 +98,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Authentication succeeded"
+            "description": "Authentication succeeded",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
           },
           "400": {
-            "description": "Body parsing error",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "401": {
             "description": "Authentication failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -155,15 +155,15 @@
             "description": "Password changed successfully"
           },
           "400": {
-            "description": "Body parsing error",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "401": {
             "description": "Unauthorized",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -183,12 +183,6 @@
             "schema": {
               "$ref": "#/definitions/configPayload"
             }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
           }
         }
       }
@@ -207,12 +201,6 @@
             "schema": {
               "$ref": "#/definitions/configPayload"
             }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
           }
         }
       }
@@ -230,12 +218,6 @@
             "description": "User set configuration values",
             "schema": {
               "$ref": "#/definitions/configPayload"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -264,10 +246,16 @@
               "$ref": "#/definitions/configPayload"
             }
           },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -291,7 +279,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -321,33 +309,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "409": {
-            "description": "Conflict. Connection already exists",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "422": {
-            "description": "Parameters validation error",
+            "description": "Unable to process the request at this point",
             "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
-            }
-          },
-          "499": {
-            "description": "Connection was cancelled",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -361,18 +337,18 @@
         "operationId": "connectionCancel",
         "responses": {
           "202": {
-            "description": "Connection Stopped"
+            "description": "Connection stopped"
           },
-          "409": {
-            "description": "Conflict. No connection exists",
+          "422": {
+            "description": "Unable to process the request at this point (e.g. no active connection exists)",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -393,16 +369,10 @@
               "$ref": "#/definitions/IPDTO"
             }
           },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
           "503": {
             "description": "Service unavailable",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -426,7 +396,7 @@
           "503": {
             "description": "Service unavailable",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -446,11 +416,38 @@
             "schema": {
               "$ref": "#/definitions/ConnectionStatisticsDTO"
             }
+          }
+        }
+      }
+    },
+    "/entertainment": {
+      "get": {
+        "description": "Estimate entertainment durations/data cap for the MYST amount specified.",
+        "tags": [
+          "Entertainment"
+        ],
+        "summary": "Estimate entertainment durations/data cap for the MYST amount specified.",
+        "operationId": "Estimate",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "Amount of MYST to give entertainment estimates for.",
+            "name": "amount",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entertainment estimates",
+            "schema": {
+              "$ref": "#/definitions/EntertainmentEstimateResponse"
+            }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -467,7 +464,7 @@
         "parameters": [
           {
             "type": "string",
-            "description": "Currency to which myst is converted",
+            "description": "Currency to which MYST is converted",
             "name": "currency",
             "in": "path",
             "required": true
@@ -475,15 +472,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Myst price in given currency",
+            "description": "MYST price in given currency",
             "schema": {
               "$ref": "#/definitions/CurrencyExchangeDTO"
+            }
+          },
+          "404": {
+            "description": "Currency is not supported",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -515,21 +518,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ReportIssueError"
+              "$ref": "#/definitions/APIError"
             }
           },
           "429": {
             "description": "Too many requests (max. 1/minute)",
             "schema": {
-              "$ref": "#/definitions/ReportIssueError"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ReportIssueError"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -558,21 +561,21 @@
             "description": "Issue reported"
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ReportIssueError"
+              "$ref": "#/definitions/APIError"
             }
           },
           "429": {
             "description": "Too many requests (max. 1/minute)",
             "schema": {
-              "$ref": "#/definitions/ReportIssueError"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ReportIssueError"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -592,12 +595,6 @@
             "schema": {
               "$ref": "#/definitions/HealthCheckDTO"
             }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
           }
         }
       }
@@ -615,12 +612,6 @@
             "description": "List of identities",
             "schema": {
               "$ref": "#/definitions/ListIdentitiesResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -650,21 +641,15 @@
             }
           },
           "400": {
-            "description": "Bad Request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "422": {
-            "description": "Parameters validation error",
-            "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -696,15 +681,21 @@
             }
           },
           "400": {
-            "description": "Bad Request error",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "422": {
+            "description": "Unable to process the request at this point",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -736,21 +727,15 @@
             }
           },
           "400": {
-            "description": "Bad Request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "422": {
-            "description": "Parameters validation error",
-            "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -765,6 +750,12 @@
             "description": "Eligibility response",
             "schema": {
               "$ref": "#/definitions/EligibilityResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -794,10 +785,16 @@
               "$ref": "#/definitions/IdentityRefDTO"
             }
           },
+          "404": {
+            "description": "ID not found",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -827,10 +824,10 @@
               "$ref": "#/definitions/BalanceDTO"
             }
           },
-          "500": {
-            "description": "Internal server error",
+          "404": {
+            "description": "ID not found",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -864,7 +861,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -890,7 +887,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Array of order objects",
+            "description": "List of orders",
             "schema": {
               "type": "array",
               "items": {
@@ -901,7 +898,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -938,10 +935,16 @@
               "$ref": "#/definitions/OrderResponse"
             }
           },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -979,10 +982,16 @@
               "$ref": "#/definitions/OrderResponse"
             }
           },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1009,7 +1018,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1035,12 +1044,12 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Referral token is available for the given identity"
           },
           "500": {
-            "description": "Internal server error",
+            "description": "Failed to check or token is not available",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1076,18 +1085,24 @@
             "description": "Identity registered."
           },
           "202": {
-            "description": "Identity registerion accepted and will be processed."
+            "description": "Identity registration accepted and will be processed."
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "422": {
+            "description": "Unable to process the request at this point",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1117,10 +1132,16 @@
               "$ref": "#/definitions/IdentityRegistrationResponseDTO"
             }
           },
+          "404": {
+            "description": "ID not found",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1156,21 +1177,21 @@
             "description": "Identity unlocked"
           },
           "400": {
-            "description": "Body parsing error",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "403": {
-            "description": "Forbidden",
+            "description": "Unlock failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
-          "500": {
-            "description": "Internal server error",
+          "404": {
+            "description": "ID not found",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1210,7 +1231,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Order object",
+            "description": "Payment order",
             "schema": {
               "$ref": "#/definitions/PaymentOrderResponse"
             }
@@ -1218,7 +1239,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1237,12 +1258,6 @@
             "description": "Original locations",
             "schema": {
               "$ref": "#/definitions/LocationDTO"
-            }
-          },
-          "503": {
-            "description": "Service unavailable",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -1268,18 +1283,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "API key has been set"
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           },
           "422": {
-            "description": "Parameters validation error",
+            "description": "Unable to process the request at this point",
             "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1293,12 +1314,12 @@
         "operationId": "clearApiKey",
         "responses": {
           "200": {
-            "description": "MMN's API key removed"
+            "description": "MMN API key removed"
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1317,12 +1338,6 @@
             "description": "MMN's API key",
             "schema": {
               "$ref": "#/definitions/MMNApiKeyRequest"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -1346,7 +1361,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1389,7 +1404,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1406,7 +1421,7 @@
         "deprecated": true,
         "responses": {
           "200": {
-            "description": "PaymentOrderOptions object",
+            "description": "Amount options for creating a payment order",
             "schema": {
               "$ref": "#/definitions/PaymentOrderOptions"
             }
@@ -1414,7 +1429,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1500,7 +1515,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1508,7 +1523,7 @@
     },
     "/proposals/countries": {
       "get": {
-        "description": "Returns list of countries with a number of proposals",
+        "description": "Returns a list of countries with a number of proposals",
         "tags": [
           "Countries"
         ],
@@ -1586,7 +1601,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1610,7 +1625,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1629,6 +1644,12 @@
             "description": "List of running services",
             "schema": {
               "$ref": "#/definitions/ServiceListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1652,33 +1673,27 @@
         ],
         "responses": {
           "201": {
-            "description": "Initiates service start",
+            "description": "Initiated service start",
             "schema": {
               "$ref": "#/definitions/ServiceInfoDTO"
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          },
-          "409": {
-            "description": "Conflict. Service is already running",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "422": {
-            "description": "Parameters validation error",
+            "description": "Unable to process the request at this point",
             "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1702,7 +1717,13 @@
           "404": {
             "description": "Service not found",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1721,13 +1742,13 @@
           "404": {
             "description": "No service exists",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1826,16 +1847,16 @@
               "$ref": "#/definitions/SessionListResponse"
             }
           },
-          "422": {
-            "description": "Parameters validation error",
+          "400": {
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -1926,21 +1947,21 @@
         ],
         "responses": {
           "200": {
-            "description": "List of sessions",
+            "description": "Session statistics",
             "schema": {
               "$ref": "#/definitions/SessionStatsAggregatedResponse"
             }
           },
-          "422": {
-            "description": "Parameters validation error",
+          "400": {
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2016,21 +2037,21 @@
         ],
         "responses": {
           "200": {
-            "description": "List of sessions",
+            "description": "Daily session statistics",
             "schema": {
               "$ref": "#/definitions/SessionStatsDTO"
             }
           },
-          "422": {
-            "description": "Parameters validation error",
+          "400": {
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ValidationErrorDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2109,15 +2130,15 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2174,18 +2195,18 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Terms agreement updated"
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2212,7 +2233,7 @@
         "operationId": "FeesDTO",
         "responses": {
           "200": {
-            "description": "fees applied by Transactor",
+            "description": "Fees applied by Transactor",
             "schema": {
               "$ref": "#/definitions/FeesDTO"
             }
@@ -2220,7 +2241,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2245,6 +2266,12 @@
             "schema": {
               "$ref": "#/definitions/EligibilityResponse"
             }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           }
         }
       }
@@ -2256,7 +2283,7 @@
         "operationId": "SettleAsync",
         "parameters": [
           {
-            "description": "settle request body",
+            "description": "Settle request",
             "name": "body",
             "in": "body",
             "schema": {
@@ -2266,12 +2293,12 @@
         ],
         "responses": {
           "202": {
-            "description": "settle request accepted"
+            "description": "Settle request accepted"
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2280,11 +2307,11 @@
     "/transactor/settle/sync": {
       "post": {
         "description": "Forces a settlement for the hermes promises and blocks until the settlement is complete.",
-        "summary": "forces the settlement of promises for the given provider and hermes",
+        "summary": "Forces the settlement of promises for the given provider and hermes",
         "operationId": "SettleSync",
         "parameters": [
           {
-            "description": "settle request body",
+            "description": "Settle request",
             "name": "body",
             "in": "body",
             "schema": {
@@ -2294,12 +2321,12 @@
         ],
         "responses": {
           "202": {
-            "description": "settle request accepted"
+            "description": "Settle request accepted"
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2322,12 +2349,18 @@
         ],
         "responses": {
           "202": {
-            "description": "withdraw request accepted"
+            "description": "Withdraw request accepted"
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2356,15 +2389,15 @@
             "description": "Payout info registered"
           },
           "400": {
-            "description": "Bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2387,12 +2420,12 @@
         ],
         "responses": {
           "202": {
-            "description": "settle request accepted"
+            "description": "Settle request accepted"
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2401,11 +2434,11 @@
     "/transactor/stake/increase/sync": {
       "post": {
         "description": "Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.",
-        "summary": "forces the settlement with stake increase of promises for the given provider and hermes.",
+        "summary": "Forces the settlement with stake increase of promises for the given provider and hermes.",
         "operationId": "StakeIncreaseSync",
         "parameters": [
           {
-            "description": "settle request body",
+            "description": "Settle request",
             "name": "body",
             "in": "body",
             "schema": {
@@ -2415,12 +2448,12 @@
         ],
         "responses": {
           "202": {
-            "description": "settle request accepted"
+            "description": "Settle request accepted"
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2449,7 +2482,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2473,7 +2506,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2489,18 +2522,18 @@
         "operationId": "uiDownload",
         "responses": {
           "200": {
-            "description": "download in progress"
+            "description": "Download in progress"
           },
           "400": {
-            "description": "bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2524,7 +2557,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2548,7 +2581,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2572,7 +2605,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2591,15 +2624,21 @@
             "description": "version switched"
           },
           "400": {
-            "description": "bad request",
+            "description": "Failed to parse or request validation failed",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "422": {
+            "description": "Unable to process the request at this point",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorResponse"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2624,7 +2663,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Array of order objects",
+            "description": "List of payment orders",
             "schema": {
               "type": "array",
               "items": {
@@ -2635,7 +2674,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2675,7 +2714,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2706,10 +2745,13 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Invoice PDF (binary)"
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2725,7 +2767,7 @@
         "operationId": "getPaymentGateways",
         "responses": {
           "200": {
-            "description": "Array of gateway objects",
+            "description": "List of payment gateways",
             "schema": {
               "type": "array",
               "items": {
@@ -2736,7 +2778,7 @@
           "500": {
             "description": "Internal server error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -2744,6 +2786,26 @@
     }
   },
   "definitions": {
+    "APIError": {
+      "type": "object",
+      "title": "APIError represents an error response from REST API service.",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/Err"
+        },
+        "path": {
+          "type": "string",
+          "x-go-name": "Path"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-name": "apiErrorSwagger",
+      "x-go-package": "github.com/mysteriumnetwork/go-rest/apierror"
+    },
     "AccessPolicies": {
       "type": "object",
       "properties": {
@@ -3242,32 +3304,31 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ErrorMessageDTO": {
+    "Err": {
       "type": "object",
+      "title": "Err contains the error details.",
       "properties": {
-        "message": {
+        "code": {
           "type": "string",
-          "x-go-name": "Message",
-          "example": "error message"
-        }
-      },
-      "x-go-name": "errorMessage",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/utils"
-    },
-    "ErrorResponse": {
-      "description": "ErrorResponse common error response",
-      "type": "object",
-      "properties": {
+          "x-go-name": "Code"
+        },
+        "detail": {
+          "type": "string",
+          "x-go-name": "Detail"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FieldError"
+          },
+          "x-go-name": "Fields"
+        },
         "message": {
           "type": "string",
           "x-go-name": "Message"
-        },
-        "original_error": {
-          "type": "string",
-          "x-go-name": "OriginalError"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+      "x-go-package": "github.com/mysteriumnetwork/go-rest/apierror"
     },
     "FeesDTO": {
       "description": "FeesDTO represents the transactor fees",
@@ -3304,10 +3365,20 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "FieldErrorMap": {
-      "description": "FieldErrorMap represents a map of field name and corresponding list of errors for that field",
+    "FieldError": {
       "type": "object",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/validation"
+      "title": "FieldError contains the reason why a field failed validation.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "x-go-name": "Code"
+        },
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/go-rest/apierror"
     },
     "FilterPreset": {
       "type": "object",
@@ -4826,21 +4897,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ValidationErrorDTO": {
-      "type": "object",
-      "properties": {
-        "errors": {
-          "$ref": "#/definitions/FieldErrorMap"
-        },
-        "message": {
-          "type": "string",
-          "x-go-name": "Message",
-          "example": "error message"
-        }
-      },
-      "x-go-name": "validationErrorMessage",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/utils"
     },
     "WithdrawRequestDTO": {
       "type": "object",

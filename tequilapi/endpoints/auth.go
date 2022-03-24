@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
@@ -56,41 +57,36 @@ type authenticator interface {
 // responses:
 //   200:
 //     description: Authentication succeeded
-//   400:
-//     description: Body parsing error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/AuthResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   401:
 //     description: Authentication failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (api *authenticationAPI) Authenticate(c *gin.Context) {
-	httpReq := c.Request
-	httpRes := c.Writer
-
-	req, err := toAuthRequest(httpReq)
+	req, err := toAuthRequest(c.Request)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 	err = api.authenticator.CheckCredentials(req.Username, req.Password)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		c.Error(apierror.Unauthorized())
 		return
 	}
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		c.Error(apierror.Unauthorized())
 		return
 	}
 
 	response := contract.NewAuthResponse(jwtToken)
-	utils.WriteAsJSON(response, httpRes)
+	utils.WriteAsJSON(response, c.Writer)
 }
 
 // swagger:operation POST /auth/login Authentication Login
@@ -105,42 +101,37 @@ func (api *authenticationAPI) Authenticate(c *gin.Context) {
 // responses:
 //   200:
 //     description: Authentication succeeded
-//   400:
-//     description: Body parsing error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/AuthResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   401:
 //     description: Authentication failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (api *authenticationAPI) Login(c *gin.Context) {
-	httpReq := c.Request
-	httpRes := c.Writer
-
-	req, err := toAuthRequest(httpReq)
+	req, err := toAuthRequest(c.Request)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 	err = api.authenticator.CheckCredentials(req.Username, req.Password)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		c.Error(apierror.Unauthorized())
 		return
 	}
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		c.Error(apierror.Unauthorized())
 		return
 	}
 
 	response := contract.NewAuthResponse(jwtToken)
 
-	http.SetCookie(httpRes, &http.Cookie{
+	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     auth.JWTCookieName,
 		Value:    jwtToken.Token,
 		Expires:  jwtToken.ExpirationTime,
@@ -148,7 +139,7 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 		Secure:   false,
 		Path:     "/",
 	})
-	utils.WriteAsJSON(response, httpRes)
+	utils.WriteAsJSON(response, c.Writer)
 }
 
 // swagger:operation DELETE /auth/logout Authentication Logout
@@ -183,27 +174,24 @@ func (api *authenticationAPI) Logout(c *gin.Context) {
 //   200:
 //     description: Password changed successfully
 //   400:
-//     description: Body parsing error
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   401:
 //     description: Unauthorized
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (api *authenticationAPI) ChangePassword(c *gin.Context) {
-	httpReq := c.Request
-	httpRes := c.Writer
-
 	var req *contract.ChangePasswordRequest
 	var err error
-	req, err = toChangePasswordRequest(httpReq)
+	req, err = toChangePasswordRequest(c.Request)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 	err = api.authenticator.ChangePassword(req.Username, req.OldPassword, req.NewPassword)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		c.Error(apierror.Unauthorized())
 		return
 	}
 }

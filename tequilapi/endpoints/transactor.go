@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/shopspring/decimal"
 
 	"github.com/asdine/storm/v3"
@@ -118,16 +119,14 @@ func NewTransactorEndpoint(
 // description: Returns fees applied by Transactor
 // responses:
 //   200:
-//     description: fees applied by Transactor
+//     description: Fees applied by Transactor
 //     schema:
 //       "$ref": "#/definitions/FeesDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
-	resp := c.Writer
-
 	chainID := config.GetInt64(config.FlagChainID)
 	if qcid, err := cast.ToInt64E(c.Query("chain_id")); err == nil {
 		chainID = qcid
@@ -135,29 +134,28 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 
 	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
+		c.Error(err)
 	}
 	settlementFees, err := te.transactor.FetchSettleFees(chainID)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee(chainID)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
 	hermes, err := te.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to get active hermes", contract.ErrCodeActiveHermes))
 		return
 	}
 
 	hermesFeePerMyriad, err := te.promiseSettler.GetHermesFee(chainID, hermes)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not get hermes fee: "+err.Error(), contract.ErrCodeHermesFee))
 		return
 	}
 
@@ -173,37 +171,33 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 		DecreaseStakeTokens: contract.NewTokens(decreaseStakeFees.Fee),
 	}
 
-	utils.WriteAsJSON(f, resp)
+	utils.WriteAsJSON(f, c.Writer)
 }
 
 // swagger:operation POST /transactor/settle/sync SettleSync
 // ---
-// summary: forces the settlement of promises for the given provider and hermes
+// summary: Forces the settlement of promises for the given provider and hermes
 // description: Forces a settlement for the hermes promises and blocks until the settlement is complete.
 // parameters:
 // - in: body
 //   name: body
-//   description: settle request body
+//   description: Settle request
 //   schema:
 //     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
-//     description: settle request accepted
+//     description: Settle request accepted
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleSync(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-
-	err := te.settle(request, te.promiseSettler.ForceSettle)
+	err := te.settle(c.Request, te.promiseSettler.ForceSettle)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not settle sync: "+err.Error(), contract.ErrCodeHermesSettle))
 		return
 	}
-
-	resp.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // swagger:operation POST /transactor/settle/async SettleAsync
@@ -213,35 +207,32 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 // parameters:
 // - in: body
 //   name: body
-//   description: settle request body
+//   description: Settle request
 //   schema:
 //     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
-//     description: settle request accepted
+//     description: Settle request accepted
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-
-	err := te.settle(request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
+	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
 		go func() {
 			err := te.promiseSettler.ForceSettle(chainID, provider, hermes)
 			if err != nil {
-				log.Error().Err(err).Msgf("could not settle provider(%q) promises", provider.Address)
+				log.Error().Err(err).Msgf("Could not settle provider(%q) promises", provider.Address)
 			}
 		}()
 		return nil
 	})
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not settle async: "+err.Error(), contract.ErrCodeHermesSettleAsync))
 		return
 	}
 
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, identity.Identity, common.Address) error) error {
@@ -275,44 +266,44 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 //   200:
 //     description: Identity registered.
 //   202:
-//     description: Identity registerion accepted and will be processed.
+//     description: Identity registration accepted and will be processed.
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
+//   422:
+//     description: Unable to process the request at this point
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-	params := c.Params
-
-	id := identity.FromAddress(params.ByName("id"))
+	id := identity.FromAddress(c.Param("id"))
 	chainID := config.GetInt64(config.FlagChainID)
 
 	req := &contract.IdentityRegisterRequest{}
 
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	registrationStatus, err := te.identityRegistry.GetRegistrationStatus(chainID, id)
 	if err != nil {
-		log.Err(err).Stack().Msgf("could not check registration status for ID: %s, %+v", id.Address, req)
-		utils.SendError(resp, errors.Wrap(err, "could not check registration status"), http.StatusInternalServerError)
+		log.Err(err).Stack().Msgf("Could not check registration status for ID: %s, %+v", id.Address, req)
+		c.Error(apierror.Internal(fmt.Sprintf("could not check registration status for ID: %s", id.Address), contract.ErrCodeIDBlockchainRegistrationCheck))
 		return
 	}
 	switch registrationStatus {
 	case registry.InProgress:
-		log.Info().Msgf("identity %q registration is in status %s, aborting...", id.Address, registrationStatus)
-		utils.SendErrorMessage(resp, "Identity registration in progress", http.StatusConflict)
+		log.Info().Msgf("Identity %q registration is in status %s, aborting...", id.Address, registrationStatus)
+		c.Error(apierror.Unprocessable("Identity registration in progress", contract.ErrCodeIDRegistrationInProgress))
 		return
 	case registry.Registered:
-		resp.WriteHeader(http.StatusOK)
+		c.Status(http.StatusOK)
 		return
 	}
 
@@ -320,7 +311,7 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 	if req.ReferralToken == nil {
 		rf, err := te.transactor.FetchRegistrationFees(chainID)
 		if err != nil {
-			utils.SendError(resp, fmt.Errorf("failed to get registration fees %w", err), http.StatusInternalServerError)
+			c.Error(err)
 			return
 		}
 
@@ -330,11 +321,11 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, req.Beneficiary, chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
-		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not register identity: "+err.Error(), contract.ErrCodeTransactorRegistration))
 		return
 	}
 
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 // swagger:operation GET /settle/history settlementList
@@ -347,45 +338,42 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/SettlementListResponse"
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
-	resp := c.Writer
-	req := c.Request
-
 	query := contract.NewSettlementListQuery()
-	if errors := query.Bind(req); errors.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errors)
+	if err := query.Bind(c.Request); err != nil {
+		c.Error(err)
 		return
 	}
 
 	settlementsAll, err := te.settlementHistoryProvider.List(query.ToFilter())
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not list settlement history: "+err.Error(), contract.ErrCodeTransactorSettleHistory))
 		return
 	}
 
 	var pagedSettlements []pingpong.SettlementHistoryEntry
 	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), query.PageSize, query.Page)
 	if err := p.Results(&pagedSettlements); err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not paginate settlement history: "+err.Error(), contract.ErrCodeTransactorSettleHistoryPaginate))
 		return
 	}
 
-	WithdrawalTotal := big.NewInt(0)
+	withdrawalTotal := big.NewInt(0)
 	for _, s := range settlementsAll {
 		if s.IsWithdrawal {
-			WithdrawalTotal.Add(WithdrawalTotal, s.Amount)
+			withdrawalTotal.Add(withdrawalTotal, s.Amount)
 		}
 	}
 
-	response := contract.NewSettlementListResponse(WithdrawalTotal, pagedSettlements, p)
-	utils.WriteAsJSON(response, resp)
+	response := contract.NewSettlementListResponse(withdrawalTotal, pagedSettlements, p)
+	utils.WriteAsJSON(response, c.Writer)
 }
 
 // swagger:operation POST /transactor/stake/decrease Decrease Stake
@@ -402,39 +390,36 @@ func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
 //   200:
 //     description: Payout info registered
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-
 	var req contract.DecreaseStakeRequest
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to parse decrease stake"), http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
 	fees, err := te.transactor.FetchStakeDecreaseFee(chainID)
 	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed get stake decrease fee"), http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
 	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, fees.Fee)
 	if err != nil {
 		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
-		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 // swagger:operation POST /transactor/settle/withdraw Withdraw
@@ -449,37 +434,38 @@ func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
 //     $ref: "#/definitions/WithdrawRequestDTO"
 // responses:
 //   202:
-//     description: withdraw request accepted
+//     description: Withdraw request accepted
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) Withdraw(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-
 	var req contract.WithdrawRequest
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	if err := req.Validate(); err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(err)
 		return
 	}
 
 	amount, err := req.AmountInMYST()
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.BadRequestField("'amount' is invalid", apierror.ValidateErrInvalidVal, "amount"))
 		return
 	}
 
 	fromChainID := config.GetInt64(config.FlagChainID)
 	if req.FromChainID != 0 {
 		if _, ok := registry.Chains()[req.FromChainID]; !ok {
-			utils.SendError(resp, errors.New("Unsupported from_chain_id"), http.StatusBadRequest)
+			c.Error(apierror.BadRequestField("Unsupported from_chain_id", apierror.ValidateErrInvalidVal, "from_chain_id"))
 			return
 		}
 
@@ -489,7 +475,7 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 	var toChainID int64
 	if req.ToChainID != 0 {
 		if _, ok := registry.Chains()[req.ToChainID]; !ok {
-			utils.SendError(resp, errors.New("Unsupported to_chain_id"), http.StatusBadRequest)
+			c.Error(apierror.BadRequestField("Unsupported to_chain_id", apierror.ValidateErrInvalidVal, "to_chain_id"))
 			return
 		}
 
@@ -498,11 +484,11 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 
 	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary), amount)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not withdraw: "+err.Error(), contract.ErrCodeTransactorWithdraw))
 		return
 	}
 
-	resp.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, error) {
@@ -520,32 +506,29 @@ func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, er
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
 // ---
-// summary: forces the settlement with stake increase of promises for the given provider and hermes.
+// summary: Forces the settlement with stake increase of promises for the given provider and hermes.
 // description: Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.
 // parameters:
 // - in: body
 //   name: body
-//   description: settle request body
+//   description: Settle request
 //   schema:
 //     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
-//     description: settle request accepted
+//     description: Settle request accepted
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-
-	err := te.settle(request, te.promiseSettler.SettleIntoStake)
+	err := te.settle(c.Request, te.promiseSettler.SettleIntoStake)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to settle into stake: "+err.Error(), contract.ErrCodeTransactorSettle))
 		return
 	}
 
-	resp.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // swagger:operation POST /transactor/stake/increase/async StakeIncreaseAsync
@@ -560,16 +543,13 @@ func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 //     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
-//     description: settle request accepted
+//     description: Settle request accepted
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
-	resp := c.Writer
-	request := c.Request
-
-	err := te.settle(request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
+	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
 		go func() {
 			err := te.promiseSettler.SettleIntoStake(chainID, provider, hermes)
 			if err != nil {
@@ -579,11 +559,11 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not settle into stake async: "+err.Error(), contract.ErrCodeTransactorSettleAsync))
 		return
 	}
 
-	resp.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // swagger:operation POST /transactor/token/{token}/reward Reward
@@ -603,25 +583,22 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
-	resp := c.Writer
-	params := c.Params
-
-	token := params.ByName("token")
+	token := c.Param("token")
 	reward, err := te.transactor.RegistrationTokenReward(token)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 	if reward == nil {
-		utils.SendError(resp, errors.New("no reward for token"), http.StatusInternalServerError)
+		c.Error(apierror.Internal("No reward for token", contract.ErrCodeTransactorNoReward))
 		return
 	}
 
 	utils.WriteAsJSON(contract.TokenRewardAmount{
 		Amount: reward,
-	}, resp)
+	}, c.Writer)
 }
 
 // swagger:operation GET /transactor/chains-summary Chains
@@ -671,15 +648,16 @@ type EligibilityResponse struct {
 //     description: Eligibility response
 //     schema:
 //       "$ref": "#/definitions/EligibilityResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
-	resp := c.Writer
-
-	params := c.Params
-	id := identity.FromAddress(params.ByName("id"))
+	id := identity.FromAddress(c.Param("id"))
 
 	res, err := te.transactor.GetFreeRegistrationEligibility(id)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
@@ -694,12 +672,14 @@ func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 //     description: Eligibility response
 //     schema:
 //       "$ref": "#/definitions/EligibilityResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context) {
-	resp := c.Writer
-
 	res, err := te.transactor.GetFreeProviderRegistrationEligibility()
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
@@ -723,25 +703,24 @@ func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context
 //       "$ref": "#/definitions/BeneficiaryTxStatus"
 //   404:
 //     description: Beneficiary change never recorded.
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
-	resp := c.Writer
-	params := c.Params
-
-	id := params.ByName("id")
-
-	identity := identity.FromAddress(id)
-	current, err := te.bprovider.GetBeneficiary(identity.ToCommonAddress())
+	id := identity.FromAddress(c.Param("id"))
+	current, err := te.bprovider.GetBeneficiary(id.ToCommonAddress())
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("failed to parse get current beneficiary: %s", err), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to get current beneficiary: "+err.Error(), contract.ErrCodeTransactorBeneficiary))
 		return
 	}
-	status, err := te.bhandler.CleanupAndGetChangeStatus(identity, current.Hex())
+	status, err := te.bhandler.CleanupAndGetChangeStatus(id, current.Hex())
 	if err != nil {
 		if errors.Is(err, storm.ErrNotFound) {
-			resp.WriteHeader(http.StatusNotFound)
+			c.Status(http.StatusNotFound)
 			return
 		}
-		utils.SendError(resp, fmt.Errorf("failed to get current transaction status: %s", err), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to get current transaction status: "+err.Error(), contract.ErrCodeTransactorBeneficiaryTxStatus))
 		return
 	}
 
@@ -751,7 +730,7 @@ func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
 			Error:    status.Error,
 			ChangeTo: status.ChangeTo,
 		},
-		resp,
+		c.Writer,
 	)
 }
 
@@ -767,18 +746,18 @@ func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
 //   required: true
 // responses:
 //   202:
-//     description: settle request accepted
+//     description: Settle request accepted
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
-	resp := c.Writer
-	params := c.Params
-	request := c.Request
-
-	id := params.ByName("id")
+	id := c.Param("id")
 
 	req := &contract.SettleWithBeneficiaryRequest{}
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
@@ -789,7 +768,7 @@ func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
 		}
 	}()
 
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router

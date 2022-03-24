@@ -21,13 +21,13 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/datasize"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -174,12 +174,12 @@ type ConnectionCreateFilter struct {
 }
 
 // Validate validates fields in request.
-func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
+func (cr ConnectionCreateRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
 	if len(cr.ConsumerID) == 0 {
-		errs.ForField("consumer_id").Required()
+		v.Required("consumer_id")
 	}
-	return errs
+	return v.Err()
 }
 
 // Event creates a quality connection event to be send as a quality metric.

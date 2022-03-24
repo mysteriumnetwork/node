@@ -18,12 +18,9 @@
 package utils
 
 import (
-	"errors"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,41 +45,4 @@ func TestWriteAsJSONReturnsExpectedResponse(t *testing.T) {
 			"renamed" : "abc"
 		}`,
 		respRecorder.Body.String())
-}
-
-func TestSendErrorRendersErrorMessage(t *testing.T) {
-	resp := httptest.NewRecorder()
-
-	SendError(resp, errors.New("custom_error"), http.StatusInternalServerError)
-
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"message" : "custom_error"
-		}`,
-		resp.Body.String())
-}
-
-func TestSendValidationErrorMessageRendersErrorMessage(t *testing.T) {
-	resp := httptest.NewRecorder()
-
-	errorMap := validation.NewErrorMap()
-	errorMap.ForField("email").AddError("required", "field required")
-
-	SendValidationErrorMessage(resp, errorMap)
-
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"message" : "validation_error" ,
-			"errors" : {
-				"email" : [
-					{ "code" : "required" , "message" : "field required"}
-				]
-			}
-		}`,
-		resp.Body.String())
-
 }

@@ -71,6 +71,7 @@ func Test_Oracle_SubscribePolicies_WhenEndpointFails(t *testing.T) {
 	repo := NewRepository()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Something wong"))
 	}))
 	defer server.Close()
 
@@ -82,7 +83,7 @@ func Test_Oracle_SubscribePolicies_WhenEndpointFails(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		fmt.Sprintf("initial fetch failed: failed to fetch policy rule {1 %s/1}: server response invalid: 500 Internal Server Error (%s/1)", server.URL, server.URL),
+		fmt.Sprintf("initial fetch failed: failed to fetch policy rule {1 %s/1}: server responded with an error: 500 (%s/1) [internal] Something wong", server.URL, server.URL),
 	)
 	assert.Equal(t, []market.AccessPolicy{}, repo.Policies())
 }

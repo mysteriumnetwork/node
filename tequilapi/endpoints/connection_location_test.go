@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
@@ -152,7 +153,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	ipResolver := ip.NewResolverMockFailing(errors.New("fake error"))
-	router := gin.Default()
+	router := summonTestGin()
 	err := AddRoutesForConnectionLocation(ipResolver, nil, nil)(router)
 	assert.NoError(t, err)
 	resp := httptest.NewRecorder()
@@ -165,11 +166,5 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"message": "fake error"
-		}`,
-		resp.Body.String(),
-	)
+	assert.Equal(t, "unavailable", apierror.Parse(resp.Result()).Err.Code)
 }

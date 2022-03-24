@@ -19,10 +19,10 @@ package endpoints
 
 import (
 	"encoding/json"
-	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type api interface {
@@ -95,33 +94,33 @@ func NewPilvytisEndpoint(pil api, pt paymentsIssuer, lf paymentLocationFallback)
 //     description: Order object
 //     schema:
 //       "$ref": "#/definitions/OrderResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) CreatePaymentOrder(c *gin.Context) {
-	r := c.Request
-	w := c.Writer
-	params := c.Params
-
 	var req contract.OrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.SendError(w, errors.Wrap(err, "failed to parse order req"), http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	rid := identity.FromAddress(params.ByName("id"))
+	rid := identity.FromAddress(c.Param("id"))
 	resp, err := e.pt.CreatePaymentOrder(
 		rid,
 		req.MystAmount,
 		req.PayCurrency,
 		req.LightningNetwork)
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to create payment order", contract.ErrCodePaymentCreate))
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrderResponse(*resp), w)
+	utils.WriteAsJSON(contract.NewOrderResponse(*resp), c.Writer)
 }
 
 // GetPaymentOrder returns a payment order which maches a given ID and identity.
@@ -147,36 +146,37 @@ func (e *pilvytisEndpoint) CreatePaymentOrder(c *gin.Context) {
 //     description: Order object
 //     schema:
 //       "$ref": "#/definitions/OrderResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentOrder(c *gin.Context) {
-	w := c.Writer
-	params := c.Params
-
-	id := params.ByName("order_id")
+	id := c.Param("order_id")
 	if id == "" {
-		utils.SendError(w, errors.New("missing ID param"), http.StatusBadRequest)
+		c.Error(apierror.BadRequestField("'order_id' is required", apierror.ValidateErrRequired, "order_id"))
 		return
 	}
 
 	orderID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		utils.SendError(w, errors.New("can't parse order ID as uint"), http.StatusBadRequest)
+		c.Error(apierror.BadRequestField("'order_id' is invalid", apierror.ValidateErrInvalidVal, "order_id"))
 		return
 	}
 
-	resp, err := e.api.GetPaymentOrder(identity.FromAddress(params.ByName("id")), orderID)
+	resp, err := e.api.GetPaymentOrder(identity.FromAddress(c.Param("id")), orderID)
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get order", contract.ErrCodePaymentGet))
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrderResponse(*resp), w)
+	utils.WriteAsJSON(contract.NewOrderResponse(*resp), c.Writer)
 }
 
-// GetPaymentOrder returns a payment order which maches a given ID and identity.
+// GetPaymentOrders returns a payment order which maches a given ID and identity.
 //
 // swagger:operation GET /identities/{id}/payment-order Order getOrders
 // ---
@@ -191,7 +191,7 @@ func (e *pilvytisEndpoint) GetPaymentOrder(c *gin.Context) {
 //   required: true
 // responses:
 //   200:
-//     description: Array of order objects
+//     description: List of orders
 //     schema:
 //       type: "array"
 //       items:
@@ -199,18 +199,15 @@ func (e *pilvytisEndpoint) GetPaymentOrder(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentOrders(c *gin.Context) {
-	w := c.Writer
-	params := c.Params
-
-	resp, err := e.api.GetPaymentOrders(identity.FromAddress(params.ByName("id")))
+	resp, err := e.api.GetPaymentOrders(identity.FromAddress(c.Param("id")))
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get orders", contract.ErrCodePaymentList))
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrdersResponse(resp), w)
+	utils.WriteAsJSON(contract.NewOrdersResponse(resp), c.Writer)
 }
 
 // GetPaymentOrderCurrencies returns a slice of possible order currencies
@@ -230,17 +227,15 @@ func (e *pilvytisEndpoint) GetPaymentOrders(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(c *gin.Context) {
-	w := c.Writer
-
 	resp, err := e.api.GetPaymentOrderCurrencies()
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get currencies", contract.ErrCodePaymentListCurrencies))
 		return
 	}
 
-	utils.WriteAsJSON(resp, w)
+	utils.WriteAsJSON(resp, c.Writer)
 }
 
 // GetPaymentOrderOptions returns recommendation on myst amounts
@@ -252,23 +247,21 @@ func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(c *gin.Context) {
 // deprecated: true
 // responses:
 //   200:
-//     description: PaymentOrderOptions object
+//     description: Amount options for creating a payment order
 //     schema:
 //       "$ref": "#/definitions/PaymentOrderOptions"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
-	w := c.Writer
-
 	resp, err := e.api.GetPaymentOrderOptions()
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get order options", contract.ErrCodePaymentGetOptions))
 		return
 	}
 
-	utils.WriteAsJSON(contract.ToPaymentOrderOptions(resp), w)
+	utils.WriteAsJSON(contract.ToPaymentOrderOptions(resp), c.Writer)
 }
 
 // GetPaymentGateways returns data about supported payment gateways.
@@ -279,7 +272,7 @@ func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
 // description: Returns gateway configuration including supported currencies, minimum amounts, etc.
 // responses:
 //   200:
-//     description: Array of gateway objects
+//     description: List of payment gateways
 //     schema:
 //       type: "array"
 //       items:
@@ -287,17 +280,15 @@ func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
-	w := c.Writer
-
 	resp, err := e.api.GetPaymentGateways()
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to list payment gateways", contract.ErrCodePaymentListGateways))
 		return
 	}
 
-	utils.WriteAsJSON(contract.ToGatewaysReponse(resp), w)
+	utils.WriteAsJSON(contract.ToGatewaysReponse(resp), c.Writer)
 }
 
 // GetPaymentGatewayOrders returns a list of payment orders.
@@ -314,7 +305,7 @@ func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
 //   required: true
 // responses:
 //   200:
-//     description: Array of order objects
+//     description: List of payment orders
 //     schema:
 //       type: "array"
 //       items:
@@ -322,18 +313,15 @@ func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGatewayOrders(c *gin.Context) {
-	w := c.Writer
-	params := c.Params
-
-	resp, err := e.api.GetPaymentGatewayOrders(identity.FromAddress(params.ByName("id")))
+	resp, err := e.api.GetPaymentGatewayOrders(identity.FromAddress(c.Param("id")))
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to list orders", contract.ErrCodePaymentList))
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewPaymentOrdersResponse(resp), w)
+	utils.WriteAsJSON(contract.NewPaymentOrdersResponse(resp), c.Writer)
 }
 
 // GetPaymentGatewayOrder returns a payment order which maches a given ID and identity.
@@ -361,21 +349,18 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrders(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
-	w := c.Writer
-	params := c.Params
-
 	resp, err := e.api.GetPaymentGatewayOrder(
-		identity.FromAddress(params.ByName("id")),
-		params.ByName("order_id"),
+		identity.FromAddress(c.Param("id")),
+		c.Param("order_id"),
 	)
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get payment order", contract.ErrCodePaymentGet))
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), w)
+	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), c.Writer)
 }
 
 // GetPaymentGatewayOrderInvoice returns an invoice for payment order matching the given ID and identity.
@@ -396,20 +381,19 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
 //   type: integer
 //   required: true
 // responses:
+//   200:
+//     description: Invoice PDF (binary)
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
-	w := c.Writer
-	params := c.Params
-
 	resp, err := e.api.GetPaymentGatewayOrderInvoice(
-		identity.FromAddress(params.ByName("id")),
-		params.ByName("order_id"),
+		identity.FromAddress(c.Param("id")),
+		c.Param("order_id"),
 	)
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get invoice", contract.ErrCodePaymentGetInvoice))
 		return
 	}
 
@@ -440,21 +424,17 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
 //     $ref: "#/definitions/PaymentOrderRequest"
 // responses:
 //   200:
-//     description: Order object
+//     description: Payment order
 //     schema:
 //       "$ref": "#/definitions/PaymentOrderResponse"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
-	r := c.Request
-	w := c.Writer
-	params := c.Params
-
 	var req contract.PaymentOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.SendError(w, errors.Wrap(err, "failed to parse order req"), http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
@@ -464,15 +444,15 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		req.Country = strings.ToUpper(org.Country)
 	}
 
-	rid := identity.FromAddress(params.ByName("id"))
+	rid := identity.FromAddress(c.Param("id"))
 
-	resp, err := e.pt.CreatePaymentGatewayOrder(req.GatewayOrderRequest(rid, params.ByName("gw")))
+	resp, err := e.pt.CreatePaymentGatewayOrder(req.GatewayOrderRequest(rid, c.Param("gw")))
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to create payment order", contract.ErrCodePaymentCreate))
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), w)
+	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), c.Writer)
 }
 
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.

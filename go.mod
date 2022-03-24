@@ -18,7 +18,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/ethereum/go-ethereum v1.10.9
 	github.com/gin-contrib/cors v1.3.0
-	github.com/gin-gonic/gin v1.7.2
+	github.com/gin-gonic/gin v1.7.7
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/gofrs/uuid v3.3.0+incompatible
@@ -38,6 +38,7 @@ require (
 	github.com/mysteriumnetwork/go-ci v0.0.0-20211124142828-37ca8ff3ef34
 	github.com/mysteriumnetwork/go-dvpn-web v1.8.0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
+	github.com/mysteriumnetwork/go-rest v0.2.2
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
@@ -53,7 +54,7 @@ require (
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
 	github.com/spf13/cast v1.3.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/takama/daemon v1.0.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/vcraescu/go-paginator v0.0.0-20200304054438-86d84f27c0b3

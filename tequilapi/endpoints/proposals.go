@@ -18,11 +18,10 @@
 package endpoints
 
 import (
-	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -114,11 +113,9 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) List(c *gin.Context) {
 	req := c.Request
-	resp := c.Writer
-
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
 	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
@@ -157,7 +154,7 @@ func (pe *proposalsEndpoint) List(c *gin.Context) {
 		IncludeMonitoringFailed: includeMonitoringFailed,
 	})
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Proposal query failed: "+err.Error(), contract.ErrCodeProposalsQuery))
 		return
 	}
 
@@ -166,13 +163,13 @@ func (pe *proposalsEndpoint) List(c *gin.Context) {
 		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
 
-	utils.WriteAsJSON(proposalsRes, resp)
+	utils.WriteAsJSON(proposalsRes, c.Writer)
 }
 
 // swagger:operation GET /proposals/countries Countries listCountries
 // ---
 // summary: Returns number of proposals per country
-// description: Returns list of countries with a number of proposals
+// description: Returns a list of countries with a number of proposals
 // parameters:
 //   - in: query
 //     name: provider_id
@@ -222,10 +219,9 @@ func (pe *proposalsEndpoint) List(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 	req := c.Request
-	resp := c.Writer
 
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
 	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
@@ -265,11 +261,11 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 		IncludeMonitoringFailed: includeMonitoringFailed,
 	})
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Proposal country query failed: "+err.Error(), contract.ErrCodeProposalsCountryQuery))
 		return
 	}
 
-	utils.WriteAsJSON(countries, resp)
+	utils.WriteAsJSON(countries, c.Writer)
 }
 
 // swagger:operation GET /prices/current
@@ -284,26 +280,24 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
-	resp := c.Writer
-
 	loc, err := pe.locationResolver.DetectLocation()
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("could not retrieve current prices: %w", err), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot detect location", contract.ErrCodeProposalsDetectLocation))
 		return
 	}
 
 	price, err := pe.pricer.GetCurrentPrice(loc.IPType, loc.Country)
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("could not retrieve current prices: %w", err), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot retrieve current prices: "+err.Error(), contract.ErrCodeProposalsPrices))
 		return
 	}
 
 	utils.WriteAsJSON(contract.CurrentPriceResponse{
 		PricePerHour: price.PricePerHour,
 		PricePerGiB:  price.PricePerGiB,
-	}, resp)
+	}, c.Writer)
 }
 
 // swagger:operation GET /proposals/filter-presets Proposal proposalFilterPresets
@@ -318,20 +312,18 @@ func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) FilterPresets(c *gin.Context) {
-	resp := c.Writer
-
 	presets, err := pe.filterPresets.List()
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot list presets", contract.ErrCodeProposalsPresets))
 		return
 	}
 	presetsRes := contract.ListProposalFilterPresetsResponse{Items: []contract.FilterPreset{}}
 	for _, p := range presets.Entries {
 		presetsRes.Items = append(presetsRes.Items, contract.NewFilterPreset(p))
 	}
-	utils.WriteAsJSON(presetsRes, resp)
+	utils.WriteAsJSON(presetsRes, c.Writer)
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router

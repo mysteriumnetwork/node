@@ -30,11 +30,10 @@ func AddRoutesForPProf(e *gin.Engine) {
 }
 
 func pprofHandler(c *gin.Context) {
-	params := c.Params
 	w := c.Writer
 	r := c.Request
 
-	switch params.ByName("profile") {
+	switch c.Param("profile") {
 	case "cmdline":
 		pprof.Cmdline(w, r)
 	case "profile":

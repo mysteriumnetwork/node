@@ -18,14 +18,13 @@
 package endpoints
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
 )
 
 type exchangeEndpoint struct {
@@ -48,44 +47,46 @@ func NewExchangeEndpoint(mystex mystexchange) *exchangeEndpoint {
 // summary: Returns the myst price in the given currency
 // description: Returns the myst price in the given currency (dai is deprecated)
 // parameters:
-// - name: currency
-//   in: path
-//   description: Currency to which myst is converted
-//   type: string
-//   required: true
+//   - name: currency
+//     in: path
+//     description: Currency to which MYST is converted
+//     type: string
+//     required: true
 // responses:
 //   200:
-//     description: Myst price in given currency
+//     description: MYST price in given currency
 //     schema:
 //       "$ref": "#/definitions/CurrencyExchangeDTO"
+//   404:
+//     description: Currency is not supported
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (e *exchangeEndpoint) ExchangeMyst(c *gin.Context) {
-	params := c.Params
-	writer := c.Writer
-	currency := strings.ToUpper(params.ByName("currency"))
+	currency := strings.ToUpper(c.Param("currency"))
 
 	rates, err := e.me.GetMystExchangeRate()
 	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
 	var ok bool
 	amount, ok := rates[currency]
 	if !ok {
-		utils.SendError(writer, errors.New("currency not supported"), http.StatusNotFound)
+		c.Error(apierror.NotFound("Currency is not supported"))
 		return
 	}
 
-	status := contract.CurrencyExchangeDTO{
+	rate := contract.CurrencyExchangeDTO{
 		Amount:   amount,
 		Currency: currency,
 	}
 
-	utils.WriteAsJSON(status, writer)
+	utils.WriteAsJSON(rate, c.Writer)
 }
 
 // AddRoutesForCurrencyExchange attaches exchange endpoints to router.

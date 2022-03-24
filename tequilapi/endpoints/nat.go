@@ -19,8 +19,8 @@ package endpoints
 
 import (
 	"context"
-	"net/http"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/node"
 
 	"github.com/gin-gonic/gin"
@@ -65,20 +65,17 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ne *NATEndpoint) NATType(c *gin.Context) {
-	req := c.Request
-	resp := c.Writer
-
-	res, err := ne.natProber.Probe(req.Context())
+	res, err := ne.natProber.Probe(c.Request.Context())
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("NAT probe failed", contract.ErrCodeNATProbe))
 		return
 	}
 	utils.WriteAsJSON(contract.NATTypeDTO{
 		Type:  res,
 		Error: "",
-	}, resp)
+	}, c.Writer)
 }
 
 // AddRoutesForNAT adds nat routes to given router

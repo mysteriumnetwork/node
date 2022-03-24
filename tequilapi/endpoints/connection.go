@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -90,7 +91,7 @@ func NewConnectionEndpoint(manager connection.MultiManager, stateProvider stateP
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 	n, _ := strconv.Atoi(c.Query("id"))
 	status := ce.manager.Status(n)
@@ -115,50 +116,34 @@ func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/ConnectionInfoDTO"
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   409:
-//     description: Conflict. Connection already exists
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   422:
-//     description: Parameters validation error
+//     description: Unable to process the request at this point
 //     schema:
-//       "$ref": "#/definitions/ValidationErrorDTO"
-//   499:
-//     description: Connection was cancelled
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Create(c *gin.Context) {
-	resp := c.Writer
-	req := c.Request
-
 	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to get active hermes", contract.ErrCodeActiveHermes))
 		return
 	}
 
-	cr, err := toConnectionRequest(req, hermes.Hex())
+	cr, err := toConnectionRequest(c.Request, hermes.Hex())
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(quality.StagePraseRequest, err.Error()))
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	if errorMap := cr.Validate(); errorMap.HasErrors() {
-		if out, err := errorMap.MarshalJSON(); err != nil {
-			log.Error().Err(err).Msg("Failed to marshal error map")
-		} else {
-			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageValidateRequest, string(out)))
-		}
-
-		utils.SendValidationErrorMessage(resp, errorMap)
+	if err := cr.Validate(); err != nil {
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageValidateRequest, err.Detail()))
+		c.Error(err)
 		return
 	}
 
@@ -166,16 +151,16 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 	status, err := ce.identityRegistry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), consumerID)
 	if err != nil {
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationGetStatus, err.Error()))
-		log.Error().Err(err).Stack().Msg("could not check registration status")
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		log.Error().Err(err).Stack().Msg("Could not check registration status")
+		c.Error(apierror.Internal("Failed to check ID registration status: "+err.Error(), contract.ErrCodeIDRegistrationCheck))
 		return
 	}
 
 	switch status {
 	case registry.Unregistered, registry.RegistrationError, registry.Unknown:
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnregistered, ""))
-		log.Error().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
-		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
+		log.Error().Msgf("Identity %q is not registered, aborting...", cr.ConsumerID)
+		c.Error(apierror.Unprocessable(fmt.Sprintf("Identity %q is not registered. Please register the identity first", cr.ConsumerID), contract.ErrCodeIDNotRegistered))
 		return
 	case registry.InProgress:
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationInProgress, ""))
@@ -186,7 +171,7 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 	default:
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnknown, ""))
 		log.Error().Msgf("identity %q has unknown status, aborting...", cr.ConsumerID)
-		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q has unknown status. aborting", cr.ConsumerID), http.StatusExpectationFailed)
+		c.Error(apierror.Unprocessable(fmt.Sprintf("Identity %q has unknown status. Aborting", cr.ConsumerID), contract.ErrCodeIDStatusUnknown))
 		return
 	}
 
@@ -209,20 +194,20 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 		switch err {
 		case connection.ErrAlreadyExists:
 			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionAlreadyExists, err.Error()))
-			utils.SendError(resp, err, http.StatusConflict)
+			c.Error(apierror.Unprocessable("Connection already exists", contract.ErrCodeConnectionAlreadyExists))
 		case connection.ErrConnectionCancelled:
 			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionCanceled, err.Error()))
-			utils.SendError(resp, err, statusConnectCancelled)
+			c.Error(apierror.Unprocessable("Connection cancelled", contract.ErrCodeConnectionCancelled))
 		default:
 			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionUnknownError, err.Error()))
 			log.Error().Err(err).Msg("Failed to connect")
-			utils.SendError(resp, err, http.StatusInternalServerError)
+			c.Error(apierror.Internal("Failed to connect: "+err.Error(), contract.ErrCodeConnect))
 		}
 		return
 	}
 
 	ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionOK, ""))
-	resp.WriteHeader(http.StatusCreated)
+	c.Status(http.StatusCreated)
 
 	statusResp := ce.manager.Status(cr.ConnectOptions.ProxyPort)
 	statusResponse := contract.NewConnectionInfoDTO(statusResp)
@@ -236,30 +221,28 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 // description: Stops current connection
 // responses:
 //   202:
-//     description: Connection Stopped
-//   409:
-//     description: Conflict. No connection exists
+//     description: Connection stopped
+//   422:
+//     description: Unable to process the request at this point (e.g. no active connection exists)
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
-	resp := c.Writer
-
 	n, _ := strconv.Atoi(c.Query("id"))
 	err := ce.manager.Disconnect(n)
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:
-			utils.SendError(resp, err, http.StatusConflict)
+			c.Error(apierror.Unprocessable("No connection exists", contract.ErrCodeNoConnectionExists))
 		default:
-			utils.SendError(resp, err, http.StatusInternalServerError)
+			c.Error(apierror.Internal("Could not disconnect: "+err.Error(), contract.ErrCodeDisconnect))
 		}
 		return
 	}
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 // GetStatistics returns statistics about current connection
@@ -272,14 +255,9 @@ func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 //     description: Connection statistics
 //     schema:
 //       "$ref": "#/definitions/ConnectionStatisticsDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
-	connection := ce.stateProvider.GetState().Connection
-	response := contract.NewConnectionStatisticsDTO(connection.Session, connection.Statistics, connection.Throughput, connection.Invoice)
-
+	conn := ce.stateProvider.GetState().Connection
+	response := contract.NewConnectionStatisticsDTO(conn.Session, conn.Statistics, conn.Throughput, conn.Invoice)
 	utils.WriteAsJSON(response, c.Writer)
 }
 

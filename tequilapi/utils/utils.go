@@ -19,11 +19,12 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
-
+	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/rs/zerolog/log"
 )
 
@@ -48,30 +49,19 @@ func WriteAsJSON(v interface{}, writer http.ResponseWriter, httpCode ...int) {
 	}
 }
 
-// swagger:model ErrorMessageDTO
-type errorMessage struct {
-	// example: error message
-	Message string `json:"message"`
+// swagger:model APIError
+type apiErrorSwagger struct {
+	apierror.APIError
 }
 
-// SendError generates error response for error
-func SendError(writer http.ResponseWriter, err error, httpCode int) {
-	SendErrorMessage(writer, fmt.Sprint(err), httpCode)
-}
-
-// SendErrorMessage generates error response with custom json message
-func SendErrorMessage(writer http.ResponseWriter, message string, httpCode int) {
-	WriteAsJSON(&errorMessage{message}, writer, httpCode)
-}
-
-// swagger:model ValidationErrorDTO
-type validationErrorMessage struct {
-	errorMessage
-	ValidationErrors *validation.FieldErrorMap `json:"errors"`
-}
-
-// SendValidationErrorMessage generates error response for validation errors
-func SendValidationErrorMessage(resp http.ResponseWriter, errorMap *validation.FieldErrorMap) {
-	errorResponse := errorMessage{Message: "validation_error"}
-	WriteAsJSON(&validationErrorMessage{errorResponse, errorMap}, resp, http.StatusUnprocessableEntity)
+// ForwardError writes err to the response if it's in `apierror.APIError` format.
+// Otherwise, appends it to the fallback APIError's message.
+func ForwardError(c *gin.Context, err error, fallback *apierror.APIError) {
+	var apiErr *apierror.APIError
+	if errors.As(err, &apiErr) {
+		c.Error(err)
+	} else {
+		fallback.Err.Message = fallback.Err.Message + ": " + fmt.Errorf("%w", err).Error()
+		c.Error(fallback)
+	}
 }
