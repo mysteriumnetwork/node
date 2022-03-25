@@ -241,10 +241,10 @@ func (c *cliApp) registerIdentity(actionArgs []string) error {
 	return nil
 }
 
-const usageSettle = "settle <providerIdentity>"
+const usageSettle = "settle <providerIdentity> [hermesID]"
 
 func (c *cliApp) settle(args []string) (err error) {
-	if len(args) != 1 {
+	if len(args) == 0 || len(args) > 2 {
 		clio.Info("Usage: " + usageSettle)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
@@ -259,10 +259,16 @@ func (c *cliApp) settle(args []string) (err error) {
 		clio.Info(fmt.Sprintf("Hermes fee: %s%%", hermesPct.Mul(decimal.NewFromInt(100)).StringFixed(2)))
 		return errWrongArgumentCount
 	}
+
 	hermesID, err := c.config.GetHermesID()
 	if err != nil {
 		return fmt.Errorf("could not get Hermes ID: %w", err)
 	}
+	if len(args) == 2 {
+		hermesID = args[1]
+	}
+
+	clio.Infof("Will settle with hermes: %s", hermesID)
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 

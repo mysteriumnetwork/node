@@ -52,18 +52,24 @@ type IdentityDTO struct {
 
 	// deprecated
 	Balance       *big.Int `json:"balance"`
-	BalanceTokens Tokens   `json:"balance_tokens"`
+	Earnings      *big.Int `json:"earnings"`
+	EarningsTotal *big.Int `json:"earnings_total"`
+	// ===========
 
-	// deprecated
-	Earnings       *big.Int `json:"earnings"`
-	EarningsTokens Tokens   `json:"earnings_tokens"`
+	BalanceTokens       Tokens `json:"balance_tokens"`
+	EarningsTokens      Tokens `json:"earnings_tokens"`
+	EarningsTotalTokens Tokens `json:"earnings_total_tokens"`
 
-	// deprecated
-	EarningsTotal       *big.Int `json:"earnings_total"`
-	EarningsTotalTokens Tokens   `json:"earnings_total_tokens"`
+	Stake             *big.Int               `json:"stake"`
+	HermesID          string                 `json:"hermes_id"`
+	EarningsPerHermes map[string]EarningsDTO `json:"earnings_per_hermes"`
+}
 
-	Stake    *big.Int `json:"stake"`
-	HermesID string   `json:"hermes_id"`
+// EarningsDTO holds earnings data.
+// swagger:model EarningsDTO
+type EarningsDTO struct {
+	Earnings      Tokens `json:"earnings"`
+	EarningsTotal Tokens `json:"earnings_total"`
 }
 
 // NewIdentityDTO maps to API identity.
