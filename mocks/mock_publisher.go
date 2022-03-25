@@ -73,7 +73,7 @@ func (mp *EventBus) Unsubscribe(topic string, fn interface{}) error {
 	return nil
 }
 
-// Unsubscribe fakes unsubscribe.
+// UnsubscribeWithUID fakes unsubscribe.
 func (mp *EventBus) UnsubscribeWithUID(topic, uid string, fn interface{}) error {
 	return nil
 }
