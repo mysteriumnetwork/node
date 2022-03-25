@@ -136,20 +136,15 @@ func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Ident
 	return hcr.sumChannels(chainID, id)
 }
 
-type EarningsDetailed struct {
-	Total     event.Earnings
-	PerHermes map[common.Address]event.Earnings
-}
-
-func (hcr *HermesChannelRepository) GetEarningsDetailed(chainID int64, id identity.Identity) *EarningsDetailed {
+func (hcr *HermesChannelRepository) GetEarningsDetailed(chainID int64, id identity.Identity) *event.EarningsDetailed {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()
 
 	return hcr.sumChannelsDetailed(chainID, id)
 }
 
-func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identity.Identity) *EarningsDetailed {
-	result := &EarningsDetailed{
+func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identity.Identity) *event.EarningsDetailed {
+	result := &event.EarningsDetailed{
 		Total: event.Earnings{
 			LifetimeBalance:  new(big.Int),
 			UnsettledBalance: new(big.Int),
@@ -328,7 +323,7 @@ func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64
 }
 
 func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChannel) {
-	earningsOld := hcr.sumChannels(chainID, new.Identity)
+	earningsOld := hcr.sumChannelsDetailed(chainID, new.Identity)
 
 	updated := false
 
@@ -354,10 +349,10 @@ func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChann
 		new.UnsettledBalance(),
 	)
 
-	earningsNew := hcr.sumChannels(chainID, new.Identity)
+	earningsNew := hcr.sumChannelsDetailed(chainID, new.Identity)
 	go hcr.publisher.Publish(event.AppTopicEarningsChanged, event.AppEventEarningsChanged{
 		Identity: new.Identity,
-		Previous: earningsOld,
-		Current:  earningsNew,
+		Previous: *earningsOld,
+		Current:  *earningsNew,
 	})
 }

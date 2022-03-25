@@ -70,7 +70,7 @@ type balanceProvider interface {
 
 type earningsProvider interface {
 	List(chainID int64) []pingpong.HermesChannel
-	GetEarnings(chainID int64, id identity.Identity) pingpongEvent.Earnings
+	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpongEvent.EarningsDetailed
 }
 
 // Keeper keeps track of state through eventual consistency.
@@ -160,15 +160,16 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
 		}
 
-		earnings := k.deps.EarningsProvider.GetEarnings(k.deps.ChainID, id)
+		earnings := k.deps.EarningsProvider.GetEarningsDetailed(k.deps.ChainID, id)
 		stateIdentity := event.Identity{
 			Address:            id.Address,
 			RegistrationStatus: status,
 			ChannelAddress:     channelAddress,
 			Balance:            k.deps.BalanceProvider.GetBalance(k.deps.ChainID, id),
-			Earnings:           earnings.UnsettledBalance,
-			EarningsTotal:      earnings.LifetimeBalance,
+			Earnings:           earnings.Total.UnsettledBalance,
+			EarningsTotal:      earnings.Total.LifetimeBalance,
 			HermesID:           hermesID,
+			EarningsPerHermes:  earnings.PerHermes,
 		}
 		identities[idx] = stateIdentity
 	}
@@ -479,8 +480,10 @@ func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 		log.Warn().Msgf("Couldn't find a matching identity for earnings change: %s", evt.Identity.Address)
 		return
 	}
-	id.Earnings = evt.Current.UnsettledBalance
-	id.EarningsTotal = evt.Current.LifetimeBalance
+
+	id.Earnings = evt.Current.Total.UnsettledBalance
+	id.EarningsTotal = evt.Current.Total.LifetimeBalance
+	id.EarningsPerHermes = evt.Current.PerHermes
 
 	go k.announceStateChanges(nil)
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -46,7 +45,7 @@ type balanceProvider interface {
 
 type earningsProvider interface {
 	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
-	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpong.EarningsDetailed
+	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpong_event.EarningsDetailed
 }
 
 type beneficiaryProvider interface {

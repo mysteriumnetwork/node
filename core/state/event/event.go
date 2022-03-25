@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
@@ -51,10 +52,13 @@ type Identity struct {
 	Address            string
 	RegistrationStatus registry.RegistrationStatus
 	ChannelAddress     common.Address
-	Balance            *big.Int
-	Earnings           *big.Int
-	EarningsTotal      *big.Int
-	HermesID           common.Address
+
+	Balance           *big.Int
+	Earnings          *big.Int
+	EarningsTotal     *big.Int
+	EarningsPerHermes map[common.Address]pingpongEvent.Earnings
+
+	HermesID common.Address
 }
 
 // Connection represents consumer connection state.
