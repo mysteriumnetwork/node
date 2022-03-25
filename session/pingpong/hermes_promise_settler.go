@@ -463,13 +463,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 	beneficiary common.Address,
 	amountToWithdraw *big.Int,
 ) error {
-	if aps.isSettling(providerID) {
+	if aps.isSettling(providerID, hermesID) {
 		return errors.New("provider already has settlement in progress")
 	}
 
-	aps.setSettling(providerID, true)
+	aps.setSettling(providerID, hermesID, true)
 	log.Info().Msgf("Marked provider %v as requesting settlement", providerID)
-	defer aps.setSettling(providerID, false)
+	defer aps.setSettling(providerID, hermesID, false)
 
 	if toChainID == 0 {
 		toChainID = aps.config.L1ChainID
@@ -820,17 +820,16 @@ func (aps *hermesPromiseSettler) settle(
 	beneficiary common.Address,
 	settled *big.Int,
 ) error {
-	if aps.isSettling(provider) {
+	if aps.isSettling(provider, hermesID) {
 		return errors.New("provider already has settlement in progress")
 	}
+	aps.setSettling(provider, hermesID, true)
+	defer aps.setSettling(provider, hermesID, false)
 
-	aps.setSettling(provider, true)
-	defer aps.setSettling(provider, false)
 	log.Info().Msgf("Marked provider %v as requesting settlement", provider)
 
 	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise)
 	if err != nil {
-		aps.setSettling(provider, false)
 		log.Error().Err(err).Msg("Could not update promise fee")
 		return err
 	}
@@ -843,14 +842,12 @@ func (aps *hermesPromiseSettler) settle(
 
 	fee, err := aps.bc.CalculateHermesFee(promise.ChainID, hermesID, amountToSettle)
 	if err != nil {
-		aps.setSettling(provider, false)
 		log.Error().Err(err).Msg("Could not calculate hermes fee")
 		return err
 	}
 
 	totalFees := new(big.Int).Add(fee, updatedPromise.Fee)
 	if totalFees.Cmp(amountToSettle) > 0 {
-		aps.setSettling(provider, false)
 		log.Error().Fields(map[string]interface{}{
 			"amountToSettle": amountToSettle.String(),
 			"promiseAmount":  updatedPromise.Amount.String(),
@@ -1062,7 +1059,7 @@ func (aps *hermesPromiseSettler) safeSub(a uint64, b uint64) uint64 {
 	return a - b
 }
 
-func (aps *hermesPromiseSettler) isSettling(id identity.Identity) bool {
+func (aps *hermesPromiseSettler) isSettling(id identity.Identity, hermesID common.Address) bool {
 	aps.lock.RLock()
 	defer aps.lock.RUnlock()
 	v, ok := aps.currentState[id]
@@ -1070,14 +1067,22 @@ func (aps *hermesPromiseSettler) isSettling(id identity.Identity) bool {
 		return false
 	}
 
-	return v.settleInProgress
+	_, ok = v.settleInProgress[hermesID]
+
+	return ok
 }
 
-func (aps *hermesPromiseSettler) setSettling(id identity.Identity, settling bool) {
+func (aps *hermesPromiseSettler) setSettling(id identity.Identity, hermesID common.Address, settling bool) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	v := aps.currentState[id]
-	v.settleInProgress = settling
+
+	if settling {
+		v.settleInProgress[hermesID] = struct{}{}
+	} else {
+		delete(v.settleInProgress, hermesID)
+	}
+
 	aps.currentState[id] = v
 }
 
@@ -1111,8 +1116,9 @@ func (aps *hermesPromiseSettler) handleNodeStop() {
 
 // settlementState earning calculations model
 type settlementState struct {
-	settleInProgress bool
-	registered       bool
+	registered bool
+
+	settleInProgress map[common.Address]struct{}
 }
 
 func (ss settlementState) needsSettling(threshold float64, zeroStakeThreshold float64, channel HermesChannel) bool {
@@ -1120,7 +1126,7 @@ func (ss settlementState) needsSettling(threshold float64, zeroStakeThreshold fl
 		return false
 	}
 
-	if ss.settleInProgress {
+	if _, ok := ss.settleInProgress[channel.HermesID]; ok {
 		return false
 	}
 
