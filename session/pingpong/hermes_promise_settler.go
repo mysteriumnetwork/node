@@ -189,7 +189,8 @@ func (aps *hermesPromiseSettler) loadInitialState(chainID int64, id identity.Ide
 	}
 
 	aps.currentState[id] = settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: make(map[common.Address]struct{}),
 	}
 	return nil
 }

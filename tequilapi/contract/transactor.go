@@ -232,8 +232,10 @@ type SettlementDTO struct {
 // swagger:model SettleRequestDTO
 type SettleRequest struct {
 	HermesIDs  []common.Address `json:"hermes_ids"`
-	HermesID   string           `json:"hermes_id"`
 	ProviderID string           `json:"provider_id"`
+
+	// Deprecated
+	HermesID string `json:"hermes_id"`
 }
 
 // WithdrawRequest represents the request to withdraw earnings to l1.
