@@ -84,7 +84,8 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 
 	v = settler.currentState[mockID]
 	assert.EqualValues(t, settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: map[common.Address]struct{}{},
 	}, v)
 
 	// check if will resync
@@ -184,7 +185,8 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 
 	// no receive should be gotten on a non registered provider
 	settler.currentState[mockID] = settlementState{
-		registered: false,
+		registered:       false,
+		settleInProgress: map[common.Address]struct{}{},
 	}
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
@@ -197,7 +199,8 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	expectedChannel := client.ProviderChannel{Stake: big.NewInt(1000)}
 	expectedPromise := crypto.Promise{Amount: big.NewInt(9000)}
 	settler.currentState[mockID] = settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: map[common.Address]struct{}{},
 	}
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
@@ -214,7 +217,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	expectedPromise = crypto.Promise{Amount: big.NewInt(8900)}
 	settler.currentState[mockID] = settlementState{
 		registered:       true,
-		settleInProgress: false,
+		settleInProgress: map[common.Address]struct{}{},
 	}
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{Promise: expectedPromise})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
@@ -289,7 +292,7 @@ func TestPromiseSettler_RejectsIfFeesExceedSettlementAmount(t *testing.T) {
 	hermesFee := big.NewInt(25000)
 
 	promiseSettler := hermesPromiseSettler{
-		currentState: make(map[identity.Identity]settlementState),
+		currentState: map[identity.Identity]settlementState{},
 		transactor: &mockTransactor{
 			feesToReturn: registry.FeesResponse{
 				Fee: transactorFee,
@@ -388,7 +391,8 @@ func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
 
 func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s := settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: map[common.Address]struct{}{},
 	}
 	channel := NewHermesChannel(
 		"1",
@@ -400,7 +404,8 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	assert.True(t, s.needsSettling(0.1, 0.0, channel), "should be true with zero balance left")
 
 	s = settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: map[common.Address]struct{}{},
 	}
 	channel = NewHermesChannel(
 		"1",
@@ -414,11 +419,14 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s.registered = false
 	assert.False(t, s.needsSettling(0.1, 0.0, channel), "should be false with no registration")
 
-	s.settleInProgress = true
+	s.settleInProgress = map[common.Address]struct{}{
+		hermesID: {},
+	}
 	assert.False(t, s.needsSettling(0.1, 0.0, channel), "should be false with settle in progress")
 
 	s = settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: map[common.Address]struct{}{},
 	}
 	channel = NewHermesChannel(
 		"1",

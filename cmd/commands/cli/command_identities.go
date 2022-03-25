@@ -275,7 +275,7 @@ func (c *cliApp) settle(args []string) (err error) {
 		hermesIDs = append(hermesIDs, common.HexToAddress(hermesID))
 	}
 
-	clio.Infof("Will settle with hermes: %v", hermesIDs)
+	clio.Infof("Will settle with hermes: %v\n", hermesIDs)
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 

@@ -44,7 +44,6 @@ type balanceProvider interface {
 }
 
 type earningsProvider interface {
-	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
 	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpong_event.EarningsDetailed
 }
 
@@ -371,7 +370,7 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		EarningsTotalTokens: contract.NewTokens(earnings.Total.LifetimeBalance),
 		Stake:               stake,
 		HermesID:            defaultHermesID.Hex(),
-		EarningsPerHermes:   settlementsPerHermes,
+		EarningsPerHermes:   contract.NewEarningsPerHermesDTO(earnings.PerHermes),
 	}
 	utils.WriteAsJSON(status, c.Writer)
 }

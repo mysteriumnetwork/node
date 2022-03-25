@@ -35,6 +35,7 @@ import (
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -195,6 +196,12 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 			Balance:            big.NewInt(50),
 			Earnings:           big.NewInt(1),
 			EarningsTotal:      big.NewInt(100),
+			EarningsPerHermes: map[common.Address]event.Earnings{
+				common.HexToAddress("0x200000000000000000000000000000000000000a"): {
+					LifetimeBalance:  big.NewInt(100),
+					UnsettledBalance: big.NewInt(50),
+				},
+			},
 		},
 	}
 	h.ConsumeStateEvent(changedState)
@@ -204,52 +211,66 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	msgJSON = strings.TrimPrefix(msg, "data: ")
 	expectJSON = `
 {
-  "payload": {
-    "service_info": null,
-    "sessions": [],
-    "sessions_stats": {
-      "count": 0,
-      "count_consumers": 0,
-      "sum_bytes_received": 0,
-      "sum_bytes_sent": 0,
-      "sum_duration": 0,
-      "sum_tokens": 0
+	"payload": {
+		"service_info": null,
+		"sessions": [],
+		"sessions_stats": {
+			"count": 0,
+			"count_consumers": 0,
+			"sum_bytes_received": 0,
+			"sum_bytes_sent": 0,
+			"sum_duration": 0,
+			"sum_tokens": 0
+		},
+		"consumer": {
+			"connection": {
+				"status": "Connecting"
+			}
+		},
+		"identities": [
+			{
+				"id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
+				"registration_status": "Registered",
+				"channel_address": "0x000000000000000000000000000000000000000A",
+				"balance": 50,
+				"earnings": 1,
+				"earnings_total": 100,
+				"balance_tokens": {
+					"wei": "50",
+					"ether": "0.00000000000000005",
+					"human": "0"
+				},
+				"earnings_tokens": {
+					"wei": "1",
+					"ether": "0.000000000000000001",
+					"human": "0"
+				},
+				"earnings_total_tokens": {
+					"wei": "100",
+					"ether": "0.0000000000000001",
+					"human": "0"
+				},
+				"stake": 0,
+				"hermes_id": "0x0000000000000000000000000000000000000000",
+				"earnings_per_hermes": {
+					"0x200000000000000000000000000000000000000A": {
+						"earnings": {
+							"wei": "50",
+							"ether": "0.00000000000000005",
+							"human": "0"
+						},
+						"earnings_total": {
+							"wei": "100",
+							"ether": "0.0000000000000001",
+							"human": "0"
+						}
+					}
+				}
+			}
+		],
+		"channels": []
 	},
-    "consumer": {
-      "connection": {
-        "status": "Connecting"
-      }
-    },
-    "identities": [
-      {
-        "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
-        "registration_status": "Registered",
-        "channel_address": "0x000000000000000000000000000000000000000A",
-        "hermes_id": "0x0000000000000000000000000000000000000000",
-        "balance": 50,
-		"balance_tokens": {
-			"wei": "50",
-			"ether": "0.00000000000000005",
-			"human": "0"
-		},
-        "earnings": 1,
-		"earnings_tokens": {
-			"wei": "1",
-			"ether": "0.000000000000000001",
-			"human": "0"
-		},
-		"earnings_total": 100,
-		"earnings_total_tokens": {
-			"wei": "100",
-			"ether": "0.0000000000000001",
-			"human": "0"
-		},
-		"stake": 0
-      }
-    ],
-    "channels": []
-  },
-  "type": "state-change"
+	"type": "state-change"
 }`
 	assert.JSONEq(t, expectJSON, msgJSON)
 

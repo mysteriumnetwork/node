@@ -136,6 +136,7 @@ func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Ident
 	return hcr.sumChannels(chainID, id)
 }
 
+// GetEarningsDetailed returns earnings in a detailed format grouping them by hermes ID but also providing totals.
 func (hcr *HermesChannelRepository) GetEarningsDetailed(chainID int64, id identity.Identity) *event.EarningsDetailed {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()

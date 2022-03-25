@@ -246,6 +246,7 @@ func mapState(event stateEvent.State) stateRes {
 			EarningsTotalTokens: contract.NewTokens(identity.EarningsTotal),
 			Stake:               stake,
 			HermesID:            identity.HermesID.Hex(),
+			EarningsPerHermes:   contract.NewEarningsPerHermesDTO(identity.EarningsPerHermes),
 		}
 	}
 

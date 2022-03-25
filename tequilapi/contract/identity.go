@@ -20,8 +20,10 @@ package contract
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/identity"
+	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 )
 
 // IdentityRefDTO represents unique identity reference.
@@ -70,6 +72,19 @@ type IdentityDTO struct {
 type EarningsDTO struct {
 	Earnings      Tokens `json:"earnings"`
 	EarningsTotal Tokens `json:"earnings_total"`
+}
+
+// NewEarningsPerHermesDTO transforms the pingong value in a public one.
+func NewEarningsPerHermesDTO(earnings map[common.Address]pingpong_event.Earnings) map[string]EarningsDTO {
+	settlementsPerHermes := make(map[string]EarningsDTO)
+	for h, earn := range earnings {
+		settlementsPerHermes[h.Hex()] = EarningsDTO{
+			Earnings:      NewTokens(earn.UnsettledBalance),
+			EarningsTotal: NewTokens(earn.LifetimeBalance),
+		}
+	}
+
+	return settlementsPerHermes
 }
 
 // NewIdentityDTO maps to API identity.

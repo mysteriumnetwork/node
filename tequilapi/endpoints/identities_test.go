@@ -353,9 +353,17 @@ func Test_IdentityGet(t *testing.T) {
 			},
 		},
 		earningsProvider: &mockEarningsProvider{
-			earnings: pingpongEvent.Earnings{
-				LifetimeBalance:  big.NewInt(100),
-				UnsettledBalance: big.NewInt(50),
+			earnings: pingpongEvent.EarningsDetailed{
+				Total: pingpongEvent.Earnings{
+					LifetimeBalance:  big.NewInt(100),
+					UnsettledBalance: big.NewInt(50),
+				},
+				PerHermes: map[common.Address]pingpongEvent.Earnings{
+					common.HexToAddress("0x200000000000000000000000000000000000000a"): {
+						LifetimeBalance:  big.NewInt(100),
+						UnsettledBalance: big.NewInt(50),
+					},
+				},
 			},
 		},
 		balanceProvider: &mockBalanceProvider{
@@ -376,32 +384,47 @@ func Test_IdentityGet(t *testing.T) {
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
+
 	assert.JSONEq(t,
 		`
 {
-  "id": "0x000000000000000000000000000000000000000a",
-  "registration_status": "Registered",
-  "channel_address": "0x100000000000000000000000000000000000000A",
-  "balance": 25,
-  "balance_tokens": {
-    "wei": "25",
-    "ether": "0.000000000000000025",
-    "human": "0"
-  },
-  "earnings": 50,
-  "earnings_tokens": {
-  	"wei": "50",
-  	"ether": "0.00000000000000005",
-  	"human": "0"
-  },
-  "earnings_total": 100,
-  "earnings_total_tokens": {
-  	"wei": "100",
-  	"ether": "0.0000000000000001",
-  	"human": "0"
-  },
-  "stake": 2,
-  "hermes_id": "0x200000000000000000000000000000000000000A"
+	"id": "0x000000000000000000000000000000000000000a",
+	"registration_status": "Registered",
+	"channel_address": "0x100000000000000000000000000000000000000A",
+	"balance": 25,
+	"earnings": 50,
+	"earnings_total": 100,
+	"balance_tokens": {
+		"wei": "25",
+		"ether": "0.000000000000000025",
+		"human": "0"
+	},
+	"earnings_tokens": {
+		"wei": "50",
+		"ether": "0.00000000000000005",
+		"human": "0"
+	},
+	"earnings_total_tokens": {
+		"wei": "100",
+		"ether": "0.0000000000000001",
+		"human": "0"
+	},
+	"stake": 2,
+	"hermes_id": "0x200000000000000000000000000000000000000A",
+	"earnings_per_hermes": {
+		"0x200000000000000000000000000000000000000A": {
+			"earnings": {
+				"wei": "50",
+				"ether": "0.00000000000000005",
+				"human": "0"
+			},
+			"earnings_total": {
+				"wei": "100",
+				"ether": "0.0000000000000001",
+				"human": "0"
+			}
+		}
+	}
 }
 `,
 		resp.Body.String())
@@ -439,7 +462,7 @@ func (m *mockProviderChannelStatusProvider) GetProviderChannel(chainID int64, he
 }
 
 type mockEarningsProvider struct {
-	earnings pingpongEvent.Earnings
+	earnings pingpongEvent.EarningsDetailed
 	channels []pingpong.HermesChannel
 }
 
@@ -447,8 +470,8 @@ func (mep *mockEarningsProvider) List(chainID int64) []pingpong.HermesChannel {
 	return mep.channels
 }
 
-func (mep *mockEarningsProvider) GetEarnings(chainID int64, _ identity.Identity) pingpongEvent.Earnings {
-	return mep.earnings
+func (mep *mockEarningsProvider) GetEarningsDetailed(chainID int64, _ identity.Identity) *pingpongEvent.EarningsDetailed {
+	return &mep.earnings
 }
 
 type mockBalanceProvider struct {

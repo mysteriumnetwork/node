@@ -164,13 +164,24 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 			t,
 			event.AppEventEarningsChanged{
 				Identity: id,
-				Previous: event.Earnings{
-					LifetimeBalance:  big.NewInt(0),
-					UnsettledBalance: big.NewInt(0),
+				Previous: event.EarningsDetailed{
+					Total: event.Earnings{
+						LifetimeBalance:  big.NewInt(0),
+						UnsettledBalance: big.NewInt(0),
+					},
+					PerHermes: map[common.Address]event.Earnings{},
 				},
-				Current: event.Earnings{
-					LifetimeBalance:  expectedChannel1.LifetimeBalance(),
-					UnsettledBalance: expectedChannel1.UnsettledBalance(),
+				Current: event.EarningsDetailed{
+					Total: event.Earnings{
+						LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+						UnsettledBalance: expectedChannel1.UnsettledBalance(),
+					},
+					PerHermes: map[common.Address]event.Earnings{
+						hermesID: {
+							LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+							UnsettledBalance: expectedChannel1.UnsettledBalance(),
+						},
+					},
 				},
 			},
 			lastEvent,
@@ -196,13 +207,29 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 			t,
 			event.AppEventEarningsChanged{
 				Identity: id,
-				Previous: event.Earnings{
-					LifetimeBalance:  expectedChannel1.LifetimeBalance(),
-					UnsettledBalance: expectedChannel1.UnsettledBalance(),
+				Previous: event.EarningsDetailed{
+					Total: event.Earnings{
+						LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+						UnsettledBalance: expectedChannel1.UnsettledBalance(),
+					},
+					PerHermes: map[common.Address]event.Earnings{
+						hermesID: {
+							LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+							UnsettledBalance: expectedChannel1.UnsettledBalance(),
+						},
+					},
 				},
-				Current: event.Earnings{
-					LifetimeBalance:  expectedChannel2.LifetimeBalance(),
-					UnsettledBalance: expectedChannel2.UnsettledBalance(),
+				Current: event.EarningsDetailed{
+					Total: event.Earnings{
+						LifetimeBalance:  expectedChannel2.LifetimeBalance(),
+						UnsettledBalance: expectedChannel2.UnsettledBalance(),
+					},
+					PerHermes: map[common.Address]event.Earnings{
+						hermesID: {
+							LifetimeBalance:  expectedChannel2.LifetimeBalance(),
+							UnsettledBalance: expectedChannel2.UnsettledBalance(),
+						},
+					},
 				},
 			},
 			lastEvent,

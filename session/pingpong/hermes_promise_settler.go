@@ -1082,6 +1082,11 @@ func (aps *hermesPromiseSettler) isSettling(id identity.Identity, hermesID commo
 		return false
 	}
 
+	if v.settleInProgress == nil {
+		v.settleInProgress = make(map[common.Address]struct{})
+		aps.currentState[id] = v
+	}
+
 	_, ok = v.settleInProgress[hermesID]
 
 	return ok
@@ -1091,6 +1096,10 @@ func (aps *hermesPromiseSettler) setSettling(id identity.Identity, hermesID comm
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	v := aps.currentState[id]
+
+	if v.settleInProgress == nil {
+		v.settleInProgress = make(map[common.Address]struct{})
+	}
 
 	if settling {
 		v.settleInProgress[hermesID] = struct{}{}

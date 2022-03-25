@@ -191,11 +191,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.Equal(t, balanceAfterRegistration, providerStatus.Balance)
 
 		// settle hermes 1
-		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
-		assert.NoError(t, err)
-
-		// settle hermes 2
-		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermes2ID), true)
+		hermeses := []common.Address{
+			common.HexToAddress(hermesID),
+			common.HexToAddress(hermes2ID),
+		}
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), hermeses, true)
 		assert.NoError(t, err)
 
 		providerStatus, err = tequilapiProvider.Identity(providerID)

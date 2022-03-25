@@ -478,8 +478,13 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	}
 	eventBus.Publish(pingpongEvent.AppTopicEarningsChanged, pingpongEvent.AppEventEarningsChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Previous: pingpongEvent.Earnings{},
-		Current:  pingpongEvent.Earnings{LifetimeBalance: big.NewInt(100), UnsettledBalance: big.NewInt(10)},
+		Previous: pingpongEvent.EarningsDetailed{},
+		Current: pingpongEvent.EarningsDetailed{
+			Total: pingpongEvent.Earnings{
+				LifetimeBalance:  big.NewInt(100),
+				UnsettledBalance: big.NewInt(10),
+			},
+		},
 	})
 
 	// then
@@ -609,7 +614,7 @@ func (mbp *mockBalanceProvider) GetBalance(_ int64, _ identity.Identity) *big.In
 }
 
 type mockEarningsProvider struct {
-	Earnings pingpongEvent.Earnings
+	Earnings pingpongEvent.EarningsDetailed
 	Channels []pingpong.HermesChannel
 }
 
@@ -619,8 +624,8 @@ func (mep *mockEarningsProvider) List(chainID int64) []pingpong.HermesChannel {
 }
 
 // GetEarnings returns a pre-defined settlement state.
-func (mep *mockEarningsProvider) GetEarnings(chainID int64, _ identity.Identity) pingpongEvent.Earnings {
-	return mep.Earnings
+func (mep *mockEarningsProvider) GetEarningsDetailed(chainID int64, _ identity.Identity) *pingpongEvent.EarningsDetailed {
+	return &mep.Earnings
 }
 
 func serviceByID(services []contract.ServiceInfoDTO, id string) (se contract.ServiceInfoDTO, found bool) {
