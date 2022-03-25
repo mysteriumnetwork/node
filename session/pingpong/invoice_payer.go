@@ -25,17 +25,18 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/gofrs/uuid"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // ErrWrongProvider represents an issue where the wrong provider is supplied.
@@ -133,7 +134,12 @@ func (ip *InvoicePayer) Start() error {
 
 	ip.deps.TimeTracker.StartTracking()
 
-	err = ip.deps.EventBus.Subscribe(connectionstate.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+
+	err = ip.deps.EventBus.SubscribeWithUID(connectionstate.AppTopicConnectionStatistics, uid.String(), ip.consumeDataTransferredEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to data transfer events")
 	}
@@ -141,6 +147,8 @@ func (ip *InvoicePayer) Start() error {
 	for {
 		select {
 		case <-ip.stop:
+			_ = ip.deps.EventBus.UnsubscribeWithUID(connectionstate.AppTopicConnectionStatistics, uid.String(), ip.consumeDataTransferredEvent)
+
 			return nil
 		case invoice := <-ip.deps.InvoiceChan:
 			log.Debug().Msgf("Invoice received: %v", invoice)
@@ -294,7 +302,6 @@ func (ip *InvoicePayer) publishInvoicePayedEvent(invoice crypto.Invoice) {
 func (ip *InvoicePayer) Stop() {
 	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = ip.deps.EventBus.Unsubscribe(connectionstate.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 		close(ip.stop)
 	})
 }

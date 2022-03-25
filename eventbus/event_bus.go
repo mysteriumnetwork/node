@@ -18,6 +18,9 @@
 package eventbus
 
 import (
+	"fmt"
+	"sync"
+
 	asaskevichEventBus "github.com/asaskevich/EventBus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -34,27 +37,86 @@ type Publisher interface {
 	Publish(topic string, data interface{})
 }
 
-// Subscriber subscribes to events
+// Subscriber subscribes to events.
 type Subscriber interface {
 	Subscribe(topic string, fn interface{}) error
 	SubscribeAsync(topic string, fn interface{}) error
 	Unsubscribe(topic string, fn interface{}) error
+	UnsubscribeWithUID(topic, uid string, fn interface{}) error
+	SubscribeWithUID(topic, uid string, fn interface{}) error
 }
 
 type simplifiedEventBus struct {
 	bus asaskevichEventBus.Bus
+
+	mu  sync.RWMutex
+	sub map[string][]string
 }
 
-func (simplifiedBus simplifiedEventBus) Unsubscribe(topic string, fn interface{}) error {
-	return simplifiedBus.bus.Unsubscribe(topic, fn)
+func (b *simplifiedEventBus) Unsubscribe(topic string, fn interface{}) error {
+	return b.bus.Unsubscribe(topic, fn)
 }
 
-func (simplifiedBus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
-	return simplifiedBus.bus.Subscribe(topic, fn)
+func (b *simplifiedEventBus) UnsubscribeWithUID(topic, uid string, fn interface{}) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if len(b.sub[topic]) == 0 {
+		return fmt.Errorf("topic %s doesn't exist", topic)
+	}
+
+	for i, id := range b.sub[topic] {
+		if id == uid {
+			b.sub[topic] = append(b.sub[topic][:i], b.sub[topic][i+1:]...)
+
+			break
+		}
+	}
+
+	if len(b.sub[topic]) == 0 {
+		delete(b.sub, topic)
+	}
+
+	return b.bus.Unsubscribe(topic+uid, fn)
 }
 
-func (simplifiedBus simplifiedEventBus) SubscribeAsync(topic string, fn interface{}) error {
-	return simplifiedBus.bus.SubscribeAsync(topic, fn, false)
+func (b *simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
+	return b.bus.Subscribe(topic, fn)
+}
+
+func (b *simplifiedEventBus) SubscribeWithUID(topic, uid string, fn interface{}) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.sub[topic] = append(b.sub[topic], uid)
+
+	return b.bus.Subscribe(topic+uid, fn)
+}
+
+func (b *simplifiedEventBus) SubscribeAsync(topic string, fn interface{}) error {
+	return b.bus.SubscribeAsync(topic, fn, false)
+}
+
+func (b *simplifiedEventBus) Publish(topic string, data interface{}) {
+	log.WithLevel(levelFor(topic)).Msgf("Published topic=%q event=%+v", topic, data)
+	b.bus.Publish(topic, data)
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if ids, ok := b.sub[topic]; ok {
+		for _, id := range ids {
+			b.bus.Publish(topic+id, data)
+		}
+	}
+}
+
+// New returns implementation of EventBus.
+func New() *simplifiedEventBus {
+	return &simplifiedEventBus{
+		bus: asaskevichEventBus.New(),
+		sub: make(map[string][]string),
+	}
 }
 
 var logLevelsByTopic = map[string]zerolog.Level{
@@ -74,16 +136,6 @@ func levelFor(topic string) zerolog.Level {
 	if level, exist := logLevelsByTopic[topic]; exist {
 		return level
 	}
+
 	return zerolog.DebugLevel
-}
-
-func (simplifiedBus simplifiedEventBus) Publish(topic string, data interface{}) {
-	log.WithLevel(levelFor(topic)).Msgf("Published topic=%q event=%+v", topic, data)
-	simplifiedBus.bus.Publish(topic, data)
-}
-
-// New returns implementation of EventBus
-func New() EventBus {
-	bus := asaskevichEventBus.New()
-	return simplifiedEventBus{bus: bus}
 }

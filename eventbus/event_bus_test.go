@@ -34,3 +34,38 @@ func Test_simplifiedEventBus_Publish_InvokesSubscribers(t *testing.T) {
 
 	assert.Equal(t, "test data", received)
 }
+
+type handler struct {
+	val int
+}
+
+func (h *handler) Handle(_ string) {
+	h.val++
+}
+
+func TestUnsubscribeMethod(t *testing.T) {
+	bus := New()
+	h := &handler{val: 0}
+	h2 := &handler{val: 5}
+
+	bus.SubscribeWithUID("topic", "1", h.Handle)
+	bus.SubscribeWithUID("topic", "2", h2.Handle)
+
+	bus.Publish("topic", "1")
+
+	err := bus.UnsubscribeWithUID("topic", "1", h.Handle)
+	assert.NoError(t, err)
+
+	bus.Publish("topic", "2")
+
+	err = bus.UnsubscribeWithUID("topic", "2", h2.Handle)
+	assert.NoError(t, err)
+
+	err = bus.UnsubscribeWithUID("topic", "1", h.Handle)
+	assert.Error(t, err)
+
+	bus.Publish("topic", "3")
+
+	assert.Equal(t, 1, h.val)
+	assert.Equal(t, 7, h2.val)
+}

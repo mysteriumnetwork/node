@@ -27,6 +27,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -34,13 +37,13 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 )
 
-const mockRegistryAddress = "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7"
-const mockHermesAddress = "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c"
-const mockChannelImplementation = "0xa26b684d8dBa935DD34544FBd3Ab4d7FDe1C4D07"
+const (
+	mockRegistryAddress       = "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7"
+	mockHermesAddress         = "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c"
+	mockChannelImplementation = "0xa26b684d8dBa935DD34544FBd3Ab4d7FDe1C4D07"
+)
 
 type MockPeerInvoiceSender struct {
 	mockError     error
@@ -783,11 +786,20 @@ func (mp *mockPublisher) Publish(topic string, payload interface{}) {
 func (mp *mockPublisher) Subscribe(topic string, fn interface{}) error {
 	return nil
 }
+
+func (mp *mockPublisher) SubscribeWithUID(topic, uid string, fn interface{}) error {
+	return nil
+}
+
 func (mp *mockPublisher) SubscribeAsync(topic string, fn interface{}) error {
 	return nil
 }
 
 func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
+	return nil
+}
+
+func (mp *mockPublisher) UnsubscribeWithUID(topic, uid string, fn interface{}) error {
 	return nil
 }
 

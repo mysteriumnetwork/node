@@ -181,7 +181,7 @@ func NewManager(
 	p2pDialer p2p.Dialer,
 	preReconnect, postReconnect func(),
 ) *connectionManager {
-	return &connectionManager{
+	m := &connectionManager{
 		newConnection:        connectionCreator,
 		status:               connectionstate.Status{State: connectionstate.NotConnected},
 		eventBus:             eventBus,
@@ -198,6 +198,10 @@ func NewManager(
 		preReconnect:         preReconnect,
 		postReconnect:        postReconnect,
 	}
+
+	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
+
+	return m
 }
 
 func (m *connectionManager) chainID() int64 {
@@ -289,8 +293,6 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	go m.consumeConnectionStates(m.activeConnection.State())
 	go m.checkSessionIP(m.channel, m.connectOptions.ConsumerID, m.connectOptions.SessionID, originalPublicIP)
-
-	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
 
 	return nil
 }

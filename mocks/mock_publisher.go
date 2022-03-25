@@ -63,8 +63,18 @@ func (mp *EventBus) Subscribe(topic string, fn interface{}) error {
 	return nil
 }
 
+// SubscribeWithUID fakes subscribe.
+func (mp *EventBus) SubscribeWithUID(topic, uid string, fn interface{}) error {
+	return nil
+}
+
 // Unsubscribe fakes unsubscribe.
 func (mp *EventBus) Unsubscribe(topic string, fn interface{}) error {
+	return nil
+}
+
+// UnsubscribeWithUID fakes unsubscribe.
+func (mp *EventBus) UnsubscribeWithUID(topic, uid string, fn interface{}) error {
 	return nil
 }
 

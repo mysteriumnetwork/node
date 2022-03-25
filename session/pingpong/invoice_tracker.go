@@ -30,6 +30,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -38,8 +41,6 @@ import (
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // ErrConsumerPromiseValidationFailed represents an error where consumer tries to cheat us with incorrect promises.
@@ -161,7 +162,8 @@ type InvoiceTrackerDeps struct {
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
 func NewInvoiceTracker(
-	itd InvoiceTrackerDeps) *InvoiceTracker {
+	itd InvoiceTrackerDeps,
+) *InvoiceTracker {
 	return &InvoiceTracker{
 		lastExchangeMessage: crypto.ExchangeMessage{
 			Promise: crypto.Promise{
@@ -275,7 +277,7 @@ func (it *InvoiceTracker) Start() error {
 	log.Debug().Msgf("Starting invoice tracker for session %s", it.deps.SessionID)
 	it.deps.TimeTracker.StartTracking()
 
-	if err := it.deps.EventBus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
+	if err := it.deps.EventBus.SubscribeWithUID(sessionEvent.AppTopicDataTransferred, it.deps.SessionID, it.consumeDataTransferredEvent); err != nil {
 		return err
 	}
 
@@ -635,7 +637,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msgf("Stopping invoice tracker for session %s", it.deps.SessionID)
-		_ = it.deps.EventBus.Unsubscribe(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent)
+		_ = it.deps.EventBus.UnsubscribeWithUID(sessionEvent.AppTopicDataTransferred, it.deps.SessionID, it.consumeDataTransferredEvent)
 		close(it.stop)
 	})
 }
