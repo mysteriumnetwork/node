@@ -243,8 +243,21 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 		return errors.Wrap(err, "failed to unmarshal settle request")
 	}
 
+	hermesIDs := []common.Address{
+		// TODO: Remove this ant just use req.HermesIDs when UI upgrades.
+		common.HexToAddress(req.HermesID),
+	}
+
+	if len(req.HermesIDs) > 0 {
+		hermesIDs = req.HermesIDs
+	}
+
+	if len(hermesIDs) == 0 {
+		return errors.New("must specify a hermes to settle with")
+	}
+
 	chainID := config.GetInt64(config.FlagChainID)
-	return errors.Wrap(settler(chainID, identity.FromAddress(req.ProviderID), req.HermesIDs...), "settling failed")
+	return errors.Wrap(settler(chainID, identity.FromAddress(req.ProviderID), hermesIDs...), "settling failed")
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
