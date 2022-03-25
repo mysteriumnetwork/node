@@ -100,9 +100,9 @@ type receivedPromise struct {
 
 // HermesPromiseSettler is responsible for settling the hermes promises.
 type HermesPromiseSettler interface {
-	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error
-	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
 }
@@ -355,55 +355,69 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 }
 
 // SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
-func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error {
-	channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-	if !found {
-		return ErrNothingToSettle
+func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
+	for _, hermesID := range hermesIDs {
+		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
+		if !found {
+			return ErrNothingToSettle
+		}
+
+		hexR, err := hex.DecodeString(channel.lastPromise.R)
+		if err != nil {
+			return fmt.Errorf("could not decode R: %w", err)
+		}
+		channel.lastPromise.Promise.R = hexR
+		err = aps.settle(
+			func(promise crypto.Promise) (string, error) {
+				return aps.transactor.SettleIntoStake(hermesID.Hex(), providerID.Address, promise)
+			},
+			providerID,
+			hermesID,
+			channel.lastPromise.Promise,
+			channel.Beneficiary,
+			channel.Channel.Settled,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	hexR, err := hex.DecodeString(channel.lastPromise.R)
-	if err != nil {
-		return fmt.Errorf("could not decode R: %w", err)
-	}
-	channel.lastPromise.Promise.R = hexR
-	return aps.settle(
-		func(promise crypto.Promise) (string, error) {
-			return aps.transactor.SettleIntoStake(hermesID.Hex(), providerID.Address, promise)
-		},
-		providerID,
-		hermesID,
-		channel.lastPromise.Promise,
-		channel.Beneficiary,
-		channel.Channel.Settled,
-	)
+	return nil
 }
 
 // ErrNothingToSettle indicates that there is nothing to settle.
 var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
-func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error {
-	channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-	if !found {
-		return ErrNothingToSettle
+func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
+	for _, hermesID := range hermesIDs {
+		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
+		if !found {
+			return ErrNothingToSettle
+		}
+
+		hexR, err := hex.DecodeString(channel.lastPromise.R)
+		if err != nil {
+			return fmt.Errorf("could not decode R: %w", err)
+		}
+
+		channel.lastPromise.Promise.R = hexR
+		err = aps.settle(
+			func(promise crypto.Promise) (string, error) {
+				return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
+			},
+			providerID,
+			hermesID,
+			channel.lastPromise.Promise,
+			channel.Beneficiary,
+			channel.Channel.Settled,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	hexR, err := hex.DecodeString(channel.lastPromise.R)
-	if err != nil {
-		return fmt.Errorf("could not decode R: %w", err)
-	}
-
-	channel.lastPromise.Promise.R = hexR
-	return aps.settle(
-		func(promise crypto.Promise) (string, error) {
-			return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
-		},
-		providerID,
-		hermesID,
-		channel.lastPromise.Promise,
-		channel.Beneficiary,
-		channel.Channel.Settled,
-	)
+	return nil
 }
 
 // ForceSettle forces the settlement for a provider

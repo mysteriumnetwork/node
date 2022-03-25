@@ -29,12 +29,12 @@ type NoopHermesPromiseSettler struct {
 }
 
 // ForceSettle does nothing.
-func (n *NoopHermesPromiseSettler) ForceSettle(chainID int64, _ identity.Identity, _ common.Address) error {
+func (n *NoopHermesPromiseSettler) ForceSettle(chainID int64, _ identity.Identity, _ ...common.Address) error {
 	return nil
 }
 
 // SettleIntoStake does nothing.
-func (n *NoopHermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, accountantID common.Address) error {
+func (n *NoopHermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, accountantID ...common.Address) error {
 	return nil
 }
 

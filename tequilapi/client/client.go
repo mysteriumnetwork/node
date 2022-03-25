@@ -620,10 +620,10 @@ func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficia
 }
 
 // Settle requests the settling of hermes promises
-func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
+func (client *Client) Settle(providerID identity.Identity, hermesIDs []common.Address, waitForBlockchain bool) error {
 	settleRequest := contract.SettleRequest{
 		ProviderID: providerID.Address,
-		HermesID:   hermesID.Address,
+		HermesIDs:  hermesIDs,
 	}
 
 	path := "transactor/settle/"
