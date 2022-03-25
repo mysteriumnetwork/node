@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
@@ -87,10 +88,6 @@ type AddressProvider interface {
 //     description: List of identities
 //     schema:
 //       "$ref": "#/definitions/ListIdentitiesResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ia *identitiesAPI) List(c *gin.Context) {
 	ids := ia.idm.GetIdentities()
 	idsDTO := contract.NewIdentityListResponse(ids)
@@ -113,30 +110,23 @@ func (ia *identitiesAPI) List(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
-//     description: Bad Request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   422:
-//     description: Parameters validation error
-//     schema:
-//       "$ref": "#/definitions/ValidationErrorDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Current(c *gin.Context) {
-	request := c.Request
-	resp := c.Writer
-
 	var req contract.IdentityCurrentRequest
-	err := json.NewDecoder(request.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	if errorMap := req.Validate(); errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
+	if err := req.Validate(); err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -149,12 +139,12 @@ func (ia *identitiesAPI) Current(c *gin.Context) {
 	id, err := ia.selector.UseOrCreate(idAddress, *req.Passphrase, chainID)
 
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to use/create ID: "+err.Error(), contract.ErrCodeIDUseOrCreate))
 		return
 	}
 
 	idDTO := contract.NewIdentityDTO(id)
-	utils.WriteAsJSON(idDTO, resp)
+	utils.WriteAsJSON(idDTO, c.Writer)
 }
 
 // swagger:operation POST /identities Identity createIdentity
@@ -173,41 +163,34 @@ func (ia *identitiesAPI) Current(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
-//     description: Bad Request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   422:
-//     description: Parameters validation error
-//     schema:
-//       "$ref": "#/definitions/ValidationErrorDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Create(c *gin.Context) {
-	resp := c.Writer
-	httpReq := c.Request
-
 	var req contract.IdentityCreateRequest
-	err := json.NewDecoder(httpReq.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	if errorMap := req.Validate(); errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
+	if err := req.Validate(); err != nil {
+		c.Error(err)
 		return
 	}
 
 	id, err := ia.idm.CreateNewIdentity(*req.Passphrase)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to create ID", contract.ErrCodeIDCreate))
 		return
 	}
 
 	idDTO := contract.NewIdentityDTO(id)
-	utils.WriteAsJSON(idDTO, resp)
+	utils.WriteAsJSON(idDTO, c.Writer)
 }
 
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
@@ -229,48 +212,44 @@ func (ia *identitiesAPI) Create(c *gin.Context) {
 //   202:
 //     description: Identity unlocked
 //   400:
-//     description: Body parsing error
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   403:
-//     description: Forbidden
+//     description: Unlock failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   500:
-//     description: Internal server error
+//       "$ref": "#/definitions/APIError"
+//   404:
+//     description: ID not found
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Unlock(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-	httpReq := c.Request
-
-	address := params.ByName("id")
+	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusNotFound)
+		c.Error(apierror.NotFound("ID not found"))
 		return
 	}
 
 	var req contract.IdentityUnlockRequest
-	err = json.NewDecoder(httpReq.Body).Decode(&req)
+	err = json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	if errorMap := req.Validate(); errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
+	if err := req.Validate(); err != nil {
+		c.Error(err)
 		return
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
 	err = ia.idm.Unlock(chainID, id.Address, *req.Passphrase)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusForbidden)
+		c.Error(apierror.Forbidden("Unlock failed", contract.ErrCodeIDUnlock))
 		return
 	}
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 // swagger:operation PUT /identities/{id}/balance/refresh Identity balance
@@ -288,18 +267,15 @@ func (ia *identitiesAPI) Unlock(c *gin.Context) {
 //     description: Updated balance
 //     schema:
 //       "$ref": "#/definitions/BalanceDTO"
-//   500:
-//     description: Internal server error
+//   404:
+//     description: ID not found
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	address := params.ByName("id")
+	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusNotFound)
+		c.Error(apierror.NotFound("Identity not found"))
 		return
 	}
 	chainID := config.GetInt64(config.FlagChainID)
@@ -308,7 +284,7 @@ func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
 		Balance:       balance,
 		BalanceTokens: contract.NewTokens(balance),
 	}
-	utils.WriteAsJSON(status, resp)
+	utils.WriteAsJSON(status, c.Writer)
 }
 
 // swagger:operation GET /identities/{id} Identity getIdentity
@@ -326,45 +302,46 @@ func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
 //     description: Identity retrieved
 //     schema:
 //       "$ref": "#/definitions/IdentityRefDTO"
+//   404:
+//     description: ID not found
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Get(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	address := params.ByName("id")
+	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusNotFound)
+		c.Error(apierror.NotFound("Identity not found"))
 		return
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
 	regStatus, err := ia.registry.GetRegistrationStatus(chainID, id)
 	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to check ID registration status: "+err.Error(), contract.ErrCodeIDRegistrationCheck))
 		return
 	}
 
 	channelAddress, err := ia.channelCalculator.GetChannelAddress(chainID, id.ToCommonAddress())
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to calculate channel address: "+err.Error(), contract.ErrCodeIDCalculateAddress))
 		return
 	}
 
 	var stake = new(big.Int)
 	hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not get active hermes: "+err.Error(), contract.ErrCodeActiveHermes))
 		return
 	}
 
 	if regStatus == registry.Registered {
 		data, err := ia.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
 		if err != nil {
-			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
+			c.Error(apierror.Internal("Failed to check blockchain registration status: "+err.Error(), contract.ErrCodeIDBlockchainRegistrationCheck))
 			return
 		}
 		stake = data.Stake
@@ -385,7 +362,7 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		Stake:               stake,
 		HermesID:            hermesID.Hex(),
 	}
-	utils.WriteAsJSON(status, resp)
+	utils.WriteAsJSON(status, c.Writer)
 }
 
 // swagger:operation GET /identities/{id}/registration Identity identityRegistration
@@ -403,24 +380,25 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 //     description: Status retrieved
 //     schema:
 //       "$ref": "#/definitions/IdentityRegistrationResponseDTO"
+//   404:
+//     description: ID not found
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	address := params.ByName("id")
+	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusNotFound)
+		c.Error(apierror.NotFound("ID not found"))
 		return
 	}
 
 	regStatus, err := ia.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to check ID registration status", contract.ErrCodeIDRegistrationCheck))
 		return
 	}
 
@@ -428,7 +406,7 @@ func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
 		Status:     regStatus.String(),
 		Registered: regStatus.Registered(),
 	}
-	utils.WriteAsJSON(registrationDataDTO, resp)
+	utils.WriteAsJSON(registrationDataDTO, c.Writer)
 }
 
 // swagger:operation GET /identities/{id}/beneficiary Identity beneficiary address
@@ -449,22 +427,19 @@ func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	address := params.ByName("id")
+	address := c.Param("id")
 	data, err := ia.bprovider.GetBeneficiary(common.HexToAddress(address))
 	if err != nil {
-		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get beneficiary address", contract.ErrCodeBeneficiaryGet))
 		return
 	}
 
 	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
 		Beneficiary: data.Hex(),
 	}
-	utils.WriteAsJSON(registrationDataDTO, resp)
+	utils.WriteAsJSON(registrationDataDTO, c.Writer)
 }
 
 // swagger:operation GET /identities/{id}/referral Referral
@@ -483,20 +458,17 @@ func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) GetReferralToken(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	id := params.ByName("id")
+	id := c.Param("id")
 	tkn, err := ia.transactor.GetReferralToken(common.HexToAddress(id))
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		utils.ForwardError(c, err, apierror.Internal("Failed to get referral token", contract.ErrCodeReferralGetToken))
 		return
 	}
 	utils.WriteAsJSON(contract.ReferralTokenResponse{
 		Token: tkn,
-	}, resp)
+	}, c.Writer)
 }
 
 // swagger:operation GET /identities/{id}/referral-available Referral availability check
@@ -511,19 +483,16 @@ func (ia *identitiesAPI) GetReferralToken(c *gin.Context) {
 //   required: true
 // responses:
 //   200:
-//     description: Success
+//     description: Referral token is available for the given identity
 //   500:
-//     description: Internal server error
+//     description: Failed to check or token is not available
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) ReferralTokenAvailable(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	id := params.ByName("id")
+	id := c.Param("id")
 	err := ia.transactor.ReferralTokenAvailable(common.HexToAddress(id))
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 }
@@ -544,38 +513,44 @@ func (ia *identitiesAPI) ReferralTokenAvailable(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
-//     description: Bad Request error
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
+//   422:
+//     description: Unable to process the request at this point
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Import(c *gin.Context) {
-	w := c.Writer
-	r := c.Request
-
 	var req contract.IdentityImportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.SendError(w, err, http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		c.Error(apierror.ParseFailed())
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		c.Error(err)
 		return
 	}
 
 	id, err := ia.mover.Import(req.Data, req.CurrentPassphrase, req.NewPassphrase)
 	if err != nil {
-		utils.SendError(w, fmt.Errorf("failed to import identity: %w", err), http.StatusBadRequest)
+		c.Error(apierror.Unprocessable(fmt.Sprintf("Failed to import identity: %s", err), contract.ErrCodeIDImport))
 		return
 	}
 
 	if req.SetDefault {
 		if err := ia.selector.SetDefault(id.Address); err != nil {
-			utils.SendError(w, fmt.Errorf("failed to set default identity: %w", err), http.StatusBadRequest)
+			c.Error(apierror.Unprocessable(fmt.Sprintf("Failed to set default identity: %s", err), contract.ErrCodeIDSetDefault))
 			return
 		}
 	}
 
 	idDTO := contract.NewIdentityDTO(id)
-	utils.WriteAsJSON(idDTO, w)
+	utils.WriteAsJSON(idDTO, c.Writer)
 }
 
 // swagger:operation GET /identities/:id/payout-address
@@ -594,29 +569,26 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/PayoutAddressRequest"
 //   400:
-//     description: Bad Request error
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
-	params := c.Params
-	w := c.Writer
-
-	id := params.ByName("id")
+	id := c.Param("id")
 	addr, err := ia.addressStorage.Address(id)
 	if err != nil {
 		if errors.Is(err, payout.ErrNotFound) {
-			utils.WriteAsJSON(contract.PayoutAddressRequest{}, w)
+			utils.WriteAsJSON(contract.PayoutAddressRequest{}, c.Writer)
 			return
 		}
-		utils.SendError(w, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to get payout address", contract.ErrCodeIDGetPayoutAddress))
 		return
 	}
 
-	utils.WriteAsJSON(contract.PayoutAddressRequest{Address: addr}, w)
+	utils.WriteAsJSON(contract.PayoutAddressRequest{Address: addr}, c.Writer)
 }
 
 // swagger:operation PUT /identities/:id/payout-address
@@ -640,29 +612,24 @@ func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/PayoutAddressRequest"
 //   400:
-//     description: Bad Request error
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
-	params := c.Params
-	w := c.Writer
-	r := c.Request
-
-	id := params.ByName("id")
-
 	var par contract.PayoutAddressRequest
-	if err := json.NewDecoder(r.Body).Decode(&par); err != nil {
-		utils.SendError(w, err, http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(&par); err != nil {
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
+	id := c.Param("id")
 	err := ia.addressStorage.Save(id, par.Address)
 	if err != nil {
-		utils.SendError(w, err, http.StatusBadRequest)
+		c.Error(apierror.BadRequest("Invalid address", contract.ErrCodeIDSavePayoutAddress))
 		return
 	}
 
-	utils.WriteAsJSON(par, w)
+	utils.WriteAsJSON(par, c.Writer)
 }
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service

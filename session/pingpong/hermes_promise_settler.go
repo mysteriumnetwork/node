@@ -31,13 +31,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/config"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
@@ -666,9 +666,9 @@ func (aps *hermesPromiseSettler) payAndSettle(
 }
 
 func payAndSettleErrorShouldRetry(err error) bool {
-	var httpErr *requests.ErrorHTTP
-	if errors.As(err, &httpErr) {
-		return httpErr.Code == 409 || httpErr.Code >= 500
+	var apiErr *apierror.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.Status == 409 || apiErr.Status >= 500
 	}
 
 	return false

@@ -19,13 +19,13 @@ package endpoints
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -75,42 +75,40 @@ type ReportIssueError struct {
 //     schema:
 //       "$ref": "#/definitions/ReportIssueSuccess"
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ReportIssueError"
+//       "$ref": "#/definitions/APIError"
 //   429:
 //     description: Too many requests (max. 1/minute)
 //     schema:
-//       "$ref": "#/definitions/ReportIssueError"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ReportIssueError"
+//       "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) ReportIssueGithub(c *gin.Context) {
-	httpReq := c.Request
-	httpRes := c.Writer
-
 	req := feedback.UserReport{}
-	err := json.NewDecoder(httpReq.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(httpRes, errors.Wrap(err, "could not read message body"), http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	result, err := api.reporter.NewIssue(req)
 	if err != nil {
 		log.Error().Stack().Err(err).Msg("Could not create an issue for feedback")
-		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
 	if !result.Success {
 		log.Error().Stack().Err(err).Msg("Submitting an issue failed")
-		utils.WriteAsJSON(result.Errors, httpRes, result.HTTPResponse.StatusCode)
+		errs, _ := json.Marshal(result.Errors)
+		c.Error(apierror.Error(result.HTTPResponse.StatusCode, "Could not submit issue: "+string(errs), contract.ErrCodeFeedbackSubmit))
 		return
 	}
 
-	utils.WriteAsJSON(result.Response, httpRes)
+	utils.WriteAsJSON(result.Response, c.Writer)
 }
 
 // ReportIntercomIssueRequest params for intercom issue report
@@ -137,38 +135,36 @@ type ReportIntercomIssueRequest struct {
 //   201:
 //     description: Issue reported
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ReportIssueError"
+//       "$ref": "#/definitions/APIError"
 //   429:
 //     description: Too many requests (max. 1/minute)
 //     schema:
-//       "$ref": "#/definitions/ReportIssueError"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ReportIssueError"
+//       "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) ReportIssueIntercom(c *gin.Context) {
-	httpReq := c.Request
-	httpRes := c.Writer
-
 	req := feedback.UserReport{}
-	err := json.NewDecoder(httpReq.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(httpRes, errors.Wrap(err, "could not read message body"), http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	result, err := api.reporter.NewIntercomIssue(req)
 	if err != nil {
 		log.Error().Stack().Err(err).Msg("Could not create an issue for feedback")
-		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
 
 	if !result.Success {
 		log.Error().Stack().Err(err).Msg("Submitting an issue failed")
-		utils.WriteAsJSON(result.Errors, httpRes, result.HTTPResponse.StatusCode)
+		errs, _ := json.Marshal(result.Errors)
+		c.Error(apierror.Error(result.HTTPResponse.StatusCode, "Could not submit issue: "+string(errs), contract.ErrCodeFeedbackSubmit))
 		return
 	}
 }

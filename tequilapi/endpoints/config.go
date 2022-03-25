@@ -19,10 +19,11 @@ package endpoints
 
 import (
 	"encoding/json"
-	"net/http"
 	"reflect"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -62,14 +63,9 @@ func newConfigAPI(config configProvider) *configAPI {
 //     description: Currently active configuration
 //     schema:
 //       "$ref": "#/definitions/configPayload"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *configAPI) GetConfig(c *gin.Context) {
-	writer := c.Writer
 	res := configPayload{Data: api.config.GetConfig()}
-	utils.WriteAsJSON(res, writer)
+	utils.WriteAsJSON(res, c.Writer)
 }
 
 // GetDefaultConfig returns default configuration
@@ -82,14 +78,9 @@ func (api *configAPI) GetConfig(c *gin.Context) {
 //     description: Default configuration values
 //     schema:
 //       "$ref": "#/definitions/configPayload"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *configAPI) GetDefaultConfig(c *gin.Context) {
-	writer := c.Writer
 	res := configPayload{Data: api.config.GetDefaultConfig()}
-	utils.WriteAsJSON(res, writer)
+	utils.WriteAsJSON(res, c.Writer)
 }
 
 // GetUserConfig returns current user configuration
@@ -102,14 +93,9 @@ func (api *configAPI) GetDefaultConfig(c *gin.Context) {
 //     description: User set configuration values
 //     schema:
 //       "$ref": "#/definitions/configPayload"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *configAPI) GetUserConfig(c *gin.Context) {
-	writer := c.Writer
 	res := configPayload{Data: api.config.GetUserConfig()}
-	utils.WriteAsJSON(res, writer)
+	utils.WriteAsJSON(res, c.Writer)
 }
 
 // SetUserConfig sets and returns current configuration
@@ -128,18 +114,19 @@ func (api *configAPI) GetUserConfig(c *gin.Context) {
 //     description: User configuration
 //     schema:
 //       "$ref": "#/definitions/configPayload"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (api *configAPI) SetUserConfig(c *gin.Context) {
-	httpReq := c.Request
-	writer := c.Writer
-
 	var req configPayload
-	err := json.NewDecoder(httpReq.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(writer, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 	for k, v := range req.Data {
@@ -153,7 +140,7 @@ func (api *configAPI) SetUserConfig(c *gin.Context) {
 	}
 	err = api.config.SaveUserConfig()
 	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to save config", contract.ErrCodeConfigSave))
 		return
 	}
 	api.GetUserConfig(c)

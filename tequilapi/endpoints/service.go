@@ -22,13 +22,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/rs/zerolog/log"
 )
 
@@ -65,16 +65,18 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //     description: List of running services
 //     schema:
 //       "$ref": "#/definitions/ServiceListResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
-	resp := c.Writer
 	instances := se.serviceManager.List()
-
 	statusResponse, err := se.toServiceListResponse(instances)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot list services: "+err.Error(), contract.ErrCodeServiceList))
 		return
 	}
-	utils.WriteAsJSON(statusResponse, resp)
+	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
 // ServiceGet provides info for requested service on the node.
@@ -90,25 +92,25 @@ func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
 //   404:
 //     description: Service not found
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceGet(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	id := service.ID(params.ByName("id"))
-
+	id := service.ID(c.Param("id"))
 	instance := se.serviceManager.Service(id)
 	if instance == nil {
-		utils.SendErrorMessage(resp, "Requested service not found", http.StatusNotFound)
+		c.Error(apierror.NotFound("Requested service not found"))
 		return
 	}
 
 	statusResponse, err := se.toServiceInfoResponse(id, instance)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot generate response: "+err.Error(), contract.ErrCodeServiceGet))
 		return
 	}
-	utils.WriteAsJSON(statusResponse, resp)
+	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
 // ServiceStart starts requested service on the node.
@@ -124,43 +126,35 @@ func (se *ServiceEndpoint) ServiceGet(c *gin.Context) {
 //       $ref: "#/definitions/ServiceStartRequestDTO"
 // responses:
 //   201:
-//     description: Initiates service start
+//     description: Initiated service start
 //     schema:
 //       "$ref": "#/definitions/ServiceInfoDTO"
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   409:
-//     description: Conflict. Service is already running
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   422:
-//     description: Parameters validation error
+//     description: Unable to process the request at this point
 //     schema:
-//       "$ref": "#/definitions/ValidationErrorDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
-	resp := c.Writer
-	req := c.Request
-
-	sr, err := se.toServiceRequest(req)
+	sr, err := se.toServiceRequest(c.Request)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	errorMap := validateServiceRequest(sr)
-	if errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
+	if err := validateServiceRequest(sr); err != nil {
+		c.Error(err)
 		return
 	}
 
 	if se.isAlreadyRunning(sr) {
-		utils.SendErrorMessage(resp, "Service already running", http.StatusConflict)
+		c.Error(apierror.Unprocessable("Service already running", contract.ErrCodeServiceRunning))
 		return
 	}
 
@@ -172,23 +166,23 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		sr.Options,
 	)
 	if err == service.ErrorLocation {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		c.Error(apierror.Unprocessable("Cannot detect location", contract.ErrCodeServiceLocation))
 		return
 	} else if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot start service: "+err.Error(), contract.ErrCodeServiceStart))
 		return
 	}
 
 	instance := se.serviceManager.Service(id)
 
-	resp.WriteHeader(http.StatusCreated)
+	c.Status(http.StatusCreated)
 	statusResponse, err := se.toServiceInfoResponse(id, instance)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot generate response: "+err.Error(), contract.ErrCodeServiceGet))
 		return
 	}
 
-	utils.WriteAsJSON(statusResponse, resp)
+	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
 // ServiceStop stops service on the node.
@@ -202,29 +196,25 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 //   404:
 //     description: No service exists
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
-	params := c.Params
-	resp := c.Writer
-
-	id := service.ID(params.ByName("id"))
-
+	id := service.ID(c.Param("id"))
 	instance := se.serviceManager.Service(id)
 	if instance == nil {
-		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
+		c.Error(apierror.NotFound("Service not found"))
 		return
 	}
 
 	if err := se.serviceManager.Stop(id); err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Cannot stop service: "+err.Error(), contract.ErrCodeServiceStop))
 		return
 	}
 
-	resp.WriteHeader(http.StatusAccepted)
+	c.Status(http.StatusAccepted)
 }
 
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
@@ -339,21 +329,20 @@ func (se *ServiceEndpoint) toServiceListResponse(instances map[service.ID]*servi
 	return res, nil
 }
 
-func validateServiceRequest(sr contract.ServiceStartRequest) *validation.FieldErrorMap {
-	errors := validation.NewErrorMap()
+func validateServiceRequest(sr contract.ServiceStartRequest) *apierror.APIError {
+	v := apierror.NewValidator()
 	if len(sr.ProviderID) == 0 {
-		errors.ForField("provider_id").AddError("required", "Field is required")
+		v.Required("provider_id")
 	}
 	if sr.Type == "" {
-		errors.ForField("type").AddError("required", "Field is required")
-	}
-	if sr.Type == serviceTypeInvalid {
-		errors.ForField("type").AddError("invalid", "Invalid service type")
+		v.Required("type")
+	} else if sr.Type == serviceTypeInvalid {
+		v.Invalid("type", "Invalid service type")
 	}
 	if sr.Options == serviceOptionsInvalid {
-		errors.ForField("options").AddError("invalid", "Invalid options")
+		v.Invalid("options", "Invalid options")
 	}
-	return errors
+	return v.Err()
 }
 
 // ServiceManager represents service manager that is used for services management.

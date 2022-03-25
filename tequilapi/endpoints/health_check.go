@@ -55,10 +55,6 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 //     description: Health check information
 //     schema:
 //       "$ref": "#/definitions/HealthCheckDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (hce *healthCheckEndpoint) HealthCheck(c *gin.Context) {
 	status := contract.HealthCheckDTO{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),

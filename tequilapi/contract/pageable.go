@@ -20,8 +20,8 @@ package contract
 import (
 	"net/http"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 const (
@@ -51,26 +51,26 @@ type PaginationQuery struct {
 }
 
 // Bind creates and validates query from API request.
-func (q *PaginationQuery) Bind(request *http.Request) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
+func (q *PaginationQuery) Bind(request *http.Request) *apierror.APIError {
+	v := apierror.NewValidator()
 
 	qs := request.URL.Query()
 	if qStr := qs.Get("page_size"); qStr != "" {
 		if qVal, err := parseInt(qStr); err != nil {
-			errs.ForField("page_size").Add(err)
+			v.Invalid("page_size", "Cannot parse page_size")
 		} else {
 			q.PageSize = *qVal
 		}
 	}
 	if qStr := qs.Get("page"); qStr != "" {
 		if qVal, err := parseInt(qStr); err != nil {
-			errs.ForField("page").Add(err)
+			v.Invalid("page", "Cannot parse page")
 		} else {
 			q.Page = *qVal
 		}
 	}
 
-	return errs
+	return v.Err()
 }
 
 // NewPageableDTO maps to API pagination DTO.

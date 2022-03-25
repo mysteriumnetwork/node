@@ -18,12 +18,12 @@
 package contract
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
 	"time"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/payments/crypto"
 
@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // FeesDTO represents the transactor fees
@@ -83,21 +82,25 @@ type SettlementListQuery struct {
 }
 
 // Bind creates and validates query from API request.
-func (q *SettlementListQuery) Bind(request *http.Request) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
-	errs.Set(q.PaginationQuery.Bind(request))
+func (q *SettlementListQuery) Bind(request *http.Request) *apierror.APIError {
+	v := apierror.NewValidator()
+	if err := q.PaginationQuery.Bind(request); err != nil {
+		for field, fieldErr := range err.Err.Fields {
+			v.Fail(field, fieldErr.Code, fieldErr.Message)
+		}
+	}
 
 	qs := request.URL.Query()
 	if qStr := qs.Get("date_from"); qStr != "" {
 		if qVal, err := parseDate(qStr); err != nil {
-			errs.ForField("date_from").Add(err)
+			v.Invalid("date_from", "Could not parse 'date_from'")
 		} else {
 			q.DateFrom = qVal
 		}
 	}
 	if qStr := qs.Get("date_to"); qStr != "" {
 		if qVal, err := parseDate(qStr); err != nil {
-			errs.ForField("date_to").Add(err)
+			v.Invalid("date_to", "Could not parse 'date_to'")
 		} else {
 			q.DateTo = qVal
 		}
@@ -115,7 +118,7 @@ func (q *SettlementListQuery) Bind(request *http.Request) *validation.FieldError
 		}
 	}
 
-	return errs
+	return v.Err()
 }
 
 // ToFilter converts API query to storage filter.
@@ -244,28 +247,27 @@ type WithdrawRequest struct {
 }
 
 // Validate will validate a given request
-func (w *WithdrawRequest) Validate() error {
+func (w *WithdrawRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
 	zeroAddr := common.HexToAddress("").Hex()
 	if !common.IsHexAddress(w.HermesID) || w.HermesID == zeroAddr {
-		return errors.New("hermesID should be a valid hex address")
+		v.Invalid("hermes_id", "'hermes_id' should be a valid hex address")
 	}
 	if !common.IsHexAddress(w.ProviderID) || w.ProviderID == zeroAddr {
-		return errors.New("providerID should be a valid hex address")
+		v.Invalid("provider_id", "'provider_id' should be a valid hex address")
 	}
 	if !common.IsHexAddress(w.Beneficiary) || w.Beneficiary == zeroAddr {
-		return errors.New("beneficiary should be a valid hex address")
+		v.Invalid("beneficiary", "'beneficiary' should be a valid hex address")
 	}
 
 	amount, err := w.AmountInMYST()
 	if err != nil {
-		return err
+		v.Invalid("amount", err.Error())
+	} else if amount != nil && amount.Cmp(crypto.FloatToBigMyst(99)) > 0 {
+		v.Invalid("amount", "withdrawal amount cannot be more than 99 MYST")
 	}
 
-	if amount != nil && amount.Cmp(crypto.FloatToBigMyst(99)) > 0 {
-		return errors.New("withdrawal amount cannot be more than 99 MYST")
-	}
-
-	return nil
+	return v.Err()
 }
 
 // AmountInMYST will return the amount value converted to big.Int MYST.

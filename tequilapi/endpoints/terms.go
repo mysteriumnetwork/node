@@ -21,9 +21,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/mysteriumnetwork/node/tequilapi/utils"
-
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -67,23 +66,20 @@ func (api *termsAPI) GetTerms(c *gin.Context) {
 //     $ref: "#/definitions/TermsRequest"
 // responses:
 //   200:
-//     description: OK
+//     description: Terms agreement updated
 //   400:
-//     description: Bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (api *termsAPI) UpdateTerms(c *gin.Context) {
-	r := c.Request
-	w := c.Writer
-
 	var req contract.TermsRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(w, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
@@ -94,10 +90,10 @@ func (api *termsAPI) UpdateTerms(c *gin.Context) {
 
 	err = api.config.SaveUserConfig()
 	if err != nil {
-		utils.SendError(w, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to save config", contract.ErrCodeConfigSave))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // AddRoutesForTerms registers /terms endpoints in Tequilapi

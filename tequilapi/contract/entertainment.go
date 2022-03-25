@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 )
 
 // EntertainmentEstimateRequest request to estimate entertainment amounts.
@@ -30,23 +30,23 @@ type EntertainmentEstimateRequest struct {
 }
 
 // Bind fills and validates EntertainmentEstimateRequest from API request.
-func (req *EntertainmentEstimateRequest) Bind(request *http.Request) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
+func (req *EntertainmentEstimateRequest) Bind(request *http.Request) *apierror.APIError {
+	v := apierror.NewValidator()
 
 	amt := request.URL.Query().Get("amount")
 	if amt == "" {
-		errs.ForField("amount").Required()
-		return errs
+		v.Required("amount")
+		return v.Err()
 	}
 
 	amtf, err := strconv.ParseFloat(amt, 64)
 	if err != nil {
-		errs.ForField("amount").Invalid("Failed to parse amount")
-		return errs
+		v.Invalid("amount", "Failed to parse amount (not a valid decimal)")
+		return v.Err()
 	}
 
 	req.Amount = amtf
-	return errs
+	return nil
 }
 
 // EntertainmentEstimateResponse represents estimated entertainment.

@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 )
@@ -52,7 +53,7 @@ func NewNodeUIEndpoints(versionManager *versionmanager.VersionManager) *NodeUIEn
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 func (n *NodeUIEndpoints) RemoteVersions(c *gin.Context) {
 	r := versionmanager.RemoteVersionRequest{
 		PerPage: 50,
@@ -72,7 +73,7 @@ func (n *NodeUIEndpoints) RemoteVersions(c *gin.Context) {
 
 	versions, err := n.versionManager.ListRemoteVersions(r)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
+		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, contract.RemoteVersionsResponse{Versions: versions})
@@ -91,11 +92,11 @@ func (n *NodeUIEndpoints) RemoteVersions(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 func (n *NodeUIEndpoints) LocalVersions(c *gin.Context) {
 	versions, err := n.versionManager.ListLocalVersions()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
+		c.Error(apierror.Internal("Could not list local versions: "+err.Error(), contract.ErrCodeUILocalVersions))
 		return
 	}
 	c.JSON(http.StatusOK, contract.LocalVersionsResponse{Versions: versions})
@@ -110,27 +111,31 @@ func (n *NodeUIEndpoints) LocalVersions(c *gin.Context) {
 //   200:
 //     description: version switched
 //   400:
-//     description: bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
+//   422:
+//     description: Unable to process the request at this point
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 func (n *NodeUIEndpoints) SwitchVersion(c *gin.Context) {
 	var req contract.SwitchNodeUIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, contract.InvalidRequestError(err))
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	if err := req.Valid(); err != nil {
-		c.JSON(http.StatusBadRequest, contract.WithErrorResponse(fmt.Sprintf("could not switch to node UI version: %s", req.Version), err))
+		c.Error(err)
 		return
 	}
 
 	if err := n.versionManager.SwitchTo(req.Version); err != nil {
-		c.JSON(http.StatusBadRequest, contract.WithErrorResponse(fmt.Sprintf("could not switch to node UI version: %s", req.Version), err))
+		c.Error(apierror.Unprocessable(fmt.Sprintf("Could not switch to node UI version: %s", req.Version), contract.ErrCodeUISwitchVersion))
 		return
 	}
 
@@ -144,31 +149,29 @@ func (n *NodeUIEndpoints) SwitchVersion(c *gin.Context) {
 // description: download a remote node UI release
 // responses:
 //   200:
-//     description: download in progress
+//     description: Download in progress
 //   400:
-//     description: bad request
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 func (n *NodeUIEndpoints) Download(c *gin.Context) {
 	var req contract.DownloadNodeUIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, contract.WithErrorResponse("could not parse request", err))
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	if err := req.Valid(); err != nil {
-		c.JSON(http.StatusBadRequest, contract.InvalidRequestError(err))
+		c.Error(err)
 		return
 	}
 
 	if err := n.versionManager.Download(req.Version); err != nil {
-		c.JSON(http.StatusInternalServerError, contract.WithErrorResponse(
-			fmt.Sprintf("could not download node UI version: %s", req.Version), err,
-		))
+		c.Error(apierror.Internal(fmt.Sprintf("Could not download node UI version: %s", req.Version), contract.ErrCodeUIDownload))
 		return
 	}
 
@@ -188,7 +191,7 @@ func (n *NodeUIEndpoints) Download(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 func (n *NodeUIEndpoints) DownloadStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, n.versionManager.DownloadStatus())
 }
@@ -206,17 +209,17 @@ func (n *NodeUIEndpoints) DownloadStatus(c *gin.Context) {
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorResponse"
+//       "$ref": "#/definitions/APIError"
 func (n *NodeUIEndpoints) UI(c *gin.Context) {
 	bundled, err := n.versionManager.BundledVersion()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
+		c.Error(apierror.Internal("Could not resolve bundled version: "+err.Error(), contract.ErrCodeUIBundledVersion))
 		return
 	}
 
 	used, err := n.versionManager.UsedVersion()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, contract.InternalError(err))
+		c.Error(apierror.Internal("Could not resolve used version: "+err.Error(), contract.ErrCodeUIUsedVersion))
 		return
 	}
 	c.JSON(http.StatusOK, contract.UI{

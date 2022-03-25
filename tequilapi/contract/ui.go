@@ -18,8 +18,7 @@
 package contract
 
 import (
-	"errors"
-
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 )
 
@@ -42,11 +41,12 @@ type DownloadNodeUIRequest struct {
 }
 
 // Valid validate DownloadNodeUIRequest
-func (s *DownloadNodeUIRequest) Valid() error {
+func (s *DownloadNodeUIRequest) Valid() *apierror.APIError {
+	v := apierror.NewValidator()
 	if s.Version == "" {
-		return errors.New("version is mandatory")
+		v.Required("version")
 	}
-	return nil
+	return v.Err()
 }
 
 // SwitchNodeUIRequest request for switching NodeUI version
@@ -56,11 +56,12 @@ type SwitchNodeUIRequest struct {
 }
 
 // Valid validate SwitchNodeUIRequest
-func (s *SwitchNodeUIRequest) Valid() error {
+func (s *SwitchNodeUIRequest) Valid() *apierror.APIError {
+	v := apierror.NewValidator()
 	if s.Version == "" {
-		return errors.New("version is mandatory")
+		v.Required("version")
 	}
-	return nil
+	return v.Err()
 }
 
 // UI ui information

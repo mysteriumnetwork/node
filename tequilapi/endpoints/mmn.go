@@ -20,17 +20,16 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 type mmnProvider interface {
@@ -59,14 +58,9 @@ func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
 //     description: MMN's API key
 //     schema:
 //       "$ref": "#/definitions/MMNApiKeyRequest"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) GetApiKey(c *gin.Context) {
-	writer := c.Writer
 	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNAPIKey.Name)}
-	utils.WriteAsJSON(res, writer)
+	utils.WriteAsJSON(res, c.Writer)
 }
 
 // SetApiKey sets MMN's API key
@@ -82,35 +76,35 @@ func (api *mmnAPI) GetApiKey(c *gin.Context) {
 //       $ref: "#/definitions/MMNApiKeyRequest"
 // responses:
 //   200:
-//     description: Success
-//   422:
-//     description: Parameters validation error
+//     description: API key has been set
+//   400:
+//     description: Failed to parse or request validation failed
 //     schema:
-//       "$ref": "#/definitions/ValidationErrorDTO"
+//       "$ref": "#/definitions/APIError"
+//   422:
+//     description: Unable to process the request at this point
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-
+//       "$ref": "#/definitions/APIError"
 func (api *mmnAPI) SetApiKey(c *gin.Context) {
-	httpReq := c.Request
-	writer := c.Writer
-
 	var req contract.MMNApiKeyRequest
-	err := json.NewDecoder(httpReq.Body).Decode(&req)
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
-		utils.SendError(writer, err, http.StatusBadRequest)
+		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	if errors := req.Validate(); errors.HasErrors() {
-		utils.SendValidationErrorMessage(writer, errors)
+	if err := req.Validate(); err != nil {
+		c.Error(err)
 		return
 	}
 
 	api.config.SetUser(config.FlagMMNAPIKey.Name, req.ApiKey)
 	if err = api.config.SaveUserConfig(); err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to save API key", contract.ErrCodeConfigSave))
 		return
 	}
 
@@ -120,22 +114,14 @@ func (api *mmnAPI) SetApiKey(c *gin.Context) {
 
 		switch {
 		case strings.Contains(err.Error(), "authentication needed: password or unlock"):
-			errors := validation.NewErrorMap()
-			errors.ForField("api_key").AddError("identity", "Identity is locked")
-			utils.SendValidationErrorMessage(writer, errors)
+			c.Error(apierror.Unprocessable("Identity is locked", contract.ErrCodeIDLocked))
 		case strings.Contains(err.Error(), "already owned"):
-			errors := validation.NewErrorMap()
-			errors.ForField("api_key").AddError(
-				"already_owned",
-				fmt.Sprintf("This node has already been claimed. Please visit %s and unclaim it first.", api.config.GetString(config.FlagMMNAddress.Name)),
-			)
-			utils.SendValidationErrorMessage(writer, errors)
+			msg := fmt.Sprintf("This node has already been claimed. Please visit %s and unclaim it first.", api.config.GetString(config.FlagMMNAddress.Name))
+			c.Error(apierror.Unprocessable(msg, contract.ErrCodeMMNNodeAlreadyClaimed))
 		case strings.Contains(err.Error(), "invalid api key"):
-			errors := validation.NewErrorMap()
-			errors.ForField("api_key").AddError("not_found", "Invalid API key")
-			utils.SendValidationErrorMessage(writer, errors)
+			c.Error(apierror.Unprocessable("Invalid API key", contract.ErrCodeMMNAPIKey))
 		default:
-			utils.SendError(writer, err, http.StatusInternalServerError)
+			c.Error(apierror.Internal("Failed to register to MMN", contract.ErrCodeMMNRegistration))
 		}
 		return
 	}
@@ -148,17 +134,15 @@ func (api *mmnAPI) SetApiKey(c *gin.Context) {
 // description: Clears MMN's API key from config
 // responses:
 //   200:
-//     description: MMN's API key removed
+//     description: MMN API key removed
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/APIError"
 func (api *mmnAPI) ClearApiKey(c *gin.Context) {
-	writer := c.Writer
-
 	api.config.RemoveUser(config.FlagMMNAPIKey.Name)
 	if err := api.config.SaveUserConfig(); err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Failed to clear API key", contract.ErrCodeConfigSave))
 		return
 	}
 }

@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // NewSessionQuery creates session query with default values.
@@ -71,20 +71,20 @@ type SessionQuery struct {
 }
 
 // Bind creates and validates query from API request.
-func (q *SessionQuery) Bind(request *http.Request) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
+func (q *SessionQuery) Bind(request *http.Request) *apierror.APIError {
+	v := apierror.NewValidator()
 
 	qs := request.URL.Query()
 	if qStr := qs.Get("date_from"); qStr != "" {
 		if qVal, err := parseDate(qStr); err != nil {
-			errs.ForField("date_from").Add(err)
+			v.Invalid("date_from", "Cannot parse 'date_from'")
 		} else {
 			q.DateFrom = qVal
 		}
 	}
 	if qStr := qs.Get("date_to"); qStr != "" {
 		if qVal, err := parseDate(qStr); err != nil {
-			errs.ForField("date_to").Add(err)
+			v.Invalid("date_to", "Cannot parse 'date_to'")
 		} else {
 			q.DateTo = qVal
 		}
@@ -108,7 +108,7 @@ func (q *SessionQuery) Bind(request *http.Request) *validation.FieldErrorMap {
 		q.Status = &qStr
 	}
 
-	return errs
+	return v.Err()
 }
 
 // ToFilter converts API query to storage filter.
@@ -156,12 +156,19 @@ type SessionListQuery struct {
 }
 
 // Bind creates and validates query from API request.
-func (q *SessionListQuery) Bind(request *http.Request) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
-	errs.Set(q.PaginationQuery.Bind(request))
-	errs.Set(q.SessionQuery.Bind(request))
-
-	return errs
+func (q *SessionListQuery) Bind(request *http.Request) *apierror.APIError {
+	v := apierror.NewValidator()
+	if err := q.PaginationQuery.Bind(request); err != nil {
+		for field, fieldErr := range err.Err.Fields {
+			v.Fail(field, fieldErr.Code, fieldErr.Message)
+		}
+	}
+	if err := q.SessionQuery.Bind(request); err != nil {
+		for field, fieldErr := range err.Err.Fields {
+			v.Fail(field, fieldErr.Code, fieldErr.Message)
+		}
+	}
+	return v.Err()
 }
 
 // NewSessionListResponse maps to API session list.

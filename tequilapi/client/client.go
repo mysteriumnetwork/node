@@ -26,11 +26,11 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // NewClient returns a new instance of Client
@@ -766,29 +766,13 @@ func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
 
 	// non 200 status codes return a generic error and we can't use it, instead
 	// the response contains validation JSON which we can use to extract the error
-	if err != nil && response == nil {
-		return err
-	}
-
-	defer response.Body.Close()
-
-	if response.StatusCode == 200 {
-		return nil
-	}
-
-	// TODO this should probably be wrapped and moved into the validation package
-	type validationResponse struct {
-		Message string                              `json:"message"`
-		Errors  map[string][]*validation.FieldError `json:"errors"`
-	}
-	res := validationResponse{}
-	err = parseResponseJSON(response, &res)
 	if err != nil {
 		return err
 	}
+	defer response.Body.Close()
 
-	if res.Errors != nil && res.Errors["api_key"] != nil && res.Errors["api_key"][0] != nil {
-		return errors.New((res.Errors["api_key"][0]).Message)
+	if response.StatusCode != 200 {
+		return apierror.Parse(response)
 	}
 
 	return nil

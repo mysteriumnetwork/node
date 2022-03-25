@@ -20,14 +20,12 @@ package endpoints
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 
@@ -95,7 +93,7 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).List
 
-	g := gin.Default()
+	g := summonTestGin()
 	g.GET(url, handlerFunc)
 	g.ServeHTTP(resp, req)
 
@@ -134,7 +132,7 @@ func Test_SessionsEndpoint_ListRespectsFilters(t *testing.T) {
 		nil,
 	)
 	resp := httptest.NewRecorder()
-	g := gin.Default()
+	g := summonTestGin()
 	g.GET(path, NewSessionsEndpoint(ssm).List)
 	g.ServeHTTP(resp, req)
 
@@ -168,16 +166,12 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).List
-	g := gin.Default()
+	g := summonTestGin()
 	g.GET(path, handlerFunc)
 	g.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-
-	assert.Equal(t,
-		fmt.Sprintf(`{"message":%q}`, mockErr.Error()),
-		resp.Body.String(),
-	)
+	assert.Equal(t, "err_session_list", apierror.Parse(resp.Result()).Err.Code)
 }
 
 func Test_SessionsEndpoint_StatsAggregated(t *testing.T) {
@@ -195,7 +189,7 @@ func Test_SessionsEndpoint_StatsAggregated(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).StatsAggregated
-	g := gin.Default()
+	g := summonTestGin()
 	g.GET(path, handlerFunc)
 	g.ServeHTTP(resp, req)
 
@@ -229,7 +223,7 @@ func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).StatsDaily
-	g := gin.Default()
+	g := summonTestGin()
 	g.GET(path, handlerFunc)
 	g.ServeHTTP(resp, req)
 

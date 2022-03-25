@@ -18,11 +18,10 @@
 package contract
 
 import (
-	"errors"
 	"math/big"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // IdentityRefDTO represents unique identity reference.
@@ -96,12 +95,12 @@ type IdentityCreateRequest struct {
 }
 
 // Validate validates fields in request
-func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
-	errors := validation.NewErrorMap()
+func (r IdentityCreateRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").Required()
+		v.Required("passphrase")
 	}
-	return errors
+	return v.Err()
 }
 
 // IdentityUnlockRequest request used for identity unlocking.
@@ -111,12 +110,12 @@ type IdentityUnlockRequest struct {
 }
 
 // Validate validates fields in request
-func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
-	errors := validation.NewErrorMap()
+func (r IdentityUnlockRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").Required()
+		v.Required("passphrase")
 	}
-	return errors
+	return v.Err()
 }
 
 // IdentityCurrentRequest request used for current identity remembering.
@@ -127,12 +126,12 @@ type IdentityCurrentRequest struct {
 }
 
 // Validate validates fields in request
-func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
-	errors := validation.NewErrorMap()
+func (r IdentityCurrentRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").Required()
+		v.Required("passphrase")
 	}
-	return errors
+	return v.Err()
 }
 
 // IdentityRegisterRequest represents the identity registration user input parameters
@@ -170,13 +169,13 @@ type IdentityImportRequest struct {
 }
 
 // Validate validates the import request.
-func (i *IdentityImportRequest) Validate() error {
+func (i *IdentityImportRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
 	if len(i.CurrentPassphrase) == 0 {
-		return errors.New("current_passphrase must be provided")
+		v.Required("current_passphrase")
 	}
 	if len(i.Data) == 0 {
-		return errors.New("data must be provided")
+		v.Required("data")
 	}
-
-	return nil
+	return v.Err()
 }

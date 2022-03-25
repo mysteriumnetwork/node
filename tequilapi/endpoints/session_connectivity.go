@@ -53,7 +53,6 @@ type sessionConnectivityEndpoint struct {
 //     schema:
 //       "$ref": "#/definitions/ConnectivityStatus"
 func (e *sessionConnectivityEndpoint) List(c *gin.Context) {
-	resp := c.Writer
 	r := sessionConnectivityStatusCollection{
 		Entries: []*sessionConnectivityStatus{},
 	}
@@ -68,7 +67,7 @@ func (e *sessionConnectivityEndpoint) List(c *gin.Context) {
 		})
 	}
 
-	utils.WriteAsJSON(r, resp)
+	utils.WriteAsJSON(r, c.Writer)
 }
 
 // AddRoutesForConnectivityStatus attaches connectivity statuses endpoints to router.

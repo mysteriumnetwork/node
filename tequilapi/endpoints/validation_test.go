@@ -26,8 +26,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/mysteriumnetwork/node/config"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +38,7 @@ func Test_EthEndpoints(t *testing.T) {
 	err := config.Current.LoadUserConfig(configFileName)
 	assert.NoError(t, err)
 
-	g := gin.Default()
+	g := summonTestGin()
 	err = AddRoutesForValidator(g)
 	assert.NoError(t, err)
 

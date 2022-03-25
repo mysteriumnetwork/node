@@ -21,47 +21,24 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 var defaultFormats = strfmt.NewFormats()
 
-func parseInt(str string) (*int, *validation.FieldError) {
+func parseInt(str string) (*int, error) {
 	value, err := strconv.Atoi(str)
 	if err != nil {
-		return nil, &validation.FieldError{Code: "invalid", Message: err.Error()}
+		return nil, err
 	}
 
 	return &value, nil
 }
 
-func parseDate(str string) (*strfmt.Date, *validation.FieldError) {
+func parseDate(str string) (*strfmt.Date, error) {
 	value, err := defaultFormats.Parse("date", str)
 	if err != nil {
-		return nil, &validation.FieldError{Code: "invalid", Message: err.Error()}
+		return nil, err
 	}
 
 	return value.(*strfmt.Date), nil
-}
-
-// ErrorResponse common error response
-// swagger:model ErrorResponse
-type ErrorResponse struct {
-	OriginalError string `json:"original_error"`
-	Message       string `json:"message"`
-}
-
-// WithErrorResponse factory function
-func WithErrorResponse(msg string, err error) ErrorResponse {
-	return ErrorResponse{OriginalError: err.Error(), Message: msg}
-}
-
-// InvalidRequestError factory function
-func InvalidRequestError(err error) ErrorResponse {
-	return ErrorResponse{OriginalError: err.Error(), Message: "invalid request"}
-}
-
-// InternalError factory function
-func InternalError(err error) ErrorResponse {
-	return ErrorResponse{OriginalError: err.Error(), Message: "internal error"}
 }

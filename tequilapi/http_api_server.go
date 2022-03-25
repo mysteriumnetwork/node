@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
-
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/tequilapi/middlewares"
 
 	"github.com/mysteriumnetwork/node/core/node"
@@ -69,6 +69,7 @@ func NewServer(
 	g.Use(gin.Recovery())
 	g.Use(cors.New(corsConfig))
 	g.Use(middlewares.NewHostFilter())
+	g.Use(apierror.ErrorHandler)
 
 	for _, h := range handlers {
 		err := h(g)

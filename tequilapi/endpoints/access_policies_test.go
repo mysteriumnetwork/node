@@ -70,7 +70,7 @@ func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 func Test_Get_AccessPolicies_WhenRequestFails_ReturnsError(t *testing.T) {
 	server := newTestServer(http.StatusInternalServerError, `{"error": "something bad"}`)
 
-	router := gin.Default()
+	router := summonTestGin()
 	err := AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL)(router)
 	assert.Nil(t, err)
 
