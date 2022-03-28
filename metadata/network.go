@@ -23,6 +23,7 @@ type NetworkDefinition struct {
 	AccessPolicyOracleAddress string
 	BrokerAddresses           []string
 	TransactorAddress         string
+	AffiliatorAddress         string
 	TransactorIdentity        string
 	Chain1                    ChainDefinition
 	Chain2                    ChainDefinition
@@ -66,6 +67,7 @@ var MainnetDefinition = NetworkDefinition{
 	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
 	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
+	AffiliatorAddress:         "https://affiliator.mysterium.network/api/v1",
 	Chain1: ChainDefinition{ // TODO: Update when mainnet deployed.
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
 		ChannelImplAddress: "0xbd20839b331a7a8d10e34cdf7219edf334814c4f",
@@ -96,6 +98,7 @@ var MainnetDefinition = NetworkDefinition{
 		"trust.mysterium.network":      {"51.15.116.186", "51.15.72.87"},
 		"broker.mysterium.network":     {"51.15.116.186", "51.15.72.87"},
 		"transactor.mysterium.network": {"51.15.116.186", "51.15.72.87"},
+		"affiliator.mysterium.network": {"51.15.116.186", "51.15.72.87"},
 		"pilvytis.mysterium.network":   {"51.15.116.186", "51.15.72.87"},
 	},
 	DefaultChainID:    137,

@@ -31,6 +31,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	appconfig "github.com/mysteriumnetwork/node/config"
@@ -84,8 +87,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	psort "github.com/mysteriumnetwork/payments/client/sort"
 )
 
 // UIServer represents our web server
@@ -163,6 +164,7 @@ type Dependencies struct {
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
 	Transactor        *registry.Transactor
+	Affiliator        *registry.Affiliator
 	BCHelper          *paymentClient.MultichainBlockchainClient
 	ProviderRegistrar *registry.ProviderRegistrar
 
@@ -767,6 +769,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		di.EventBus,
 		di.BCHelper,
 	)
+	di.Affiliator = registry.NewAffiliator(di.HTTPClient, options.Affiliator.AffiliatorEndpointAddress)
 
 	registryCfg := registry.IdentityRegistryConfig{
 		TransactorPollInterval: options.Payments.RegistryTransactorPollInterval,
@@ -780,6 +783,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	allow := []string{
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
+		options.Affiliator.AffiliatorEndpointAddress,
 		hermesURL,
 		options.PilvytisAddress,
 	}

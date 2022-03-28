@@ -40,6 +40,35 @@
         }
       }
     },
+    "/affiliator/token/{token}/reward": {
+      "post": {
+        "summary": "Returns the amount of reward for a token (affiliator)",
+        "operationId": "AffiliatorTokenReward",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Token for which to lookup the reward",
+            "name": "token",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token Reward",
+            "schema": {
+              "$ref": "#/definitions/TokenRewardAmount"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/auth/authenticate": {
       "post": {
         "description": "Authenticates user and issues auth token",
@@ -990,64 +1019,6 @@
           },
           "500": {
             "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
-    "/identities/{id}/referral": {
-      "get": {
-        "description": "Gets a referral token for the given identity if a campaign exists",
-        "summary": "Gets referral token",
-        "operationId": "Referral",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to get a token",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Token response"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
-    "/identities/{id}/referral-available": {
-      "get": {
-        "description": "Verifies user's eligibility and the presence of an applicable public campaign",
-        "tags": [
-          "Referral",
-          "availability"
-        ],
-        "summary": "Checks if the user can obtain a referral token",
-        "operationId": "check",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to get a token",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Referral token is available for the given identity"
-          },
-          "500": {
-            "description": "Failed to check or token is not available",
             "schema": {
               "$ref": "#/definitions/APIError"
             }
@@ -2463,6 +2434,7 @@
       "post": {
         "summary": "Returns the amount of reward for a token",
         "operationId": "Reward",
+        "deprecated": true,
         "parameters": [
           {
             "type": "string",

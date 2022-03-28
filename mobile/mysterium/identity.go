@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/mysteriumnetwork/payments/crypto"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // GetIdentityRequest represents identity request.
@@ -160,7 +161,7 @@ func (mb *MobileNode) IsFreeRegistrationEligible(identityAddress string) (bool, 
 
 // RegistrationTokenReward returns the reward amount for a given token.
 func (mb *MobileNode) RegistrationTokenReward(token string) (float64, error) {
-	reward, err := mb.transactor.RegistrationTokenReward(token)
+	reward, err := mb.affiliator.RegistrationTokenReward(token)
 	if err != nil {
 		return 0, err
 	}

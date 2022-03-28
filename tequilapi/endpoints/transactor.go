@@ -53,7 +53,6 @@ type Transactor interface {
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
-	RegistrationTokenReward(token string) (*big.Int, error)
 	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 	GetFreeProviderRegistrationEligibility() (bool, error)
 }
@@ -81,6 +80,7 @@ type settlementHistoryProvider interface {
 
 type transactorEndpoint struct {
 	transactor                Transactor
+	affiliator                Affiliator
 	identityRegistry          identityRegistry
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
@@ -580,6 +580,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 // swagger:operation POST /transactor/token/{token}/reward Reward
 // ---
 // summary: Returns the amount of reward for a token
+// deprecated: true
 // parameters:
 // - in: path
 //   name: token
@@ -597,7 +598,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 //       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 	token := c.Param("token")
-	reward, err := te.transactor.RegistrationTokenReward(token)
+	reward, err := te.affiliator.RegistrationTokenReward(token)
 	if err != nil {
 		c.Error(err)
 		return
@@ -786,6 +787,7 @@ func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
 	transactor Transactor,
+	affiliator Affiliator,
 	promiseSettler promiseSettler,
 	settlementHistoryProvider settlementHistoryProvider,
 	addressProvider addressProvider,
@@ -793,6 +795,7 @@ func AddRoutesForTransactor(
 	bhandler beneficiarySaver,
 ) func(*gin.Engine) error {
 	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bprovider, bhandler)
+	a := NewAffiliatorEndpoint(affiliator)
 
 	return func(e *gin.Engine) error {
 		idGroup := e.Group("/identities")
@@ -814,7 +817,7 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/increase/async", te.SettleIntoStakeAsync)
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
-			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
+			transGroup.GET("/token/:token/reward", a.TokenRewardAmount)
 			transGroup.GET("/chain-summary", te.ChainSummary)
 		}
 		return nil
