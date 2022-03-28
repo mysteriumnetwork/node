@@ -364,7 +364,7 @@ func (c *cliApp) mmnApiKey(args []string) (err error) {
 		return fmt.Errorf("failed to set MMN API key: %w", err)
 	}
 
-	clio.Success(fmt.Sprint("MMN API key configured."))
+	clio.Success("MMN API key configured.")
 	return nil
 }
 
