@@ -42,7 +42,7 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
-	github.com/mysteriumnetwork/payments v1.0.1-0.20220323141827-60075846cf4a
+	github.com/mysteriumnetwork/payments v1.0.1-0.20220328090759-e12e904ecd62
 	github.com/mysteriumnetwork/terms v0.0.40
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
