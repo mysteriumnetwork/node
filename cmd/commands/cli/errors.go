@@ -32,7 +32,7 @@ var (
 )
 
 func errUnknownSubCommand(cmd string) error {
-	return fmt.Errorf("unknown sub-command '%s'\n", cmd)
+	return fmt.Errorf("unknown sub-command '%s'", cmd)
 }
 
 func formatForHuman(err error) string {

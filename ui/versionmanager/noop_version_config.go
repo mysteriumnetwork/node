@@ -60,6 +60,6 @@ func (vm *NoOpVersionConfig) uiDir() string {
 	return ""
 }
 
-func (vm *NoOpVersionConfig) write(w nodeUIVersion) {
-	return
+func (vm *NoOpVersionConfig) write(w nodeUIVersion) error {
+	return nil
 }

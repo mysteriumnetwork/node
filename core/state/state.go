@@ -31,14 +31,13 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	nodeSession "github.com/mysteriumnetwork/node/session"
-	sevent "github.com/mysteriumnetwork/node/session/event"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -142,7 +141,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 
 func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 	ids := k.deps.IdentityProvider.GetIdentities()
-	identities := make([]event.Identity, len(ids))
+	identities := make([]stateEvent.Identity, len(ids))
 	for idx, id := range ids {
 		status, err := k.deps.IdentityRegistry.GetRegistrationStatus(k.deps.ChainID, id)
 		if err != nil {
@@ -161,7 +160,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 		}
 
 		earnings := k.deps.EarningsProvider.GetEarningsDetailed(k.deps.ChainID, id)
-		stateIdentity := event.Identity{
+		stateIdentity := stateEvent.Identity{
 			Address:            id.Address,
 			RegistrationStatus: status,
 			ChannelAddress:     channelAddress,
@@ -181,13 +180,13 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(servicestate.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeServiceSessionEvent); err != nil {
+	if err := bus.SubscribeAsync(sessionEvent.AppTopicSession, k.consumeServiceSessionEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(sevent.AppTopicDataTransferred, k.consumeServiceSessionStatisticsEvent); err != nil {
+	if err := bus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, k.consumeServiceSessionStatisticsEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(sevent.AppTopicTokensEarned, k.consumeServiceSessionEarningsEvent); err != nil {
+	if err := bus.SubscribeAsync(sessionEvent.AppTopicTokensEarned, k.consumeServiceSessionEarningsEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, k.consumeConnectionStateEvent); err != nil {
@@ -271,24 +270,24 @@ func (k *Keeper) getServiceByID(id string) (se contract.ServiceInfoDTO, found bo
 }
 
 // consumeServiceSessionEvent consumes the session change events
-func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
+func (k *Keeper) consumeServiceSessionEvent(e sessionEvent.AppEventSession) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
 	switch e.Status {
-	case sevent.CreatedStatus:
+	case sessionEvent.CreatedStatus:
 		k.addSession(e)
 		k.incrementConnectCount(e.Service.ID, false)
-	case sevent.RemovedStatus:
+	case sessionEvent.RemovedStatus:
 		k.removeSession(e)
-	case sevent.AcknowledgedStatus:
+	case sessionEvent.AcknowledgedStatus:
 		k.incrementConnectCount(e.Service.ID, true)
 	}
 
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) addSession(e sevent.AppEventSession) {
+func (k *Keeper) addSession(e sessionEvent.AppEventSession) {
 	k.state.Sessions = append(k.state.Sessions, session.History{
 		SessionID:       nodeSession.ID(e.Session.ID),
 		Direction:       session.DirectionProvided,
@@ -304,7 +303,7 @@ func (k *Keeper) addSession(e sevent.AppEventSession) {
 	})
 }
 
-func (k *Keeper) removeSession(e sevent.AppEventSession) {
+func (k *Keeper) removeSession(e sessionEvent.AppEventSession) {
 	found := false
 	for i := range k.state.Sessions {
 		if string(k.state.Sessions[i].SessionID) == e.Session.ID {
@@ -323,7 +322,7 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	evt, ok := e.(sevent.AppEventDataTransferred)
+	evt, ok := e.(sessionEvent.AppEventDataTransferred)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for session state update")
 		return
@@ -353,7 +352,7 @@ func (k *Keeper) updateSessionEarnings(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	evt, ok := e.(sevent.AppEventTokensEarned)
+	evt, ok := e.(sessionEvent.AppEventTokensEarned)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return
@@ -531,7 +530,7 @@ func (k *Keeper) incrementConnectCount(serviceID string, isSuccess bool) {
 }
 
 // GetState returns the current state
-func (k *Keeper) GetState() event.State {
+func (k *Keeper) GetState() stateEvent.State {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 

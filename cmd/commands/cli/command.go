@@ -125,7 +125,7 @@ const (
 	statusNotConnected        = string(connectionstate.NotConnected)
 )
 
-var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
+var errTermsNotAgreed = errors.New("you must agree with provider and consumer terms of use in order to use this command")
 
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
@@ -151,7 +151,7 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 
 	version := c.config.GetString(contract.TermsVersion)
 	if version != terms.TermsVersion {
-		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
+		return fmt.Errorf("you've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
 	}
 
 	return nil
@@ -364,7 +364,7 @@ func (c *cliApp) mmnApiKey(args []string) (err error) {
 		return fmt.Errorf("failed to set MMN API key: %w", err)
 	}
 
-	clio.Success(fmt.Sprint("MMN API key configured."))
+	clio.Success("MMN API key configured.")
 	return nil
 }
 

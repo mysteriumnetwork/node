@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
-	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/rs/zerolog/log"
@@ -131,22 +130,6 @@ func PackageMacOSArm64() error {
 func PackageWindowsAmd64() error {
 	logconfig.Bootstrap()
 	if err := packageStandalone("build/myst/myst_windows_amd64.exe", "windows", "amd64"); err != nil {
-		return err
-	}
-	return env.IfRelease(storage.UploadArtifacts)
-}
-
-// PackageIOS builds and stores iOS package
-func PackageIOS() error {
-	job.Precondition(func() bool {
-		pr, _ := env.IsPR()
-		fullBuild, _ := env.IsFullBuild()
-		return !pr || fullBuild
-	})
-	logconfig.Bootstrap()
-	mg.Deps(vendordModules)
-
-	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -286,28 +269,6 @@ func PackageDockerSwaggerRedoc() error {
 	})
 }
 
-// vendordModules uses vend tool to create vendor directory from installed go modules.
-// This is a temporary solution needed for ios and android builds since gomobile
-// does not support go modules yet and go mod vendor does not include c dependencies.
-func vendordModules() error {
-	mg.Deps(checkVend)
-	return sh.RunV("vend")
-}
-
-func checkVend() error {
-	path, _ := util.GetGoBinaryPath("vend")
-	if path != "" {
-		fmt.Println("Tool 'vend' already installed")
-		return nil
-	}
-	err := goGet("github.com/mysteriumnetwork/vend")
-	if err != nil {
-		fmt.Println("could not go get vend")
-		return err
-	}
-	return nil
-}
-
 func goGet(pkg string) error {
 	return sh.RunWith(map[string]string{"GO111MODULE": "off"}, "go", "get", "-u", pkg)
 }
@@ -335,15 +296,6 @@ func packageStandalone(binaryPath, os, arch string) error {
 		"BINARY": binaryPath,
 	}
 	return sh.RunWith(envs, "bin/package_standalone", os)
-}
-
-func packageSupervisor(os, arch string) error {
-	log.Info().Msgf("Packaging supervisor %s %s", os, arch)
-	envs := map[string]string{
-		"GOOS":   os,
-		"GOARCH": arch,
-	}
-	return sh.RunWith(envs, "bin/package_supervisor", os, arch)
 }
 
 func packageDebian(binaryPath, arch string) error {

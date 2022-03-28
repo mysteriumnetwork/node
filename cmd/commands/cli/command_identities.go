@@ -248,13 +248,13 @@ func (c *cliApp) settle(args []string) (err error) {
 		clio.Info("Usage: " + usageSettle)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
-			clio.Warn("could not get transactor fee: ", err)
+			clio.Warn("Could not get transactor fee:", err)
 		}
 		clio.Info(fmt.Sprintf("Transactor fee: %s MYST", fees.SettlementTokens))
 
 		hermesPct, err := decimal.NewFromString(fees.HermesPercent)
 		if err != nil {
-			clio.Info(fmt.Sprintf("Hermes fee: COULD NOT RETIREVE"))
+			clio.Info("Could not retrieve hermes fee:", err)
 		}
 		clio.Info(fmt.Sprintf("Hermes fee: %s%%", hermesPct.Mul(decimal.NewFromInt(100)).StringFixed(2)))
 		return errWrongArgumentCount
@@ -371,7 +371,7 @@ func (c *cliApp) setBeneficiary(actionArgs []string) error {
 			}
 
 			if st.Error != "" {
-				return fmt.Errorf("Could not set new beneficiary address: %s", st.Error)
+				return fmt.Errorf("could not set new beneficiary address: %s", st.Error)
 			}
 
 			data, err := c.tequilapi.Beneficiary(address)
@@ -405,7 +405,7 @@ func (c *cliApp) getBeneficiaryStatus(actionArgs []string) error {
 
 	st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
 	if err != nil {
-		return fmt.Errorf("Could not get beneficiary change status: %w", err)
+		return fmt.Errorf("could not get beneficiary change status: %w", err)
 	}
 
 	clio.Info("Last change request information:")
@@ -425,12 +425,12 @@ func (c *cliApp) withdraw(args []string) error {
 		clio.Info("Usage: " + usageWithdraw)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
-			clio.Warn("could not get transactor fee: ", err)
+			clio.Warn("Could not get transactor fee:", err)
 		}
 		clio.Info(fmt.Sprintf("Transactor fee: %s MYST", fees.SettlementTokens))
 		hermesPct, err := decimal.NewFromString(fees.HermesPercent)
 		if err != nil {
-			clio.Info(fmt.Sprintf("Hermes fee: COULD NOT RETIREVE"))
+			clio.Info("Could not retrieve hermes fee:", err)
 		}
 		clio.Info(fmt.Sprintf("Hermes fee: %s%%", hermesPct.Mul(decimal.NewFromInt(100)).StringFixed(2)))
 		return errWrongArgumentCount
@@ -604,7 +604,7 @@ func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	address := actionArgs[0]
 	history, err := c.tequilapi.WithdrawalHistory(address)
 	if err != nil {
-		return fmt.Errorf("Could not get last withdrawal: %w", err)
+		return fmt.Errorf("could not get last withdrawal: %w", err)
 	}
 	if history.TotalItems == 0 {
 		clio.Info("No withdrawals found")
@@ -618,11 +618,11 @@ func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	clio.Info("Beneficiary: ", lastWithdrawal.Beneficiary)
 	clio.Info("Amount: ", money.New(lastWithdrawal.Amount))
 	clio.Info("Fees: ", money.New(lastWithdrawal.Fees))
-	clio.Info("Blockchain explorer Url: ", lastWithdrawal.BlockExplorerURL)
+	clio.Info("Blockchain explorer URL: ", lastWithdrawal.BlockExplorerURL)
 	if lastWithdrawal.Error != "" {
-		clio.Warn(fmt.Sprintf("Error: %s", lastWithdrawal.Error))
+		clio.Warnf("Error: %s", lastWithdrawal.Error)
 	} else {
-		clio.Info(fmt.Sprintf("Error: none"))
+		clio.Info("Error: none")
 	}
 	return nil
 }

@@ -135,6 +135,9 @@ func copyConfig(target string) error {
 		targetOS = runtime.GOOS
 	}
 	osSpecific, err := filepath.Abs(path.Join("bin", "package", "config", targetOS))
+	if err != nil {
+		return err
+	}
 	if err := fileutil.CopyDirs(osSpecific, dest); err != nil {
 		return err
 	}
