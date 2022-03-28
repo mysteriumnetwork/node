@@ -2835,6 +2835,15 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/market"
     },
+    "Address": {
+      "type": "array",
+      "title": "Address represents the 20 byte address of an Ethereum account.",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "github.com/ethereum/go-ethereum/common"
+    },
     "AuthRequest": {
       "type": "object",
       "title": "AuthRequest request used to authenticate to API.",
@@ -3256,6 +3265,19 @@
       "x-go-name": "Status",
       "x-go-package": "github.com/mysteriumnetwork/node/ui/versionmanager"
     },
+    "EarningsDTO": {
+      "type": "object",
+      "title": "EarningsDTO holds earnings data.",
+      "properties": {
+        "earnings": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "earnings_total": {
+          "$ref": "#/definitions/Tokens"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "EligibilityResponse": {
       "description": "EligibilityResponse represents the eligibility response",
       "type": "object",
@@ -3520,6 +3542,13 @@
         },
         "earnings": {
           "$ref": "#/definitions/Int"
+        },
+        "earnings_per_hermes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/EarningsDTO"
+          },
+          "x-go-name": "EarningsPerHermes"
         },
         "earnings_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -4678,8 +4707,16 @@
       "type": "object",
       "properties": {
         "hermes_id": {
+          "description": "Deprecated",
           "type": "string",
           "x-go-name": "HermesID"
+        },
+        "hermes_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Address"
+          },
+          "x-go-name": "HermesIDs"
         },
         "provider_id": {
           "type": "string",

@@ -241,10 +241,10 @@ func (c *cliApp) registerIdentity(actionArgs []string) error {
 	return nil
 }
 
-const usageSettle = "settle <providerIdentity>"
+const usageSettle = "settle <providerIdentity> [hermesID,hermesID2]"
 
 func (c *cliApp) settle(args []string) (err error) {
-	if len(args) != 1 {
+	if len(args) == 0 || len(args) > 2 {
 		clio.Info("Usage: " + usageSettle)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
@@ -259,18 +259,31 @@ func (c *cliApp) settle(args []string) (err error) {
 		clio.Info(fmt.Sprintf("Hermes fee: %s%%", hermesPct.Mul(decimal.NewFromInt(100)).StringFixed(2)))
 		return errWrongArgumentCount
 	}
+
 	hermesID, err := c.config.GetHermesID()
 	if err != nil {
 		return fmt.Errorf("could not get Hermes ID: %w", err)
 	}
+
+	hermesIDs := make([]common.Address, 0)
+	if len(args) == 2 {
+		ids := strings.Split(args[1], ",")
+		for _, h := range ids {
+			hermesIDs = append(hermesIDs, common.HexToAddress(h))
+		}
+	} else {
+		hermesIDs = append(hermesIDs, common.HexToAddress(hermesID))
+	}
+
+	clio.Infof("Will settle with hermes: %v\n", hermesIDs)
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), identity.FromAddress(hermesID), true)
+		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), hermesIDs, true)
 	}()
 
-	timeout := time.After(time.Minute * 2)
+	timeout := time.After(time.Minute * 5)
 	for {
 		select {
 		case <-timeout:

@@ -44,7 +44,7 @@ type balanceProvider interface {
 }
 
 type earningsProvider interface {
-	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
+	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpong_event.EarningsDetailed
 }
 
 type beneficiaryProvider interface {
@@ -331,15 +331,15 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		return
 	}
 
-	var stake = new(big.Int)
-	hermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
+	defaultHermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
 	if err != nil {
 		c.Error(apierror.Internal("Could not get active hermes: "+err.Error(), contract.ErrCodeActiveHermes))
 		return
 	}
 
+	var stake = new(big.Int)
 	if regStatus == registry.Registered {
-		data, err := ia.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
+		data, err := ia.bc.GetProviderChannel(chainID, defaultHermesID, common.HexToAddress(address), false)
 		if err != nil {
 			c.Error(apierror.Internal("Failed to check blockchain registration status: "+err.Error(), contract.ErrCodeIDBlockchainRegistrationCheck))
 			return
@@ -348,19 +348,29 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 	}
 
 	balance := ia.balanceProvider.GetBalance(chainID, id)
-	settlement := ia.earningsProvider.GetEarnings(chainID, id)
+	earnings := ia.earningsProvider.GetEarningsDetailed(chainID, id)
+
+	settlementsPerHermes := make(map[string]contract.EarningsDTO)
+	for h, earn := range earnings.PerHermes {
+		settlementsPerHermes[h.Hex()] = contract.EarningsDTO{
+			Earnings:      contract.NewTokens(earn.UnsettledBalance),
+			EarningsTotal: contract.NewTokens(earn.LifetimeBalance),
+		}
+	}
+
 	status := contract.IdentityDTO{
 		Address:             address,
 		RegistrationStatus:  regStatus.String(),
 		ChannelAddress:      channelAddress.Hex(),
 		Balance:             balance,
 		BalanceTokens:       contract.NewTokens(balance),
-		Earnings:            settlement.UnsettledBalance,
-		EarningsTokens:      contract.NewTokens(settlement.UnsettledBalance),
-		EarningsTotal:       settlement.LifetimeBalance,
-		EarningsTotalTokens: contract.NewTokens(settlement.LifetimeBalance),
+		Earnings:            earnings.Total.UnsettledBalance,
+		EarningsTokens:      contract.NewTokens(earnings.Total.UnsettledBalance),
+		EarningsTotal:       earnings.Total.LifetimeBalance,
+		EarningsTotalTokens: contract.NewTokens(earnings.Total.LifetimeBalance),
 		Stake:               stake,
-		HermesID:            hermesID.Hex(),
+		HermesID:            defaultHermesID.Hex(),
+		EarningsPerHermes:   contract.NewEarningsPerHermesDTO(earnings.PerHermes),
 	}
 	utils.WriteAsJSON(status, c.Writer)
 }

@@ -62,9 +62,9 @@ type Transactor interface {
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
-	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
+	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
-	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
 }
 
@@ -218,9 +218,9 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
-	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
+	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes ...common.Address) error {
 		go func() {
-			err := te.promiseSettler.ForceSettle(chainID, provider, hermes)
+			err := te.promiseSettler.ForceSettle(chainID, provider, hermes...)
 			if err != nil {
 				log.Error().Err(err).Msgf("Could not settle provider(%q) promises", provider.Address)
 			}
@@ -235,7 +235,7 @@ func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
 	c.Status(http.StatusAccepted)
 }
 
-func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, identity.Identity, common.Address) error) error {
+func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, identity.Identity, ...common.Address) error) error {
 	req := contract.SettleRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
@@ -243,8 +243,21 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 		return errors.Wrap(err, "failed to unmarshal settle request")
 	}
 
+	hermesIDs := []common.Address{
+		// TODO: Remove this ant just use req.HermesIDs when UI upgrades.
+		common.HexToAddress(req.HermesID),
+	}
+
+	if len(req.HermesIDs) > 0 {
+		hermesIDs = req.HermesIDs
+	}
+
+	if len(hermesIDs) == 0 {
+		return errors.New("must specify a hermes to settle with")
+	}
+
 	chainID := config.GetInt64(config.FlagChainID)
-	return errors.Wrap(settler(chainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID)), "settling failed")
+	return errors.Wrap(settler(chainID, identity.FromAddress(req.ProviderID), hermesIDs...), "settling failed")
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
@@ -549,9 +562,9 @@ func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
-	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
+	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes ...common.Address) error {
 		go func() {
-			err := te.promiseSettler.SettleIntoStake(chainID, provider, hermes)
+			err := te.promiseSettler.SettleIntoStake(chainID, provider, hermes...)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not settle into stake provider(%q) promises", provider.Address)
 			}

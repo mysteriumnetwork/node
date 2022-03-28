@@ -231,8 +231,11 @@ type SettlementDTO struct {
 // SettleRequest represents the request to settle hermes promises
 // swagger:model SettleRequestDTO
 type SettleRequest struct {
-	HermesID   string `json:"hermes_id"`
-	ProviderID string `json:"provider_id"`
+	HermesIDs  []common.Address `json:"hermes_ids"`
+	ProviderID string           `json:"provider_id"`
+
+	// Deprecated
+	HermesID string `json:"hermes_id"`
 }
 
 // WithdrawRequest represents the request to withdraw earnings to l1.

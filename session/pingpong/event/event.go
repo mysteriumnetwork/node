@@ -66,8 +66,14 @@ type AppEventBalanceChanged struct {
 // AppEventEarningsChanged represents a balance change event
 type AppEventEarningsChanged struct {
 	Identity identity.Identity
-	Previous Earnings
-	Current  Earnings
+	Previous EarningsDetailed
+	Current  EarningsDetailed
+}
+
+// EarningsDetailed returns total and split per hermes earnings
+type EarningsDetailed struct {
+	Total     Earnings
+	PerHermes map[common.Address]Earnings
 }
 
 // Earnings represents current identity earnings

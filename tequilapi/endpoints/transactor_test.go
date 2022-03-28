@@ -502,11 +502,11 @@ type mockSettler struct {
 	capturedFromChainID int64
 }
 
-func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ common.Address) error {
+func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ ...common.Address) error {
 	return ms.errToReturn
 }
 
-func (ms *mockSettler) SettleIntoStake(_ int64, providerID identity.Identity, hermesID common.Address) error {
+func (ms *mockSettler) SettleIntoStake(_ int64, providerID identity.Identity, hermesID ...common.Address) error {
 	return nil
 }
 

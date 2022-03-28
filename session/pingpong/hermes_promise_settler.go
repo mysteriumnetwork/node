@@ -100,9 +100,9 @@ type receivedPromise struct {
 
 // HermesPromiseSettler is responsible for settling the hermes promises.
 type HermesPromiseSettler interface {
-	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error
-	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
 }
@@ -189,7 +189,8 @@ func (aps *hermesPromiseSettler) loadInitialState(chainID int64, id identity.Ide
 	}
 
 	aps.currentState[id] = settlementState{
-		registered: true,
+		registered:       true,
+		settleInProgress: make(map[common.Address]struct{}),
 	}
 	return nil
 }
@@ -355,55 +356,69 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 }
 
 // SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
-func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error {
-	channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-	if !found {
-		return ErrNothingToSettle
+func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
+	for _, hermesID := range hermesIDs {
+		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
+		if !found {
+			return ErrNothingToSettle
+		}
+
+		hexR, err := hex.DecodeString(channel.lastPromise.R)
+		if err != nil {
+			return fmt.Errorf("could not decode R: %w", err)
+		}
+		channel.lastPromise.Promise.R = hexR
+		err = aps.settle(
+			func(promise crypto.Promise) (string, error) {
+				return aps.transactor.SettleIntoStake(hermesID.Hex(), providerID.Address, promise)
+			},
+			providerID,
+			hermesID,
+			channel.lastPromise.Promise,
+			channel.Beneficiary,
+			channel.Channel.Settled,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	hexR, err := hex.DecodeString(channel.lastPromise.R)
-	if err != nil {
-		return fmt.Errorf("could not decode R: %w", err)
-	}
-	channel.lastPromise.Promise.R = hexR
-	return aps.settle(
-		func(promise crypto.Promise) (string, error) {
-			return aps.transactor.SettleIntoStake(hermesID.Hex(), providerID.Address, promise)
-		},
-		providerID,
-		hermesID,
-		channel.lastPromise.Promise,
-		channel.Beneficiary,
-		channel.Channel.Settled,
-	)
+	return nil
 }
 
 // ErrNothingToSettle indicates that there is nothing to settle.
 var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
-func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error {
-	channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-	if !found {
-		return ErrNothingToSettle
+func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
+	for _, hermesID := range hermesIDs {
+		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
+		if !found {
+			return ErrNothingToSettle
+		}
+
+		hexR, err := hex.DecodeString(channel.lastPromise.R)
+		if err != nil {
+			return fmt.Errorf("could not decode R: %w", err)
+		}
+
+		channel.lastPromise.Promise.R = hexR
+		err = aps.settle(
+			func(promise crypto.Promise) (string, error) {
+				return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
+			},
+			providerID,
+			hermesID,
+			channel.lastPromise.Promise,
+			channel.Beneficiary,
+			channel.Channel.Settled,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	hexR, err := hex.DecodeString(channel.lastPromise.R)
-	if err != nil {
-		return fmt.Errorf("could not decode R: %w", err)
-	}
-
-	channel.lastPromise.Promise.R = hexR
-	return aps.settle(
-		func(promise crypto.Promise) (string, error) {
-			return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
-		},
-		providerID,
-		hermesID,
-		channel.lastPromise.Promise,
-		channel.Beneficiary,
-		channel.Channel.Settled,
-	)
+	return nil
 }
 
 // ForceSettle forces the settlement for a provider
@@ -463,13 +478,13 @@ func (aps *hermesPromiseSettler) Withdraw(
 	beneficiary common.Address,
 	amountToWithdraw *big.Int,
 ) error {
-	if aps.isSettling(providerID) {
+	if aps.isSettling(providerID, hermesID) {
 		return errors.New("provider already has settlement in progress")
 	}
 
-	aps.setSettling(providerID, true)
+	aps.setSettling(providerID, hermesID, true)
 	log.Info().Msgf("Marked provider %v as requesting settlement", providerID)
-	defer aps.setSettling(providerID, false)
+	defer aps.setSettling(providerID, hermesID, false)
 
 	if toChainID == 0 {
 		toChainID = aps.config.L1ChainID
@@ -820,17 +835,16 @@ func (aps *hermesPromiseSettler) settle(
 	beneficiary common.Address,
 	settled *big.Int,
 ) error {
-	if aps.isSettling(provider) {
+	if aps.isSettling(provider, hermesID) {
 		return errors.New("provider already has settlement in progress")
 	}
+	aps.setSettling(provider, hermesID, true)
+	defer aps.setSettling(provider, hermesID, false)
 
-	aps.setSettling(provider, true)
-	defer aps.setSettling(provider, false)
 	log.Info().Msgf("Marked provider %v as requesting settlement", provider)
 
 	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise)
 	if err != nil {
-		aps.setSettling(provider, false)
 		log.Error().Err(err).Msg("Could not update promise fee")
 		return err
 	}
@@ -843,14 +857,12 @@ func (aps *hermesPromiseSettler) settle(
 
 	fee, err := aps.bc.CalculateHermesFee(promise.ChainID, hermesID, amountToSettle)
 	if err != nil {
-		aps.setSettling(provider, false)
 		log.Error().Err(err).Msg("Could not calculate hermes fee")
 		return err
 	}
 
 	totalFees := new(big.Int).Add(fee, updatedPromise.Fee)
 	if totalFees.Cmp(amountToSettle) > 0 {
-		aps.setSettling(provider, false)
 		log.Error().Fields(map[string]interface{}{
 			"amountToSettle": amountToSettle.String(),
 			"promiseAmount":  updatedPromise.Amount.String(),
@@ -1062,7 +1074,7 @@ func (aps *hermesPromiseSettler) safeSub(a uint64, b uint64) uint64 {
 	return a - b
 }
 
-func (aps *hermesPromiseSettler) isSettling(id identity.Identity) bool {
+func (aps *hermesPromiseSettler) isSettling(id identity.Identity, hermesID common.Address) bool {
 	aps.lock.RLock()
 	defer aps.lock.RUnlock()
 	v, ok := aps.currentState[id]
@@ -1070,14 +1082,31 @@ func (aps *hermesPromiseSettler) isSettling(id identity.Identity) bool {
 		return false
 	}
 
-	return v.settleInProgress
+	if v.settleInProgress == nil {
+		v.settleInProgress = make(map[common.Address]struct{})
+		aps.currentState[id] = v
+	}
+
+	_, ok = v.settleInProgress[hermesID]
+
+	return ok
 }
 
-func (aps *hermesPromiseSettler) setSettling(id identity.Identity, settling bool) {
+func (aps *hermesPromiseSettler) setSettling(id identity.Identity, hermesID common.Address, settling bool) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	v := aps.currentState[id]
-	v.settleInProgress = settling
+
+	if v.settleInProgress == nil {
+		v.settleInProgress = make(map[common.Address]struct{})
+	}
+
+	if settling {
+		v.settleInProgress[hermesID] = struct{}{}
+	} else {
+		delete(v.settleInProgress, hermesID)
+	}
+
 	aps.currentState[id] = v
 }
 
@@ -1111,8 +1140,9 @@ func (aps *hermesPromiseSettler) handleNodeStop() {
 
 // settlementState earning calculations model
 type settlementState struct {
-	settleInProgress bool
-	registered       bool
+	registered bool
+
+	settleInProgress map[common.Address]struct{}
 }
 
 func (ss settlementState) needsSettling(threshold float64, zeroStakeThreshold float64, channel HermesChannel) bool {
@@ -1120,7 +1150,7 @@ func (ss settlementState) needsSettling(threshold float64, zeroStakeThreshold fl
 		return false
 	}
 
-	if ss.settleInProgress {
+	if _, ok := ss.settleInProgress[channel.HermesID]; ok {
 		return false
 	}
 
