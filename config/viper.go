@@ -66,13 +66,13 @@ func SearchMap(source map[string]interface{}, path []string) interface{} {
 		}
 
 		// Nested case
-		switch next.(type) {
+		switch next := next.(type) {
 		case map[interface{}]interface{}:
 			return SearchMap(cast.ToStringMap(next), path[1:])
 		case map[string]interface{}:
 			// Type assertion is safe here since it is only reached
 			// if the type of `next` is the same as the type being asserted
-			return SearchMap(next.(map[string]interface{}), path[1:])
+			return SearchMap(next, path[1:])
 		default:
 			// got a value but nested key expected, return "nil" for not found
 			return nil
