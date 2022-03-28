@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -49,7 +48,7 @@ const (
 
 // Discovery structure holds discovery service state
 type Discovery struct {
-	identityRegistry identity_registry.IdentityRegistry
+	identityRegistry registry.IdentityRegistry
 	ownIdentity      identity.Identity
 	proposalRegistry ProposalRegistry
 	proposalPingTTL  time.Duration
@@ -69,7 +68,7 @@ type Discovery struct {
 
 // NewService creates new discovery service
 func NewService(
-	identityRegistry identity_registry.IdentityRegistry,
+	identityRegistry registry.IdentityRegistry,
 	proposalRegistry ProposalRegistry,
 	proposalPingTTL time.Duration,
 	signerCreate identity.SignerFactory,
@@ -236,7 +235,7 @@ func (d *Discovery) checkRegistration() {
 		return
 	}
 	switch status {
-	case identity_registry.Registered:
+	case registry.Registered:
 		d.changeStatus(RegisterProposal)
 	default:
 		log.Info().Msgf("Identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)

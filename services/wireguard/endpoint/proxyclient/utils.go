@@ -40,19 +40,19 @@ func proxyHTTP1(ctx context.Context, left, right net.Conn) {
 	wg.Add(2)
 	go cpy(left, right)
 	go cpy(right, left)
-	groupdone := make(chan struct{}, 1)
+	groupDone := make(chan struct{}, 1)
 	go func() {
 		wg.Wait()
-		groupdone <- struct{}{}
+		groupDone <- struct{}{}
 	}()
 	select {
 	case <-ctx.Done():
 		left.Close()
 		right.Close()
-	case <-groupdone:
+	case <-groupDone:
 		return
 	}
-	<-groupdone
+	<-groupDone
 	return
 }
 
@@ -70,19 +70,19 @@ func proxyHTTP2(ctx context.Context, leftreader io.ReadCloser, leftwriter io.Wri
 	wg.Add(2)
 	go ltr(right, leftreader)
 	go rtl(leftwriter, right)
-	groupdone := make(chan struct{}, 1)
+	groupDone := make(chan struct{}, 1)
 	go func() {
 		wg.Wait()
-		groupdone <- struct{}{}
+		groupDone <- struct{}{}
 	}()
 	select {
 	case <-ctx.Done():
 		leftreader.Close()
 		right.Close()
-	case <-groupdone:
+	case <-groupDone:
 		return
 	}
-	<-groupdone
+	<-groupDone
 	return
 }
 
@@ -117,14 +117,14 @@ func delHopHeaders(header http.Header) {
 func hijack(hijackable interface{}) (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := hijackable.(http.Hijacker)
 	if !ok {
-		return nil, nil, errors.New("Connection doesn't support hijacking")
+		return nil, nil, errors.New("connection does not support hijacking")
 	}
 	conn, rw, err := hj.Hijack()
 	if err != nil {
 		return nil, nil, err
 	}
-	var emptytime time.Time
-	err = conn.SetDeadline(emptytime)
+	var emptyTime time.Time
+	err = conn.SetDeadline(emptyTime)
 	if err != nil {
 		conn.Close()
 		return nil, nil, err
@@ -144,13 +144,13 @@ func flush(flusher interface{}) bool {
 func copyBody(wr io.Writer, body io.Reader) {
 	buf := make([]byte, copyBuffer)
 	for {
-		bread, read_err := body.Read(buf)
-		var write_err error
+		bread, readErr := body.Read(buf)
+		var writeErr error
 		if bread > 0 {
-			_, write_err = wr.Write(buf[:bread])
+			_, writeErr = wr.Write(buf[:bread])
 			flush(wr)
 		}
-		if read_err != nil || write_err != nil {
+		if readErr != nil || writeErr != nil {
 			break
 		}
 	}

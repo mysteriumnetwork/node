@@ -87,7 +87,7 @@ func (s *Status) Duration() time.Duration {
 		return time.Duration(0)
 	}
 
-	return time.Now().Sub(s.StartedAt)
+	return time.Since(s.StartedAt)
 }
 
 const (

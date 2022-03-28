@@ -38,7 +38,7 @@ type NodeUIVersionConfig interface {
 	uiDir() string
 	uiDistPath(versionName string) string
 	uiDistFile(versionName string) string
-	write(w nodeUIVersion)
+	write(w nodeUIVersion) error
 }
 
 // VersionConfig ui version config
@@ -122,14 +122,13 @@ func (vm *VersionConfig) uiDistFile(versionName string) string {
 	return filepath.Join(vm.uiDistPath(versionName), nodeUIAssetName)
 }
 
-func (vm *VersionConfig) write(w nodeUIVersion) {
-	json, err := json.Marshal(w)
+func (vm *VersionConfig) write(w nodeUIVersion) error {
+	configJSON, err := json.Marshal(w)
 	if err != nil {
-		return
+		return err
 	}
 
-	err = ioutil.WriteFile(vm.whichFilePath(), json, 0644)
-	return
+	return ioutil.WriteFile(vm.whichFilePath(), configJSON, 0644)
 }
 
 func (vm *VersionConfig) uiDir() string {

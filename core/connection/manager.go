@@ -963,7 +963,7 @@ func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.C
 
 	m.eventBus.Publish(quality.AppTopicConsumerPingP2P, quality.PingEvent{
 		SessionID: string(sessionID),
-		Duration:  time.Now().Sub(start),
+		Duration:  time.Since(start),
 	})
 
 	return nil

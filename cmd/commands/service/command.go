@@ -204,7 +204,7 @@ func hasAcceptedTOS(ctx *cli.Context) error {
 
 	version := config.Current.GetString(contract.TermsVersion)
 	if version != terms.TermsVersion {
-		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
+		return fmt.Errorf("you've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
 	}
 
 	return nil

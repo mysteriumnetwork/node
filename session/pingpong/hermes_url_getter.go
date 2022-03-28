@@ -64,7 +64,7 @@ const suffix = "api/v2"
 func (hug *HermesURLGetter) normalizeAddress(address string) (string, error) {
 	u, err := url.ParseRequestURI(address)
 	if err != nil {
-		return "", fmt.Errorf("Could not parse hermes URL: %w", err)
+		return "", fmt.Errorf("could not parse hermes URL: %w", err)
 	}
 	return fmt.Sprintf("%v://%v/%v", u.Scheme, u.Host, suffix), nil
 }

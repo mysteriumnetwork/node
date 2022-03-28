@@ -208,7 +208,7 @@ func (c *command) topup(ctx *cli.Context) {
 	amount := ctx.String(flagAmount.Name)
 
 	amountF, err := strconv.ParseFloat(amount, 64)
-	if amountF <= 0 {
+	if err != nil || amountF <= 0 {
 		clio.Warn("Top-up amount is required and must be greater than 0")
 		return
 	}
@@ -321,7 +321,7 @@ func (c *command) registerIdentity(identity string, token *string) {
 func (c *command) identityIsUnregistered(identityAddress string) (bool, error) {
 	identityStatus, err := c.tequilapi.Identity(identityAddress)
 	if err != nil {
-		return false, errors.New("Failed to get identity status")
+		return false, errors.New("failed to get identity status")
 	}
 
 	return identityStatus.RegistrationStatus == registry.Unregistered.String(), nil

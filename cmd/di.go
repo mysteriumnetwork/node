@@ -33,7 +33,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
-	appconfig "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/auth"
@@ -60,7 +59,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -122,7 +120,7 @@ type Dependencies struct {
 	Keystore         *identity.Keystore
 	IdentityManager  identity.Manager
 	SignerFactory    identity.SignerFactory
-	IdentityRegistry identity_registry.IdentityRegistry
+	IdentityRegistry registry.IdentityRegistry
 	IdentitySelector identity_selector.Handler
 	IdentityMover    *identity.Mover
 
@@ -289,7 +287,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	appconfig.Current.EnableEventPublishing(di.EventBus)
+	config.Current.EnableEventPublishing(di.EventBus)
 
 	di.handleNATStatusForPublicIP()
 
@@ -773,7 +771,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		TransactorPollTimeout:  options.Payments.RegistryTransactorPollTimeout,
 	}
 
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg); err != nil {
+	if di.IdentityRegistry, err = registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg); err != nil {
 		return err
 	}
 

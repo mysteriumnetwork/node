@@ -40,7 +40,6 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	p2pnat "github.com/mysteriumnetwork/node/p2p/nat"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
-	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/trace"
 )
@@ -189,7 +188,7 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 		registry.AppTopicIdentityRegistration:        s.sendRegistrationEvent,
 		sessionEvent.AppTopicSession:                 s.sendServiceSessionEvent,
 		trace.AppTopicTraceEvent:                     s.sendTraceEvent,
-		sevent.AppTopicDataTransferred:               s.sendServiceDataStatistics,
+		sessionEvent.AppTopicDataTransferred:         s.sendServiceDataStatistics,
 		AppTopicConsumerPingP2P:                      s.sendConsumerPingDistance,
 		AppTopicProviderPingP2P:                      s.sendProviderPingDistance,
 		identity.AppTopicResidentCountry:             s.sendResidentCountry,
@@ -267,7 +266,7 @@ func (s *Sender) sendConnectionEvent(e ConnectionEvent) {
 	s.sendEvent(connectionEvent, e)
 }
 
-func (s *Sender) sendServiceDataStatistics(e sevent.AppEventDataTransferred) {
+func (s *Sender) sendServiceDataStatistics(e sessionEvent.AppEventDataTransferred) {
 	session, err := s.recoverSessionContext(e.ID)
 	if err != nil {
 		log.Warn().Err(err).Msg("Can't recover session context")

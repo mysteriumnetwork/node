@@ -255,7 +255,7 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 		bus: bus,
 	}
 	bc := mockConsumerBalanceChecker{
-		errToReturn:         errors.New("No contract deployed"),
+		errToReturn:         errors.New("no contract deployed"),
 		mystBalanceToReturn: initialBalance,
 	}
 	cfg := defaultCfg
@@ -320,7 +320,7 @@ func TestConsumerBalanceTracker_InprogressUnregisteredBalanceReturnedWhenNoBount
 		bus: bus,
 	}
 	bc := mockConsumerBalanceChecker{
-		errToReturn:         errors.New("No contract deployed"),
+		errToReturn:         errors.New("no contract deployed"),
 		mystBalanceToReturn: initialBalance,
 	}
 	cfg := defaultCfg

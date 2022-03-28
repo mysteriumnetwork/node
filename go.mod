@@ -35,7 +35,7 @@ require (
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/feedback v1.1.2-0.20211228095831-9dfca34c9ab7
-	github.com/mysteriumnetwork/go-ci v0.0.0-20211124142828-37ca8ff3ef34
+	github.com/mysteriumnetwork/go-ci v0.0.0-20220328103729-c16a61419959
 	github.com/mysteriumnetwork/go-dvpn-web v1.8.1
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.2.2
@@ -64,7 +64,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
-	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86
+	golang.org/x/sys v0.0.0-20220327210214-530d0810a4d0
 	golang.zx2c4.com/wireguard v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671

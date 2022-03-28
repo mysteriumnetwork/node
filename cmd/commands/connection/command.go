@@ -200,12 +200,12 @@ func (c *command) handleTOS(ctx *cli.Context) error {
 
 	agreed := c.cfg.GetBool(contract.TermsConsumerAgreed)
 	if !agreed {
-		return errors.New("You must agree with consumer terms of use in order to use this command")
+		return errors.New("you must agree with consumer terms of use in order to use this command")
 	}
 
 	version := c.cfg.GetString(contract.TermsVersion)
 	if version != terms.TermsVersion {
-		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
+		return fmt.Errorf("you've agreed to terms of use version %s, but version %s is required", version, terms.TermsVersion)
 	}
 
 	return nil

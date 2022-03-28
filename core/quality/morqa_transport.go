@@ -305,5 +305,5 @@ func duration(startedAt time.Time) uint64 {
 		return 0
 	}
 
-	return uint64(time.Now().Sub(startedAt).Seconds())
+	return uint64(time.Since(startedAt).Seconds())
 }

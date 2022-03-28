@@ -26,11 +26,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
-	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	pinge "github.com/mysteriumnetwork/node/session/pingpong/event"
+	pingEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
@@ -129,7 +128,7 @@ func (hcr *HermesChannelRepository) List(chainID int64) []HermesChannel {
 }
 
 // GetEarnings returns all channels earnings for given identity combined from all hermeses possible
-func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Identity) event.Earnings {
+func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Identity) pingEvent.Earnings {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()
 
@@ -137,20 +136,20 @@ func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Ident
 }
 
 // GetEarningsDetailed returns earnings in a detailed format grouping them by hermes ID but also providing totals.
-func (hcr *HermesChannelRepository) GetEarningsDetailed(chainID int64, id identity.Identity) *event.EarningsDetailed {
+func (hcr *HermesChannelRepository) GetEarningsDetailed(chainID int64, id identity.Identity) *pingEvent.EarningsDetailed {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()
 
 	return hcr.sumChannelsDetailed(chainID, id)
 }
 
-func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identity.Identity) *event.EarningsDetailed {
-	result := &event.EarningsDetailed{
-		Total: event.Earnings{
+func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identity.Identity) *pingEvent.EarningsDetailed {
+	result := &pingEvent.EarningsDetailed{
+		Total: pingEvent.Earnings{
 			LifetimeBalance:  new(big.Int),
 			UnsettledBalance: new(big.Int),
 		},
-		PerHermes: make(map[common.Address]event.Earnings),
+		PerHermes: make(map[common.Address]pingEvent.Earnings),
 	}
 
 	v, ok := hcr.channels[chainID]
@@ -158,7 +157,7 @@ func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identi
 		return result
 	}
 
-	add := func(current event.Earnings, channel HermesChannel) event.Earnings {
+	add := func(current pingEvent.Earnings, channel HermesChannel) pingEvent.Earnings {
 		life := new(big.Int).Add(current.LifetimeBalance, channel.LifetimeBalance())
 		unset := new(big.Int).Add(current.UnsettledBalance, channel.UnsettledBalance())
 
@@ -178,7 +177,7 @@ func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identi
 		// Save total for a single hermes
 		got, ok := result.PerHermes[channel.HermesID]
 		if !ok {
-			got = event.Earnings{
+			got = pingEvent.Earnings{
 				LifetimeBalance:  new(big.Int),
 				UnsettledBalance: new(big.Int),
 			}
@@ -190,12 +189,12 @@ func (hcr *HermesChannelRepository) sumChannelsDetailed(chainID int64, id identi
 	return result
 }
 
-func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Identity) event.Earnings {
+func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Identity) pingEvent.Earnings {
 	var lifetimeBalance = new(big.Int)
 	var unsettledBalance = new(big.Int)
 	v, ok := hcr.channels[chainID]
 	if !ok {
-		return event.Earnings{
+		return pingEvent.Earnings{
 			LifetimeBalance:  new(big.Int),
 			UnsettledBalance: new(big.Int),
 		}
@@ -208,7 +207,7 @@ func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Ident
 		}
 	}
 
-	return event.Earnings{
+	return pingEvent.Earnings{
 		LifetimeBalance:  lifetimeBalance,
 		UnsettledBalance: unsettledBalance,
 	}
@@ -216,18 +215,18 @@ func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Ident
 
 // Subscribe subscribes to the appropriate events.
 func (hcr *HermesChannelRepository) Subscribe(bus eventbus.Subscriber) error {
-	err := bus.SubscribeAsync(nodevent.AppTopicNode, hcr.handleNodeStart)
+	err := bus.SubscribeAsync(nodeEvent.AppTopicNode, hcr.handleNodeStart)
 	if err != nil {
 		return fmt.Errorf("could not subscribe to node status event: %w", err)
 	}
-	err = bus.SubscribeAsync(pinge.AppTopicHermesPromise, hcr.handleHermesPromiseReceived)
+	err = bus.SubscribeAsync(pingEvent.AppTopicHermesPromise, hcr.handleHermesPromiseReceived)
 	if err != nil {
 		return fmt.Errorf("could not subscribe to AppTopicHermesPromise event: %w", err)
 	}
 	return nil
 }
 
-func (hcr *HermesChannelRepository) handleHermesPromiseReceived(payload pinge.AppEventHermesPromise) {
+func (hcr *HermesChannelRepository) handleHermesPromiseReceived(payload pingEvent.AppEventHermesPromise) {
 	channelID, err := crypto.GenerateProviderChannelID(payload.ProviderID.Address, payload.HermesID.Hex())
 	if err != nil {
 		log.Err(err).Msg("could not generate provider channel id")
@@ -246,8 +245,8 @@ func (hcr *HermesChannelRepository) handleHermesPromiseReceived(payload pinge.Ap
 	}
 }
 
-func (hcr *HermesChannelRepository) handleNodeStart(payload nodevent.Payload) {
-	if payload.Status != nodevent.StatusStarted {
+func (hcr *HermesChannelRepository) handleNodeStart(payload nodeEvent.Payload) {
+	if payload.Status != nodeEvent.StatusStarted {
 		return
 	}
 	hcr.fetchKnownChannels(config.GetInt64(config.FlagChainID))
@@ -351,7 +350,7 @@ func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChann
 	)
 
 	earningsNew := hcr.sumChannelsDetailed(chainID, new.Identity)
-	go hcr.publisher.Publish(event.AppTopicEarningsChanged, event.AppEventEarningsChanged{
+	go hcr.publisher.Publish(pingEvent.AppTopicEarningsChanged, pingEvent.AppEventEarningsChanged{
 		Identity: new.Identity,
 		Previous: *earningsOld,
 		Current:  *earningsNew,
