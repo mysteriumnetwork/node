@@ -208,7 +208,7 @@ func (c *command) topup(ctx *cli.Context) {
 	amount := ctx.String(flagAmount.Name)
 
 	amountF, err := strconv.ParseFloat(amount, 64)
-	if amountF <= 0 {
+	if err != nil || amountF <= 0 {
 		clio.Warn("Top-up amount is required and must be greater than 0")
 		return
 	}
