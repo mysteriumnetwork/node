@@ -321,7 +321,7 @@ func (c *command) registerIdentity(identity string, token *string) {
 func (c *command) identityIsUnregistered(identityAddress string) (bool, error) {
 	identityStatus, err := c.tequilapi.Identity(identityAddress)
 	if err != nil {
-		return false, errors.New("Failed to get identity status")
+		return false, errors.New("failed to get identity status")
 	}
 
 	return identityStatus.RegistrationStatus == registry.Unregistered.String(), nil

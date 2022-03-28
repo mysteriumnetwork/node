@@ -371,7 +371,7 @@ func (c *cliApp) setBeneficiary(actionArgs []string) error {
 			}
 
 			if st.Error != "" {
-				return fmt.Errorf("Could not set new beneficiary address: %s", st.Error)
+				return fmt.Errorf("could not set new beneficiary address: %s", st.Error)
 			}
 
 			data, err := c.tequilapi.Beneficiary(address)
@@ -405,7 +405,7 @@ func (c *cliApp) getBeneficiaryStatus(actionArgs []string) error {
 
 	st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
 	if err != nil {
-		return fmt.Errorf("Could not get beneficiary change status: %w", err)
+		return fmt.Errorf("could not get beneficiary change status: %w", err)
 	}
 
 	clio.Info("Last change request information:")
@@ -604,7 +604,7 @@ func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	address := actionArgs[0]
 	history, err := c.tequilapi.WithdrawalHistory(address)
 	if err != nil {
-		return fmt.Errorf("Could not get last withdrawal: %w", err)
+		return fmt.Errorf("could not get last withdrawal: %w", err)
 	}
 	if history.TotalItems == 0 {
 		clio.Info("No withdrawals found")

@@ -588,7 +588,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if em.ChainID != it.chainID() {
-		return fmt.Errorf("Invalid chain id in exchange message: expected %v, got %v", it.chainID(), em.ChainID)
+		return fmt.Errorf("invalid chain id in exchange message: expected %v, got %v", it.chainID(), em.ChainID)
 	}
 
 	signer, err := em.Promise.RecoverSigner()
