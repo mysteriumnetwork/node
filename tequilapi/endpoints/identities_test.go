@@ -26,18 +26,18 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/payments/client"
+
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/mysteriumnetwork/payments/client"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/requests"
-	"github.com/stretchr/testify/assert"
 )
 
 const identityUrl = "/irrelevant"
@@ -312,28 +312,6 @@ func TestListIdentities(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-}
-
-func Test_ReferralTokenGet(t *testing.T) {
-	server := newTestTransactorServer(http.StatusAccepted, `{"token":"yay-free-myst"}`)
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
-	endpoint := &identitiesAPI{transactor: tr}
-
-	router := gin.Default()
-	router.GET("/identities/:id/referral", endpoint.GetReferralToken)
-
-	tokenRequest := `{"identity": "0x0"}`
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"/identities/0x0/referral",
-		bytes.NewBufferString(tokenRequest),
-	)
-	assert.Nil(t, err)
-
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"token":"yay-free-myst"}`, resp.Body.String())
 }
 
 func Test_IdentityGet(t *testing.T) {

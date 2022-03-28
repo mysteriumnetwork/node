@@ -32,6 +32,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/vcraescu/go-paginator/adapter"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/payout"
@@ -40,9 +44,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/vcraescu/go-paginator/adapter"
 )
 
 // Transactor represents interface to Transactor service
@@ -52,9 +53,6 @@ type Transactor interface {
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
-	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
-	GetReferralToken(id common.Address) (string, error)
-	ReferralTokenAvailable(id common.Address) error
 	RegistrationTokenReward(token string) (*big.Int, error)
 	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 	GetFreeProviderRegistrationEligibility() (bool, error)
