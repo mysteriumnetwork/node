@@ -3,9 +3,9 @@ services:
   morqa:
     image: mysteriumnetwork/quality-oracle:latest
     command: >
-      --bind-addr=:8085
-      --prometheus=http://prometheus:9090
-      --metrics-addr=:8080
+      - '--bind-addr=:8085'
+      - '--prometheus=http://prometheus:9090'
+      - '--metrics-addr=:8080'
     depends_on:
       - prometheus
     expose:
