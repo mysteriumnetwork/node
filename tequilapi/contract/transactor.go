@@ -113,9 +113,7 @@ func (q *SettlementListQuery) Bind(request *http.Request) *apierror.APIError {
 	}
 
 	if types, ok := qs["types"]; ok {
-		for _, sv := range types {
-			q.Types = append(q.Types, sv)
-		}
+		q.Types = append(q.Types, types...)
 	}
 
 	return v.Err()

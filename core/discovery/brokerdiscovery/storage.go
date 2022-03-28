@@ -52,9 +52,7 @@ func (s *ProposalStorage) Proposals() []market.ServiceProposal {
 	defer s.mutex.Unlock()
 
 	proposals := make([]market.ServiceProposal, 0)
-	for _, p := range s.proposals {
-		proposals = append(proposals, p)
-	}
+	proposals = append(proposals, s.proposals...)
 	return proposals
 }
 
