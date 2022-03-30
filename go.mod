@@ -36,7 +36,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/feedback v1.1.2-0.20211228095831-9dfca34c9ab7
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220328103729-c16a61419959
-	github.com/mysteriumnetwork/go-dvpn-web v1.8.1
+	github.com/mysteriumnetwork/go-dvpn-web v1.9.0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.2.2
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
