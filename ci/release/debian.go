@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/node/ci/deb"
 )
 
 type releaseDebianOpts struct {
@@ -33,6 +34,10 @@ type releaseDebianOpts struct {
 }
 
 func releaseDebianPPA(opts *releaseDebianOpts) error {
+	if err := deb.TermsTemplateFile("debian/templates"); err != nil {
+		return err
+	}
+
 	for _, codename := range []string{"bionic", "focal", "impish"} {
 		err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, codename).Run()
 		if err != nil {
