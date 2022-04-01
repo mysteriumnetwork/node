@@ -25,12 +25,14 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/node/ci/deb"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/rs/zerolog/log"
 )
 
 // PackageLinuxAmd64 builds and stores linux amd64 package
@@ -198,7 +200,8 @@ func makeCacheRef(cacheRepo string) string {
 func buildDockerImage(dockerfile string, buildArgs map[string]string, cacheRepo string, tags []string, push bool) error {
 	mg.Deps(binFmtSupport)
 
-	args := []string{"docker", "buildx", "build",
+	args := []string{
+		"docker", "buildx", "build",
 		"--file", dockerfile,
 		"--platform", "linux/amd64,linux/arm64,linux/arm",
 		"--output", fmt.Sprintf("type=image,push=%v", push),
@@ -305,5 +308,10 @@ func packageDebian(binaryPath, arch string) error {
 	envs := map[string]string{
 		"BINARY": binaryPath,
 	}
+
+	if err := deb.TermsTemplateFile("bin/package/installation/templates"); err != nil {
+		return err
+	}
+
 	return sh.RunWith(envs, "bin/package_debian", env.Str(env.BuildVersion), arch)
 }
