@@ -102,9 +102,11 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "could not pull images")
 	}
 
-	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase", "pilvytis-mock", "scylla"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
+	//wait for scylla
+	time.Sleep(30 * time.Second)
 
 	log.Info().Msg("Starting discovery DB")
 	if err := r.compose("up", "-d", "db"); err != nil {
