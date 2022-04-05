@@ -115,6 +115,10 @@ const (
 	ErrCodeTransactorBeneficiary           = "err_transactor_beneficiary"
 	ErrCodeTransactorBeneficiaryTxStatus   = "err_transactor_beneficiary_tx_status"
 
+	// Affiliator
+
+	ErrCodeAffiliatorNoReward = "err_affiliator_no_reward"
+
 	// Other
 
 	ErrCodeActiveHermes      = "err_get_active_hermes"

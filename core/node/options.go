@@ -72,6 +72,7 @@ type Options struct {
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
+	Affiliator OptionsAffiliator
 	Chains     OptionsChains
 
 	Openvpn  Openvpn
@@ -144,6 +145,9 @@ func GetOptions() *Options {
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
+		},
+		Affiliator: OptionsAffiliator{
+			AffiliatorEndpointAddress: config.GetString(config.FlagAffiliatorAddress),
 		},
 		Payments: OptionsPayments{
 			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),

@@ -30,6 +30,9 @@ import (
 
 	"github.com/rs/zerolog"
 
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	"github.com/mysteriumnetwork/payments/crypto"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
@@ -56,8 +59,6 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -77,6 +78,7 @@ type MobileNode struct {
 	proposalsManager          *proposalsManager
 	feedbackReporter          *feedback.Reporter
 	transactor                *registry.Transactor
+	affiliator                *registry.Affiliator
 	identityRegistry          registry.IdentityRegistry
 	identityChannelCalculator *paymentClient.MultiChainAddressProvider
 	consumerBalanceTracker    *pingpong.ConsumerBalanceTracker
@@ -104,6 +106,7 @@ type MobileNodeOptions struct {
 	IPDetectorURL                  string
 	LocationDetectorURL            string
 	TransactorEndpointAddress      string
+	AffiliatorEndpointAddress      string
 	HermesEndpointAddress          string
 	Chain1ID                       int64
 	Chain2ID                       int64
@@ -136,6 +139,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		IPDetectorURL:                  "https://location.mysterium.network/api/v1/location",
 		LocationDetectorURL:            "https://location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:      metadata.MainnetDefinition.TransactorAddress,
+		AffiliatorEndpointAddress:      metadata.MainnetDefinition.AffiliatorAddress,
 		ActiveChainID:                  metadata.MainnetDefinition.DefaultChainID,
 		Chain1ID:                       metadata.MainnetDefinition.Chain1.ChainID,
 		Chain2ID:                       metadata.MainnetDefinition.Chain2.ChainID,
@@ -239,6 +243,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
 		},
+		Affiliator: node.OptionsAffiliator{AffiliatorEndpointAddress: options.AffiliatorEndpointAddress},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:    1500,
 			BCTimeout:                      time.Second * 30,

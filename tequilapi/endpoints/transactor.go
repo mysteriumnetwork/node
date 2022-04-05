@@ -32,6 +32,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/vcraescu/go-paginator/adapter"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/payout"
@@ -40,9 +44,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/vcraescu/go-paginator/adapter"
 )
 
 // Transactor represents interface to Transactor service
@@ -52,10 +53,6 @@ type Transactor interface {
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
-	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
-	GetReferralToken(id common.Address) (string, error)
-	ReferralTokenAvailable(id common.Address) error
-	RegistrationTokenReward(token string) (*big.Int, error)
 	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 	GetFreeProviderRegistrationEligibility() (bool, error)
 }
@@ -83,6 +80,7 @@ type settlementHistoryProvider interface {
 
 type transactorEndpoint struct {
 	transactor                Transactor
+	affiliator                Affiliator
 	identityRegistry          identityRegistry
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
@@ -582,6 +580,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 // swagger:operation POST /transactor/token/{token}/reward Reward
 // ---
 // summary: Returns the amount of reward for a token
+// deprecated: true
 // parameters:
 // - in: path
 //   name: token
@@ -599,7 +598,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 //       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 	token := c.Param("token")
-	reward, err := te.transactor.RegistrationTokenReward(token)
+	reward, err := te.affiliator.RegistrationTokenReward(token)
 	if err != nil {
 		c.Error(err)
 		return
@@ -788,6 +787,7 @@ func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
 func AddRoutesForTransactor(
 	identityRegistry identityRegistry,
 	transactor Transactor,
+	affiliator Affiliator,
 	promiseSettler promiseSettler,
 	settlementHistoryProvider settlementHistoryProvider,
 	addressProvider addressProvider,
@@ -795,6 +795,7 @@ func AddRoutesForTransactor(
 	bhandler beneficiarySaver,
 ) func(*gin.Engine) error {
 	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bprovider, bhandler)
+	a := NewAffiliatorEndpoint(affiliator)
 
 	return func(e *gin.Engine) error {
 		idGroup := e.Group("/identities")
@@ -816,7 +817,7 @@ func AddRoutesForTransactor(
 			transGroup.POST("/stake/increase/async", te.SettleIntoStakeAsync)
 			transGroup.POST("/stake/decrease", te.DecreaseStake)
 			transGroup.POST("/settle/withdraw", te.Withdraw)
-			transGroup.GET("/token/:token/reward", te.TokenRewardAmount)
+			transGroup.GET("/token/:token/reward", a.TokenRewardAmount)
 			transGroup.GET("/chain-summary", te.ChainSummary)
 		}
 		return nil

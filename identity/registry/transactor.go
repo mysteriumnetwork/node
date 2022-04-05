@@ -22,19 +22,19 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/client"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 // AppTopicTransactorRegistration represents the registration topic to which events regarding registration attempts on transactor will occur
@@ -251,18 +251,6 @@ type TokenRewardResponse struct {
 	Reward *big.Int `json:"reward"`
 }
 
-// GetTokenReward returns the reward that is issued for the given token.
-func (t *Transactor) GetTokenReward(token string) (TokenRewardResponse, error) {
-	f := TokenRewardResponse{}
-	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("referal/%v/reward", token), nil)
-	if err != nil {
-		return f, fmt.Errorf("failed to fetch transactor fees %w", err)
-	}
-
-	err = t.httpClient.DoRequestAndParseResponse(req, &f)
-	return f, err
-}
-
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
 func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
 	if referralToken == nil {
@@ -330,36 +318,6 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	regReq.Identity = id
 
 	return regReq, nil
-}
-
-// GetReferralToken returns the referral token.
-func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
-	req, err := t.getReferralTokenRequest(id)
-	if err != nil {
-		return "", err
-	}
-
-	request, err := requests.NewPostRequest(t.endpointAddress, "rp/tokens/request", req)
-	if err != nil {
-		return "", fmt.Errorf("failed to create referral token request %w", err)
-	}
-
-	var resp struct {
-		Token string `json:"token"`
-	}
-	err = t.httpClient.DoRequestAndParseResponse(request, &resp)
-	return resp.Token, err
-}
-
-// ReferralTokenAvailable checks if user is eligible to obtain a referral token.
-func (t *Transactor) ReferralTokenAvailable(id common.Address) error {
-	query := url.Values{}
-	query.Set("identity", id.String())
-	req, err := requests.NewGetRequest(t.endpointAddress, "rp/tokens-available", query)
-	if err != nil {
-		return err
-	}
-	return t.httpClient.DoRequest(req)
 }
 
 func (t *Transactor) getReferralTokenRequest(id common.Address) (pc.ReferralTokenRequest, error) {
@@ -702,21 +660,6 @@ func (t *Transactor) DecreaseStake(id string, chainID int64, amount, transactorF
 		return errors.Wrap(err, "failed to create decrease stake request")
 	}
 	return t.httpClient.DoRequest(req)
-}
-
-// RegistrationTokenReward returns the amount of MYST rewarder for token used.
-func (t *Transactor) RegistrationTokenReward(token string) (*big.Int, error) {
-	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("register-reward/token/%s", token), nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to token reward amount")
-	}
-
-	var resp struct {
-		Reward *big.Int `json:"reward"`
-	}
-
-	err = t.httpClient.DoRequestAndParseResponse(req, &resp)
-	return resp.Reward, err
 }
 
 func (t *Transactor) fillDecreaseStakeRequest(id string, chainID int64, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
