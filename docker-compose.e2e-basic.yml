@@ -80,19 +80,19 @@ services:
 
   #private blockchain
   ganache:
-    image: trufflesuite/ganache-cli:v6.12.0
+    image: trufflesuite/ganache:v7.0.3
     expose:
       - 8545
     command: >
-      --chainId 5 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+      --chain.chainId 5 --chain.networkId 5 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   #private blockchain
   ganache2:
-    image: trufflesuite/ganache-cli:v6.12.0
+    image: trufflesuite/ganache:v7.0.3
     expose:
       - 8545
     command: >
-      --chainId 80001 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+      --chain.chainId 80001 --chain.networkId 80001 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   trust:
     image: mysteriumnetwork/trust-oracle:latest
@@ -121,7 +121,7 @@ services:
       - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   transactor-sidecar:
-    image: mysteriumnetwork/transactor-sidecar:1.0.1
+    image: mysteriumnetwork/transactor-sidecar:2.6.5
     depends_on:
       - transactordatabase
       - redis
@@ -135,19 +135,14 @@ services:
       -MongoDatabase=transactor
       -MongoReplSet ""
       -geckoUrl=http://http-mock:1080/gecko
-      -affiliateHermesAddress=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      -affiliateRegistryAddress=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -affiliateRewardCalcChainID=80001
-      -affiliateRewardCalcRPC="http://ganache2:8545"
-      -affiliateSyncInterval=1h
-      -affiliateSnapshotCronTimer=1h
-      -affiliateOwnerAdress=0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -affiliateOwnerPassphrase=""
-      -affiliateRPCEndpoint="http://ganache:8545"
-      -affiliateRewarderChainID=5
+      -ethStaticGasPrice=0.001
+      -maticStaticGasPrice=0.001
+      -gasPriceUpdateInterval 2s
+      -gasStationOverrideChainsEth ""
+      -gasStationOverrideChainsMatic ""
 
   transactor:
-    image: mysteriumnetwork/transactor:1.0.1
+    image: mysteriumnetwork/transactor:2.6.5
     environment:
       PORT: 8888
     expose:
@@ -160,8 +155,6 @@ services:
       - http-mock
       - transactor-sidecar
     command: >
-      -ethStaticGasPrice=0.001
-      -maticStaticGasPrice=0.001
       -settlementThrottleTime=1ms
       -stakeAmount 62000000000000000000
       -topUpAmount 7000000000000000000
@@ -176,7 +169,7 @@ services:
       -freeRegistration=true
       -registrationGasLimit=450000
       -settlementCheckInterval=50ms
-      -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -ourIdentity 0x3d2cdbab09d2c8d613556769f37b47c82a5e13bf
       -balanceCheckInterval 1s
       -MongoUser transactor
       -MongoPass transactor
@@ -217,7 +210,7 @@ services:
         start_period: 5s
 
   hermes:
-    image: mysteriumnetwork/hermes:1.0.0
+    image: mysteriumnetwork/hermes:2.3.17
     environment:
       PORT: 8889
       LOG_LEVEL: trace
@@ -229,6 +222,7 @@ services:
       - mongodb
       - ganache2
       - transactor
+      - pilvytis-mock
     command: >
       -identityPassphrase ""
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -255,11 +249,19 @@ services:
       -MongoReplSet ""
       -redisAddress "redis:6379"
       -bindAddr="0.0.0.0:8889"
+      -pilvytisBaseURL http://pilvytis-mock:8080
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
+  pilvytis-mock:
+    image: wiremock/wiremock:2.32.0
+    expose: 
+      - 8080
+    volumes:
+      - ./e2e/pilvytis:/home/wiremock
+
   hermes2:
-    image: mysteriumnetwork/hermes:1.0.0
+    image: mysteriumnetwork/hermes:2.3.17
     environment:
       LOG_LEVEL: trace
     expose:
@@ -296,6 +298,7 @@ services:
       -transactorBaseUri "http://transactor:8888/api/v1/"
       -redisAddress "redis:6379"
       -bindAddr="0.0.0.0:8889"
+      -pilvytisBaseURL http://pilvytis-mock:8080
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 

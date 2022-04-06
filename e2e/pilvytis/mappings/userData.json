@@ -1,0 +1,19 @@
+{
+    "request": {
+        "method": "GET",
+        "urlPattern": "/api/v2/user-data/.+"
+    },
+    "response": {
+        "status": 404,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "status": "success",
+            "isPartial": false,
+            "data": {
+            }
+        }
+    },
+    "priority": 3
+}

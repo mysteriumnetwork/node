@@ -246,6 +246,28 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	tc, _ := bindings.NewMystTokenCaller(mystTokenAddress, client)
 	tokenBalance, _ := tc.BalanceOf(&bind.CallOpts{}, accs)
 	fmt.Println(" tokenBalance ", tokenBalance.Uint64())
+
+	// transfer eth and myst for transactions during the e2e tests to transactor
+	value = big.NewInt(0).SetUint64(10000000000000000000)
+	gasLimit = uint64(21000)
+	gasPrice, err = client.SuggestGasPrice(context.Background())
+	checkError("suggest gas price", err)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+
+	tx = types.NewTransaction(transactor.Nonce.Uint64(), common.HexToAddress("0x3d2cdbab09d2c8d613556769f37b47c82a5e13bf"), value, gasLimit, gasPrice, data)
+
+	signedTx, err = transactor.Signer(transactor.From, tx)
+	checkError("sign tx", err)
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	checkError("transfer eth", err)
+	checkTxStatus(client, signedTx)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+
+	tx, err = ts.Mint(transactor, common.HexToAddress("0x3d2cdbab09d2c8d613556769f37b47c82a5e13bf"), mystToMint)
+	checkError("mint myst for future top-ups during tests", err)
+	checkTxStatus(client, tx)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
 }
 
 func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAddress, mystTokenAddress common.Address) common.Address {

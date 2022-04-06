@@ -59,10 +59,10 @@ var (
 )
 
 var (
-	ethClient       *ethclient.Client
-	ethClientL2     *ethclient.Client
-	ethSigner       func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
-	transactorMongo *Mongo
+	ethClient        *ethclient.Client
+	ethClientL2      *ethclient.Client
+	ethSignerBuilder func(client *ethclient.Client) func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
+	transactorMongo  *Mongo
 )
 
 var (
@@ -424,18 +424,24 @@ func initEthClient(t *testing.T) {
 	c, err := ethclient.Dial("http://ganache:8545")
 	assert.NoError(t, err)
 
-	cid, err := c.ChainID(context.Background())
-	assert.NoError(t, err)
-
 	ethClient = c
 
 	c2, err := ethclient.Dial("ws://ganache2:8545")
 	assert.NoError(t, err)
 	ethClientL2 = c2
 
-	ethSigner = func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-		return ks.SignTx(acc, tx, cid)
+	ethSignerBuilder = func(client *ethclient.Client) func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		chainId, err := client.ChainID(context.Background())
+		if err != nil {
+			return func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+				return nil, err
+			}
+		}
+		return func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return ks.SignTx(acc, tx, chainId)
+		}
 	}
+
 }
 
 func mintMyst(t *testing.T, amount *big.Int, chid common.Address, ethc *ethclient.Client) {
@@ -447,7 +453,7 @@ func mintMyst(t *testing.T, amount *big.Int, chid common.Address, ethc *ethclien
 
 	_, err = ts.Transfer(&bind.TransactOpts{
 		From:   common.HexToAddress(addressForTopups),
-		Signer: ethSigner,
+		Signer: ethSignerBuilder(ethc),
 		Nonce:  big.NewInt(0).SetUint64(nonce),
 	}, chid, amount)
 	assert.NoError(t, err)
@@ -458,7 +464,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	assert.NoError(t, err)
 
 	err = tequilapi.RegisterIdentity(id, "", nil)
-	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
+	assert.True(t, err == nil || assert.Contains(t, err.Error(), "registration in progress"))
 
 	assert.Eventually(t, func() bool {
 		idStatus, _ := tequilapi.Identity(id)
@@ -468,12 +474,14 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	// once we're registered, check some other information
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	balance, err := tequilapi.BalanceRefresh(id)
-	assert.NoError(t, err)
 
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, providerChannelAddress, idStatus.ChannelAddress)
-	assert.Equal(t, balanceAfterRegistration, balance.Balance)
+	assert.Eventually(t, func() bool {
+		balance, err := tequilapi.BalanceRefresh(id)
+		assert.NoError(t, err)
+		return balanceAfterRegistration.Cmp(balance.Balance) == 0
+	}, time.Second*5, time.Millisecond*500)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
@@ -507,7 +515,11 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	assert.Equal(t, balanceAfterRegistration, idStatus.Balance)
+	assert.Eventually(t, func() bool {
+		balance, err := tequilapi.BalanceRefresh(id)
+		assert.NoError(t, err)
+		return balanceAfterRegistration.Cmp(balance.Balance) == 0
+	}, time.Second*5, time.Millisecond*500)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
