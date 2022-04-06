@@ -314,7 +314,7 @@ func TestPromiseSettler_RejectsIfFeesExceedSettlementAmount(t *testing.T) {
 
 	mockSettler := func(crypto.Promise) (string, error) { return "", nil }
 	err := promiseSettler.settle(mockSettler, identity.Identity{}, common.Address{}, mockPromise, common.Address{}, settled)
-	assert.Equal(t, "settlement fees exceed earning amount. Please provide more service and try again. Current earnings: 29000, current fees: 30000", err.Error())
+	assert.Equal(t, "settlement fees exceed earning amount. Please provide more service and try again. Current earnings: 29000, current fees: 30000: fee not covered, cannot continue", err.Error())
 }
 
 func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {

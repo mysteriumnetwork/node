@@ -61,18 +61,8 @@ func NewSaver(currentChain int64, ad addressProvider, st storage, bc multiChainB
 }
 
 // SettleAndSaveBeneficiary executes a settlement transaction saving the beneficiary to the blockchain.
-func (b *Saver) SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error {
-	hermesID, err := b.ad.GetActiveHermes(b.chainID)
-	if err != nil {
-		return err
-	}
-
-	err = b.executeWithStatusTracking(id, beneficiary, func() error {
+func (b *Saver) SettleAndSaveBeneficiary(id identity.Identity, hermesID, beneficiary common.Address) error {
+	return b.executeWithStatusTracking(id, beneficiary, func() error {
 		return b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, hermesID)
 	})
-	if err != nil {
-		return err
-	}
-
-	return err
 }
