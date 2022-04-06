@@ -140,6 +140,8 @@ type HermesPromiseSettlerConfig struct {
 	ZeroStakeSettlementThreshold float64
 }
 
+var errFeeNotCovered = errors.New("fee not covered, cannot continue")
+
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
 func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
 	return &hermesPromiseSettler{
@@ -391,6 +393,7 @@ var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
 func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
+	feeNotCoveredCount := 0
 	for _, hermesID := range hermesIDs {
 		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
 		if !found {
@@ -414,8 +417,18 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 			channel.Channel.Settled,
 		)
 		if err != nil {
-			return err
+			if errors.Is(err, errFeeNotCovered) {
+				log.Warn().Err(err).Str("hermes_id", hermesID.Hex()).Msg("fee not covered, skipping")
+				feeNotCoveredCount++
+				continue
+			}
+
+			return fmt.Errorf("settlements with hermes %q interrupted with an error: %w", hermesID.Hex(), err)
 		}
+	}
+
+	if feeNotCoveredCount == len(hermesIDs) {
+		return errors.New("fee not covered for all given hermeses, settled with none")
 	}
 
 	return nil
@@ -871,7 +884,7 @@ func (aps *hermesPromiseSettler) settle(
 			"hermesFee":      fee.String(),
 			"totalFees":      totalFees.String(),
 		}).Err(err).Msg("Earned amount too small for settling")
-		return fmt.Errorf("settlement fees exceed earning amount. Please provide more service and try again. Current earnings: %v, current fees: %v", amountToSettle, totalFees)
+		return fmt.Errorf("settlement fees exceed earning amount. Please provide more service and try again. Current earnings: %v, current fees: %v: %w", amountToSettle, totalFees, errFeeNotCovered)
 	}
 
 	id, err := settleFunc(updatedPromise)

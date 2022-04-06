@@ -289,7 +289,8 @@ func (w *WithdrawRequest) AmountInMYST() (*big.Int, error) {
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
 type SettleWithBeneficiaryRequest struct {
-	SettleRequest
+	ProviderID  string `json:"provider_id"`
+	HermesID    string `json:"hermes_id"`
 	Beneficiary string `json:"beneficiary"`
 }
 

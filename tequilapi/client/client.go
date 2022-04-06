@@ -690,10 +690,8 @@ func (client *Client) SettleWithBeneficiaryStatus(address string) (res contract.
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
 func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
 	payload := contract.SettleWithBeneficiaryRequest{
-		SettleRequest: contract.SettleRequest{
-			ProviderID: address,
-			HermesID:   hermesID,
-		},
+		ProviderID:  address,
+		HermesID:    hermesID,
 		Beneficiary: beneficiary,
 	}
 	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
