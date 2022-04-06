@@ -1,0 +1,21 @@
+{
+    "request": {
+        "method": "GET",
+        "urlPattern": "/api/v2/payment/user/.+/bought/total"
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "status": "success",
+            "isPartial": false,
+            "data": {
+                "total": 0,
+                "last_topup": "0001-01-01T00:00:00Z"
+            }
+        }
+    },
+    "priority": 3
+}

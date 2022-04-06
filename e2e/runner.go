@@ -102,7 +102,7 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "could not pull images")
 	}
 
-	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase", "pilvytis-mock"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 
