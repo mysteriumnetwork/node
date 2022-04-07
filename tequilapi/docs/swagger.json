@@ -3462,6 +3462,10 @@
         "beneficiary": {
           "type": "string",
           "x-go-name": "Beneficiary"
+        },
+        "is_channel_address": {
+          "type": "boolean",
+          "x-go-name": "IsChannelAddress"
         }
       },
       "x-go-name": "IdentityBeneficiaryResponse",

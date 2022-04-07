@@ -655,9 +655,13 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 		return fdiff < tenthThou
 	}, time.Second*5, time.Millisecond*250)
 
-	providerStatus, err := tequilapi.Identity(id)
-	assert.NoError(t, err)
-	assert.Equal(t, providerStatus.Balance, balanceAfterRegistration)
+	var providerStatus contract.IdentityDTO
+	var err error
+	assert.Eventually(t, func() bool {
+		providerStatus, err = tequilapi.Identity(id)
+		assert.NoError(t, err)
+		return providerStatus.Balance.Cmp(balanceAfterRegistration) == 0
+	}, time.Second*5, time.Millisecond*500)
 
 	// For reasoning behind these, see the comment in recheckBalancesWithHermes
 	actualEarnings := getDiffFloat(earningsExpected, providerStatus.Earnings)

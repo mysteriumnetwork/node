@@ -84,6 +84,7 @@ type Options struct {
 
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
+	ObserverAddress         string
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -173,6 +174,7 @@ func GetOptions() *Options {
 				ChannelImplAddress: config.GetString(config.FlagChain1ChannelImplementationAddress),
 				ChainID:            config.GetInt64(config.FlagChain1ChainID),
 				MystAddress:        config.GetString(config.FlagChain1MystAddress),
+				KnownHermeses:      config.GetStringSlice(config.FlagChain1KnownHermeses),
 			},
 			Chain2: metadata.ChainDefinition{
 				RegistryAddress:    config.GetString(config.FlagChain2RegistryAddress),
@@ -180,6 +182,7 @@ func GetOptions() *Options {
 				ChannelImplAddress: config.GetString(config.FlagChain2ChannelImplementationAddress),
 				ChainID:            config.GetInt64(config.FlagChain2ChainID),
 				MystAddress:        config.GetString(config.FlagChain2MystAddress),
+				KnownHermeses:      config.GetStringSlice(config.FlagChain2KnownHermeses),
 			},
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
@@ -190,6 +193,7 @@ func GetOptions() *Options {
 		},
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
+		ObserverAddress: config.GetString(config.FlagObserverAddress),
 	}
 }
 

@@ -72,6 +72,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/upnp"
+	"github.com/mysteriumnetwork/node/observer"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
@@ -191,6 +192,8 @@ type Dependencies struct {
 	PilvytisTracker     *pilvytis.StatusTracker
 	PilvytisOrderIssuer *pilvytis.OrderIssuer
 
+	ObserverAPI *observer.API
+
 	ResidentCountry *identity.ResidentCountry
 
 	PayoutAddressStorage *payout.AddressStorage
@@ -300,18 +303,35 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
 	ch1 := nodeOptions.Chains.Chain1
 	ch2 := nodeOptions.Chains.Chain2
+	chain1KnownHermeses := parseAddressSlice(ch1.KnownHermeses)
+	chain2KnownHermeses := parseAddressSlice(ch2.KnownHermeses)
+	hermesAddresses, err := di.ObserverAPI.GetApprovedHermesAdresses()
+	if err != nil {
+		log.Warn().AnErr("err", err).Msg("observer hermeses call failed, using fallback known hermeses")
+	} else {
+		chain1ApprovedHermeses, ok := hermesAddresses[ch1.ChainID]
+		if ok {
+			chain1KnownHermeses = chain1ApprovedHermeses
+		}
+		chain2ApprovedHermeses, ok := hermesAddresses[ch2.ChainID]
+		if ok {
+			chain2KnownHermeses = chain2ApprovedHermeses
+		}
+	}
 	addresses := map[int64]paymentClient.SmartContractAddresses{
 		ch1.ChainID: {
-			Registry:              common.HexToAddress(ch1.RegistryAddress),
-			Myst:                  common.HexToAddress(ch1.MystAddress),
-			Hermes:                common.HexToAddress(ch1.HermesID),
-			ChannelImplementation: common.HexToAddress(ch1.ChannelImplAddress),
+			Registry:                    common.HexToAddress(ch1.RegistryAddress),
+			Myst:                        common.HexToAddress(ch1.MystAddress),
+			ActiveHermes:                common.HexToAddress(ch1.HermesID),
+			ActiveChannelImplementation: common.HexToAddress(ch1.ChannelImplAddress),
+			KnownHermeses:               chain1KnownHermeses,
 		},
 		ch2.ChainID: {
-			Registry:              common.HexToAddress(ch2.RegistryAddress),
-			Myst:                  common.HexToAddress(ch2.MystAddress),
-			Hermes:                common.HexToAddress(ch2.HermesID),
-			ChannelImplementation: common.HexToAddress(ch2.ChannelImplAddress),
+			Registry:                    common.HexToAddress(ch2.RegistryAddress),
+			Myst:                        common.HexToAddress(ch2.MystAddress),
+			ActiveHermes:                common.HexToAddress(ch2.HermesID),
+			ActiveChannelImplementation: common.HexToAddress(ch2.ChannelImplAddress),
+			KnownHermeses:               chain2KnownHermeses,
 		},
 	}
 
@@ -745,6 +765,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	clients[options.Chains.Chain2.ChainID] = bcL2
 
 	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
+	di.ObserverAPI = observer.NewAPI(di.HTTPClient, options.ObserverAddress)
 	di.bootstrapAddressProvider(options)
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
 
@@ -1093,4 +1114,12 @@ func (di *Dependencies) disallowTrustedDomainBypassTunnel() {
 	if err := router.RemoveExcludedURL(allow...); err != nil {
 		log.Error().Err(err).Msgf("Failed to remove excluded routes for trusted domains: %v", allow)
 	}
+}
+
+func parseAddressSlice(slice []string) []common.Address {
+	res := make([]common.Address, len(slice))
+	for i, s := range slice {
+		res[i] = common.HexToAddress(s)
+	}
+	return res
 }

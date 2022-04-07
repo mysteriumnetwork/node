@@ -318,7 +318,7 @@ func Test_IdentityGet(t *testing.T) {
 	endpoint := &identitiesAPI{
 		idm:      identity.NewIdentityManagerFake(existingIdentities, newIdentity),
 		registry: &registry.FakeRegistry{RegistrationStatus: registry.Registered},
-		channelCalculator: &mockAddressProvider{
+		addressProvider: &mockAddressProvider{
 			channelAddressToReturn: common.HexToAddress("0x100000000000000000000000000000000000000a"),
 			hermesToReturn:         common.HexToAddress("0x200000000000000000000000000000000000000a"),
 		},
@@ -415,7 +415,7 @@ type mockAddressProvider struct {
 	channelAddressToReturn common.Address
 }
 
-func (ma *mockAddressProvider) GetChannelImplementation(chainID int64) (common.Address, error) {
+func (ma *mockAddressProvider) GetActiveChannelImplementation(chainID int64) (common.Address, error) {
 	return ma.channelToReturn, nil
 }
 
@@ -427,8 +427,16 @@ func (ma *mockAddressProvider) GetRegistryAddress(chainID int64) (common.Address
 	return ma.registryToReturn, nil
 }
 
-func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id common.Address) (common.Address, error) {
+func (ma *mockAddressProvider) GetActiveChannelAddress(chainID int64, id common.Address) (common.Address, error) {
 	return ma.channelAddressToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetHermesChannelAddress(chainID int64, id, hermes common.Address) (common.Address, error) {
+	return common.Address{}, fmt.Errorf("unimplemented")
+}
+
+func (ma *mockAddressProvider) GetKnownHermeses(chainID int64) ([]common.Address, error) {
+	return nil, fmt.Errorf("unimplemented")
 }
 
 type mockProviderChannelStatusProvider struct {
