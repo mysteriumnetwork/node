@@ -192,6 +192,7 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.ForceSettle)
 	if err != nil {
+		log.Err(err).Msg("Settle failed")
 		c.Error(apierror.Internal("Could not settle sync: "+err.Error(), contract.ErrCodeHermesSettle))
 		return
 	}
@@ -495,6 +496,14 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 
 	err = te.promiseSettler.Withdraw(fromChainID, toChainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary), amount)
 	if err != nil {
+		log.Err(err).Fields(map[string]interface{}{
+			"from_chain_id": fromChainID,
+			"to_chain_id":   toChainID,
+			"provider_id":   req.ProviderID,
+			"hermes_id":     req.HermesID,
+			"beneficiary":   req.Beneficiary,
+			"amount":        amount.String(),
+		}).Msg("Withdrawal failed")
 		c.Error(apierror.Internal("Could not withdraw: "+err.Error(), contract.ErrCodeTransactorWithdraw))
 		return
 	}
@@ -535,6 +544,7 @@ func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, er
 func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.SettleIntoStake)
 	if err != nil {
+		log.Err(err).Msg("Settle into stake failed")
 		c.Error(apierror.Internal("Failed to settle into stake: "+err.Error(), contract.ErrCodeTransactorSettle))
 		return
 	}
