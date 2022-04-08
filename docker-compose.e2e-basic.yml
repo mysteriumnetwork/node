@@ -261,7 +261,7 @@ services:
       - ./e2e/pilvytis:/home/wiremock
 
   hermes2:
-    image: mysteriumnetwork/hermes:2.3.17
+    image: mysteriumnetwork/hermes:3.0.0
     environment:
       LOG_LEVEL: trace
     expose:
@@ -272,6 +272,7 @@ services:
       - redis
       - mongodb
       - transactor
+      - scylla
     command: >
       -identityPassphrase ""
       -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
@@ -298,9 +299,22 @@ services:
       -transactorBaseUri "http://transactor:8888/api/v1/"
       -redisAddress "redis:6379"
       -bindAddr="0.0.0.0:8889"
+      -scyllaHosts scylla
+      -scyllaConsistency ALL
+      -scyllaKeyspace e2e
+      -scyllaUser=""
+      -scyllaPassword=""
       -pilvytisBaseURL http://pilvytis-mock:8080
+      -enablePayAndSettle true
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+  
+  scylla:
+    image: scylladb/scylla:4.5.0
+    expose:
+      - 9042
+    command: >
+      --smp 1
 
   myst-provider:
     build:
