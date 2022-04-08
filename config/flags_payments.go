@@ -145,6 +145,13 @@ var (
 		Value:  5000000000000000000,
 		Hidden: true,
 	}
+
+	// FlagObserverAddress address of Observer service.
+	FlagObserverAddress = cli.StringFlag{
+		Name:  "observer.address",
+		Usage: "full address of the observer service",
+		Value: metadata.DefaultNetwork.ObserverAddress,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -169,6 +176,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsZeroStakeUnsettledAmount,
 		&FlagPaymentsDuringSessionDebug,
 		&FlagPaymentsAmountDuringSessionDebug,
+		&FlagObserverAddress,
 	)
 }
 
@@ -193,4 +201,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
 	Current.ParseBoolFlag(ctx, FlagPaymentsDuringSessionDebug)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsAmountDuringSessionDebug)
+	Current.ParseStringFlag(ctx, FlagObserverAddress)
 }

@@ -269,7 +269,7 @@ func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGran
 }
 
 func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, id identity.Identity) (*big.Int, error) {
-	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id.ToCommonAddress())
+	addr, err := cbt.addressProvider.GetActiveChannelAddress(chainID, id.ToCommonAddress())
 	if err != nil {
 		return new(big.Int), err
 	}
@@ -444,7 +444,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 		fallback.BCBalance = big.NewInt(0)
 	}
 
-	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id.ToCommonAddress())
+	addr, err := cbt.addressProvider.GetActiveChannelAddress(chainID, id.ToCommonAddress())
 	if err != nil {
 		log.Error().Err(err).Msg("Could not calculate channel address")
 		return fallback.BCBalance

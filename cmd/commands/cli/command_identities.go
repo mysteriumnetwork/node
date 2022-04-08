@@ -402,6 +402,7 @@ func (c *cliApp) getBeneficiaryStatus(actionArgs []string) error {
 	}
 
 	clio.Info(fmt.Sprintf("Current beneficiary: %s", data.Beneficiary))
+	clio.Info(fmt.Sprintf("Is a channel address: %t", data.IsChannelAddress))
 
 	st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
 	if err != nil {

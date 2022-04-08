@@ -47,7 +47,7 @@ type channelProvider interface {
 
 // AddressProvider provides sc addresses.
 type AddressProvider interface {
-	GetChannelImplementation(chainID int64) (common.Address, error)
+	GetActiveChannelImplementation(chainID int64) (common.Address, error)
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
 }
@@ -271,7 +271,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 		return IdentityRegistrationRequest{}, err
 	}
 
-	chimp, err := t.addresser.GetChannelImplementation(chainID)
+	chimp, err := t.addresser.GetActiveChannelImplementation(chainID)
 	if err != nil {
 		return IdentityRegistrationRequest{}, err
 	}

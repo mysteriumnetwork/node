@@ -175,7 +175,8 @@ type IdentityRegistrationResponse struct {
 // IdentityBeneficiaryResponse represents the provider beneficiary address.
 // swagger:model IdentityBeneficiaryResponseDTO
 type IdentityBeneficiaryResponse struct {
-	Beneficiary string `json:"beneficiary"`
+	Beneficiary      string `json:"beneficiary"`
+	IsChannelAddress bool   `json:"is_channel_address"`
 }
 
 // IdentityImportRequest is received in identity import endpoint.

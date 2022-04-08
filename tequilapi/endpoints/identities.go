@@ -37,6 +37,7 @@ import (
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/rs/zerolog/log"
 )
 
 type balanceProvider interface {
@@ -61,23 +62,25 @@ type identityMover interface {
 }
 
 type identitiesAPI struct {
-	mover             identityMover
-	idm               identity.Manager
-	selector          identity_selector.Handler
-	registry          registry.IdentityRegistry
-	channelCalculator AddressProvider
-	balanceProvider   balanceProvider
-	earningsProvider  earningsProvider
-	bc                providerChannel
-	transactor        Transactor
-	bprovider         beneficiaryProvider
-	addressStorage    *payout.AddressStorage
+	mover            identityMover
+	idm              identity.Manager
+	selector         identity_selector.Handler
+	registry         registry.IdentityRegistry
+	addressProvider  AddressProvider
+	balanceProvider  balanceProvider
+	earningsProvider earningsProvider
+	bc               providerChannel
+	transactor       Transactor
+	bprovider        beneficiaryProvider
+	addressStorage   *payout.AddressStorage
 }
 
 // AddressProvider provides sc addresses.
 type AddressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
-	GetChannelAddress(chainID int64, id common.Address) (common.Address, error)
+	GetActiveChannelAddress(chainID int64, id common.Address) (common.Address, error)
+	GetKnownHermeses(chainID int64) ([]common.Address, error)
+	GetHermesChannelAddress(chainID int64, id, hermesAddr common.Address) (common.Address, error)
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -326,13 +329,13 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 		return
 	}
 
-	channelAddress, err := ia.channelCalculator.GetChannelAddress(chainID, id.ToCommonAddress())
+	channelAddress, err := ia.addressProvider.GetActiveChannelAddress(chainID, id.ToCommonAddress())
 	if err != nil {
 		c.Error(apierror.Internal("Failed to calculate channel address: "+err.Error(), contract.ErrCodeIDCalculateAddress))
 		return
 	}
 
-	defaultHermesID, err := ia.channelCalculator.GetActiveHermes(chainID)
+	defaultHermesID, err := ia.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
 		c.Error(apierror.Internal("Could not get active hermes: "+err.Error(), contract.ErrCodeActiveHermes))
 		return
@@ -441,14 +444,35 @@ func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
 //       "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 	address := c.Param("id")
-	data, err := ia.bprovider.GetBeneficiary(common.HexToAddress(address))
+	identity := common.HexToAddress(address)
+	beneficiary, err := ia.bprovider.GetBeneficiary(identity)
 	if err != nil {
 		utils.ForwardError(c, err, apierror.Internal("Failed to get beneficiary address", contract.ErrCodeBeneficiaryGet))
 		return
 	}
+	chainID := config.GetInt64(config.FlagChainID)
+	isChannel := false
+	hermeses, err := ia.addressProvider.GetKnownHermeses(chainID)
+	if err != nil {
+		utils.ForwardError(c, err, apierror.Internal("Failed to get list of known hermeses", contract.ErrCodeBeneficiaryGet))
+		return
+	}
+	for _, h := range hermeses {
+		channelAddr, err := ia.addressProvider.GetHermesChannelAddress(chainID, identity, h)
+		if err != nil {
+			log.Err(err).Msgf("could not generate channel address for chain %d and hermes %s", chainID, h.Hex())
+			utils.ForwardError(c, err, apierror.Internal("Failed to generate channel address", contract.ErrCodeBeneficiaryGet))
+			return
+		}
+		if channelAddr == beneficiary {
+			isChannel = true
+			break
+		}
+	}
 
 	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
-		Beneficiary: data.Hex(),
+		Beneficiary:      beneficiary.Hex(),
+		IsChannelAddress: isChannel,
 	}
 	utils.WriteAsJSON(registrationDataDTO, c.Writer)
 }
@@ -594,7 +618,7 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
 	balanceProvider balanceProvider,
-	channelAddressCalculator *client.MultiChainAddressProvider,
+	addressProvider *client.MultiChainAddressProvider,
 	earningsProvider earningsProvider,
 	bc providerChannel,
 	transactor Transactor,
@@ -603,17 +627,17 @@ func AddRoutesForIdentities(
 	addressStorage *payout.AddressStorage,
 ) func(*gin.Engine) error {
 	idAPI := &identitiesAPI{
-		mover:             mover,
-		idm:               idm,
-		selector:          selector,
-		registry:          registry,
-		balanceProvider:   balanceProvider,
-		channelCalculator: channelAddressCalculator,
-		earningsProvider:  earningsProvider,
-		bc:                bc,
-		transactor:        transactor,
-		bprovider:         bprovider,
-		addressStorage:    addressStorage,
+		mover:            mover,
+		idm:              idm,
+		selector:         selector,
+		registry:         registry,
+		balanceProvider:  balanceProvider,
+		addressProvider:  addressProvider,
+		earningsProvider: earningsProvider,
+		bc:               bc,
+		transactor:       transactor,
+		bprovider:        bprovider,
+		addressStorage:   addressStorage,
 	}
 	return func(e *gin.Engine) error {
 		identityGroup := e.Group("/identities")

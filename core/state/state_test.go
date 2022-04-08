@@ -643,7 +643,7 @@ var stubLocation = market.Location{Country: "MU"}
 
 type mockChannelAddressCalculator struct{}
 
-func (mcac *mockChannelAddressCalculator) GetChannelAddress(chainID int64, id common.Address) (common.Address, error) {
+func (mcac *mockChannelAddressCalculator) GetActiveChannelAddress(chainID int64, id common.Address) (common.Address, error) {
 	return common.Address{}, nil
 }
 

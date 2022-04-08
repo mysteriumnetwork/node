@@ -30,6 +30,7 @@ type NetworkDefinition struct {
 	MMNAddress                string
 	MMNAPIAddress             string
 	PilvytisAddress           string
+	ObserverAddress           string
 	DNSMap                    map[string][]string
 	DefaultChainID            int64
 	DefaultCurrency           string
@@ -46,6 +47,7 @@ type ChainDefinition struct {
 	ChainID            int64
 	MystAddress        string
 	EtherClientRPC     []string
+	KnownHermeses      []string
 }
 
 // Payments defines payments configuration
@@ -78,6 +80,9 @@ var MainnetDefinition = NetworkDefinition{
 			"https://ethereum1.mysterium.network/",
 			"https://cloudflare-eth.com/",
 		},
+		KnownHermeses: []string{
+			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
+		},
 	},
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
@@ -89,10 +94,15 @@ var MainnetDefinition = NetworkDefinition{
 			"https://polygon1.mysterium.network/",
 			"https://polygon-rpc.com/",
 		},
+		KnownHermeses: []string{
+			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
+			"0xde82990405acc36b4fd53c94a24d1010fcc1f83d",
+		},
 	},
 	MMNAddress:      "https://mystnodes.com",
 	MMNAPIAddress:   "https://mystnodes.com/api/v1",
 	PilvytisAddress: "https://pilvytis.mysterium.network",
+	ObserverAddress: "https://observer.mysterium.network",
 	DNSMap: map[string][]string{
 		"discovery.mysterium.network":  {"51.15.116.186", "51.15.72.87"},
 		"trust.mysterium.network":      {"51.15.116.186", "51.15.72.87"},
@@ -100,6 +110,7 @@ var MainnetDefinition = NetworkDefinition{
 		"transactor.mysterium.network": {"51.15.116.186", "51.15.72.87"},
 		"affiliator.mysterium.network": {"51.15.116.186", "51.15.72.87"},
 		"pilvytis.mysterium.network":   {"51.15.116.186", "51.15.72.87"},
+		"observer.mysterium.network":   {"51.15.116.186", "51.15.72.87"},
 	},
 	DefaultChainID:    137,
 	DefaultCurrency:   "MYST",

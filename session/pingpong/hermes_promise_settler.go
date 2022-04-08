@@ -511,7 +511,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	if err != nil {
 		return err
 	}
-	channel, err := aps.addressProvider.GetChannelImplementation(fromChainID)
+	channel, err := aps.addressProvider.GetActiveChannelImplementation(fromChainID)
 	if err != nil {
 		return err
 	}
@@ -821,7 +821,7 @@ func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, id commo
 		return nil, err
 	}
 
-	channelAddress, err := aps.addressProvider.GetChannelAddress(chainID, id)
+	channelAddress, err := aps.addressProvider.GetActiveChannelAddress(chainID, id)
 	if err != nil {
 		return nil, err
 	}

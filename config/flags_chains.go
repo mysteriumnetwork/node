@@ -46,6 +46,10 @@ var (
 	FlagChain1ChainID = getChainIDFlag(1)
 	// FlagChain1ChainID represents the chainID for chain2.
 	FlagChain2ChainID = getChainIDFlag(2)
+	// FlagChain1KnownHermeses represents the known hermeses for chain1.
+	FlagChain1KnownHermeses = getKnownHermesesFlag(1)
+	// FlagChain2KnownHermeses represents the known hermeses for chain2.
+	FlagChain2KnownHermeses = getKnownHermesesFlag(2)
 )
 
 // RegisterFlagsChains function registers chain flags to flag list.
@@ -61,6 +65,8 @@ func RegisterFlagsChains(flags *[]cli.Flag) {
 		&FlagChain2MystAddress,
 		&FlagChain1ChainID,
 		&FlagChain2ChainID,
+		&FlagChain1KnownHermeses,
+		&FlagChain2KnownHermeses,
 	)
 }
 
@@ -76,6 +82,8 @@ func ParseFlagsChains(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagChain2MystAddress)
 	Current.ParseInt64Flag(ctx, FlagChain1ChainID)
 	Current.ParseInt64Flag(ctx, FlagChain2ChainID)
+	Current.ParseStringSliceFlag(ctx, FlagChain1KnownHermeses)
+	Current.ParseStringSliceFlag(ctx, FlagChain2KnownHermeses)
 }
 
 func getRegistryFlag(chainIndex int64) cli.StringFlag {
@@ -140,5 +148,18 @@ func getChainIDFlag(chainIndex int64) cli.Int64Flag {
 		Name:  fmt.Sprintf("chains.%v.chainID", chainIndex),
 		Value: defaultAddress,
 		Usage: fmt.Sprintf("Sets the chainID for chain %v", chainIndex),
+	}
+}
+
+func getKnownHermesesFlag(chainIndex int64) cli.StringSliceFlag {
+	defaultAddress := metadata.DefaultNetwork.Chain1.KnownHermeses
+	if chainIndex == 2 {
+		defaultAddress = metadata.DefaultNetwork.Chain2.KnownHermeses
+	}
+
+	return cli.StringSliceFlag{
+		Name:  fmt.Sprintf("chains.%v.knownHermeses", chainIndex),
+		Value: cli.NewStringSlice(defaultAddress...),
+		Usage: fmt.Sprintf("Sets the known hermeses list for chain %v", chainIndex),
 	}
 }

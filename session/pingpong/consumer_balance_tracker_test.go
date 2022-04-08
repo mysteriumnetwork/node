@@ -467,10 +467,10 @@ type mockAddressProvider struct {
 	addrToReturn common.Address
 }
 
-func (ma *mockAddressProvider) GetChannelAddress(chainID int64, id common.Address) (common.Address, error) {
+func (ma *mockAddressProvider) GetActiveChannelAddress(chainID int64, id common.Address) (common.Address, error) {
 	return ma.addrToReturn, nil
 }
-func (ma *mockAddressProvider) GetChannelImplementation(chainID int64) (common.Address, error) {
+func (ma *mockAddressProvider) GetActiveChannelImplementation(chainID int64) (common.Address, error) {
 	return common.Address{}, nil
 }
 func (ma *mockAddressProvider) GetMystAddress(chainID int64) (common.Address, error) {
