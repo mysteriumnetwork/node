@@ -492,7 +492,7 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:2.3.17
+    image: mysteriumnetwork/hermes:3.0.0
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
@@ -508,6 +508,7 @@ services:
       - redis
       - mongodb
       - transactor
+      - scylla
     command: >
       -identityPassphrase ""
       -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -534,7 +535,13 @@ services:
       -MongoReplSet ""
       -redisAddress "redis:6379"
       -bindAddr "0.0.0.0:8889"
+      -scyllaHosts scylla
+      -scyllaConsistency ALL
+      -scyllaKeyspace e2e
+      -scyllaUser=""
+      -scyllaPassword=""
       -pilvytisBaseURL http://pilvytis-mock:8080
+      -enablePayAndSettle true
     volumes:
       - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254
@@ -543,6 +550,22 @@ services:
         ipv4_address: 172.30.0.208
       public1:
         ipv4_address: 172.31.0.208
+  
+  scylla:
+    image: scylladb/scylla:4.5.0
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+    expose:
+      - 9042
+    command: >
+      --smp 1
+      --listen-address 172.30.0.214
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.214
 
   myst-consumer-wireguard:
     build:
