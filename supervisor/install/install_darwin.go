@@ -42,7 +42,10 @@ const plistTpl = `
 		<string>{{.SupervisorPath}}</string>
 	</array>
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
 	<key>StandardErrorPath</key>
 	<string>/Library/Logs/Mysterium/myst_supervisor.log</string>
 	<key>StandardOutPath</key>
