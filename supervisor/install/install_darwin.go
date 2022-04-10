@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,10 @@ const plistTpl = `
 	</array>
 	<key>KeepAlive</key>
 	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Library/Logs/Mysterium/myst_supervisor.log</string>
+	<key>StandardOutPath</key>
+	<string>/Library/Logs/Mysterium/myst_supervisor.log</string>
 </dict>
 </plist>
 `

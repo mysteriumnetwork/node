@@ -1,7 +1,5 @@
-//go:build !windows
-
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,5 +18,5 @@
 package logconfig
 
 func defaultLogPath() (string, error) {
-	return "/var/log/myst_supervisor", nil
+	return "/Library/Logs/Mysterium/myst_supervisor", nil
 }
