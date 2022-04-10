@@ -17,7 +17,7 @@ Currently node supports WireGuard as its underlying VPN transport.
 - [Latest release](https://github.com/mysteriumnetwork/node/releases/latest)
 - [Snapshot builds](https://github.com/mysteriumnetwork/node-builds/releases) - bleeding edge, use at your own risk
 - [Documentation](https://docs.mysterium.network/)
-- [Installation guide](https://docs.mysterium.network/user-guide/)
+- [Installation guide](https://docs.mysterium.network/for-node-runners/linux-guide)
 
 ## Installation options
 
@@ -74,8 +74,8 @@ docker logs -f myst
 
 ### Further information
 
-More installation options are described in the [installation guide](https://docs.mysterium.network/node-runners/setup/).
-For possible issues while running a node refer to our [Troubleshooting guide](https://docs.mysterium.network/node-runners/troubleshooting/).
+More installation options are described in the [installation guide](https://docs.mysterium.network/for-node-runners/).
+For possible issues while running a node refer to our [Troubleshooting guide](https://docs.mysterium.network/troubleshooting/).
 
 ## Built With
 
@@ -88,7 +88,7 @@ For possible issues while running a node refer to our [Troubleshooting guide](ht
 
 ## Contributing
 
-For a detailed guide, please visit our [developer docs](https://docs.mysterium.network/developers/).
+For a detailed guide, please visit our [developer docs](https://docs.mysterium.network/for-developers/node-development).
 
 ## Core contributors
 * **Valdas Petrulis** - *Lead developer, go evangelist, node bootstrapper* - [Waldz](https://github.com/Waldz)
