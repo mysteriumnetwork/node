@@ -53,7 +53,7 @@ func (c Config) Write() error {
 	if err != nil {
 		return fmt.Errorf("could not encode configuration: %w", err)
 	}
-	if err := ioutil.WriteFile(confPath, []byte(out.String()), 0700); err != nil {
+	if err := ioutil.WriteFile(confPath, []byte(out.String()), 0644); err != nil {
 		return fmt.Errorf("could not write %q: %w", confPath, err)
 	}
 	return nil
