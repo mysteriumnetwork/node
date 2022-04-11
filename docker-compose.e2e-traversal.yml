@@ -315,6 +315,9 @@ services:
       -MongoReplSet ""
       -freeRegistration=true
       -redisAddress "redis:6379"
+      -observerBaseURI=""
+      -hermesesWithEnabledWithdrawals="0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
+      -fallbackChainHermeses="5=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed;80001=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254
@@ -492,7 +495,7 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:3.0.0
+    image: mysteriumnetwork/hermes:3.0.1
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
