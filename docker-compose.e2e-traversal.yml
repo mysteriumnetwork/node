@@ -276,7 +276,7 @@ services:
         ipv4_address: 172.31.0.212
 
   transactor:
-    image: mysteriumnetwork/transactor:2.6.5
+    image: mysteriumnetwork/transactor:2.7.0
     environment:
       PORT: 8888
     expose:
