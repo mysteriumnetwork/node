@@ -60,6 +60,7 @@ func (c *cliApp) identities(args []string) (err error) {
 		"  " + usageImportIdentity,
 		"  " + usageWithdraw,
 		"  " + usageLastWithdrawal,
+		"  " + usageMigrateHermes,
 	}, "\n")
 
 	if len(args) == 0 {
@@ -103,6 +104,8 @@ func (c *cliApp) identities(args []string) (err error) {
 		return c.withdraw(actionArgs)
 	case "last-withdrawal":
 		return c.lastWithdrawal(actionArgs)
+	case "migrate-hermes":
+		return c.migrateHermes(actionArgs)
 	default:
 		fmt.Println(usage)
 		return errUnknownSubCommand(args[0])
@@ -206,7 +209,7 @@ func (c *cliApp) unlockIdentity(actionArgs []string) (err error) {
 		return err
 	}
 
-	clio.Success(fmt.Sprintf("Identity %s unlocked.", address))
+	clio.Success(fmt.Sprintf("ID %s unlocked.", address))
 	return nil
 }
 
@@ -557,7 +560,7 @@ func (c *cliApp) exportIdentity(actionsArgs []string) (err error) {
 			return fmt.Errorf("failed to write exported key to file: %s reason: %w", filepath, err)
 		}
 
-		clio.Success("Identity exported to file:", filepath)
+		clio.Success("ID exported to file:", filepath)
 		return nil
 	}
 
@@ -590,7 +593,7 @@ func (c *cliApp) importIdentity(actionsArgs []string) (err error) {
 		return fmt.Errorf("failed to import identity: %w", err)
 	}
 
-	clio.Success("Identity imported:", id.Address)
+	clio.Success("ID imported:", id.Address)
 	return nil
 }
 
@@ -598,7 +601,7 @@ const usageLastWithdrawal = "last-withdrawal <identity>"
 
 func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	if len(actionArgs) != 1 {
-		clio.Info("Usage: " + usageGetReferralCode)
+		clio.Info("Usage: " + usageLastWithdrawal)
 		return errWrongArgumentCount
 	}
 
@@ -625,5 +628,20 @@ func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	} else {
 		clio.Info("Error: none")
 	}
+	return nil
+}
+
+const usageMigrateHermes = "migrate-hermes <identity>"
+
+func (c *cliApp) migrateHermes(actionArgs []string) error {
+	if len(actionArgs) != 1 {
+		clio.Info("Usage: " + usageMigrateHermes)
+		return errWrongArgumentCount
+	}
+
+	address := actionArgs[0]
+	err := c.tequilapi.MigrateHermes(address)
+	fmt.Println(err)
+
 	return nil
 }

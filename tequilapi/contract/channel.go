@@ -59,3 +59,39 @@ type PaymentChannelDTO struct {
 	// Beneficiary - eth wallet address
 	Beneficiary string `json:"beneficiary"`
 }
+
+// OpenChannelRequest represents request to open payment channel
+// swagger:model OpenChannelRequest
+type OpenChannelRequest struct {
+	ID              string `json:"id"`
+	HermesID        string `json:"hermesID"`
+	ChainID         int64  `json:"chainID"`
+	RegistryAddress string `json:"registry_address"`
+}
+
+// ChannelStatusRequest represents request for channel status
+type ChannelStatusRequest struct {
+	ID              string `json:"id"`
+	HermesID        string `json:"hermesID"`
+	ChainID         int64  `json:"chainID"`
+	RegistryAddress string `json:"registry_address"`
+}
+
+type ChannelStatus = string
+
+const (
+	// ChannelStatusNotFound channel is not opened and the request was not sent
+	ChannelStatusNotFound = ChannelStatus("not_found")
+	// ChannelStatusOpen channel successfully opened
+	ChannelStatusOpen = ChannelStatus("open")
+	// ChannelStatusFail channel open transaction fails
+	ChannelStatusFail = ChannelStatus("fail")
+	// ChannelStatusInProgress channel opening is in progress
+	ChannelStatusInProgress = ChannelStatus("in_progress")
+)
+
+// ChannelStatusResponse is a status of the channel
+// swagger:model ChannelStatusResponse
+type ChannelStatusResponse struct {
+	Status ChannelStatus `json:"status"`
+}

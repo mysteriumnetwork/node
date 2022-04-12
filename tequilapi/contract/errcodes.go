@@ -114,6 +114,8 @@ const (
 	ErrCodeTransactorNoReward              = "err_transactor_no_reward"
 	ErrCodeTransactorBeneficiary           = "err_transactor_beneficiary"
 	ErrCodeTransactorBeneficiaryTxStatus   = "err_transactor_beneficiary_tx_status"
+	ErrCodeTransactorOpenChannel           = "err_transactor_open_channel"
+	ErrCodeTransactorChannelStatus         = "err_transactor_channel_status"
 
 	// Affiliator
 

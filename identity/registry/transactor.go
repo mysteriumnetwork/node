@@ -397,6 +397,126 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	return signature.Bytes(), nil
 }
 
+// OpenConsumerChannelRequest represents the open consumer channel request body
+type OpenConsumerChannelRequest struct {
+	TransactorFee   *big.Int `json:"transactorFee"`
+	Signature       string   `json:"signature"`
+	HermesID        string   `json:"hermesID"`
+	ChainID         int64    `json:"chainID"`
+	RegistryAddress string   `json:"registry_address"`
+}
+
+// sign OpenConsumerChannelRequest by identity's signer
+func (t *Transactor) signOpenConsumerChannelRequest(signer identity.Signer, req *OpenConsumerChannelRequest) error {
+	r := registration.OpenConsumerChannelRequest{
+		ChainID:         req.ChainID,
+		HermesID:        req.HermesID,
+		TransactorFee:   req.TransactorFee,
+		RegistryAddress: req.RegistryAddress,
+	}
+	message := r.GetMessage()
+
+	signature, err := signer.Sign(message)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a registration request")
+	}
+
+	err = pc.ReformatSignatureVForBC(signature.Bytes())
+	if err != nil {
+		return errors.Wrap(err, "signature reformat failed")
+	}
+
+	signatureHex := common.Bytes2Hex(signature.Bytes())
+	req.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
+
+	return nil
+}
+
+// create request for open consumer channel
+func (t *Transactor) createOpenConsumerChannelRequest(chainID int64, id, hermesID, registryAddress string) (OpenConsumerChannelRequest, error) {
+	request := OpenConsumerChannelRequest{
+		TransactorFee:   new(big.Int),
+		Signature:       "",
+		HermesID:        hermesID,
+		ChainID:         chainID,
+		RegistryAddress: registryAddress,
+	}
+	fmt.Println(request)
+
+	signer := t.signerFactory(identity.FromAddress(id))
+	err := t.signOpenConsumerChannelRequest(signer, &request)
+	if err != nil {
+		return request, errors.Wrap(err, "failed to sign open consumer channel request")
+	}
+
+	return request, nil
+}
+
+// OpenChannel opens payment channel for consumer for certain Hermes
+func (t *Transactor) OpenChannel(chainID int64, id, hermesID, registryAddress string) error {
+	endpoint := "channel/open"
+	request, err := t.createOpenConsumerChannelRequest(chainID, id, hermesID, registryAddress)
+	if err != nil {
+		return errors.Wrap(err, "failed to create OpenConsumerChannel request")
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, endpoint, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to create OpenConsumerChannel request")
+	}
+
+	return t.httpClient.DoRequest(req)
+}
+
+// ChannelStatusRequest request for channel status
+type ChannelStatusRequest struct {
+	Identity        string `json:"identity"`
+	HermesID        string `json:"hermesID"`
+	ChainID         int64  `json:"chainID"`
+	RegistryAddress string `json:"registry_address"`
+}
+
+type ChannelStatus = string
+
+const (
+	// ChannelStatusNotFound channel is not opened and the request was not sent
+	ChannelStatusNotFound = ChannelStatus("not_found")
+	// ChannelStatusOpen channel successfully opened
+	ChannelStatusOpen = ChannelStatus("open")
+	// ChannelStatusFail channel open transaction fails
+	ChannelStatusFail = ChannelStatus("fail")
+	// ChannelStatusInProgress channel opening is in progress
+	ChannelStatusInProgress = ChannelStatus("in_progress")
+)
+
+type ChannelStatusResponse struct {
+	Status ChannelStatus `json:"status"`
+}
+
+// ChannelStatus check the status of the channel
+func (t *Transactor) ChannelStatus(chainID int64, id, hermesID, registryAddress string) (ChannelStatusResponse, error) {
+	endpoint := "channel/status"
+	request := ChannelStatusRequest{
+		HermesID:        hermesID,
+		Identity:        id,
+		ChainID:         chainID,
+		RegistryAddress: registryAddress,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, endpoint, request)
+	if err != nil {
+		return ChannelStatusResponse{}, fmt.Errorf("failed to create channel status request: %w", err)
+	}
+
+	res := ChannelStatusResponse{}
+	err = t.httpClient.DoRequestAndParseResponse(req, &res)
+	if err != nil {
+		return ChannelStatusResponse{}, fmt.Errorf("failed to do channel status request: %w", err)
+	}
+
+	return res, nil
+}
+
 // SettleWithBeneficiaryRequest represent the request for setting new beneficiary address.
 type SettleWithBeneficiaryRequest struct {
 	Promise     PromiseSettlementRequest
