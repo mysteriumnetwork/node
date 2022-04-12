@@ -77,6 +77,7 @@ type ChannelStatusRequest struct {
 	RegistryAddress string `json:"registry_address"`
 }
 
+// ChannelStatus represents status of the channel
 type ChannelStatus = string
 
 const (

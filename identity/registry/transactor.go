@@ -474,6 +474,7 @@ type ChannelStatusRequest struct {
 	RegistryAddress string `json:"registry_address"`
 }
 
+// ChannelStatus represents status of the channel
 type ChannelStatus = string
 
 const (
@@ -487,6 +488,7 @@ const (
 	ChannelStatusInProgress = ChannelStatus("in_progress")
 )
 
+// ChannelStatusResponse represents response with channel status
 type ChannelStatusResponse struct {
 	Status ChannelStatus `json:"status"`
 }
