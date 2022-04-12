@@ -397,8 +397,8 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	return signature.Bytes(), nil
 }
 
-// OpenConsumerChannelRequest represents the open consumer channel request body
-type OpenConsumerChannelRequest struct {
+// OpenChannelRequest represents the open consumer channel request body
+type OpenChannelRequest struct {
 	TransactorFee   *big.Int `json:"transactorFee"`
 	Signature       string   `json:"signature"`
 	HermesID        string   `json:"hermesID"`
@@ -406,8 +406,8 @@ type OpenConsumerChannelRequest struct {
 	RegistryAddress string   `json:"registry_address"`
 }
 
-// sign OpenConsumerChannelRequest by identity's signer
-func (t *Transactor) signOpenConsumerChannelRequest(signer identity.Signer, req *OpenConsumerChannelRequest) error {
+// sign OpenChannelRequest by identity's signer
+func (t *Transactor) signOpenChannelRequest(signer identity.Signer, req *OpenChannelRequest) error {
 	r := registration.OpenConsumerChannelRequest{
 		ChainID:         req.ChainID,
 		HermesID:        req.HermesID,
@@ -418,12 +418,12 @@ func (t *Transactor) signOpenConsumerChannelRequest(signer identity.Signer, req 
 
 	signature, err := signer.Sign(message)
 	if err != nil {
-		return errors.Wrap(err, "failed to sign a registration request")
+		return fmt.Errorf("failed to sign a open channel request: %w", err)
 	}
 
 	err = pc.ReformatSignatureVForBC(signature.Bytes())
 	if err != nil {
-		return errors.Wrap(err, "signature reformat failed")
+		return fmt.Errorf("signature reformat failed: %w", err)
 	}
 
 	signatureHex := common.Bytes2Hex(signature.Bytes())
@@ -432,21 +432,19 @@ func (t *Transactor) signOpenConsumerChannelRequest(signer identity.Signer, req 
 	return nil
 }
 
-// create request for open consumer channel
-func (t *Transactor) createOpenConsumerChannelRequest(chainID int64, id, hermesID, registryAddress string) (OpenConsumerChannelRequest, error) {
-	request := OpenConsumerChannelRequest{
+// create request for open  channel
+func (t *Transactor) createOpenChannelRequest(chainID int64, id, hermesID, registryAddress string) (OpenChannelRequest, error) {
+	request := OpenChannelRequest{
 		TransactorFee:   new(big.Int),
-		Signature:       "",
 		HermesID:        hermesID,
 		ChainID:         chainID,
 		RegistryAddress: registryAddress,
 	}
-	fmt.Println(request)
 
 	signer := t.signerFactory(identity.FromAddress(id))
-	err := t.signOpenConsumerChannelRequest(signer, &request)
+	err := t.signOpenChannelRequest(signer, &request)
 	if err != nil {
-		return request, errors.Wrap(err, "failed to sign open consumer channel request")
+		return request, fmt.Errorf("failed to sign open channel request: %w", err)
 	}
 
 	return request, nil
@@ -455,14 +453,14 @@ func (t *Transactor) createOpenConsumerChannelRequest(chainID int64, id, hermesI
 // OpenChannel opens payment channel for consumer for certain Hermes
 func (t *Transactor) OpenChannel(chainID int64, id, hermesID, registryAddress string) error {
 	endpoint := "channel/open"
-	request, err := t.createOpenConsumerChannelRequest(chainID, id, hermesID, registryAddress)
+	request, err := t.createOpenChannelRequest(chainID, id, hermesID, registryAddress)
 	if err != nil {
-		return errors.Wrap(err, "failed to create OpenConsumerChannel request")
+		return fmt.Errorf("failed to create open channel request: %w", err)
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, endpoint, request)
 	if err != nil {
-		return errors.Wrap(err, "failed to create OpenConsumerChannel request")
+		return fmt.Errorf("failed to do open channel request: %w", err)
 	}
 
 	return t.httpClient.DoRequest(req)
