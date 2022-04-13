@@ -198,67 +198,6 @@
         }
       }
     },
-    "/channel/open": {
-      "post": {
-        "description": "Open channel for certain Hermes using Transactor",
-        "summary": "Open channel",
-        "operationId": "OpenChannelRequest",
-        "parameters": [
-          {
-            "description": "all body parameters for request are required",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/OpenChannelRequest"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Open channel request accepted and will be processed."
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
-    "/channel/status": {
-      "get": {
-        "description": "Check status of the channel",
-        "summary": "Check channel status",
-        "operationId": "ChannelStatusRequest",
-        "responses": {
-          "200": {
-            "description": "Returns channel status",
-            "schema": {
-              "$ref": "#/definitions/ChannelStatusResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
     "/config": {
       "get": {
         "description": "Returns default configuration",
@@ -2997,17 +2936,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ChannelStatusResponse": {
-      "description": "ChannelStatusResponse is a status of the channel",
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "ConnectOptionsDTO": {
       "description": "ConnectOptions holds tequilapi connect options",
       "type": "object",
@@ -3861,6 +3789,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "MigrationStatusResponse": {
+      "description": "MigrationStatusResponse represents status of the migration",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "MonitoringStatus": {
       "description": "MonitoringStatus enum",
       "type": "string",
@@ -3891,30 +3830,6 @@
       "properties": {
         "status": {
           "$ref": "#/definitions/MonitoringStatus"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "OpenChannelRequest": {
-      "description": "OpenChannelRequest represents request to open payment channel",
-      "type": "object",
-      "properties": {
-        "chainID": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "ChainID"
-        },
-        "hermesID": {
-          "type": "string",
-          "x-go-name": "HermesID"
-        },
-        "id": {
-          "type": "string",
-          "x-go-name": "ID"
-        },
-        "registry_address": {
-          "type": "string",
-          "x-go-name": "RegistryAddress"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

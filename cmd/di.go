@@ -28,6 +28,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -185,6 +186,7 @@ type Dependencies struct {
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 	AddressProvider          *paymentClient.MultiChainAddressProvider
 	HermesStatusChecker      *pingpong.HermesStatusChecker
+	HermesMigrator           *migration.HermesMigrator
 
 	MMN *mmn.MMN
 
@@ -625,6 +627,16 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.NodeStatusTracker = node.NewMonitoringStatusTracker(
 		sessionProviderFunc,
 		di.IdentityManager,
+	)
+
+	di.HermesMigrator = migration.NewHermesMigrator(
+		di.Transactor,
+		di.AddressProvider,
+		di.HermesURLGetter,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesPromiseSettler,
 	)
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)

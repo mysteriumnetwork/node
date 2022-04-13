@@ -50,6 +50,7 @@ type AddressProvider interface {
 	GetActiveChannelImplementation(chainID int64) (common.Address, error)
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
+	GetKnownHermeses(chainID int64) ([]common.Address, error)
 }
 
 // Transactor allows for convenient calls to the transactor service

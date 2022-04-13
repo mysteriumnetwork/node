@@ -746,6 +746,40 @@ func (client *Client) WithdrawalHistory(address string) (res contract.Settlement
 	return res, err
 }
 
+// MigrateHermes migrate from old to active Hermes
+func (client *Client) MigrateHermes(address string) error {
+	response, err := client.http.Post(fmt.Sprintf("identities/%s/migrate-hermes", address), nil)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("migration error: %s", body)
+	}
+
+	return nil
+}
+
+// MigrateHermesStatus check status of the migration
+func (client *Client) MigrateHermesStatus(address string) (contract.MigrationStatusResponse, error) {
+	var res contract.MigrationStatusResponse
+
+	response, err := client.http.Get(fmt.Sprintf("identities/%s/migrate-hermes/status", address), nil)
+	if err != nil {
+		return res, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+
+	return res, err
+}
+
 // Beneficiary gets beneficiary address for the provided identity.
 func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponse, err error) {
 	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)

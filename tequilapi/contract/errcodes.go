@@ -37,6 +37,8 @@ const (
 	ErrCodeIDCalculateAddress            = "err_id_calculate_address"
 	ErrCodeIDSavePayoutAddress           = "err_id_save_payout_invalid_address"
 	ErrCodeIDGetPayoutAddress            = "err_id_get_payout_address"
+	ErrCodeHermesMigration               = "err_id_check_hermes_migration"
+	ErrCodeCheckHermesMigrationStatus    = "err_id_check_hermes_migration_status"
 
 	// Payment
 
@@ -114,8 +116,6 @@ const (
 	ErrCodeTransactorNoReward              = "err_transactor_no_reward"
 	ErrCodeTransactorBeneficiary           = "err_transactor_beneficiary"
 	ErrCodeTransactorBeneficiaryTxStatus   = "err_transactor_beneficiary_tx_status"
-	ErrCodeTransactorOpenChannel           = "err_transactor_open_channel"
-	ErrCodeTransactorChannelStatus         = "err_transactor_channel_status"
 
 	// Affiliator
 

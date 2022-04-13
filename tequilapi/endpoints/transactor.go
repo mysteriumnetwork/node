@@ -342,85 +342,6 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 	c.Status(http.StatusAccepted)
 }
 
-// swagger:operation POST /channel/open OpenChannelRequest
-// ---
-// summary: Open channel
-// description: Open channel for certain Hermes using Transactor
-// parameters:
-// - in: body
-//   name: body
-//   description: all body parameters for request are required
-//   schema:
-//     $ref: "#/definitions/OpenChannelRequest"
-// responses:
-//   202:
-//     description: Open channel request accepted and will be processed.
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (te *transactorEndpoint) OpenChannel(c *gin.Context) {
-	req := contract.OpenChannelRequest{}
-	err := json.NewDecoder(c.Request.Body).Decode(&req)
-
-	if err != nil {
-		c.Error(apierror.ParseFailed())
-		return
-	}
-
-	err = te.transactor.OpenChannel(req.ChainID, req.ID, req.HermesID, req.RegistryAddress)
-
-	if err != nil {
-		log.Err(err).Msgf("Failed to open a channel: %s, %+v", req.ID, req)
-		c.Error(apierror.Internal("Could not open a channel: "+err.Error(), contract.ErrCodeTransactorOpenChannel))
-		return
-	}
-
-	c.Status(http.StatusAccepted)
-}
-
-// swagger:operation GET /channel/status ChannelStatusRequest
-// ---
-// summary: Check channel status
-// description: Check status of the channel
-// responses:
-//   200:
-//     description: Returns channel status
-//     schema:
-//       "$ref": "#/definitions/ChannelStatusResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (te *transactorEndpoint) ChannelStatus(c *gin.Context) {
-	req := contract.ChannelStatusRequest{}
-
-	err := json.NewDecoder(c.Request.Body).Decode(&req)
-	if err != nil {
-		c.Error(apierror.ParseFailed())
-		return
-	}
-
-	res, err := te.transactor.ChannelStatus(req.ChainID, req.ID, req.HermesID, req.RegistryAddress)
-	if err != nil {
-		log.Err(err).Msgf("Failed to get channel status: %s, %+v", req.ID, req)
-		c.Error(apierror.Internal("Could not check channel status: "+err.Error(), contract.ErrCodeTransactorChannelStatus))
-		return
-	}
-
-	utils.WriteAsJSON(contract.ChannelStatusResponse{
-		Status: res.Status,
-	}, c.Writer)
-}
-
 // swagger:operation GET /settle/history settlementList
 // ---
 // summary: Returns settlement history
@@ -921,8 +842,6 @@ func AddRoutesForTransactor(
 			transGroup.POST("/settle/withdraw", te.Withdraw)
 			transGroup.GET("/token/:token/reward", a.TokenRewardAmount)
 			transGroup.GET("/chain-summary", te.ChainSummary)
-			transGroup.POST("/channel/open", te.OpenChannel)
-			transGroup.POST("/channel/status", te.ChannelStatus)
 		}
 		return nil
 	}
