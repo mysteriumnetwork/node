@@ -86,8 +86,8 @@ var MainnetDefinition = NetworkDefinition{
 	},
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
-		ChannelImplAddress: "0x25882f4966065ca13b7bac15cc48391d9a4124f6",
-		HermesID:           "0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
+		ChannelImplAddress: "0x813d3A0ef42FD4F25F2854811A64D5842EF3F8D1",
+		HermesID:           "0xDe82990405aCc36B4Fd53c94A24D1010fcc1F83d",
 		ChainID:            137,
 		MystAddress:        "0x1379e8886a944d2d9d440b3d88df536aea08d9f3",
 		EtherClientRPC: []string{
