@@ -3177,8 +3177,14 @@
         "price_per_gib": {
           "$ref": "#/definitions/Int"
         },
+        "price_per_gib_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "price_per_hour": {
           "$ref": "#/definitions/Int"
+        },
+        "price_per_hour_tokens": {
+          "$ref": "#/definitions/Tokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
