@@ -69,6 +69,8 @@ type promiseSettler interface {
 
 type addressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
+	GetKnownHermeses(chainID int64) ([]common.Address, error)
+	GetHermesChannelAddress(chainID int64, id, hermesAddr common.Address) (common.Address, error)
 }
 
 type beneficiarySaver interface {
@@ -220,6 +222,18 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 //       "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
 	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes ...common.Address) error {
+		providerId := provider.ToCommonAddress()
+		beneficiary, err := te.bprovider.GetBeneficiary(providerId)
+		if err != nil {
+			return fmt.Errorf("failed to get beneficiary: %w", err)
+		}
+		isChannel, err := isBenenficiarySetToChannel(te.addressProvider, chainID, providerId, beneficiary)
+		if err != nil {
+			return fmt.Errorf("failed to check if channel is set as beneficiary: %w", err)
+		}
+		if isChannel {
+			return fmt.Errorf("payment channel is set as beneficiary, please turn on auto-withdrawals using your personal wallet address")
+		}
 		go func() {
 			err := te.promiseSettler.ForceSettle(chainID, provider, hermes...)
 			if err != nil {

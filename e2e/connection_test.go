@@ -198,6 +198,10 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		hermeses := []common.Address{
 			common.HexToAddress(hermesID),
 		}
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), hermeses, false)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "payment channel is set as beneficiary")
+
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), hermeses, true)
 		assert.NoError(t, err)
 

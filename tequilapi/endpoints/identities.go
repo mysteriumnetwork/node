@@ -452,24 +452,11 @@ func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 		utils.ForwardError(c, err, apierror.Internal("Failed to get beneficiary address", contract.ErrCodeBeneficiaryGet))
 		return
 	}
-	chainID := config.GetInt64(config.FlagChainID)
-	isChannel := false
-	hermeses, err := ia.addressProvider.GetKnownHermeses(chainID)
+
+	isChannel, err := isBenenficiarySetToChannel(ia.addressProvider, config.GetInt64(config.FlagChainID), identity, beneficiary)
 	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to get list of known hermeses", contract.ErrCodeBeneficiaryGet))
+		utils.ForwardError(c, err, apierror.Internal("Failed to check if beneficiary is set to channel address", contract.ErrCodeBeneficiaryGet))
 		return
-	}
-	for _, h := range hermeses {
-		channelAddr, err := ia.addressProvider.GetHermesChannelAddress(chainID, identity, h)
-		if err != nil {
-			log.Err(err).Msgf("could not generate channel address for chain %d and hermes %s", chainID, h.Hex())
-			utils.ForwardError(c, err, apierror.Internal("Failed to generate channel address", contract.ErrCodeBeneficiaryGet))
-			return
-		}
-		if channelAddr == beneficiary {
-			isChannel = true
-			break
-		}
 	}
 
 	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
@@ -686,6 +673,24 @@ func (ia *identitiesAPI) MigrationHermesStatus(c *gin.Context) {
 	}
 
 	utils.WriteAsJSON(contract.MigrationStatusResponse{Status: status}, c.Writer)
+}
+
+func isBenenficiarySetToChannel(addressProvider addressProvider, chainID int64, identity, beneficiary common.Address) (bool, error) {
+	hermeses, err := addressProvider.GetKnownHermeses(chainID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get list of known hermeses: %w", err)
+	}
+	for _, h := range hermeses {
+		channelAddr, err := addressProvider.GetHermesChannelAddress(chainID, identity, h)
+		if err != nil {
+			log.Err(err).Msgf("could not generate channel address for chain %d and hermes %s", chainID, h.Hex())
+			return false, fmt.Errorf("failed to generate channel address: %w", err)
+		}
+		if channelAddr == beneficiary {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service

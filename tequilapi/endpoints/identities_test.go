@@ -50,6 +50,14 @@ var (
 	newIdentity = identity.Identity{Address: "0x000000000000000000000000000000000000aaac"}
 )
 
+type mockBeneficiaryProvider struct {
+	b common.Address
+}
+
+func (ms *mockBeneficiaryProvider) GetBeneficiary(identity common.Address) (common.Address, error) {
+	return ms.b, nil
+}
+
 type selectorFake struct {
 }
 
@@ -178,6 +186,82 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
   "status": 400,
   "path": "/identities/0x000000000000000000000000000000000000000a/unlock"
 }`,
+		resp.Body.String(),
+	)
+}
+
+func TestBeneficiaryWithChannel(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("/identities/%s/beneficiary", "0x000000000000000000000000000000000000000a"),
+		nil,
+	)
+	assert.Nil(t, err)
+
+	endpoint := &identitiesAPI{
+		idm: mockIdm,
+		addressProvider: &mockAddressProvider{
+			hermesToReturn:         common.HexToAddress("0x000000000000000000000000000000000000000b"),
+			registryToReturn:       common.HexToAddress("0x00000000000000000000000000000000000000cb"),
+			channelToReturn:        common.HexToAddress("0x0000000000000000000000000000000000000ddb"),
+			channelAddressToReturn: common.HexToAddress("0x0000000000000000000000000000000000001234"),
+		},
+		bprovider: &mockBeneficiaryProvider{
+			b: common.HexToAddress("0x0000000000000000000000000000000000001234"),
+		},
+	}
+	g := summonTestGin()
+	g.GET("/identities/:id/beneficiary", endpoint.Beneficiary)
+
+	g.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"beneficiary":"0x0000000000000000000000000000000000001234",
+			"is_channel_address":true
+  		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestBeneficiaryWithoutChannel(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("/identities/%s/beneficiary", "0x000000000000000000000000000000000000000a"),
+		nil,
+	)
+	assert.Nil(t, err)
+
+	endpoint := &identitiesAPI{
+		idm: mockIdm,
+		addressProvider: &mockAddressProvider{
+			hermesToReturn:         common.HexToAddress("0x000000000000000000000000000000000000000b"),
+			registryToReturn:       common.HexToAddress("0x00000000000000000000000000000000000000cb"),
+			channelToReturn:        common.HexToAddress("0x0000000000000000000000000000000000000ddb"),
+			channelAddressToReturn: common.HexToAddress("0x000000000000000000000000000000000000eeeb"),
+		},
+		bprovider: &mockBeneficiaryProvider{
+			b: common.HexToAddress("0x0000000000000000000000000000000000000123"),
+		},
+	}
+	g := summonTestGin()
+	g.GET("/identities/:id/beneficiary", endpoint.Beneficiary)
+
+	g.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"beneficiary":"0x0000000000000000000000000000000000000123",
+			"is_channel_address":false
+  		}`,
 		resp.Body.String(),
 	)
 }
@@ -432,11 +516,11 @@ func (ma *mockAddressProvider) GetActiveChannelAddress(chainID int64, id common.
 }
 
 func (ma *mockAddressProvider) GetHermesChannelAddress(chainID int64, id, hermes common.Address) (common.Address, error) {
-	return common.Address{}, fmt.Errorf("unimplemented")
+	return ma.channelAddressToReturn, nil
 }
 
 func (ma *mockAddressProvider) GetKnownHermeses(chainID int64) ([]common.Address, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return []common.Address{ma.hermesToReturn}, nil
 }
 
 type mockProviderChannelStatusProvider struct {
