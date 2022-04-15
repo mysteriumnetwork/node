@@ -18,6 +18,7 @@
 package migration
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -43,6 +44,7 @@ type HermesMigrator struct {
 	hps                 pingpong.HermesPromiseSettler
 	hermesURLGetter     *pingpong.HermesURLGetter
 	hermesCallerFactory pingpong.HermesCallerFactory
+	registry            registry.IdentityRegistry
 }
 
 // NewHermesMigrator create new HermesMigrator
@@ -52,6 +54,7 @@ func NewHermesMigrator(
 	hermesURLGetter *pingpong.HermesURLGetter,
 	hermesCallerFactory pingpong.HermesCallerFactory,
 	hps pingpong.HermesPromiseSettler,
+	registry registry.IdentityRegistry,
 ) *HermesMigrator {
 	return &HermesMigrator{
 		transactor:          transactor,
@@ -59,6 +62,7 @@ func NewHermesMigrator(
 		hermesURLGetter:     hermesURLGetter,
 		hermesCallerFactory: hermesCallerFactory,
 		hps:                 hps,
+		registry:            registry,
 	}
 }
 
@@ -70,6 +74,13 @@ type HermesClient interface {
 // Start begins migration from old hermes to new
 func (m *HermesMigrator) Start(id string) error {
 	chainID := config.GetInt64(config.FlagChainID)
+
+	registered, err := m.isRegistered(chainID, id)
+	if err != nil {
+		return fmt.Errorf("could not get identity register status: %w", err)
+	} else if !registered {
+		return errors.New("identity is unregistered")
+	}
 
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
@@ -93,11 +104,31 @@ func (m *HermesMigrator) Start(id string) error {
 	if err != nil {
 		return fmt.Errorf("error during getting balance: %w", err)
 	}
+
+	if err = m.openChannel(id, err, chainID, activeHermes, registryAddress); err != nil {
+		return fmt.Errorf("open channel error: %w", err)
+	}
+
 	if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) > 0 {
 		log.Debug().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
 		return nil
 	}
 
+	channelImpl, err := m.addressProvider.GetActiveChannelImplementation(chainID)
+	if err != nil {
+		return fmt.Errorf("error during getting channel implementation: %w", err)
+	}
+	newChannel, err := crypto.GenerateChannelAddress(id, activeHermes.Hex(), registryAddress.Hex(), channelImpl.Hex())
+	if err != nil {
+		return fmt.Errorf("generate channel address erro: %w", err)
+	}
+
+	log.Debug().Msgf("Send transaction. Old Hermes: %s, new Hermes %s (channel: %s)", oldHermes, activeHermes, newChannel)
+
+	return m.hps.Withdraw(chainID, chainID, identity.FromAddress(id), oldHermes, common.HexToAddress(newChannel), nil)
+}
+
+func (m *HermesMigrator) openChannel(id string, err error, chainID int64, activeHermes common.Address, registryAddress common.Address) error {
 	statusResponse, err := m.transactor.ChannelStatus(chainID, id, activeHermes.Hex(), registryAddress.Hex())
 	if err != nil {
 		return fmt.Errorf("channel status error: %w", err)
@@ -116,27 +147,25 @@ func (m *HermesMigrator) Start(id string) error {
 		return fmt.Errorf("error during waiting for channel opening: %w", err)
 	}
 
-	channelImpl, err := m.addressProvider.GetActiveChannelImplementation(chainID)
-	if err != nil {
-		return fmt.Errorf("error during getting channel implementation: %w", err)
-	}
-	newChannel, err := crypto.GenerateChannelAddress(id, activeHermes.Hex(), registryAddress.Hex(), channelImpl.Hex())
-	if err != nil {
-		return fmt.Errorf("generate channel address erro: %w", err)
-	}
-
-	log.Debug().Msgf("Send transaction. Old Hermes: %s, new Hermes %s (channel: %s)", oldHermes, activeHermes, newChannel)
-
-	return m.hps.Withdraw(chainID, chainID, identity.FromAddress(id), oldHermes, common.HexToAddress(newChannel), nil)
+	return nil
 }
 
 // IsMigrationRequired check whether migration required
 func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	chainID := config.GetInt64(config.FlagChainID)
+
+	registered, err := m.isRegistered(chainID, id)
+	if err != nil {
+		return false, fmt.Errorf("could not get identity register status: %w", err)
+	} else if !registered {
+		return false, nil
+	}
+
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
 		return false, fmt.Errorf("could not get hermes address: %w", err)
 	}
+
 	knownHermeses, err := m.addressProvider.GetKnownHermeses(chainID)
 	if err != nil {
 		return false, fmt.Errorf("could not get hermes address: %w", err)
@@ -226,4 +255,12 @@ func getOldHermeses(knownHermeses []common.Address, activeHermes common.Address)
 	}
 
 	return oldHermeses
+}
+
+func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
+	status, err := m.registry.GetRegistrationStatus(chainID, identity.FromAddress(id))
+	if err != nil {
+		return false, err
+	}
+	return status == registry.Registered, nil
 }

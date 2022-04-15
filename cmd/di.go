@@ -637,6 +637,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 		},
 		di.HermesPromiseSettler,
+		di.IdentityRegistry,
 	)
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)

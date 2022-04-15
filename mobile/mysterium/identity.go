@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -184,7 +185,6 @@ const (
 )
 
 // MigrationStatusResponse represents status of the migration
-// swagger:model MigrationStatusResponse
 type MigrationStatusResponse struct {
 	Status MigrationStatus `json:"status"`
 }
@@ -193,10 +193,10 @@ type MigrationStatusResponse struct {
 type MigrationStatus = string
 
 // MigrateHermesStatus migrate from old to active Hermes
-func (mb *MobileNode) MigrateHermesStatus(id string) (MigrationStatusResponse, error) {
+func (mb *MobileNode) MigrateHermesStatus(id string) ([]byte, error) {
 	r, err := mb.hermesMigrator.IsMigrationRequired(id)
 	if err != nil {
-		return MigrationStatusResponse{}, err
+		return []byte{}, err
 	}
 
 	var status MigrationStatus
@@ -206,5 +206,5 @@ func (mb *MobileNode) MigrateHermesStatus(id string) (MigrationStatusResponse, e
 		status = MigrationStatusFinished
 	}
 
-	return MigrationStatusResponse{Status: status}, nil
+	return json.Marshal(MigrationStatusResponse{Status: status})
 }
