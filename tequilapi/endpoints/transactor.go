@@ -55,6 +55,8 @@ type Transactor interface {
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
 	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
 	GetFreeProviderRegistrationEligibility() (bool, error)
+	OpenChannel(chainID int64, id, hermesID, registryAddress string) error
+	ChannelStatus(chainID int64, id, hermesID, registryAddress string) (registry.ChannelStatusResponse, error)
 }
 
 // promiseSettler settles the given promises

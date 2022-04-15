@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/rs/zerolog"
 
 	paymentClient "github.com/mysteriumnetwork/payments/client"
@@ -90,6 +91,7 @@ type MobileNode struct {
 	entertainmentEstimator    *entertainment.Estimator
 	residentCountry           *identity.ResidentCountry
 	filterPresetStorage       *proposal.FilterPresetStorage
+	hermesMigrator            *migration.HermesMigrator
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -316,6 +318,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		),
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
+		hermesMigrator:      di.HermesMigrator,
 	}
 
 	return mobileNode, nil

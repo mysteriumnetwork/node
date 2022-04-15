@@ -60,6 +60,8 @@ func (c *cliApp) identities(args []string) (err error) {
 		"  " + usageImportIdentity,
 		"  " + usageWithdraw,
 		"  " + usageLastWithdrawal,
+		"  " + usageMigrateHermesStatus,
+		"  " + usageMigrateHermes,
 	}, "\n")
 
 	if len(args) == 0 {
@@ -103,6 +105,10 @@ func (c *cliApp) identities(args []string) (err error) {
 		return c.withdraw(actionArgs)
 	case "last-withdrawal":
 		return c.lastWithdrawal(actionArgs)
+	case "migrate-hermes":
+		return c.migrateHermes(actionArgs)
+	case "migrate-hermes-status":
+		return c.migrateHermesStatus(actionArgs)
 	default:
 		fmt.Println(usage)
 		return errUnknownSubCommand(args[0])
@@ -598,7 +604,7 @@ const usageLastWithdrawal = "last-withdrawal <identity>"
 
 func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	if len(actionArgs) != 1 {
-		clio.Info("Usage: " + usageGetReferralCode)
+		clio.Info("Usage: " + usageLastWithdrawal)
 		return errWrongArgumentCount
 	}
 
@@ -625,5 +631,43 @@ func (c *cliApp) lastWithdrawal(actionArgs []string) error {
 	} else {
 		clio.Info("Error: none")
 	}
+	return nil
+}
+
+const usageMigrateHermesStatus = "migrate-hermes-status <identity>"
+
+func (c *cliApp) migrateHermesStatus(actionArgs []string) error {
+	if len(actionArgs) != 1 {
+		clio.Info("Usage: " + usageMigrateHermesStatus)
+		return errWrongArgumentCount
+	}
+
+	address := actionArgs[0]
+	response, err := c.tequilapi.MigrateHermesStatus(address)
+	if err != nil {
+		return err
+	}
+
+	clio.Info("Migration status: ", response.Status)
+
+	return nil
+}
+
+const usageMigrateHermes = "migrate-hermes <identity>"
+
+func (c *cliApp) migrateHermes(actionArgs []string) error {
+	if len(actionArgs) != 1 {
+		clio.Info("Usage: " + usageMigrateHermes)
+		return errWrongArgumentCount
+	}
+
+	address := actionArgs[0]
+	clio.Info("Migration started")
+	err := c.tequilapi.MigrateHermes(address)
+	if err != nil {
+		return err
+	}
+	clio.Info("Migration finished successfully")
+
 	return nil
 }

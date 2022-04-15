@@ -18,14 +18,14 @@
 package mysterium
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 
-	"github.com/mysteriumnetwork/payments/crypto"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // GetIdentityRequest represents identity request.
@@ -170,4 +170,41 @@ func (mb *MobileNode) RegistrationTokenReward(token string) (float64, error) {
 	}
 
 	return crypto.BigMystToFloat(reward), nil
+}
+
+// MigrateHermes migrate from old to active Hermes
+func (mb *MobileNode) MigrateHermes(id string) error {
+	return mb.hermesMigrator.Start(id)
+}
+
+const (
+	// MigrationStatusRequired means new there is new Hermes and identity required to migrate to it
+	MigrationStatusRequired = "required"
+	// MigrationStatusFinished means migration to new Hermes finished or not needed
+	MigrationStatusFinished = "finished"
+)
+
+// MigrationStatusResponse represents status of the migration
+type MigrationStatusResponse struct {
+	Status MigrationStatus `json:"status"`
+}
+
+// MigrationStatus status of the migration
+type MigrationStatus = string
+
+// MigrateHermesStatus migrate from old to active Hermes
+func (mb *MobileNode) MigrateHermesStatus(id string) ([]byte, error) {
+	r, err := mb.hermesMigrator.IsMigrationRequired(id)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	var status MigrationStatus
+	if r {
+		status = MigrationStatusRequired
+	} else {
+		status = MigrationStatusFinished
+	}
+
+	return json.Marshal(MigrationStatusResponse{Status: status})
 }

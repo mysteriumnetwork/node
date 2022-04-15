@@ -511,7 +511,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	if err != nil {
 		return err
 	}
-	channel, err := aps.addressProvider.GetActiveChannelImplementation(fromChainID)
+	channel, err := aps.addressProvider.GetChannelImplementationForHermes(fromChainID, hermesID)
 	if err != nil {
 		return err
 	}
@@ -570,6 +570,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 	ch := aps.paySettler.PayAndSettle(msg.Promise.R, *msg, providerID, "")
 	err = <-ch
 	if err != nil {
+		log.Debug().Msgf("ERROR HERMES. provider:%s, hermes:%s, channel: %s", providerID, hermesID, channel)
 		return fmt.Errorf("could not call hermes pay and settle:%w", err)
 	}
 
