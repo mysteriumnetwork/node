@@ -43,11 +43,11 @@ func TestInstall(t *testing.T) {
 	t.Parallel()
 
 	images := []string{
-		"debian-buster",
-		"debian-stretch",
-		"ubuntu-bionic",
-		"ubuntu-focal",
-		"ubuntu-impish",
+		// "debian-buster",
+		// "debian-stretch",
+		// "ubuntu-bionic",
+		// "ubuntu-focal",
+		// "ubuntu-impish",
 		"ubuntu-jammy",
 	}
 	for _, img := range images {
@@ -66,6 +66,7 @@ func testImage(t *testing.T, image string) {
 		"-t", "testinstall_"+image,
 		".",
 	)
+	fmt.Println(buildOutput)
 	failIf(err)
 
 	var imageId string

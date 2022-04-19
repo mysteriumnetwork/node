@@ -6,9 +6,9 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN sed -i 's/# deb/deb/g' /etc/apt/sources.list
 
-RUN apt update \
-    && apt install -y systemd \
-    && apt-get clean
+RUN apt-get update
+RUN apt-get install -y systemd
+RUN apt-get clean
 
 RUN cd /lib/systemd/system/sysinit.target.wants/ \
     && ls | grep -v systemd-tmpfiles-setup | xargs rm -f $1
