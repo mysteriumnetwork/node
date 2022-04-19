@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 // HermesURLGetter allows for fetching and storing of hermes urls.
@@ -91,7 +92,9 @@ func (hug *HermesURLGetter) GetHermesURL(chainID int64, address common.Address) 
 
 	add, err := hug.bc.GetHermesURL(chainID, registry, address)
 	if err != nil {
-		return "", err
+		log.Err(err).Msg("could not get hermes URL, will return fallback")
+		return "https://hermes.mysterium.network/", nil
+		// return "", err
 	}
 	add, err = hug.normalizeAddress(add)
 	if err != nil {

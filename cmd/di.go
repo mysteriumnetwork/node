@@ -725,7 +725,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	bcClientsL2 := make([]paymentClient.AddressableEthClientGetter, 0)
 	for _, rpc := range network.Chain2.EtherClientRPC {
-		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*3)
 		if err != nil {
 			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
 			continue
@@ -736,7 +736,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	if len(bcClientsL2) == 0 {
-		return errors.New("no l2 rpc endpoints loaded, can't continue")
+		err = errors.New("no l2 rpc endpoints loaded, can't continue")
+		log.Err(err).Msg("uh oh")
+		// return err
 	}
 
 	notifyChannelL1 := make(chan paymentClient.Notification, 5)
