@@ -613,7 +613,10 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 
 	chimp, err := it.deps.AddressProvider.GetChannelImplementationForHermes(em.ChainID, common.HexToAddress(em.HermesID))
 	if err != nil {
-		return errors.Wrap(err, "could not get channel implementation")
+		chimp, err = it.deps.AddressProvider.GetActiveChannelImplementation(em.ChainID)
+		if err != nil {
+			return errors.Wrap(err, "could not get channel implementation")
+		}
 	}
 
 	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer.ToCommonAddress())
