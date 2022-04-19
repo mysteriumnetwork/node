@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 // HermesStatusChecker checks hermes activity and caches the results.
@@ -86,6 +87,12 @@ func (hac *HermesStatusChecker) fetchHermesStatus(chainID int64, registryAddress
 	// hermes is active if: is registered and is active.
 	isRegistered, err := hac.mbc.IsHermesRegistered(chainID, registryAddress, hermesID)
 	if err != nil {
+		log.Err(err).Msg("fallback")
+		return HermesStatus{
+			Fee:      2000,
+			IsActive: true,
+		}, nil
+
 		return HermesStatus{}, fmt.Errorf("could not check if hermes(%v) is registered on chain %v via registry(%v): %w", hermesID.Hex(), chainID, registryAddress.Hex(), err)
 	}
 
