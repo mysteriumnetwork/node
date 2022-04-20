@@ -153,13 +153,15 @@ release-snapshot:docker:
   stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDockerSnapshot
+  only:
+    - hermes-v3
 
 release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPASnapshot
   only:
-    - master
+    - hermes-v3
 
 release-snapshot:goreport:
   stage: release-snapshot
@@ -182,7 +184,6 @@ release-nightly:node:
   script: go run mage.go -v ReleaseGithubNightly
   only:
     - master
-
 
 release-tag:release:
   stage: release-tag
