@@ -109,11 +109,6 @@ func (m *HermesMigrator) Start(id string) error {
 		return fmt.Errorf("open channel error: %w", err)
 	}
 
-	if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) > 0 {
-		log.Debug().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
-		return nil
-	}
-
 	channelImpl, err := m.addressProvider.GetActiveChannelImplementation(chainID)
 	if err != nil {
 		return fmt.Errorf("error during getting channel implementation: %w", err)
@@ -123,9 +118,27 @@ func (m *HermesMigrator) Start(id string) error {
 		return fmt.Errorf("generate channel address erro: %w", err)
 	}
 
+	providerId := identity.FromAddress(id)
+
+	if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) > 0 {
+		// If not enough balance we should still check that latest withdrawal succeeded
+		amountToWithdraw, chid, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id), oldHermes)
+		if err != nil {
+			if !errors.Is(err, pingpong.ErrNotFound) {
+				return fmt.Errorf("failed to check latest withdrawal status: %w", err)
+			}
+			log.Warn().Err(err).Msg("No promise saved")
+		} else if amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
+			log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
+			return m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
+		}
+		log.Debug().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
+		return nil
+	}
+
 	log.Debug().Msgf("Send transaction. Old Hermes: %s, new Hermes %s (channel: %s)", oldHermes, activeHermes, newChannel)
 
-	return m.hps.Withdraw(chainID, chainID, identity.FromAddress(id), oldHermes, common.HexToAddress(newChannel), nil)
+	return m.hps.Withdraw(chainID, chainID, providerId, oldHermes, common.HexToAddress(newChannel), nil)
 }
 
 func (m *HermesMigrator) openChannel(id string, err error, chainID int64, activeHermes common.Address, registryAddress common.Address) error {
@@ -198,6 +211,16 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, fmt.Errorf("error during getting balance: %w", err)
 	}
 
+	amountToWithdraw, _, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id), oldHermes)
+	if err != nil {
+		if !errors.Is(err, pingpong.ErrNotFound) {
+			return false, fmt.Errorf("failed to check latest withdrawal status: %w", err)
+		}
+		log.Warn().Err(err).Msg("No promise saved")
+	} else if amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
+		return true, nil
+	}
+
 	return crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) < 0 && newBalance.Cmp(new(big.Int)) == 0, nil
 }
 
@@ -240,6 +263,9 @@ func (m *HermesMigrator) getBalance(chainID int64, hermesID, id string) (*big.In
 
 	data, err := c.GetConsumerData(chainID, id)
 	if err != nil {
+		if errors.Is(err, pingpong.ErrHermesNotFound) {
+			return new(big.Int), nil
+		}
 		return nil, err
 	}
 

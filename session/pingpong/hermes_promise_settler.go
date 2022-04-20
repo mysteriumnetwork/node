@@ -105,6 +105,8 @@ type HermesPromiseSettler interface {
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
+	CheckLatestWithdrawal(chainID int64, providerID identity.Identity, hermesID common.Address) (*big.Int, string, error)
+	RetryWithdrawLatest(chainID int64, amountToWithdraw *big.Int, chid string, beneficiary common.Address, providerID identity.Identity) error
 }
 
 // hermesPromiseSettler is responsible for settling the hermes promises.
@@ -592,6 +594,51 @@ func (aps *hermesPromiseSettler) Withdraw(
 	latestPromise.Promise.R = decodedR
 
 	return aps.payAndSettleTransactor(toChainID, amountToWithdraw, beneficiary, providerID, chid, latestPromise, fromChainID)
+}
+
+func (aps *hermesPromiseSettler) CheckLatestWithdrawal(
+	chainID int64,
+	providerID identity.Identity,
+	hermesID common.Address,
+) (*big.Int, string, error) {
+	chid, err := crypto.GenerateProviderChannelIDForPayAndSettle(providerID.Address, hermesID.Hex())
+	if err != nil {
+		return nil, "", fmt.Errorf("could not get channel id for pay and settle: %w", err)
+	}
+
+	latestPromise, err := aps.promiseStorage.Get(chainID, chid)
+	if err != nil {
+		return nil, chid, err
+	}
+
+	withdrawalChannel, err := aps.bc.GetProvidersWithdrawalChannel(chainID, hermesID, providerID.ToCommonAddress(), true)
+	if err != nil {
+		return nil, chid, err
+	}
+
+	return new(big.Int).Sub(latestPromise.Promise.Amount, withdrawalChannel.Settled), chid, nil
+}
+
+func (aps *hermesPromiseSettler) RetryWithdrawLatest(
+	chainID int64,
+	amountToWithdraw *big.Int,
+	chid string,
+	beneficiary common.Address,
+	providerID identity.Identity,
+) error {
+	latestPromise, err := aps.promiseStorage.Get(chainID, chid)
+	if err != nil {
+		return err
+	}
+
+	decodedR, err := hex.DecodeString(latestPromise.R)
+	if err != nil {
+		return fmt.Errorf("could not decode R %w", err)
+	}
+	latestPromise.Promise.R = decodedR
+
+	return aps.payAndSettleTransactor(chainID, amountToWithdraw, beneficiary, providerID, chid, latestPromise, chainID)
+
 }
 
 func (aps *hermesPromiseSettler) payAndSettleTransactor(toChainID int64, amountToWithdraw *big.Int, beneficiary common.Address, providerID identity.Identity, chid string, promiseFromStorage HermesPromise, fromChain int64) error {
