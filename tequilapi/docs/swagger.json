@@ -2729,6 +2729,39 @@
         }
       }
     },
+    "/v2/identities/{id}/registration-payment": {
+      "get": {
+        "description": "Checks if a registration payment order for an identity has been paid in pilvytis.",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Check for registration payment",
+        "operationId": "getRegistrationPaymentStatus",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to check",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registration order status",
+            "schema": {
+              "$ref": "#/definitions/RegistrationPaymentResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/v2/payment-order-gateways": {
       "get": {
         "description": "Returns gateway configuration including supported currencies, minimum amounts, etc.",
@@ -4227,6 +4260,17 @@
         "token": {
           "type": "string",
           "x-go-name": "Token"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "RegistrationPaymentResponse": {
+      "type": "object",
+      "title": "RegistrationPaymentResponse holds a registration payment order response.",
+      "properties": {
+        "paid": {
+          "type": "boolean",
+          "x-go-name": "Paid"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

@@ -169,6 +169,19 @@ func NewPaymentOrdersResponse(r []pilvytis.GatewayOrderResponse) []PaymentOrderR
 	return result
 }
 
+// RegistrationPaymentResponse holds a registration payment order response.
+// swagger:model RegistrationPaymentResponse
+type RegistrationPaymentResponse struct {
+	Paid bool `json:"paid"`
+}
+
+// NewRegistrationPaymentResponse creates a registration order response
+func NewRegistrationPaymentResponse(r *pilvytis.RegistrationPaymentResponse) RegistrationPaymentResponse {
+	return RegistrationPaymentResponse{
+		Paid: r.Paid,
+	}
+}
+
 // GatewaysResponse holds payment gateway details.
 // swagger:model GatewaysResponse
 type GatewaysResponse struct {

@@ -112,6 +112,18 @@ func (mock *mockPilvytis) GetPaymentGateways() ([]pilvytis.GatewaysResponse, err
 	return nil, nil
 }
 
+func (mock *mockPilvytis) GetRegistrationPaymentStatus(id identity.Identity) (*pilvytis.RegistrationPaymentResponse, error) {
+	if id.Address != mock.identity {
+		return &pilvytis.RegistrationPaymentResponse{
+			Paid: false,
+		}, nil
+	}
+
+	return &pilvytis.RegistrationPaymentResponse{
+		Paid: true,
+	}, nil
+}
+
 type mockPilvytisLocation struct{}
 
 func (mock *mockPilvytisLocation) GetOrigin() locationstate.Location {
@@ -337,6 +349,35 @@ func TestGetPaymentOrderOptions(t *testing.T) {
 				100
 			]
 		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestGetRegistrationPaymentStatus(t *testing.T) {
+	identity := "0x000000000000000000000000000000000000000b"
+
+	mock := &mockPilvytis{
+		identity: identity,
+	}
+	handler := NewPilvytisEndpoint(mock, &mockPilvytisIssuer{}, &mockPilvytisLocation{}).GetRegistrationPaymentStatus
+
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("/identities/%s/registration-payment", identity),
+		nil,
+	)
+	assert.NoError(t, err)
+
+	g := gin.Default()
+	g.GET("/identities/:id/registration-payment", handler)
+	g.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+	assert.JSONEq(t,
+		`{
+			"paid":true
+		 }`,
 		resp.Body.String(),
 	)
 }
