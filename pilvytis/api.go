@@ -421,3 +421,20 @@ func (a *API) sendRequestAndParseResp(req *http.Request, resp interface{}) error
 
 	return a.req.DoRequestAndParseResponse(req, &resp)
 }
+
+// RegistrationPaymentResponse is a response for the status of a registration payment.
+type RegistrationPaymentResponse struct {
+	Paid bool `json:"paid"`
+}
+
+// GetRegistrationPaymentStatus returns whether a registration payment order
+// has been paid by a given identity
+func (a *API) GetRegistrationPaymentStatus(id identity.Identity) (*RegistrationPaymentResponse, error) {
+	req, err := requests.NewGetRequest(a.url, fmt.Sprintf("api/v2/payment/registration/%s", id.Address), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp RegistrationPaymentResponse
+	return &resp, a.sendRequestAndParseResp(req, &resp)
+}
