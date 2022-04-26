@@ -121,6 +121,7 @@ type InvoiceTracker struct {
 	once                           sync.Once
 	agreementID                    *big.Int
 	firstInvoicePaid               bool
+	lastInvoicePaid                bool
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
@@ -198,6 +199,7 @@ func (it *InvoiceTracker) markInvoiceSent(invoice sentInvoice) {
 	defer it.invoiceLock.Unlock()
 
 	it.invoicesSent[invoice.invoice.Hashlock] = invoice
+	it.lastInvoicePaid = false
 }
 
 func (it *InvoiceTracker) markInvoicePaid(hashlock []byte) {
@@ -208,6 +210,7 @@ func (it *InvoiceTracker) markInvoicePaid(hashlock []byte) {
 		it.firstInvoicePaid = true
 	}
 
+	it.lastInvoicePaid = true
 	delete(it.invoicesSent, hex.EncodeToString(hashlock))
 }
 
@@ -316,8 +319,6 @@ func (it *InvoiceTracker) Start() error {
 	go it.sendInvoicesWhenNeeded(time.Second * 2)
 	for {
 		select {
-		case <-it.stop:
-			return nil
 		case critical := <-it.invoiceChannel:
 			err := it.sendInvoice(critical)
 			if err != nil {
@@ -328,6 +329,9 @@ func (it *InvoiceTracker) Start() error {
 					return fmt.Errorf("sending of invoice failed: %w", err)
 				}
 			}
+		case <-it.stop:
+			log.Info().Msg("exiting")
+			return nil
 		case err := <-it.criticalInvoiceErrors:
 			return err
 		case emErr := <-emErrors:
@@ -376,6 +380,31 @@ func (it *InvoiceTracker) WaitFirstInvoice(wait time.Duration) error {
 			paid := it.firstInvoicePaid
 			it.invoiceLock.Unlock()
 			if paid {
+				return nil
+			}
+		case <-timeout:
+			return fmt.Errorf("failed waiting for first invoice")
+		case <-it.stop:
+			return nil
+		}
+	}
+}
+
+func (it *InvoiceTracker) WaitLastInvoice(lastSent time.Duration, wait time.Duration) error {
+	timeout := time.After(wait)
+
+	for {
+		select {
+		case <-time.After(50 * time.Millisecond):
+			it.invoiceLock.Lock()
+			paid := it.lastInvoicePaid
+			sent := it.lastInvoiceSent
+			it.invoiceLock.Unlock()
+
+			fmt.Println(paid)
+			fmt.Println("last", lastSent)
+			fmt.Println("current", sent)
+			if paid && sent > lastSent {
 				return nil
 			}
 		case <-timeout:
@@ -638,6 +667,20 @@ func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msgf("Stopping invoice tracker for session %s", it.deps.SessionID)
 		_ = it.deps.EventBus.UnsubscribeWithUID(sessionEvent.AppTopicDataTransferred, it.deps.SessionID, it.consumeDataTransferredEvent)
+
+		var t time.Duration
+		it.invoiceLock.Lock()
+		t = it.lastInvoiceSent
+		it.invoiceLock.Unlock()
+
+		it.invoiceChannel <- false
+
+		log.Info().Msg("Sent last invoice request, waiting")
+		if err := it.WaitLastInvoice(t, time.Second*10); err != nil {
+			log.Err(err).Msg("got an error while waiting")
+		}
+		log.Info().Msg("Waiting is done")
+
 		close(it.stop)
 	})
 }
