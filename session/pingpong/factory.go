@@ -53,11 +53,11 @@ const (
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	channel p2p.Channel,
-	balanceSendPeriod, promiseTimeout time.Duration,
+	balanceSendPeriod, limitBalanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
 	maxHermesFailureCount uint64,
 	maxAllowedHermesFee uint16,
-	maxUnpaidInvoiceValue *big.Int,
+	maxUnpaidInvoiceValue, limitUnpaidInvoiceValue *big.Int,
 	hermesStatusChecker hermesStatusChecker,
 	eventBus eventbus.EventBus,
 	promiseHandler promiseHandler,
@@ -71,8 +71,6 @@ func InvoiceFactoryCreator(
 			PeerInvoiceSender:          NewInvoiceSender(channel),
 			InvoiceStorage:             invoiceStorage,
 			TimeTracker:                &timeTracker,
-			ChargePeriod:               balanceSendPeriod,
-			ChargePeriodLeeway:         2 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
 			ProviderID:                 providerID,
@@ -83,9 +81,14 @@ func InvoiceFactoryCreator(
 			EventBus:                   eventBus,
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
-			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 			ChainID:                    chainID,
 			AddressProvider:            addressProvider,
+
+			MaxNotPaidInvoice:   maxUnpaidInvoiceValue,
+			LimitNotPaidInvoice: limitUnpaidInvoiceValue,
+			ChargePeriod:        balanceSendPeriod,
+			LimitChargePeriod:   balanceSendPeriod,
+			ChargePeriodLeeway:  2 * time.Minute,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

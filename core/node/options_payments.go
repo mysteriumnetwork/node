@@ -30,8 +30,6 @@ type OptionsPayments struct {
 	SettlementTimeout              time.Duration
 	SettlementRecheckInterval      time.Duration
 	ConsumerDataLeewayMegabytes    uint64
-	ProviderInvoiceFrequency       time.Duration
-	MaxUnpaidInvoiceValue          *big.Int
 	HermesStatusRecheckInterval    time.Duration
 	BalanceFastPollInterval        time.Duration
 	BalanceFastPollTimeout         time.Duration
@@ -39,4 +37,10 @@ type OptionsPayments struct {
 	RegistryTransactorPollInterval time.Duration
 	RegistryTransactorPollTimeout  time.Duration
 	ZeroStakeSettlementThreshold   float64
+
+	ProviderInvoiceFrequency      time.Duration
+	ProviderLimitInvoiceFrequency time.Duration
+
+	MaxUnpaidInvoiceValue   *big.Int
+	LimitUnpaidInvoiceValue *big.Int
 }
