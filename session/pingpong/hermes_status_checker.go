@@ -23,11 +23,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 // HermesStatusChecker checks hermes activity and caches the results.
 type HermesStatusChecker struct {
 	mbc           mbc
+	observer      observerApi
 	cacheDuration time.Duration
 
 	cachedValues map[string]HermesStatus
@@ -35,11 +37,12 @@ type HermesStatusChecker struct {
 }
 
 // NewHermesStatusChecker creates a new instance of hermes activity checker.
-func NewHermesStatusChecker(bc mbc, cacheDuration time.Duration) *HermesStatusChecker {
+func NewHermesStatusChecker(bc mbc, observer observerApi, cacheDuration time.Duration) *HermesStatusChecker {
 	return &HermesStatusChecker{
 		cachedValues:  make(map[string]HermesStatus),
 		cacheDuration: cacheDuration,
 		mbc:           bc,
+		observer:      observer,
 	}
 }
 
@@ -86,7 +89,8 @@ func (hac *HermesStatusChecker) fetchHermesStatus(chainID int64, registryAddress
 	// hermes is active if: is registered and is active.
 	isRegistered, err := hac.mbc.IsHermesRegistered(chainID, registryAddress, hermesID)
 	if err != nil {
-		return HermesStatus{}, fmt.Errorf("could not check if hermes(%v) is registered on chain %v via registry(%v): %w", hermesID.Hex(), chainID, registryAddress.Hex(), err)
+		log.Err(err).Msg("using observer as fallback")
+		return hac.fetchFallbackHermesStatus(chainID, hermesID)
 	}
 
 	isActive, err := hac.mbc.IsHermesActive(chainID, hermesID)
@@ -105,6 +109,18 @@ func (hac *HermesStatusChecker) fetchHermesStatus(chainID int64, registryAddress
 	}
 
 	return status, nil
+}
+
+func (hac *HermesStatusChecker) fetchFallbackHermesStatus(chainID int64, hermesID common.Address) (HermesStatus, error) {
+	hermesData, err := hac.observer.GetHermesData(chainID, hermesID)
+	if err != nil {
+		return HermesStatus{}, fmt.Errorf("failed to get hermes data from observer: %w", err)
+	}
+	return HermesStatus{
+		IsActive: hermesData.Approved,
+		Fee:      uint16(hermesData.Fee),
+	}, nil
+
 }
 
 func (hac *HermesStatusChecker) setInCache(chainID int64, hermesID common.Address, isActive bool, fee uint16) HermesStatus {

@@ -156,12 +156,11 @@ type InvoiceTrackerDeps struct {
 	SessionID                  string
 	PromiseHandler             promiseHandler
 	ChainID                    int64
-
-	ChargePeriod      time.Duration
-	LimitChargePeriod time.Duration
-
-	LimitNotPaidInvoice *big.Int
-	MaxNotPaidInvoice   *big.Int
+	ChargePeriod               time.Duration
+	LimitChargePeriod          time.Duration
+	LimitNotPaidInvoice        *big.Int
+	MaxNotPaidInvoice          *big.Int
+	Observer                   observerApi
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -341,7 +340,7 @@ func (it *InvoiceTracker) Start() error {
 		case pErr := <-it.promiseErrors:
 			err := it.handleHermesError(pErr)
 			if err != nil {
-				return fmt.Errorf("could not request promise %w", err)
+				return fmt.Errorf("could not request promise: %w", err)
 			}
 		}
 	}
@@ -649,9 +648,15 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(err, "could not get registry address")
 	}
 
-	chimp, err := it.deps.AddressProvider.GetChannelImplementationForHermes(em.ChainID, common.HexToAddress(em.HermesID))
+	hermesId := common.HexToAddress(em.HermesID)
+	chimp, err := it.deps.AddressProvider.GetChannelImplementationForHermes(em.ChainID, hermesId)
 	if err != nil {
-		return errors.Wrap(err, "could not get channel implementation")
+		log.Err(err).Msgf("Failed to get channel implementation for hermes %s, using fallback", em.HermesID)
+		hermesData, err := it.deps.Observer.GetHermesData(em.ChainID, hermesId)
+		if err != nil {
+			return errors.Wrap(err, "could not get channel implementation")
+		}
+		chimp = hermesData.ChannelImplAddress
 	}
 
 	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer.ToCommonAddress())
