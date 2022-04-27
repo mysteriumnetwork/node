@@ -476,7 +476,12 @@ func (aps *hermesPromiseSettler) updatePromiseWithLatestFee(hermesID common.Addr
 
 	updatedPromise, err := hermesCaller.UpdatePromiseFee(promise, fees.Fee)
 	if err != nil {
-		return crypto.Promise{}, fmt.Errorf("could not update promise fee: %w", err)
+		var hermesErr *HermesErrorResponse
+		if errors.As(err, &hermesErr) {
+			return crypto.Promise{}, fmt.Errorf("could not update promise fee: %w", err)
+		}
+		log.Err(err).Msg("could not update promise fee with unknown error, will try settling with outdated promise")
+		return promise, nil
 	}
 	updatedPromise.R = promise.R
 	log.Debug().Msg("promise updated with latest fee")

@@ -118,6 +118,8 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
+		LimitChargePeriod:          time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -163,6 +165,8 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
+		LimitChargePeriod:          time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -213,6 +217,8 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
+		LimitChargePeriod:          time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -258,6 +264,8 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
+		LimitChargePeriod:          time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
 		ChargePeriod:               time.Millisecond,
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
@@ -312,7 +320,10 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
+		LimitChargePeriod:          time.Nanosecond,
 		ChargePeriod:               time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
+		MaxNotPaidInvoice:          big.NewInt(0),
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
@@ -362,6 +373,8 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
+		LimitChargePeriod:          time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
@@ -412,6 +425,8 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
+		LimitChargePeriod:          time.Nanosecond,
+		LimitNotPaidInvoice:        big.NewInt(0),
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Second,
 		ExchangeMessageChan:        exchangeMessageChan,
@@ -464,11 +479,13 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 	tracker := session.NewTracker(mbtime.Now)
 	tracker.StartTracking()
 	deps := InvoiceTrackerDeps{
-		TimeTracker:       &tracker,
-		EventBus:          mocks.NewEventBus(),
-		AgreedPrice:       *market.NewPrice(600, 0),
-		MaxNotPaidInvoice: big.NewInt(100),
-		ChargePeriod:      time.Millisecond,
+		TimeTracker:         &tracker,
+		EventBus:            mocks.NewEventBus(),
+		AgreedPrice:         *market.NewPrice(600, 0),
+		MaxNotPaidInvoice:   big.NewInt(100),
+		ChargePeriod:        time.Millisecond * 2,
+		LimitChargePeriod:   time.Millisecond * 3,
+		LimitNotPaidInvoice: big.NewInt(0),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	invoiceTracker.dataTransferred = DataTransferred{
@@ -476,12 +493,61 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 		Down: 1,
 	}
 	invoiceTracker.invoiceDebounceRate = time.Nanosecond
-	defer invoiceTracker.Stop()
 
-	go invoiceTracker.sendInvoicesWhenNeeded(time.Millisecond * 5)
+	wait := make(chan struct{}, 0)
+	go func() {
+		defer close(wait)
+		invoiceTracker.sendInvoicesWhenNeeded(time.Millisecond * 5)
+	}()
 
 	res := <-invoiceTracker.invoiceChannel
 	assert.False(t, res)
+	res = <-invoiceTracker.invoiceChannel
+	assert.False(t, res)
+	invoiceTracker.Stop()
+
+	<-wait
+	// Test that MaxUnpaid and ChargePeriod Increased
+	assert.Equal(t, time.Millisecond*3, invoiceTracker.deps.ChargePeriod, "charge period should increase up to limit")
+
+}
+
+func Test_sendsInvoiceIfDataUsed(t *testing.T) {
+	tracker := session.NewTracker(mbtime.Now)
+	tracker.StartTracking()
+	deps := InvoiceTrackerDeps{
+		TimeTracker:         &tracker,
+		EventBus:            mocks.NewEventBus(),
+		AgreedPrice:         *market.NewPrice(600, 100),
+		MaxNotPaidInvoice:   big.NewInt(100),
+		ChargePeriod:        time.Millisecond * 2,
+		LimitChargePeriod:   time.Millisecond * 3,
+		LimitNotPaidInvoice: big.NewInt(140),
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+	invoiceTracker.invoiceDebounceRate = time.Nanosecond
+	invoiceTracker.dataTransferred = DataTransferred{
+		Up:   1000000000,
+		Down: 1000000000,
+	}
+	invoiceTracker.invoiceDebounceRate = time.Millisecond * 1
+
+	wait := make(chan struct{}, 0)
+	go func() {
+		defer close(wait)
+		invoiceTracker.sendInvoicesWhenNeeded(time.Millisecond * 5)
+	}()
+
+	res := <-invoiceTracker.invoiceChannel
+	assert.True(t, res)
+	res = <-invoiceTracker.invoiceChannel
+	assert.True(t, res)
+	invoiceTracker.Stop()
+
+	<-wait
+	// Test that MaxUnpaid and ChargePeriod Increased
+	assert.Equal(t, big.NewInt(140), invoiceTracker.deps.MaxNotPaidInvoice, "max unpaid invoice should increase up to limit")
+
 }
 
 func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
@@ -643,6 +709,8 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
 				AddressProvider:            tt.fields.addressProvider,
 				AgreedPrice:                *market.NewPrice(0, 0),
+				LimitChargePeriod:          time.Nanosecond,
+				LimitNotPaidInvoice:        big.NewInt(0),
 			}
 			it := &InvoiceTracker{
 				hermesFailureCount:  tt.fields.hermesFailureCount,
@@ -720,6 +788,8 @@ func TestInvoiceTracker_handleHermesError(t *testing.T) {
 			it := &InvoiceTracker{
 				deps: InvoiceTrackerDeps{
 					MaxHermesFailureCount: tt.maxHermesFailureCount,
+					LimitChargePeriod:     time.Nanosecond,
+					LimitNotPaidInvoice:   big.NewInt(0),
 				},
 			}
 			err := it.handleHermesError(tt.err)

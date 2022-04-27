@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync"
 
-	asaskevichEventBus "github.com/asaskevich/EventBus"
+	asaskevichEventBus "github.com/mysteriumnetwork/EventBus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

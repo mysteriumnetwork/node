@@ -162,10 +162,13 @@ func GetOptions() *Options {
 			RegistryTransactorPollInterval: config.GetDuration(config.FlagPaymentsRegistryTransactorPollInterval),
 			RegistryTransactorPollTimeout:  config.GetDuration(config.FlagPaymentsRegistryTransactorPollTimeout),
 			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
-			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
-			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
 			HermesStatusRecheckInterval:    config.GetDuration(config.FlagPaymentsHermesStatusRecheckInterval),
 			ZeroStakeSettlementThreshold:   config.GetFloat64(config.FlagPaymentsZeroStakeUnsettledAmount),
+
+			ProviderInvoiceFrequency:      config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			ProviderLimitInvoiceFrequency: config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:         config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue),
+			LimitUnpaidInvoiceValue:       config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue),
 		},
 		Chains: OptionsChains{
 			Chain1: metadata.ChainDefinition{

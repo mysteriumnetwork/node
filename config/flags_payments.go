@@ -99,23 +99,11 @@ var (
 		Usage:  "The duration we'll wait before giving up on transactors registration status",
 		Hidden: true,
 	}
-	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
-	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
-		Name:  "payments.provider.invoice-frequency",
-		Value: time.Minute,
-		Usage: "Determines how often the provider sends invoices.",
-	}
 	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
 		Name:  "payments.consumer.data-leeway-megabytes",
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
 		Value: metadata.MainnetDefinition.Payments.Consumer.DataLeewayMegabytes,
-	}
-	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
-	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
-		Name:  "payments.provider.max-unpaid-invoice-value",
-		Usage: "sets the upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
-		Value: "3000000000000000",
 	}
 	// FlagPaymentsHermesStatusRecheckInterval sets how often we re-check the hermes status on bc. Higher values allow for less bc lookups but increase the risk for provider.
 	FlagPaymentsHermesStatusRecheckInterval = cli.DurationFlag{
@@ -152,6 +140,36 @@ var (
 		Usage: "full address of the observer service",
 		Value: metadata.DefaultNetwork.ObserverAddress,
 	}
+
+	// FlagPaymentsLimitUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
+	FlagPaymentsLimitUnpaidInvoiceValue = cli.StringFlag{
+		Name:  "payments.provider.max-unpaid-invoice-value-limit",
+		Usage: "sets the max upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
+		Value: "30000000000000000",
+	}
+
+	// FlagPaymentsUnpaidInvoiceValue sets the starting max limit of session payment value before forcing an invoice
+	FlagPaymentsUnpaidInvoiceValue = cli.StringFlag{
+		Name:   "payments.provider.max-unpaid-invoice-value",
+		Usage:  "sets the starting upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
+		Value:  "3000000000000000",
+		Hidden: true,
+	}
+
+	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
+	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
+		Name:   "payments.provider.invoice-frequency",
+		Value:  time.Second * 30,
+		Usage:  "Determines how often the provider sends invoices.",
+		Hidden: true,
+	}
+
+	// FlagPaymentsLimitProviderInvoiceFrequency determines how often the provider sends invoices.
+	FlagPaymentsLimitProviderInvoiceFrequency = cli.DurationFlag{
+		Name:  "payments.provider.invoice-frequency-limit",
+		Value: time.Minute * 5,
+		Usage: "Determines how often the provider sends invoices.",
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -168,15 +186,19 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsFastBalancePollTimeout,
 		&FlagPaymentsRegistryTransactorPollTimeout,
 		&FlagPaymentsRegistryTransactorPollInterval,
-		&FlagPaymentsProviderInvoiceFrequency,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
-		&FlagPaymentsMaxUnpaidInvoiceValue,
 		&FlagPaymentsHermesStatusRecheckInterval,
 		&FlagOffchainBalanceExpiration,
 		&FlagPaymentsZeroStakeUnsettledAmount,
 		&FlagPaymentsDuringSessionDebug,
 		&FlagPaymentsAmountDuringSessionDebug,
 		&FlagObserverAddress,
+
+		&FlagPaymentsProviderInvoiceFrequency,
+		&FlagPaymentsLimitProviderInvoiceFrequency,
+
+		&FlagPaymentsUnpaidInvoiceValue,
+		&FlagPaymentsLimitUnpaidInvoiceValue,
 	)
 }
 
@@ -187,7 +209,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleCheckInterval)
-	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
 	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollInterval)
 	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsLongBalancePollInterval)
@@ -195,11 +216,16 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsRegistryTransactorPollInterval)
 	Current.ParseDurationFlag(ctx, FlagPaymentsRegistryTransactorPollTimeout)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
-	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
 	Current.ParseDurationFlag(ctx, FlagOffchainBalanceExpiration)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsZeroStakeUnsettledAmount)
 	Current.ParseBoolFlag(ctx, FlagPaymentsDuringSessionDebug)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsAmountDuringSessionDebug)
 	Current.ParseStringFlag(ctx, FlagObserverAddress)
+
+	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
+	Current.ParseDurationFlag(ctx, FlagPaymentsLimitProviderInvoiceFrequency)
+
+	Current.ParseStringFlag(ctx, FlagPaymentsLimitUnpaidInvoiceValue)
+	Current.ParseStringFlag(ctx, FlagPaymentsUnpaidInvoiceValue)
 }

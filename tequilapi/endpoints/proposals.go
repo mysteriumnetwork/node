@@ -297,6 +297,9 @@ func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 	utils.WriteAsJSON(contract.CurrentPriceResponse{
 		PricePerHour: price.PricePerHour,
 		PricePerGiB:  price.PricePerGiB,
+
+		PricePerHourTokens: contract.NewTokens(price.PricePerHour),
+		PricePerGiBTokens:  contract.NewTokens(price.PricePerGiB),
 	}, c.Writer)
 }
 
