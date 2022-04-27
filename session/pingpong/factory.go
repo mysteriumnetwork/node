@@ -62,6 +62,7 @@ func InvoiceFactoryCreator(
 	eventBus eventbus.EventBus,
 	promiseHandler promiseHandler,
 	addressProvider addressProvider,
+	observer observerApi,
 ) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage, market.Price) (service.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Price) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
@@ -83,12 +84,12 @@ func InvoiceFactoryCreator(
 			PromiseHandler:             promiseHandler,
 			ChainID:                    chainID,
 			AddressProvider:            addressProvider,
-
-			MaxNotPaidInvoice:   maxUnpaidInvoiceValue,
-			LimitNotPaidInvoice: limitUnpaidInvoiceValue,
-			ChargePeriod:        balanceSendPeriod,
-			LimitChargePeriod:   balanceSendPeriod,
-			ChargePeriodLeeway:  2 * time.Minute,
+			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
+			LimitNotPaidInvoice:        limitUnpaidInvoiceValue,
+			ChargePeriod:               balanceSendPeriod,
+			LimitChargePeriod:          balanceSendPeriod,
+			ChargePeriodLeeway:         2 * time.Minute,
+			Observer:                   observer,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

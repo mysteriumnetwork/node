@@ -33,7 +33,7 @@ var chainID int64 = 5
 func Test_HermesActivityChecker(t *testing.T) {
 	t.Run("uses cached value if present and valid", func(t *testing.T) {
 		mbc := &mockBc{}
-		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker := NewHermesStatusChecker(mbc, nil, time.Minute)
 		checker.cachedValues[checker.formKey(chainID, hid)] = HermesStatus{
 			IsActive:   true,
 			ValidUntil: time.Now().Add(time.Minute),
@@ -53,7 +53,7 @@ func Test_HermesActivityChecker(t *testing.T) {
 			isRegisteredResult: true,
 			feeResult:          1,
 		}
-		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker := NewHermesStatusChecker(mbc, nil, time.Minute)
 		checker.cachedValues[checker.formKey(chainID, hid)] = HermesStatus{
 			IsActive:   false,
 			ValidUntil: time.Now().Add(-time.Minute),
@@ -83,7 +83,7 @@ func Test_HermesActivityChecker(t *testing.T) {
 			feeResult:          1,
 		}
 
-		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker := NewHermesStatusChecker(mbc, nil, time.Minute)
 		status, err := checker.GetHermesStatus(chainID, rid, hid)
 		assert.NoError(t, err)
 		assert.True(t, status.IsActive)
@@ -107,7 +107,7 @@ func Test_HermesActivityChecker(t *testing.T) {
 			feeResult:          1,
 		}
 
-		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker := NewHermesStatusChecker(mbc, nil, time.Minute)
 		status, err := checker.GetHermesStatus(chainID, rid, hid)
 		assert.NoError(t, err)
 		assert.True(t, status.IsActive)
@@ -127,7 +127,7 @@ func Test_HermesActivityChecker(t *testing.T) {
 			feeResult:          1,
 		}
 
-		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker := NewHermesStatusChecker(mbc, nil, time.Minute)
 		status, err := checker.GetHermesStatus(chainID, rid, hid)
 		assert.NoError(t, err)
 		assert.True(t, status.IsActive)
