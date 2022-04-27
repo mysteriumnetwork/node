@@ -144,7 +144,6 @@ type InvoiceTrackerDeps struct {
 	InvoiceStorage             providerInvoiceStorage
 	TimeTracker                timeTracker
 	ChargePeriodLeeway         time.Duration
-	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
 	ProviderID                 identity.Identity
@@ -156,8 +155,13 @@ type InvoiceTrackerDeps struct {
 	EventBus                   eventbus.EventBus
 	SessionID                  string
 	PromiseHandler             promiseHandler
-	MaxNotPaidInvoice          *big.Int
 	ChainID                    int64
+
+	ChargePeriod      time.Duration
+	LimitChargePeriod time.Duration
+
+	LimitNotPaidInvoice *big.Int
+	MaxNotPaidInvoice   *big.Int
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -313,7 +317,7 @@ func (it *InvoiceTracker) Start() error {
 		return fmt.Errorf("could not send first invoice: %w", err)
 	}
 
-	go it.sendInvoicesWhenNeeded(time.Second * 2)
+	go it.sendInvoicesWhenNeeded(time.Second)
 	for {
 		select {
 		case <-it.stop:
@@ -357,12 +361,46 @@ func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
 			if diff.Cmp(it.deps.MaxNotPaidInvoice) >= 0 && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
 				it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
 				it.invoiceChannel <- true
+
+				it.updateMaxUnpaid()
 			} else if currentlyElapsed-it.lastInvoiceSent > it.deps.ChargePeriod {
 				it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
 				it.invoiceChannel <- false
+
+				it.updateTimer()
 			}
 		}
 	}
+}
+
+const sessionInvoiceIncreaseSlope = 3
+
+func (it *InvoiceTracker) updateMaxUnpaid() {
+	limit := it.deps.LimitNotPaidInvoice
+	if limit == nil || it.deps.MaxNotPaidInvoice.Cmp(limit) >= 0 {
+		return
+	}
+
+	add := new(big.Int).Div(it.deps.MaxNotPaidInvoice, new(big.Int).SetInt64(sessionInvoiceIncreaseSlope))
+	bigger := new(big.Int).Add(it.deps.MaxNotPaidInvoice, add)
+	if bigger.Cmp(limit) > 0 {
+		bigger = limit
+	}
+
+	it.deps.MaxNotPaidInvoice = bigger
+}
+
+func (it *InvoiceTracker) updateTimer() {
+	maxTime := it.deps.LimitChargePeriod
+	if it.deps.ChargePeriod >= maxTime {
+		return
+	}
+
+	newMaxTime := it.deps.ChargePeriod/sessionInvoiceIncreaseSlope + it.deps.ChargePeriod
+	if newMaxTime > maxTime {
+		newMaxTime = maxTime
+	}
+	it.deps.ChargePeriod = newMaxTime
 }
 
 // WaitFirstInvoice waits for a first invoice to be paid.
