@@ -145,7 +145,6 @@ func GetOptions() *Options {
 		Transactor: OptionsTransactor{
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
-			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
 		},
 		Affiliator: OptionsAffiliator{
 			AffiliatorEndpointAddress: config.GetString(config.FlagAffiliatorAddress),

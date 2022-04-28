@@ -241,7 +241,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		Transactor: node.OptionsTransactor{
 			TransactorEndpointAddress:       options.TransactorEndpointAddress,
 			ProviderMaxRegistrationAttempts: 10,
-			ProviderRegistrationRetryDelay:  time.Minute * 3,
 		},
 		Affiliator: node.OptionsAffiliator{AffiliatorEndpointAddress: options.AffiliatorEndpointAddress},
 		Payments: node.OptionsPayments{

@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"net/http"
 	"strings"
 	"time"
 
@@ -203,11 +202,6 @@ func (t *Transactor) registerIdentity(endpoint string, id string, stake, fee *bi
 	return nil
 }
 
-// RegisterProvider registers a provider if free registration slots are available.
-func (t *Transactor) RegisterProvider(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
-	return t.registerIdentity("identity/register/provider", id, stake, fee, beneficiary, chainID)
-}
-
 type identityRegistrationRequestWithToken struct {
 	IdentityRegistrationRequest
 	Token string `json:"token"`
@@ -326,40 +320,6 @@ func (t *Transactor) getReferralTokenRequest(id common.Address) (pc.ReferralToke
 		Identity:  id,
 		Signature: hex.EncodeToString(signature.Bytes()),
 	}, err
-}
-
-// CheckIfRegistrationBountyEligible determines if the identity is eligible for registration bounty
-func (t *Transactor) CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error) {
-	signer := t.signerFactory(identity)
-	message := common.HexToAddress(identity.Address)
-	signature, err := signer.Sign(message.Bytes())
-	if err != nil {
-		return false, err
-	}
-
-	req := pc.ReferralTokenRequest{
-		Identity:  common.HexToAddress(identity.Address),
-		Signature: hex.EncodeToString(signature.Bytes()),
-	}
-
-	request, err := requests.NewPostRequest(t.endpointAddress, "identity/register/bounty", req)
-	if err != nil {
-		return false, fmt.Errorf("failed to create RegisterIdentity request %w", err)
-	}
-
-	resp, err := t.httpClient.Do(request)
-	if err != nil {
-		return false, fmt.Errorf("failed to check bounty status %w", err)
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		return true, nil
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return false, nil
-	}
-
-	return false, fmt.Errorf("got unexpected status from bounty check %v", resp.StatusCode)
 }
 
 func (t *Transactor) validateRegisterIdentityRequest(regReq IdentityRegistrationRequest) error {
@@ -569,37 +529,6 @@ func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Pro
 	}
 	res := SettleResponse{}
 	return res.ID, t.httpClient.DoRequestAndParseResponse(req, &res)
-}
-
-// EligibilityResponse shows if one is eligible for free registration.
-type EligibilityResponse struct {
-	Eligible bool `json:"eligible"`
-}
-
-// GetFreeProviderRegistrationEligibility determines if there are any free provider registrations available.
-func (t *Transactor) GetFreeProviderRegistrationEligibility() (bool, error) {
-	e := EligibilityResponse{}
-
-	req, err := requests.NewGetRequest(t.endpointAddress, "identity/register/provider/eligibility", nil)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to fetch registration eligibility")
-	}
-
-	err = t.httpClient.DoRequestAndParseResponse(req, &e)
-	return e.Eligible, err
-}
-
-// GetFreeRegistrationEligibility determines if the identity is eligible for free registration.
-func (t *Transactor) GetFreeRegistrationEligibility(identity identity.Identity) (bool, error) {
-	e := EligibilityResponse{}
-
-	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("identity/register/eligibility/%v", identity.Address), nil)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to fetch registration eligibility")
-	}
-
-	err = t.httpClient.DoRequestAndParseResponse(req, &e)
-	return e.Eligible, err
 }
 
 // PayAndSettlePayload represents the pay and settle payload.

@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
@@ -125,20 +124,6 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 			return service_noop.NewManager(), nil
 		},
 	)
-}
-
-func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
-	if nodeOptions.Consumer {
-		log.Debug().Msg("Skipping provider registrar for consumer mode")
-		return nil
-	}
-
-	cfg := registry.ProviderRegistrarConfig{
-		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
-	}
-
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg)
-	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {

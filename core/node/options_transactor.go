@@ -17,13 +17,8 @@
 
 package node
 
-import (
-	"time"
-)
-
 // OptionsTransactor describes possible parameters for interaction with transactor
 type OptionsTransactor struct {
 	TransactorEndpointAddress       string
 	ProviderMaxRegistrationAttempts int
-	ProviderRegistrationRetryDelay  time.Duration
 }

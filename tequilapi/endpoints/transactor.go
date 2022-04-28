@@ -54,8 +54,6 @@ type Transactor interface {
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
-	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
-	GetFreeProviderRegistrationEligibility() (bool, error)
 }
 
 // promiseSettler settles the given promises
@@ -658,64 +656,6 @@ func (te *transactorEndpoint) ChainSummary(c *gin.Context) {
 	})
 }
 
-// EligibilityResponse represents the eligibility response
-// swagger:model EligibilityResponse
-type EligibilityResponse struct {
-	Eligible bool `json:"eligible"`
-}
-
-// swagger:operation GET /transactor/identities/{id}/eligibility Eligibility
-// ---
-// summary: Checks if given id is eligible for free registration
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity address to register
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Eligibility response
-//     schema:
-//       "$ref": "#/definitions/EligibilityResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
-	id := identity.FromAddress(c.Param("id"))
-
-	res, err := te.transactor.GetFreeRegistrationEligibility(id)
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
-}
-
-// swagger:operation GET /identities/provider/eligibility ProviderEligibility
-// ---
-// summary: Checks if provider is eligible for free registration
-// responses:
-//   200:
-//     description: Eligibility response
-//     schema:
-//       "$ref": "#/definitions/EligibilityResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context) {
-	res, err := te.transactor.GetFreeProviderRegistrationEligibility()
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, EligibilityResponse{Eligible: res})
-}
-
 // swagger:operation GET /identities/{id}/beneficiary-status
 // ---
 // summary: Returns beneficiary transaction status
@@ -831,8 +771,6 @@ func AddRoutesForTransactor(
 		idGroup := e.Group("/identities")
 		{
 			idGroup.POST("/:id/register", te.RegisterIdentity)
-			idGroup.GET("/provider/eligibility", te.FreeProviderRegistrationEligibility)
-			idGroup.GET("/:id/eligibility", te.FreeRegistrationEligibility)
 			idGroup.GET("/:id/beneficiary-status", te.BeneficiaryTxStatus)
 			idGroup.POST("/:id/beneficiary", te.SettleWithBeneficiaryAsync)
 		}

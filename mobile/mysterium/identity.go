@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/payments/crypto"
 
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
@@ -146,17 +145,6 @@ func (mb *MobileNode) ImportIdentity(data []byte, passphrase string) (string, er
 	}
 
 	return identity.Address, nil
-}
-
-// IsFreeRegistrationEligible returns true if free registration is possible for a given identity.
-func (mb *MobileNode) IsFreeRegistrationEligible(identityAddress string) (bool, error) {
-	id := identity.FromAddress(identityAddress)
-	ok, err := mb.transactor.GetFreeRegistrationEligibility(id)
-	if err != nil {
-		return false, err
-	}
-
-	return ok, nil
 }
 
 // RegistrationTokenReward returns the reward amount for a given token.

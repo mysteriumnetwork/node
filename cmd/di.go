@@ -159,13 +159,12 @@ type Dependencies struct {
 	P2PDialer   p2p.Dialer
 	P2PListener p2p.Listener
 
-	Authenticator     *auth.Authenticator
-	JWTAuthenticator  *auth.JWTAuthenticator
-	UIServer          UIServer
-	Transactor        *registry.Transactor
-	Affiliator        *registry.Affiliator
-	BCHelper          *paymentClient.MultichainBlockchainClient
-	ProviderRegistrar *registry.ProviderRegistrar
+	Authenticator    *auth.Authenticator
+	JWTAuthenticator *auth.JWTAuthenticator
+	UIServer         UIServer
+	Transactor       *registry.Transactor
+	Affiliator       *registry.Affiliator
+	BCHelper         *paymentClient.MultichainBlockchainClient
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -517,10 +516,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	// Consumer current session bandwidth
 	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
 	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
-	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
 	}
 
