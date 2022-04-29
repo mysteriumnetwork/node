@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jinzhu/copier"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
@@ -217,9 +218,15 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 }
 
 func (k *Keeper) announceState(_ interface{}) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-	k.deps.Publisher.Publish(stateEvent.AppTopicState, *k.state)
+	var state stateEvent.State
+	func() {
+		k.lock.Lock()
+		defer k.lock.Unlock()
+		if err := copier.CopyWithOption(&state, *k.state, copier.Option{DeepCopy: true}); err != nil {
+			panic(err)
+		}
+	}()
+	k.deps.Publisher.Publish(stateEvent.AppTopicState, state)
 }
 
 func (k *Keeper) updateServiceState(_ interface{}) {
@@ -530,11 +537,14 @@ func (k *Keeper) incrementConnectCount(serviceID string, isSuccess bool) {
 }
 
 // GetState returns the current state
-func (k *Keeper) GetState() stateEvent.State {
+func (k *Keeper) GetState() (res stateEvent.State) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	return *k.state
+	if err := copier.CopyWithOption(&res, *k.state, copier.Option{DeepCopy: true}); err != nil {
+		panic(err)
+	}
+	return
 }
 
 // Debounce takes in the f and makes sure that it only gets called once if multiple calls are executed in the given interval d.

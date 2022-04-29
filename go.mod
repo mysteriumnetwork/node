@@ -25,6 +25,7 @@ require (
 	github.com/google/go-github/v35 v35.2.0
 	github.com/huin/goupnp v1.0.2
 	github.com/jackpal/gateway v1.0.6
+	github.com/jinzhu/copier v0.3.5
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/koron/go-ssdp v0.0.2
 	github.com/libp2p/go-libp2p v0.5.2
