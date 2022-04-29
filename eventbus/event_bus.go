@@ -102,12 +102,11 @@ func (b *simplifiedEventBus) Publish(topic string, data interface{}) {
 	b.bus.Publish(topic, data)
 
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	ids := b.sub[topic]
+	b.mu.RUnlock()
 
-	if ids, ok := b.sub[topic]; ok {
-		for _, id := range ids {
-			b.bus.Publish(topic+id, data)
-		}
+	for _, id := range ids {
+		b.bus.Publish(topic+id, data)
 	}
 }
 
