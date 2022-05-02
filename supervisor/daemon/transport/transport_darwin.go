@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 
 	"github.com/rs/zerolog/log"
 )
@@ -37,10 +36,6 @@ func Start(handle handlerFunc, options Options) error {
 	l, err := net.Listen("unix", sock)
 	if err != nil {
 		return fmt.Errorf("error listening: %w", err)
-	}
-	numUid, err := strconv.Atoi(options.Uid)
-	if err != nil {
-		return fmt.Errorf("failed to parse uid %s: %w", options.Uid, err)
 	}
 	if err := os.Chmod(sock, 0666); err != nil {
 		return fmt.Errorf("failed to chmod supervisor socket: %w", err)

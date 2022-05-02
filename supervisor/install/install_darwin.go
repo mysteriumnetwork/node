@@ -50,6 +50,16 @@ const plistTpl = `
 	<string>/Library/Logs/Mysterium/myst_supervisor.log</string>
 	<key>StandardOutPath</key>
 	<string>/Library/Logs/Mysterium/myst_supervisor.log</string>
+	<key>Sockets</key>
+	<dict>
+		<key>Listener</key>
+		<dict>
+			<key>SockPathMode</key>
+			<integer>438</integer>
+			<key>SockPathName</key>
+			<string>/var/run/myst.sock</string>
+		</dict>
+	</dict>
 </dict>
 </plist>
 `
