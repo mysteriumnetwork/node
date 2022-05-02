@@ -1,3 +1,5 @@
+//go:build !darwin && !windows
+
 /*
  * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
