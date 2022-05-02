@@ -4046,6 +4046,11 @@
       "description": "PaymentOrderRequest holds order request details",
       "type": "object",
       "properties": {
+        "amount_usd": {
+          "type": "string",
+          "x-go-name": "AmountUSD",
+          "example": "20"
+        },
         "country": {
           "type": "string",
           "x-go-name": "Country",
