@@ -86,8 +86,8 @@ var MainnetDefinition = NetworkDefinition{
 	},
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
-		ChannelImplAddress: "0x813d3A0ef42FD4F25F2854811A64D5842EF3F8D1",
-		HermesID:           "0xDe82990405aCc36B4Fd53c94A24D1010fcc1F83d",
+		ChannelImplAddress: "0x6b423D3885B4877b5760E149364f85f185f477aD",
+		HermesID:           "0x80ed28d84792d8b153bf2f25f0c4b7a1381de4ab",
 		ChainID:            137,
 		MystAddress:        "0x1379e8886a944d2d9d440b3d88df536aea08d9f3",
 		EtherClientRPC: []string{
@@ -96,7 +96,7 @@ var MainnetDefinition = NetworkDefinition{
 		},
 		KnownHermeses: []string{
 			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
-			"0xde82990405acc36b4fd53c94a24d1010fcc1f83d",
+			"0x4f7265afc1373317975a306023574BE5Ec87157A",
 		},
 	},
 	MMNAddress:      "https://mystnodes.com",
