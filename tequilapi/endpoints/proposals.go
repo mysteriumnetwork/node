@@ -117,7 +117,11 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 func (pe *proposalsEndpoint) List(c *gin.Context) {
 	req := c.Request
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
-	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
+	compatibilityMinQuery := req.URL.Query().Get("compatibility_min")
+	compatibilityMin := 2
+	if compatibilityMinQuery != "" {
+		compatibilityMin, _ = strconv.Atoi(compatibilityMinQuery)
+	}
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
 	qualityMin := func() float32 {
 		f, err := strconv.ParseFloat(req.URL.Query().Get("quality_min"), 32)
@@ -224,7 +228,11 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 	req := c.Request
 
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
-	compatibilityMin, _ := strconv.Atoi(req.URL.Query().Get("compatibility_min"))
+	compatibilityMinQuery := req.URL.Query().Get("compatibility_min")
+	compatibilityMin := 2
+	if compatibilityMinQuery != "" {
+		compatibilityMin, _ = strconv.Atoi(compatibilityMinQuery)
+	}
 	compatibilityMax, _ := strconv.Atoi(req.URL.Query().Get("compatibility_max"))
 	qualityMin := func() float32 {
 		f, err := strconv.ParseFloat(req.URL.Query().Get("quality_min"), 32)

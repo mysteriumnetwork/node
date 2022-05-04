@@ -122,7 +122,7 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery:
-    image: mysteriumnetwork/discovery:2.2.0
+    image: mysteriumnetwork/discovery:2.6.3
     depends_on:
       - db
       - redis
@@ -144,6 +144,8 @@ services:
       - REDIS_ADDRESS=redis:6379
       - UNIVERSE_JWT_SECRET=suchsecret
       - BADGER_ADDRESS=http://badger:1234
+      - QUALITY_CACHE_TTL=20m
+      - LOCATION_ADDRESS="badurl"
     dns: 172.30.0.254
     networks:
       public0:
