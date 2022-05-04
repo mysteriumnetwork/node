@@ -162,6 +162,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	assert.EqualValues(t, &proposal.Filter{
 		ProviderID:         "0xProviderId",
 		ExcludeUnsupported: true,
+		CompatibilityMin:   2,
 	}, repository.recordedFilter)
 }
 
@@ -233,6 +234,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 			AccessPolicy:       "accessPolicy",
 			AccessPolicySource: "accessPolicySource",
 			ExcludeUnsupported: true,
+			CompatibilityMin:   2,
 		},
 		repository.recordedFilter,
 	)
