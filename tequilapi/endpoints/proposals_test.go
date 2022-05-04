@@ -26,6 +26,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -77,6 +79,21 @@ func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
 }
 
 var mockedNATProber = &mockNATProber{"none", nil}
+
+type mockResolver struct {
+}
+
+func (r *mockResolver) DetectLocation() (locationstate.Location, error) {
+	return locationstate.Location{}, nil
+}
+
+type mockPricer struct {
+	priceToReturn market.Price
+}
+
+func (mpip *mockPricer) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
+	return mpip.priceToReturn, nil
+}
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	repository := &mockProposalRepository{
@@ -218,6 +235,62 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 			ExcludeUnsupported: true,
 		},
 		repository.recordedFilter,
+	)
+}
+
+func TestCurrentPrices(t *testing.T) {
+	// given
+	repository := &mockProposalRepository{
+		proposals: serviceProposals,
+	}
+	presetRepository := &mockFilterPresetRepository{
+		presets: proposal.FilterPresets{Entries: []proposal.FilterPreset{
+			{
+				ID:     0,
+				Name:   "",
+				IPType: "",
+			},
+		}},
+	}
+	endpoint := NewProposalsEndpoint(repository, &mockPricer{
+		priceToReturn: market.Price{
+			PricePerHour: big.NewInt(123_000_000_000_000_000),
+			PricePerGiB:  big.NewInt(456_000_000_000_000_000),
+		},
+	}, &mockResolver{}, presetRepository, mockedNATProber)
+
+	path := "/prices/current"
+	req, err := http.NewRequest(
+		http.MethodGet,
+		path,
+		nil,
+	)
+	assert.Nil(t, err)
+
+	g := gin.Default()
+	g.GET(path, endpoint.CurrentPrice)
+	resp := httptest.NewRecorder()
+	g.ServeHTTP(resp, req)
+
+	assert.JSONEq(
+		t,
+		`
+				{
+				  "price_per_hour": 123000000000000000,
+				  "price_per_hour_tokens": {
+					"wei": "123000000000000000",
+					"ether": "0.123",
+					"human": "0.123"
+				  },
+				  "price_per_gib": 456000000000000000,
+				  "price_per_gib_tokens": {
+					"wei": "456000000000000000",
+					"ether": "0.456",
+					"human": "0.456"
+				  }
+				}
+				`,
+		resp.Body.String(),
 	)
 }
 

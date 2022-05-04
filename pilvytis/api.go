@@ -364,6 +364,7 @@ func (a *API) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([
 type paymentOrderRequest struct {
 	ChannelAddress string `json:"channel_address"`
 	MystAmount     string `json:"myst_amount"`
+	AmountUSD      string `json:"amount_usd"`
 	PayCurrency    string `json:"pay_currency"`
 	Country        string `json:"country"`
 	ChainID        int64  `json:"chain_id"`
@@ -377,6 +378,7 @@ type GatewayOrderRequest struct {
 	Identity    identity.Identity
 	Gateway     string
 	MystAmount  string
+	AmountUSD   string
 	PayCurrency string
 	Country     string
 	ProjectID   string
@@ -395,6 +397,7 @@ func (a *API) createPaymentGatewayOrder(cgo GatewayOrderRequest) (*GatewayOrderR
 	payload := paymentOrderRequest{
 		ChannelAddress:    ch.Hex(),
 		MystAmount:        cgo.MystAmount,
+		AmountUSD:         cgo.AmountUSD,
 		PayCurrency:       cgo.PayCurrency,
 		Country:           cgo.Country,
 		ChainID:           chainID,
@@ -420,4 +423,21 @@ func (a *API) sendRequestAndParseResp(req *http.Request, resp interface{}) error
 	req.Header.Set("X-Origin-Node-Version", metadata.VersionAsString())
 
 	return a.req.DoRequestAndParseResponse(req, &resp)
+}
+
+// RegistrationPaymentResponse is a response for the status of a registration payment.
+type RegistrationPaymentResponse struct {
+	Paid bool `json:"paid"`
+}
+
+// GetRegistrationPaymentStatus returns whether a registration payment order
+// has been paid by a given identity
+func (a *API) GetRegistrationPaymentStatus(id identity.Identity) (*RegistrationPaymentResponse, error) {
+	req, err := requests.NewGetRequest(a.url, fmt.Sprintf("api/v2/payment/registration/%s", id.Address), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp RegistrationPaymentResponse
+	return &resp, a.sendRequestAndParseResp(req, &resp)
 }

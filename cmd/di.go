@@ -723,7 +723,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.EtherClients = make([]*paymentClient.ReconnectableEthClient, 0)
 	bcClientsL1 := make([]paymentClient.AddressableEthClientGetter, 0)
 	for _, rpc := range network.Chain1.EtherClientRPC {
-		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*10)
 		if err != nil {
 			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
 			continue
@@ -733,12 +733,12 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	if len(bcClientsL1) == 0 {
-		return errors.New("no l1 rpc endpoints loaded, can't continue")
+		log.Error().Msg("no l1 rpc endpoints loaded")
 	}
 
 	bcClientsL2 := make([]paymentClient.AddressableEthClientGetter, 0)
 	for _, rpc := range network.Chain2.EtherClientRPC {
-		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*30)
+		client, err := paymentClient.NewReconnectableEthClient(rpc, time.Second*10)
 		if err != nil {
 			log.Warn().Msgf("failed to load rpc endpoint: %s", rpc)
 			continue
@@ -749,7 +749,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	if len(bcClientsL2) == 0 {
-		return errors.New("no l2 rpc endpoints loaded, can't continue")
+		log.Error().Msg("no l1 rpc endpoints loaded")
 	}
 
 	notifyChannelL1 := make(chan paymentClient.Notification, 5)
@@ -780,7 +780,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
 	di.ObserverAPI = observer.NewAPI(di.HTTPClient, options.ObserverAddress)
 	di.bootstrapAddressProvider(options)
-	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
+	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider, di.ObserverAPI)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
 

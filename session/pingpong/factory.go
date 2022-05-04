@@ -53,15 +53,16 @@ const (
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	channel p2p.Channel,
-	balanceSendPeriod, promiseTimeout time.Duration,
+	balanceSendPeriod, limitBalanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
 	maxHermesFailureCount uint64,
 	maxAllowedHermesFee uint16,
-	maxUnpaidInvoiceValue *big.Int,
+	maxUnpaidInvoiceValue, limitUnpaidInvoiceValue *big.Int,
 	hermesStatusChecker hermesStatusChecker,
 	eventBus eventbus.EventBus,
 	promiseHandler promiseHandler,
 	addressProvider addressProvider,
+	observer observerApi,
 ) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage, market.Price) (service.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage, price market.Price) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
@@ -71,8 +72,6 @@ func InvoiceFactoryCreator(
 			PeerInvoiceSender:          NewInvoiceSender(channel),
 			InvoiceStorage:             invoiceStorage,
 			TimeTracker:                &timeTracker,
-			ChargePeriod:               balanceSendPeriod,
-			ChargePeriodLeeway:         2 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
 			ProviderID:                 providerID,
@@ -83,9 +82,14 @@ func InvoiceFactoryCreator(
 			EventBus:                   eventBus,
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
-			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 			ChainID:                    chainID,
 			AddressProvider:            addressProvider,
+			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
+			LimitNotPaidInvoice:        limitUnpaidInvoiceValue,
+			ChargePeriod:               balanceSendPeriod,
+			LimitChargePeriod:          balanceSendPeriod,
+			ChargePeriodLeeway:         2 * time.Minute,
+			Observer:                   observer,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

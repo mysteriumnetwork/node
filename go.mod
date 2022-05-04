@@ -7,7 +7,6 @@ require (
 	github.com/Microsoft/go-winio v0.5.1
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/arthurkiller/rollingwriter v1.1.3-0.20220211070658-c19a8e8b35be
-	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/asdine/storm/v3 v3.1.1
 	github.com/aws/aws-sdk-go-v2 v1.3.2
 	github.com/aws/aws-sdk-go-v2/config v1.1.6
@@ -26,6 +25,7 @@ require (
 	github.com/google/go-github/v35 v35.2.0
 	github.com/huin/goupnp v1.0.2
 	github.com/jackpal/gateway v1.0.6
+	github.com/jinzhu/copier v0.3.5
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/koron/go-ssdp v0.0.2
 	github.com/libp2p/go-libp2p v0.5.2
@@ -34,9 +34,10 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
+	github.com/mysteriumnetwork/EventBus v0.0.0-20220415063055-d22cb121672c
 	github.com/mysteriumnetwork/feedback v1.1.2-0.20211228095831-9dfca34c9ab7
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220328103729-c16a61419959
-	github.com/mysteriumnetwork/go-dvpn-web v1.11.0
+	github.com/mysteriumnetwork/go-dvpn-web v1.13.0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.2.2
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1

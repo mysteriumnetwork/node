@@ -331,7 +331,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 					return false
 				}
 				return status.Status == "Registered"
-			}, time.Second*5, time.Millisecond*100)
+			}, time.Second*20, time.Millisecond*100)
 		})
 		t.Run("provider", func(t *testing.T) {
 			c := consumersToTest[0]
@@ -357,7 +357,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 					return false
 				}
 				return status.Status == "Registered"
-			}, time.Second*5, time.Millisecond*100)
+			}, time.Second*20, time.Millisecond*100)
 		})
 	})
 }
@@ -488,7 +488,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 		balance, err := tequilapi.BalanceRefresh(id)
 		assert.NoError(t, err)
 		return balanceAfterRegistration.Cmp(balance.Balance) == 0
-	}, time.Second*5, time.Millisecond*500)
+	}, time.Second*20, time.Millisecond*500)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
@@ -526,7 +526,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 		balance, err := tequilapi.BalanceRefresh(id)
 		assert.NoError(t, err)
 		return balanceAfterRegistration.Cmp(balance.Balance) == 0
-	}, time.Second*5, time.Millisecond*500)
+	}, time.Second*20, time.Millisecond*500)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
@@ -660,7 +660,7 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 
 		fdiff := getDiffFloat(providerStatus.Earnings, earningsExpected)
 		return fdiff < tenthThou
-	}, time.Second*5, time.Millisecond*250)
+	}, time.Second*20, time.Millisecond*250)
 
 	var providerStatus contract.IdentityDTO
 	var err error
@@ -668,7 +668,7 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 		providerStatus, err = tequilapi.Identity(id)
 		assert.NoError(t, err)
 		return providerStatus.Balance.Cmp(balanceAfterRegistration) == 0
-	}, time.Second*5, time.Millisecond*500)
+	}, time.Second*20, time.Millisecond*500)
 
 	// For reasoning behind these, see the comment in recheckBalancesWithHermes
 	actualEarnings := getDiffFloat(earningsExpected, providerStatus.Earnings)

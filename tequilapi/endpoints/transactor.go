@@ -41,6 +41,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -82,6 +83,10 @@ type settlementHistoryProvider interface {
 	List(pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error)
 }
 
+type pilvytisApi interface {
+	GetRegistrationPaymentStatus(id identity.Identity) (*pilvytis.RegistrationPaymentResponse, error)
+}
+
 type transactorEndpoint struct {
 	transactor                Transactor
 	affiliator                Affiliator
@@ -92,6 +97,7 @@ type transactorEndpoint struct {
 	addressStorage            *payout.AddressStorage
 	bprovider                 beneficiaryProvider
 	bhandler                  beneficiarySaver
+	pilvytis                  pilvytisApi
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
@@ -103,6 +109,7 @@ func NewTransactorEndpoint(
 	addressProvider addressProvider,
 	bprovider beneficiaryProvider,
 	bhandler beneficiarySaver,
+	pilvytis pilvytisApi,
 ) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
@@ -112,6 +119,7 @@ func NewTransactorEndpoint(
 		addressProvider:           addressProvider,
 		bprovider:                 bprovider,
 		bhandler:                  bhandler,
+		pilvytis:                  pilvytis,
 	}
 }
 
@@ -336,7 +344,7 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 	}
 
 	regFee := big.NewInt(0)
-	if req.ReferralToken == nil {
+	if !te.canRegisterForFree(req, id) {
 		rf, err := te.transactor.FetchRegistrationFees(chainID)
 		if err != nil {
 			c.Error(err)
@@ -830,8 +838,9 @@ func AddRoutesForTransactor(
 	addressProvider addressProvider,
 	bprovider beneficiaryProvider,
 	bhandler beneficiarySaver,
+	pilvytis pilvytisApi,
 ) func(*gin.Engine) error {
-	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bprovider, bhandler)
+	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bprovider, bhandler, pilvytis)
 	a := NewAffiliatorEndpoint(affiliator)
 
 	return func(e *gin.Engine) error {
@@ -859,4 +868,16 @@ func AddRoutesForTransactor(
 		}
 		return nil
 	}
+}
+
+func (te *transactorEndpoint) canRegisterForFree(req *contract.IdentityRegisterRequest, id identity.Identity) bool {
+	if req.ReferralToken != nil {
+		return true
+	}
+	resp, err := te.pilvytis.GetRegistrationPaymentStatus(id)
+	if err != nil {
+		log.Warn().AnErr("err", err).Msg("Failed to get registration payment status from pilvytis")
+		return false
+	}
+	return resp.Paid
 }

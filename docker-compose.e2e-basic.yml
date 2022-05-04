@@ -121,7 +121,7 @@ services:
       - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   transactor-sidecar:
-    image: mysteriumnetwork/transactor-sidecar:2.6.5
+    image: mysteriumnetwork/transactor-sidecar:2.7.4
     depends_on:
       - transactordatabase
       - redis
@@ -140,9 +140,10 @@ services:
       -gasPriceUpdateInterval 2s
       -gasStationOverrideChainsEth ""
       -gasStationOverrideChainsMatic ""
+      -feeUpdateInterval 2s
 
   transactor:
-    image: mysteriumnetwork/transactor:2.7.0
+    image: mysteriumnetwork/transactor:2.7.4
     environment:
       PORT: 8888
     expose:
