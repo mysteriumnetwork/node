@@ -190,11 +190,6 @@ release-tag:release:
   tags: [go]
   script: go run mage.go -v ReleaseGithubTag
 
-release-tag:avado:
-  stage: release-tag
-  tags: [go]
-  script: go run mage.go -v CreateAvadoPR
-
 release-tag:docker:
   stage: release-tag
   tags: [go,high_performance]
@@ -214,3 +209,19 @@ remove-bucket:
   stage: post-release
   tags: [go]
   script: go run mage.go -v RemoveBucket
+
+notify-uptimerobot:
+  stage: post-release
+  tags: [go]
+  script:
+    - |
+      if [ "$NIGHTLY_BUILD" = "1" -o "$NIGHTLY_BUILD" = "T" -o "$NIGHTLY_BUILD" = "true" -o "$NIGHTLY_BUILD" = "True" -o "$NIGHTLY_BUILD" = "TRUE" ]; then
+        curl -so /dev/null -I "$NIGHTLY_UPTIMEROBOT"
+      fi
+  only:
+    - master
+
+pr-avado:
+  stage: post-release
+  tags: [go]
+  script: go run mage.go -v CreateAvadoPR

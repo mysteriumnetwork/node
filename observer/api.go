@@ -19,16 +19,25 @@ package observer
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
+type httpClient interface {
+	DoRequestAndParseResponse(req *http.Request, resp interface{}) error
+}
+
 // API is object which exposes observer API.
 type API struct {
-	req *requests.HTTPClient
-	url string
+	req            httpClient
+	url            string
+	cachedResponse HermesesDataCache
+	lock           sync.Mutex
 }
 
 const (
@@ -36,7 +45,7 @@ const (
 )
 
 // NewAPI returns a new API instance.
-func NewAPI(hc *requests.HTTPClient, url string) *API {
+func NewAPI(hc httpClient, url string) *API {
 	return &API{
 		req: hc,
 		url: strings.TrimSuffix(url, "/"),
@@ -48,14 +57,41 @@ type HermesesResponse map[int64][]HermesResponse
 
 // HermesResponse describes a hermes.
 type HermesResponse struct {
-	HermesAddress common.Address `json:"hermes_address"`
-	Operator      common.Address `json:"operator"`
-	Version       int            `json:"version"`
-	Approved      bool           `json:"approved"`
+	HermesAddress      common.Address `json:"hermes_address"`
+	Operator           common.Address `json:"operator"`
+	Version            int            `json:"version"`
+	Approved           bool           `json:"approved"`
+	ChannelImplAddress common.Address `json:"channel_impl"`
+	Fee                int            `json:"fee"`
+	URL                string         `json:"url"`
 }
 
-// GetHermeses returns a map by chain of all known hermeses.
-func (a *API) GetHermeses() (*HermesesResponse, error) {
+// HermesesData is a map by chain id and hermes address to used to index hermes data.
+type HermesesData map[int64]map[common.Address]HermesData
+
+// HermesData describes the data belonging to a hermes.
+type HermesData struct {
+	Operator           common.Address
+	Version            int
+	Approved           bool
+	ChannelImplAddress common.Address
+	Fee                int
+	URL                string
+}
+
+// HermesesDataCache describes a hermeses data cache.
+type HermesesDataCache struct {
+	HermesesData
+	ValidUntil time.Time
+}
+
+// GetHermesesData returns a map by chain id and hermes address of all known hermeses.
+func (a *API) GetHermesesData() (HermesesData, error) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	if time.Now().Before(a.cachedResponse.ValidUntil) {
+		return a.cachedResponse.HermesesData, nil
+	}
 	if a.url == "" {
 		return nil, fmt.Errorf("no observer url set")
 	}
@@ -63,26 +99,65 @@ func (a *API) GetHermeses() (*HermesesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var resp HermesesResponse
-	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
+	err = a.req.DoRequestAndParseResponse(req, &resp)
+	if err != nil {
+		return nil, err
+	}
+	hermesesData := make(map[int64]map[common.Address]HermesData)
+	for chainId, hermeses := range resp {
+		hermesesMap := make(map[common.Address]HermesData)
+		for _, hermes := range hermeses {
+			hermesesMap[hermes.HermesAddress] = HermesData{
+				Operator:           hermes.Operator,
+				Version:            hermes.Version,
+				Approved:           hermes.Approved,
+				ChannelImplAddress: hermes.ChannelImplAddress,
+				Fee:                hermes.Fee,
+				URL:                hermes.URL,
+			}
+		}
+		hermesesData[chainId] = hermesesMap
+	}
+	a.cachedResponse = HermesesDataCache{
+		HermesesData: hermesesData,
+		ValidUntil:   time.Now().Add(24 * time.Hour),
+	}
+	return hermesesData, err
 }
 
 // GetApprovedHermesAdresses returns a map by chain of all approved hermes addresses.
 func (a *API) GetApprovedHermesAdresses() (map[int64][]common.Address, error) {
-	resp, err := a.GetHermeses()
+	resp, err := a.GetHermesesData()
 	if err != nil {
 		return nil, err
 	}
 	res := make(map[int64][]common.Address)
-	for chainId, hermesesResp := range *resp {
+	for chainId, hermesesResp := range resp {
 		hermeses := make([]common.Address, 0)
-		for _, h := range hermesesResp {
-			if h.Approved {
-				hermeses = append(hermeses, h.HermesAddress)
+		for hermesAddress, hermesData := range hermesesResp {
+			if hermesData.Approved {
+				hermeses = append(hermeses, hermesAddress)
 			}
 		}
 		res[chainId] = hermeses
 	}
 	return res, nil
+}
+
+// GetHermesData returns the data of a given hermes and chain id.
+func (a *API) GetHermesData(chainId int64, hermesAddress common.Address) (HermesData, error) {
+	hermesesData, err := a.GetHermesesData()
+	if err != nil {
+		return HermesData{}, err
+	}
+	hermesesForChainId, ok := hermesesData[chainId]
+	if !ok {
+		return HermesData{}, fmt.Errorf("no hermeses for chain id %d", chainId)
+	}
+	hermesData, ok := hermesesForChainId[hermesAddress]
+	if !ok {
+		return HermesData{}, fmt.Errorf("no data for hermes %s", hermesAddress.Hex())
+	}
+	return hermesData, nil
 }

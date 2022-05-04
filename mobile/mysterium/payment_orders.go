@@ -131,6 +131,7 @@ type CreatePaymentGatewayOrderReq struct {
 	IdentityAddress string
 	Gateway         string
 	MystAmount      string
+	AmountUSD       string
 	PayCurrency     string
 	Country         string
 	// GatewayCallerData is marshaled json that is accepting by the payment gateway.
@@ -148,6 +149,7 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 		pilvytis.GatewayOrderRequest{Identity: identity.FromAddress(req.IdentityAddress),
 			Gateway:     req.Gateway,
 			MystAmount:  req.MystAmount,
+			AmountUSD:   req.AmountUSD,
 			PayCurrency: req.PayCurrency,
 			Country:     req.Country,
 			CallerData:  req.GatewayCallerData,

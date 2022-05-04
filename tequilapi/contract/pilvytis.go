@@ -169,6 +169,19 @@ func NewPaymentOrdersResponse(r []pilvytis.GatewayOrderResponse) []PaymentOrderR
 	return result
 }
 
+// RegistrationPaymentResponse holds a registration payment order response.
+// swagger:model RegistrationPaymentResponse
+type RegistrationPaymentResponse struct {
+	Paid bool `json:"paid"`
+}
+
+// NewRegistrationPaymentResponse creates a registration order response
+func NewRegistrationPaymentResponse(r *pilvytis.RegistrationPaymentResponse) RegistrationPaymentResponse {
+	return RegistrationPaymentResponse{
+		Paid: r.Paid,
+	}
+}
+
 // GatewaysResponse holds payment gateway details.
 // swagger:model GatewaysResponse
 type GatewaysResponse struct {
@@ -197,6 +210,9 @@ type PaymentOrderRequest struct {
 	// example: 3.14
 	MystAmount string `json:"myst_amount"`
 
+	// example: 20
+	AmountUSD string `json:"amount_usd"`
+
 	// example: EUR
 	PayCurrency string `json:"pay_currency"`
 
@@ -216,6 +232,7 @@ func (o *PaymentOrderRequest) GatewayOrderRequest(identity identity.Identity, ga
 		Identity:    identity,
 		Gateway:     gateway,
 		MystAmount:  o.MystAmount,
+		AmountUSD:   o.AmountUSD,
 		PayCurrency: o.PayCurrency,
 		Country:     o.Country,
 		ProjectID:   o.ProjectID,

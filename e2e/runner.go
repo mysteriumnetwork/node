@@ -102,11 +102,9 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "could not pull images")
 	}
 
-	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase", "pilvytis-mock", "scylla"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase", "pilvytis-mock"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
-	//wait for scylla
-	time.Sleep(30 * time.Second)
 
 	log.Info().Msg("Starting discovery DB")
 	if err := r.compose("up", "-d", "db"); err != nil {
@@ -150,8 +148,6 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
 
-	time.Sleep(time.Second * 5)
-
 	log.Info().Msg("Seeding http mock")
 	if err := seedHTTPMock(); err != nil {
 		return fmt.Errorf("could not seed http mock %w", err)
@@ -161,6 +157,8 @@ func (r *Runner) Init() error {
 	if err := r.compose("up", "-d", "transactor", "transactor-sidecar"); err != nil {
 		return errors.Wrap(err, "starting transactor failed!")
 	}
+
+	time.Sleep(time.Second * 5)
 
 	log.Info().Msg("Building app images")
 	if err := r.compose("build"); err != nil {

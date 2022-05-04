@@ -45,6 +45,7 @@ type api interface {
 	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
 	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.GatewayOrderResponse, error)
 	GetPaymentGateways() ([]pilvytis.GatewaysResponse, error)
+	GetRegistrationPaymentStatus(id identity.Identity) (*pilvytis.RegistrationPaymentResponse, error)
 }
 
 type paymentsIssuer interface {
@@ -455,6 +456,37 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 	utils.WriteAsJSON(contract.NewPaymentOrderResponse(resp), c.Writer)
 }
 
+// GetRegistrationPaymentStatus returns a whether a registration order has been paid.
+//
+// swagger:operation GET /v2/identities/{id}/registration-payment Order getRegistrationPaymentStatus
+// ---
+// summary: Check for registration payment
+// description: Checks if a registration payment order for an identity has been paid in pilvytis.
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to check
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Registration order status
+//     schema:
+//       "$ref": "#/definitions/RegistrationPaymentResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (e *pilvytisEndpoint) GetRegistrationPaymentStatus(c *gin.Context) {
+	resp, err := e.api.GetRegistrationPaymentStatus(identity.FromAddress(c.Param("id")))
+	if err != nil {
+		utils.ForwardError(c, err, apierror.Internal("Failed to get registration payment status", contract.ErrCodePaymentList))
+		return
+	}
+
+	utils.WriteAsJSON(contract.NewRegistrationPaymentResponse(resp), c.Writer)
+}
+
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.
 func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer, lf paymentLocationFallback) func(*gin.Engine) error {
 	pil := NewPilvytisEndpoint(pilvytis, pt, lf)
@@ -477,6 +509,7 @@ func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer, lf paymentLocationFal
 			idGroupV2.GET("/:id/payment-order/:order_id", pil.GetPaymentGatewayOrder)
 			idGroupV2.GET("/:id/payment-order/:order_id/invoice", pil.GetPaymentGatewayOrderInvoice)
 			idGroupV2.GET("/:id/payment-order", pil.GetPaymentGatewayOrders)
+			idGroupV2.GET("/:id/registration-payment", pil.GetRegistrationPaymentStatus)
 		}
 		e.GET("/v2/payment-order-gateways", pil.GetPaymentGateways)
 		return nil

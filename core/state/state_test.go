@@ -19,6 +19,7 @@ package state
 
 import (
 	"math/big"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -322,7 +323,15 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	// given
-	expected := connectionstate.Status{State: connectionstate.Connected, SessionID: "1"}
+	expected := connectionstate.Status{
+		State:     connectionstate.Connected,
+		SessionID: "1",
+		Proposal: proposal.PricedServiceProposal{
+			ServiceProposal: market.ServiceProposal{
+				Contacts: market.ContactList{},
+			},
+		},
+	}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
 		Publisher:        eventBus,
@@ -404,7 +413,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return expected == keeper.GetState().Connection.Invoice
+		return reflect.DeepEqual(expected, keeper.GetState().Connection.Invoice)
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
