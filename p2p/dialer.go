@@ -105,6 +105,10 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("could not exchange config: %w", err)
 	}
 
+	if config.compatibility < 2 {
+		return nil, fmt.Errorf("peer using compatibility version lower than 2: %d", config.compatibility)
+	}
+
 	if serviceType != "openvpn" { // OpenVPN does this automatically, we don't need to perform it manually.
 		if err := router.ExcludeIP(net.ParseIP(config.peerIP())); err != nil {
 			return nil, fmt.Errorf("failed to exclude peer IP from default routes: %w", err)
