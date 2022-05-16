@@ -782,6 +782,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		di.SignerFactory,
 		di.EventBus,
 		di.BCHelper,
+		options.Transactor.TransactorFeesValidTime,
 	)
 	di.Affiliator = registry.NewAffiliator(di.HTTPClient, options.Affiliator.AffiliatorEndpointAddress)
 

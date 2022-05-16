@@ -52,6 +52,58 @@ type AddressProvider interface {
 	GetRegistryAddress(chainID int64) (common.Address, error)
 }
 
+type feeType uint8
+
+const (
+	settleFeeType        feeType = iota
+	registrationFeeType          = 1
+	stakeDecreaseFeeType         = 2
+)
+
+type feeCacher struct {
+	validityDuration time.Duration
+	feesMap          map[int64]map[feeType]feeCache
+}
+
+type feeCache struct {
+	FeesResponse
+	CacheValidUntil time.Time
+}
+
+func newFeeCacher(validityDuration time.Duration) *feeCacher {
+	return &feeCacher{
+		validityDuration: validityDuration,
+		feesMap:          make(map[int64]map[feeType]feeCache),
+	}
+}
+
+func (f *feeCacher) getCachedFee(chainId int64, feeType feeType) *FeesResponse {
+	if chainFees, ok := f.feesMap[chainId]; ok {
+		if fees, ok := chainFees[feeType]; ok {
+			if fees.CacheValidUntil.After(time.Now()) {
+				return &fees.FeesResponse
+			}
+		}
+	}
+	return nil
+}
+
+func (f *feeCacher) cacheFee(chainId int64, ftype feeType, response FeesResponse) {
+	_, ok := f.feesMap[chainId]
+	if !ok {
+		f.feesMap[chainId] = make(map[feeType]feeCache)
+	}
+	cacheExpiration := time.Now().Add(f.validityDuration)
+	feeCache := feeCache{
+		FeesResponse:    response,
+		CacheValidUntil: cacheExpiration,
+	}
+	if feeCache.CacheValidUntil.After(response.ValidUntil) {
+		feeCache.CacheValidUntil = response.ValidUntil
+	}
+	f.feesMap[chainId][ftype] = feeCache
+}
+
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
 	httpClient      *requests.HTTPClient
@@ -60,10 +112,11 @@ type Transactor struct {
 	publisher       eventbus.Publisher
 	bc              channelProvider
 	addresser       AddressProvider
+	feeCache        *feeCacher
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(httpClient *requests.HTTPClient, endpointAddress string, addresser AddressProvider, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress string, addresser AddressProvider, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider, feesValidTime time.Duration) *Transactor {
 	return &Transactor{
 		httpClient:      httpClient,
 		endpointAddress: endpointAddress,
@@ -71,6 +124,7 @@ func NewTransactor(httpClient *requests.HTTPClient, endpointAddress string, addr
 		addresser:       addresser,
 		publisher:       publisher,
 		bc:              bc,
+		feeCache:        newFeeCacher(feesValidTime),
 	}
 }
 
@@ -117,40 +171,61 @@ type PromiseSettlementRequest struct {
 
 // FetchRegistrationFees fetches current transactor registration fees
 func (t *Transactor) FetchRegistrationFees(chainID int64) (FeesResponse, error) {
-	f := FeesResponse{}
+	cachedFees := t.feeCache.getCachedFee(chainID, registrationFeeType)
+	if cachedFees != nil {
+		return *cachedFees, nil
+	}
 
+	f := FeesResponse{}
 	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v/register", chainID), nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
 
 	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	if err == nil {
+		t.feeCache.cacheFee(chainID, registrationFeeType, f)
+	}
 	return f, err
 }
 
 // FetchSettleFees fetches current transactor settlement fees
 func (t *Transactor) FetchSettleFees(chainID int64) (FeesResponse, error) {
-	f := FeesResponse{}
+	cachedFees := t.feeCache.getCachedFee(chainID, settleFeeType)
+	if cachedFees != nil {
+		return *cachedFees, nil
+	}
 
+	f := FeesResponse{}
 	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v/settle", chainID), nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
 
 	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	if err == nil {
+		t.feeCache.cacheFee(chainID, settleFeeType, f)
+	}
 	return f, err
 }
 
 // FetchStakeDecreaseFee fetches current transactor stake decrease fees.
 func (t *Transactor) FetchStakeDecreaseFee(chainID int64) (FeesResponse, error) {
-	f := FeesResponse{}
+	cachedFees := t.feeCache.getCachedFee(chainID, stakeDecreaseFeeType)
+	if cachedFees != nil {
+		return *cachedFees, nil
+	}
 
+	f := FeesResponse{}
 	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v/stake/decrease", chainID), nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
 
 	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	if err == nil {
+		t.feeCache.cacheFee(chainID, stakeDecreaseFeeType, f)
+	}
 	return f, err
 }
 

@@ -96,6 +96,7 @@ type receivedPromise struct {
 	hermesID    common.Address
 	promise     crypto.Promise
 	beneficiary common.Address
+	maxFee      *big.Int
 }
 
 // HermesPromiseSettler is responsible for settling the hermes promises.
@@ -132,12 +133,14 @@ type hermesPromiseSettler struct {
 
 // HermesPromiseSettlerConfig configures the hermes promise settler accordingly.
 type HermesPromiseSettlerConfig struct {
-	Threshold                    float64
-	L1ChainID                    int64
-	L2ChainID                    int64
-	SettlementCheckInterval      time.Duration
-	SettlementCheckTimeout       time.Duration
-	ZeroStakeSettlementThreshold float64
+	MaxFeeThreshold         float64
+	MinAutoSettleAmount     float64
+	MaxUnSettledAmount      float64
+	L1ChainID               int64
+	L2ChainID               int64
+	SettlementCheckInterval time.Duration
+	SettlementCheckTimeout  time.Duration
+	BalanceThreshold        float64
 }
 
 var errFeeNotCovered = errors.New("fee not covered, cannot continue")
@@ -308,13 +311,14 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 
 	log.Info().Msgf("Hermes %q promise state updated for provider %q", apep.HermesID.Hex(), id)
 
-	if s.needsSettling(aps.config.Threshold, aps.config.ZeroStakeSettlementThreshold, channel) {
+	needs, maxFee := aps.needsSettling(s, aps.config.BalanceThreshold, aps.config.MaxFeeThreshold, aps.config.MinAutoSettleAmount, aps.config.MaxUnSettledAmount, channel, apep.Promise.ChainID)
+	if needs {
 		log.Info().Msgf("Starting auto settle for provider %v", id)
-		aps.initiateSettling(channel)
+		aps.initiateSettling(channel, maxFee)
 	}
 }
 
-func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel) {
+func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel, maxFee *big.Int) {
 	hexR, err := hex.DecodeString(channel.lastPromise.R)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("could encode R: %w", err))
@@ -327,6 +331,7 @@ func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel) {
 		provider:    channel.Identity,
 		promise:     channel.lastPromise.Promise,
 		beneficiary: channel.Beneficiary,
+		maxFee:      maxFee,
 	}
 }
 
@@ -352,6 +357,7 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 				p.promise,
 				p.beneficiary,
 				channel.Channel.Settled,
+				p.maxFee,
 			)
 		}
 	}
@@ -379,6 +385,7 @@ func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID ident
 			channel.lastPromise.Promise,
 			channel.Beneficiary,
 			channel.Channel.Settled,
+			nil,
 		)
 		if err != nil {
 			return err
@@ -415,6 +422,7 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 			channel.lastPromise.Promise,
 			channel.Beneficiary,
 			channel.Channel.Settled,
+			nil,
 		)
 		if err != nil {
 			if errors.Is(err, errFeeNotCovered) {
@@ -456,17 +464,22 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID
 		channel.lastPromise.Promise,
 		beneficiary,
 		channel.Channel.Settled,
+		nil,
 	)
 }
 
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
-func (aps *hermesPromiseSettler) updatePromiseWithLatestFee(hermesID common.Address, promise crypto.Promise) (crypto.Promise, error) {
+func (aps *hermesPromiseSettler) updatePromiseWithLatestFee(hermesID common.Address, promise crypto.Promise, maxFee *big.Int) (crypto.Promise, error) {
 	log.Debug().Msgf("Updating promise with latest fee. HermesID %v", hermesID.Hex())
 	fees, err := aps.transactor.FetchSettleFees(promise.ChainID)
 	if err != nil {
 		return crypto.Promise{}, fmt.Errorf("could not fetch settle fees: %w", err)
+	}
+
+	if maxFee != nil && fees.Fee.Cmp(maxFee) == 1 {
+		return crypto.Promise{}, fmt.Errorf("current fee is more than the max")
 	}
 
 	hermesCaller, err := aps.getHermesCaller(promise.ChainID, hermesID)
@@ -712,7 +725,7 @@ func (aps *hermesPromiseSettler) settlePayAndSettleWithRetry(
 	withdrawalAmount *big.Int,
 	promiseFromStorage HermesPromise,
 ) (string, error) {
-	promise, err := aps.updatePromiseWithLatestFee(promiseFromStorage.HermesID, promiseFromStorage.Promise)
+	promise, err := aps.updatePromiseWithLatestFee(promiseFromStorage.HermesID, promiseFromStorage.Promise, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not update promise fee")
 		return "", err
@@ -852,6 +865,7 @@ func (aps *hermesPromiseSettler) settle(
 	promise crypto.Promise,
 	beneficiary common.Address,
 	settled *big.Int,
+	maxFee *big.Int,
 ) error {
 	if aps.isSettling(provider, hermesID) {
 		return errors.New("provider already has settlement in progress")
@@ -861,7 +875,7 @@ func (aps *hermesPromiseSettler) settle(
 
 	log.Info().Msgf("Marked provider %v as requesting settlement", provider)
 
-	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise)
+	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise, maxFee)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not update promise fee")
 		return err
@@ -1163,33 +1177,50 @@ type settlementState struct {
 	settleInProgress map[common.Address]struct{}
 }
 
-func (ss settlementState) needsSettling(threshold float64, zeroStakeThreshold float64, channel HermesChannel) bool {
+func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThreshold float64, feeThreshold float64, minSettleAmount, maxUnSettledAmount float64, channel HermesChannel, chainID int64) (bool, *big.Int) {
 	if !ss.registered {
-		return false
+		return false, nil
 	}
 
 	if _, ok := ss.settleInProgress[channel.HermesID]; ok {
-		return false
+		return false, nil
 	}
 
 	if channel.Channel.Stake.Cmp(big.NewInt(0)) == 0 {
-		// if starting with zero stake, only settle predefined myst in config.
-		return channel.UnsettledBalance().Cmp(crypto.FloatToBigMyst(zeroStakeThreshold)) == 1
+		// no stake mode
+		unsettledAmount := channel.UnsettledBalance()
+		if unsettledAmount.Cmp(crypto.FloatToBigMyst(maxUnSettledAmount)) > 0 {
+			return true, nil
+		}
+		if unsettledAmount.Cmp(crypto.FloatToBigMyst(minSettleAmount)) >= 0 {
+			settleFees, err := aps.transactor.FetchSettleFees(chainID)
+			if err != nil {
+				log.Err(err).Msgf("will not use settlement fees to check if settling is needed")
+				return false, nil
+			}
+			//set max fee to 10% more than current
+			maxFee, _ := new(big.Float).Mul(new(big.Float).SetInt(settleFees.Fee), big.NewFloat(1.1)).Int(nil)
+			unsettledBalance := new(big.Float).SetInt(channel.UnsettledBalance())
+			calculatedFeesThreshold := new(big.Float).Mul(big.NewFloat(feeThreshold), unsettledBalance)
+			calculatedFeesThresholdInt, _ := calculatedFeesThreshold.Int(nil)
+			return settleFees.Fee.Cmp(calculatedFeesThresholdInt) < 0, maxFee
+		}
+		return false, nil
 	}
 
 	floated := new(big.Float).SetInt(channel.availableBalance())
-	calculatedThreshold := new(big.Float).Mul(big.NewFloat(threshold), floated)
+	calculatedThreshold := new(big.Float).Mul(big.NewFloat(balanceThreshold), floated)
 	possibleEarnings := channel.UnsettledBalance()
 	i, _ := calculatedThreshold.Int(nil)
 	if possibleEarnings.Cmp(i) == -1 {
-		return false
+		return false, nil
 	}
 
 	if channel.balance().Cmp(i) <= 0 {
-		return true
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
 func formTXUrl(txHash string, chainID int64) (string, error) {
