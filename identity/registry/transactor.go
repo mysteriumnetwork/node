@@ -203,11 +203,6 @@ func (t *Transactor) registerIdentity(endpoint string, id string, stake, fee *bi
 	return nil
 }
 
-// RegisterProvider registers a provider if free registration slots are available.
-func (t *Transactor) RegisterProvider(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
-	return t.registerIdentity("identity/register/provider", id, stake, fee, beneficiary, chainID)
-}
-
 type identityRegistrationRequestWithToken struct {
 	IdentityRegistrationRequest
 	Token string `json:"token"`
