@@ -18,8 +18,6 @@
 package config
 
 import (
-	"time"
-
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
@@ -37,12 +35,6 @@ var (
 		Usage: "the max attempts the provider will make to register before giving up",
 		Value: 10,
 	}
-	// FlagTransactorProviderRegistrationRetryDelay determines the delay between each provider registration attempts.
-	FlagTransactorProviderRegistrationRetryDelay = cli.DurationFlag{
-		Name:  "transactor.provider.registration-retry-delay",
-		Usage: "the duration that the provider will wait between each retry",
-		Value: time.Minute * 3,
-	}
 )
 
 // RegisterFlagsTransactor function register network flags to flag list
@@ -51,7 +43,6 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		*flags,
 		&FlagTransactorAddress,
 		&FlagTransactorProviderMaxRegistrationAttempts,
-		&FlagTransactorProviderRegistrationRetryDelay,
 	)
 }
 
@@ -59,5 +50,4 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
-	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
 }
