@@ -145,6 +145,7 @@ func GetOptions() *Options {
 		Transactor: OptionsTransactor{
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
+			TransactorFeesValidTime:         config.GetDuration(config.FlagTransactorFeesValidTime),
 		},
 		Affiliator: OptionsAffiliator{
 			AffiliatorEndpointAddress: config.GetString(config.FlagAffiliatorAddress),
@@ -153,6 +154,8 @@ func GetOptions() *Options {
 			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),
 			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
 			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
+			MaxFeeSettlingThreshold:        config.GetFloat64(config.FlagPaymentsPromiseSettleMaxFeeThreshold),
+			MaxUnSettledAmount:             config.GetFloat64(config.FlagPaymentsUnsettledMaxAmount),
 			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
 			SettlementRecheckInterval:      config.GetDuration(config.FlagPaymentsHermesPromiseSettleCheckInterval),
 			BalanceLongPollInterval:        config.GetDuration(config.FlagPaymentsLongBalancePollInterval),
@@ -162,7 +165,7 @@ func GetOptions() *Options {
 			RegistryTransactorPollTimeout:  config.GetDuration(config.FlagPaymentsRegistryTransactorPollTimeout),
 			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
 			HermesStatusRecheckInterval:    config.GetDuration(config.FlagPaymentsHermesStatusRecheckInterval),
-			ZeroStakeSettlementThreshold:   config.GetFloat64(config.FlagPaymentsZeroStakeUnsettledAmount),
+			MinAutoSettleAmount:            config.GetFloat64(config.FlagPaymentsZeroStakeUnsettledAmount),
 
 			ProviderInvoiceFrequency:      config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			ProviderLimitInvoiceFrequency: config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),

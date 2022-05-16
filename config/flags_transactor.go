@@ -18,6 +18,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
@@ -35,6 +37,13 @@ var (
 		Usage: "the max attempts the provider will make to register before giving up",
 		Value: 10,
 	}
+	// FlagTransactorFeesValidTime The duration we will consider transactor fees valid for.
+	FlagTransactorFeesValidTime = cli.DurationFlag{
+		Name:   "payments.transactor.fees-valid-time",
+		Value:  30 * time.Second,
+		Usage:  "The duration we will consider transactor fees valid for (more than 5 minutes is likely to fail)",
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsTransactor function register network flags to flag list
@@ -43,6 +52,7 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		*flags,
 		&FlagTransactorAddress,
 		&FlagTransactorProviderMaxRegistrationAttempts,
+		&FlagTransactorFeesValidTime,
 	)
 }
 
@@ -50,4 +60,5 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
+	Current.ParseDurationFlag(ctx, FlagTransactorFeesValidTime)
 }
