@@ -366,8 +366,13 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 // SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
 func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
 	for _, hermesID := range hermesIDs {
-		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-		if !found {
+		channel, err := aps.channelProvider.Fetch(chainID, providerID, hermesID)
+		if err != nil {
+			log.Err(err).Fields(map[string]interface{}{
+				"chain_id":  chainID,
+				"provider":  providerID.Address,
+				"hermes_id": hermesID,
+			}).Msg("Failed to fetch a channel")
 			return ErrNothingToSettle
 		}
 
@@ -402,8 +407,13 @@ var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.Identity, hermesIDs ...common.Address) error {
 	feeNotCoveredCount := 0
 	for _, hermesID := range hermesIDs {
-		channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-		if !found {
+		channel, err := aps.channelProvider.Fetch(chainID, providerID, hermesID)
+		if err != nil {
+			log.Err(err).Fields(map[string]interface{}{
+				"chain_id":  chainID,
+				"provider":  providerID.Address,
+				"hermes_id": hermesID,
+			}).Msg("Failed to fetch a channel")
 			return ErrNothingToSettle
 		}
 
@@ -444,8 +454,13 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 
 // ForceSettle forces the settlement for a provider
 func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error {
-	channel, found := aps.channelProvider.Get(chainID, providerID, hermesID)
-	if !found {
+	channel, err := aps.channelProvider.Fetch(chainID, providerID, hermesID)
+	if err != nil {
+		log.Err(err).Fields(map[string]interface{}{
+			"chain_id":  chainID,
+			"provider":  providerID.Address,
+			"hermes_id": hermesID,
+		}).Msg("Failed to fetch a channel")
 		return ErrNothingToSettle
 	}
 
