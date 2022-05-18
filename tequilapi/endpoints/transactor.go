@@ -378,13 +378,17 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 
 	regFee := big.NewInt(0)
 	if !te.canRegisterForFree(req, id) {
-		rf, err := te.transactor.FetchRegistrationFees(chainID)
-		if err != nil {
-			c.Error(err)
-			return
-		}
+		if req.Fee == nil || req.Fee.Cmp(big.NewInt(0)) == 0 {
+			rf, err := te.transactor.FetchRegistrationFees(chainID)
+			if err != nil {
+				c.Error(err)
+				return
+			}
 
-		regFee = rf.Fee
+			regFee = rf.Fee
+		} else {
+			regFee = req.Fee
+		}
 	}
 
 	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, req.Beneficiary, chainID, req.ReferralToken)
