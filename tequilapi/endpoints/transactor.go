@@ -120,7 +120,7 @@ func NewTransactorEndpoint(
 	}
 }
 
-// swagger:operation GET /v2/transactor/fees CombinedFeesDTO
+// swagger:operation GET /v2/transactor/fees CombinedFeesResponse
 // ---
 // summary: Returns fees
 // description: Returns fees applied by Transactor
@@ -128,7 +128,7 @@ func NewTransactorEndpoint(
 //   200:
 //     description: Fees applied by Transactor
 //     schema:
-//       "$ref": "#/definitions/CombinedFeesDTO"
+//       "$ref": "#/definitions/CombinedFeesResponse"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -157,7 +157,7 @@ func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
 	}
 
 	hermesPercent := decimal.NewFromInt(int64(hermesFeePerMyriad)).Div(decimal.NewFromInt(10000))
-	f := contract.CombinedFeesDTO{
+	f := contract.CombinedFeesResponse{
 		Current:    contract.NewTransactorFees(&fees.Current),
 		Last:       contract.NewTransactorFees(&fees.Last),
 		ServerTime: fees.ServerTime,
@@ -171,6 +171,7 @@ func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
 // swagger:operation GET /transactor/fees FeesDTO
 // ---
 // summary: Returns fees
+// deprecated: true
 // description: Returns fees applied by Transactor
 // responses:
 //   200:
@@ -905,7 +906,7 @@ func AddRoutesForTransactor(
 		}
 		transGroupV2 := e.Group("/v2/transactor")
 		{
-			transGroupV2.GET("/fees", te.TransactorFees)
+			transGroupV2.GET("/fees", te.TransactorFeesV2)
 		}
 		return nil
 	}

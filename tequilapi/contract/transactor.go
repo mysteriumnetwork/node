@@ -49,9 +49,9 @@ type FeesDTO struct {
 	DecreaseStakeTokens Tokens   `json:"decrease_stake_tokens"`
 }
 
-// CombinedFeesDTO all transactor fees.
-// swagger:model CombinedFeesDTO
-type CombinedFeesDTO struct {
+// CombinedFeesResponse represents transactor fees.
+// swagger:model CombinedFeesResponse
+type CombinedFeesResponse struct {
 	Current TransactorFees `json:"current"`
 	Last    TransactorFees `json:"last"`
 

@@ -2202,6 +2202,7 @@
         "description": "Returns fees applied by Transactor",
         "summary": "Returns fees",
         "operationId": "FeesDTO",
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Fees applied by Transactor",
@@ -2793,12 +2794,12 @@
       "get": {
         "description": "Returns fees applied by Transactor",
         "summary": "Returns fees",
-        "operationId": "CombinedFeesDTO",
+        "operationId": "CombinedFeesResponse",
         "responses": {
           "200": {
             "description": "Fees applied by Transactor",
             "schema": {
-              "$ref": "#/definitions/CombinedFeesDTO"
+              "$ref": "#/definitions/CombinedFeesResponse"
             }
           },
           "500": {
@@ -2990,9 +2991,9 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "CombinedFeesDTO": {
+    "CombinedFeesResponse": {
       "type": "object",
-      "title": "CombinedFeesDTO all transactor fees.",
+      "title": "CombinedFeesResponse represents transactor fees.",
       "properties": {
         "current": {
           "$ref": "#/definitions/TransactorFees"
@@ -3689,6 +3690,9 @@
           "description": "Beneficiary: beneficiary to set during registration. Optional.",
           "type": "string",
           "x-go-name": "Beneficiary"
+        },
+        "fee": {
+          "$ref": "#/definitions/Int"
         },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
