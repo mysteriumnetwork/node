@@ -624,16 +624,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
-	di.HermesMigrator = migration.NewHermesMigrator(
-		di.Transactor,
-		di.AddressProvider,
-		di.HermesURLGetter,
-		func(hermesURL string) pingpong.HermesHTTPRequester {
-			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
-		},
-		di.HermesPromiseSettler,
-		di.IdentityRegistry,
-	)
+	di.HermesMigrator = di.bootstrapHemesMigrator(nodeOptions)
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -1006,6 +997,46 @@ func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
 		di.Storage,
 		di.BCHelper,
 		di.HermesPromiseSettler,
+	)
+}
+
+func (di *Dependencies) bootstrapHemesMigrator(options node.Options) *migration.HermesMigrator {
+	settler := pingpong.NewHermesPromiseSettler(
+		di.Transactor,
+		di.HermesPromiseStorage,
+		di.HermesPromiseHandler,
+		di.AddressProvider,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesURLGetter,
+		di.HermesChannelRepository,
+		di.BCHelper,
+		di.IdentityRegistry,
+		di.Keystore,
+		di.SettlementHistoryStorage,
+		di.EventBus,
+		pingpong.HermesPromiseSettlerConfig{
+			BalanceThreshold:        options.Payments.HermesPromiseSettlingThreshold,
+			MaxFeeThreshold:         options.Payments.MaxFeeSettlingThreshold,
+			MinAutoSettleAmount:     options.Payments.MinAutoSettleAmount,
+			MaxUnSettledAmount:      options.Payments.MaxUnSettledAmount,
+			SettlementCheckTimeout:  options.Payments.SettlementTimeout,
+			SettlementCheckInterval: options.Payments.SettlementRecheckInterval,
+			L1ChainID:               options.Chains.Chain1.ChainID,
+			L2ChainID:               options.Chains.Chain2.ChainID,
+		},
+	)
+
+	return migration.NewHermesMigrator(
+		di.Transactor,
+		di.AddressProvider,
+		di.HermesURLGetter,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		settler,
+		di.IdentityRegistry,
 	)
 }
 
