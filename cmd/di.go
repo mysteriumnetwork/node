@@ -624,7 +624,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
-	di.HermesMigrator = di.bootstrapHermesMigrator(nodeOptions)
+	di.HermesMigrator = di.bootstrapHermesMigrator()
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -1000,34 +1000,7 @@ func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
 	)
 }
 
-func (di *Dependencies) bootstrapHermesMigrator(options node.Options) *migration.HermesMigrator {
-	settler := pingpong.NewHermesPromiseSettler(
-		di.Transactor,
-		di.HermesPromiseStorage,
-		di.HermesPromiseHandler,
-		di.AddressProvider,
-		func(hermesURL string) pingpong.HermesHTTPRequester {
-			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
-		},
-		di.HermesURLGetter,
-		di.HermesChannelRepository,
-		di.BCHelper,
-		di.IdentityRegistry,
-		di.Keystore,
-		di.SettlementHistoryStorage,
-		di.EventBus,
-		pingpong.HermesPromiseSettlerConfig{
-			BalanceThreshold:        options.Payments.HermesPromiseSettlingThreshold,
-			MaxFeeThreshold:         options.Payments.MaxFeeSettlingThreshold,
-			MinAutoSettleAmount:     options.Payments.MinAutoSettleAmount,
-			MaxUnSettledAmount:      options.Payments.MaxUnSettledAmount,
-			SettlementCheckTimeout:  options.Payments.SettlementTimeout,
-			SettlementCheckInterval: options.Payments.SettlementRecheckInterval,
-			L1ChainID:               options.Chains.Chain1.ChainID,
-			L2ChainID:               options.Chains.Chain2.ChainID,
-		},
-	)
-
+func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
 	return migration.NewHermesMigrator(
 		di.Transactor,
 		di.AddressProvider,
@@ -1035,7 +1008,7 @@ func (di *Dependencies) bootstrapHermesMigrator(options node.Options) *migration
 		func(hermesURL string) pingpong.HermesHTTPRequester {
 			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 		},
-		settler,
+		di.HermesPromiseSettler,
 		di.IdentityRegistry,
 	)
 }
