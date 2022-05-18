@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
@@ -127,20 +126,6 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	)
 }
 
-func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
-	if nodeOptions.Consumer {
-		log.Debug().Msg("Skipping provider registrar for consumer mode")
-		return nil
-	}
-
-	cfg := registry.ProviderRegistrarConfig{
-		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
-	}
-
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.AddressProvider, di.BCHelper, cfg)
-	return di.ProviderRegistrar.Subscribe(di.EventBus)
-}
-
 func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
 	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(
 		di.HermesPromiseStorage,
@@ -176,12 +161,14 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.SettlementHistoryStorage,
 		di.EventBus,
 		pingpong.HermesPromiseSettlerConfig{
-			Threshold:                    nodeOptions.Payments.HermesPromiseSettlingThreshold,
-			SettlementCheckTimeout:       nodeOptions.Payments.SettlementTimeout,
-			SettlementCheckInterval:      nodeOptions.Payments.SettlementRecheckInterval,
-			L1ChainID:                    nodeOptions.Chains.Chain1.ChainID,
-			L2ChainID:                    nodeOptions.Chains.Chain2.ChainID,
-			ZeroStakeSettlementThreshold: nodeOptions.Payments.ZeroStakeSettlementThreshold,
+			BalanceThreshold:        nodeOptions.Payments.HermesPromiseSettlingThreshold,
+			MaxFeeThreshold:         nodeOptions.Payments.MaxFeeSettlingThreshold,
+			MinAutoSettleAmount:     nodeOptions.Payments.MinAutoSettleAmount,
+			MaxUnSettledAmount:      nodeOptions.Payments.MaxUnSettledAmount,
+			SettlementCheckTimeout:  nodeOptions.Payments.SettlementTimeout,
+			SettlementCheckInterval: nodeOptions.Payments.SettlementRecheckInterval,
+			L1ChainID:               nodeOptions.Chains.Chain1.ChainID,
+			L2ChainID:               nodeOptions.Chains.Chain2.ChainID,
 		},
 	)
 	if err := settler.Subscribe(di.EventBus); err != nil {

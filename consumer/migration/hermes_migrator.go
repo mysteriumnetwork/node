@@ -128,7 +128,7 @@ func (m *HermesMigrator) Start(id string) error {
 				return fmt.Errorf("failed to check latest withdrawal status: %w", err)
 			}
 			log.Warn().Err(err).Msg("No promise saved")
-		} else if amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
+		} else if amountToWithdraw != nil && amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
 			log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
 			return m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
 		}
@@ -217,7 +217,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 			return false, fmt.Errorf("failed to check latest withdrawal status: %w", err)
 		}
 		log.Warn().Err(err).Msg("No promise saved")
-	} else if amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
+	} else if amountToWithdraw != nil && amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
 		return true, nil
 	}
 

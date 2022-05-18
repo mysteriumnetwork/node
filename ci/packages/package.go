@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 
 	"github.com/magefile/mage/mg"
@@ -197,13 +198,21 @@ func makeCacheRef(cacheRepo string) string {
 	return cacheRepo + ":build-cache"
 }
 
-func buildDockerImage(dockerfile string, buildArgs map[string]string, cacheRepo string, tags []string, push bool) error {
+func buildDockerImage(dockerfile string, buildArgs map[string]string, cacheRepo string, tags []string, push bool, platforms []string) error {
 	mg.Deps(binFmtSupport)
+
+	if platforms == nil {
+		platforms = []string{
+			"linux/amd64",
+			"linux/arm64",
+			"linux/arm",
+		}
+	}
 
 	args := []string{
 		"docker", "buildx", "build",
 		"--file", dockerfile,
-		"--platform", "linux/amd64,linux/arm64,linux/arm",
+		"--platform", strings.Join(platforms, ","),
 		"--output", fmt.Sprintf("type=image,push=%v", push),
 	}
 	for buildArgKey, buildArgValue := range buildArgs {
@@ -237,6 +246,7 @@ func BuildMystAlpineImage(tags []string, push bool) error {
 		"mysteriumnetwork/myst",
 		tags,
 		push,
+		nil,
 	)
 }
 
@@ -249,6 +259,9 @@ func BuildMystDocumentationImage(tags []string, push bool) error {
 		"mysteriumnetwork/documentation",
 		tags,
 		push,
+		[]string{
+			"linux/amd64",
+		},
 	)
 }
 

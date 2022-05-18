@@ -17,13 +17,11 @@
 
 package node
 
-import (
-	"time"
-)
+import "time"
 
 // OptionsTransactor describes possible parameters for interaction with transactor
 type OptionsTransactor struct {
 	TransactorEndpointAddress       string
 	ProviderMaxRegistrationAttempts int
-	ProviderRegistrationRetryDelay  time.Duration
+	TransactorFeesValidTime         time.Duration
 }

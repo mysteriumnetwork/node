@@ -57,7 +57,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := summonTestGin()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 	err := AddRoutesForTransactor(&registry.FakeRegistry{RegistrationStatus: registry.Unregistered}, tr, a, nil, &settlementHistoryProviderMock{}, &mockAddressProvider{}, nil, nil, &mockPilvytis{})(router)
 	assert.NoError(t, err)
@@ -82,7 +82,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	router := summonTestGin()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{
 		feeToReturn: 11_000,
@@ -133,7 +133,7 @@ func Test_SettleAsync_OK(t *testing.T) {
 
 	router := summonTestGin()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, &mockBeneficiaryProvider{
 		b: common.HexToAddress("0x0000000000000000000000000000000000000001"),
@@ -161,7 +161,7 @@ func Test_SettleAsync_ReturnsError(t *testing.T) {
 
 	router := summonTestGin()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, nil, nil, nil)(router)
 	assert.NoError(t, err)
@@ -187,7 +187,7 @@ func Test_SettleSync_OK(t *testing.T) {
 
 	router := summonTestGin()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, nil, nil, nil)(router)
 	assert.NoError(t, err)
@@ -213,7 +213,7 @@ func Test_SettleSync_ReturnsError(t *testing.T) {
 
 	router := summonTestGin()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, nil, nil, nil)(router)
 	assert.NoError(t, err)
@@ -240,7 +240,7 @@ func Test_SettleHistory(t *testing.T) {
 		defer server.Close()
 
 		router := summonTestGin()
-		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 		a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 		err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, nil, &settlementHistoryProviderMock{errToReturn: errors.New("explosions everywhere")}, &mockAddressProvider{}, nil, nil, nil)(router)
 		assert.NoError(t, err)
@@ -277,7 +277,7 @@ func Test_SettleHistory(t *testing.T) {
 		defer server.Close()
 
 		router := summonTestGin()
-		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 		a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 		err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, nil, mockStorage, &mockAddressProvider{}, nil, nil, nil)(router)
 		assert.NoError(t, err)
@@ -335,7 +335,7 @@ func Test_SettleHistory(t *testing.T) {
 		server := newTestTransactorServer(http.StatusAccepted, "")
 		defer server.Close()
 		router := summonTestGin()
-		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
+		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 		a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
 		err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, nil, mockStorage, &mockAddressProvider{}, nil, nil, nil)(router)
 		assert.NoError(t, err)

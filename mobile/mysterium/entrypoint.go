@@ -243,13 +243,12 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		Transactor: node.OptionsTransactor{
 			TransactorEndpointAddress:       options.TransactorEndpointAddress,
 			ProviderMaxRegistrationAttempts: 10,
-			ProviderRegistrationRetryDelay:  time.Minute * 3,
+			TransactorFeesValidTime:         time.Second * 30,
 		},
 		Affiliator: node.OptionsAffiliator{AffiliatorEndpointAddress: options.AffiliatorEndpointAddress},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:    1500,
 			BCTimeout:                      time.Second * 30,
-			HermesPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:              time.Hour * 2,
 			HermesStatusRecheckInterval:    time.Hour * 2,
 			BalanceFastPollInterval:        time.Second * 30,
