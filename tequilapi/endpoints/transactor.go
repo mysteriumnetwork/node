@@ -49,6 +49,7 @@ import (
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
+	FetchCombinedFees(chainID int64) (registry.CombinedFeesResponse, error)
 	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
 	FetchSettleFees(chainID int64) (registry.FeesResponse, error)
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
@@ -117,6 +118,54 @@ func NewTransactorEndpoint(
 		bhandler:                  bhandler,
 		pilvytis:                  pilvytis,
 	}
+}
+
+// swagger:operation GET /v2/transactor/fees CombinedFeesDTO
+// ---
+// summary: Returns fees
+// description: Returns fees applied by Transactor
+// responses:
+//   200:
+//     description: Fees applied by Transactor
+//     schema:
+//       "$ref": "#/definitions/CombinedFeesDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
+	chainID := config.GetInt64(config.FlagChainID)
+	if qcid, err := cast.ToInt64E(c.Query("chain_id")); err == nil {
+		chainID = qcid
+	}
+
+	fees, err := te.transactor.FetchCombinedFees(chainID)
+	if err != nil {
+		c.Error(err)
+	}
+
+	hermes, err := te.addressProvider.GetActiveHermes(chainID)
+	if err != nil {
+		c.Error(apierror.Internal("Failed to get active hermes", contract.ErrCodeActiveHermes))
+		return
+	}
+
+	hermesFeePerMyriad, err := te.promiseSettler.GetHermesFee(chainID, hermes)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get hermes fee: "+err.Error(), contract.ErrCodeHermesFee))
+		return
+	}
+
+	hermesPercent := decimal.NewFromInt(int64(hermesFeePerMyriad)).Div(decimal.NewFromInt(10000))
+	f := contract.CombinedFeesDTO{
+		Current:    contract.NewTransactorFees(&fees.Current),
+		Last:       contract.NewTransactorFees(&fees.Last),
+		ServerTime: fees.ServerTime,
+
+		HermesPercent: hermesPercent.StringFixed(4),
+	}
+
+	utils.WriteAsJSON(f, c.Writer)
 }
 
 // swagger:operation GET /transactor/fees FeesDTO
@@ -849,6 +898,10 @@ func AddRoutesForTransactor(
 			transGroup.POST("/settle/withdraw", te.Withdraw)
 			transGroup.GET("/token/:token/reward", a.TokenRewardAmount)
 			transGroup.GET("/chain-summary", te.ChainSummary)
+		}
+		transGroupV2 := e.Group("/v2/transactor")
+		{
+			transGroupV2.GET("/fees", te.TransactorFees)
 		}
 		return nil
 	}

@@ -2788,6 +2788,27 @@
           }
         }
       }
+    },
+    "/v2/transactor/fees": {
+      "get": {
+        "description": "Returns fees applied by Transactor",
+        "summary": "Returns fees",
+        "operationId": "CombinedFeesDTO",
+        "responses": {
+          "200": {
+            "description": "Fees applied by Transactor",
+            "schema": {
+              "$ref": "#/definitions/CombinedFeesDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -2965,6 +2986,28 @@
         "username": {
           "type": "string",
           "x-go-name": "Username"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "CombinedFeesDTO": {
+      "type": "object",
+      "title": "CombinedFeesDTO all transactor fees.",
+      "properties": {
+        "current": {
+          "$ref": "#/definitions/TransactorFees"
+        },
+        "hermes_percent": {
+          "type": "string",
+          "x-go-name": "HermesPercent"
+        },
+        "last": {
+          "$ref": "#/definitions/TransactorFees"
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "ServerTime"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4947,6 +4990,27 @@
         "wei": {
           "type": "string",
           "x-go-name": "Wei"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TransactorFees": {
+      "type": "object",
+      "title": "TransactorFees represents transactor fees.",
+      "properties": {
+        "decrease_stake": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "registration": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "settlement": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "ValidUntil"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
