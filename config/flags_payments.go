@@ -79,11 +79,23 @@ var (
 		Usage:  "The duration we'll wait before giving up trying to fetch new balance.",
 		Hidden: true,
 	}
-	// FlagPaymentsZeroStakeUnsettledAmount determines the minimum amount of myst required before auto settling is triggered if zero stake is used.
+	// FlagPaymentsZeroStakeUnsettledAmount determines the minimum amount of myst that we will settle automatically if zero stake is used.
 	FlagPaymentsZeroStakeUnsettledAmount = cli.Float64Flag{
 		Name:  "payments.zero-stake-unsettled-amount",
 		Value: 5.0,
 		Usage: "The settling threshold if provider uses a zero stake",
+	}
+	// FlagPaymentsPromiseSettleMaxFeeThreshold represents the max percentage of the settlement that will be acceptable to pay in transaction fees.
+	FlagPaymentsPromiseSettleMaxFeeThreshold = cli.Float64Flag{
+		Name:  "payments.settle.max-fee-percentage",
+		Value: 0.05,
+		Usage: "The max percentage we allow to pay in fees when automatically settling promises.",
+	}
+	// FlagPaymentsUnsettledMaxAmount determines the maximum amount of myst for which we will consider the fee threshold.
+	FlagPaymentsUnsettledMaxAmount = cli.Float64Flag{
+		Name:  "payments.unsettled.max-amount",
+		Value: 20.0,
+		Usage: "The maximum amount of unsettled myst, after that we will always try to settle.",
 	}
 	// FlagPaymentsRegistryTransactorPollInterval The duration we'll wait before calling transactor to check for new status updates.
 	FlagPaymentsRegistryTransactorPollInterval = cli.DurationFlag{
@@ -179,6 +191,8 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsMaxHermesFee,
 		&FlagPaymentsBCTimeout,
 		&FlagPaymentsHermesPromiseSettleThreshold,
+		&FlagPaymentsPromiseSettleMaxFeeThreshold,
+		&FlagPaymentsUnsettledMaxAmount,
 		&FlagPaymentsHermesPromiseSettleTimeout,
 		&FlagPaymentsHermesPromiseSettleCheckInterval,
 		&FlagPaymentsLongBalancePollInterval,
@@ -207,6 +221,8 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagPaymentsMaxHermesFee)
 	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
+	Current.ParseFloat64Flag(ctx, FlagPaymentsPromiseSettleMaxFeeThreshold)
+	Current.ParseFloat64Flag(ctx, FlagPaymentsUnsettledMaxAmount)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleCheckInterval)
 	Current.ParseDurationFlag(ctx, FlagPaymentsFastBalancePollInterval)

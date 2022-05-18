@@ -37,11 +37,12 @@ var (
 		Usage: "the max attempts the provider will make to register before giving up",
 		Value: 10,
 	}
-	// FlagTransactorProviderRegistrationRetryDelay determines the delay between each provider registration attempts.
-	FlagTransactorProviderRegistrationRetryDelay = cli.DurationFlag{
-		Name:  "transactor.provider.registration-retry-delay",
-		Usage: "the duration that the provider will wait between each retry",
-		Value: time.Minute * 3,
+	// FlagTransactorFeesValidTime The duration we will consider transactor fees valid for.
+	FlagTransactorFeesValidTime = cli.DurationFlag{
+		Name:   "payments.transactor.fees-valid-time",
+		Value:  30 * time.Second,
+		Usage:  "The duration we will consider transactor fees valid for (more than 5 minutes is likely to fail)",
+		Hidden: true,
 	}
 )
 
@@ -51,7 +52,7 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		*flags,
 		&FlagTransactorAddress,
 		&FlagTransactorProviderMaxRegistrationAttempts,
-		&FlagTransactorProviderRegistrationRetryDelay,
+		&FlagTransactorFeesValidTime,
 	)
 }
 
@@ -59,5 +60,5 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
-	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
+	Current.ParseDurationFlag(ctx, FlagTransactorFeesValidTime)
 }
