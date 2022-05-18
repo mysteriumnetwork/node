@@ -624,7 +624,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
-	di.HermesMigrator = di.bootstrapHemesMigrator(nodeOptions)
+	di.HermesMigrator = di.bootstrapHermesMigrator(nodeOptions)
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -1000,7 +1000,7 @@ func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
 	)
 }
 
-func (di *Dependencies) bootstrapHemesMigrator(options node.Options) *migration.HermesMigrator {
+func (di *Dependencies) bootstrapHermesMigrator(options node.Options) *migration.HermesMigrator {
 	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
 		di.HermesPromiseStorage,
