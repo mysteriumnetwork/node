@@ -624,16 +624,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
-	di.HermesMigrator = migration.NewHermesMigrator(
-		di.Transactor,
-		di.AddressProvider,
-		di.HermesURLGetter,
-		func(hermesURL string) pingpong.HermesHTTPRequester {
-			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
-		},
-		di.HermesPromiseSettler,
-		di.IdentityRegistry,
-	)
+	di.HermesMigrator = di.bootstrapHermesMigrator()
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -1006,6 +997,19 @@ func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
 		di.Storage,
 		di.BCHelper,
 		di.HermesPromiseSettler,
+	)
+}
+
+func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
+	return migration.NewHermesMigrator(
+		di.Transactor,
+		di.AddressProvider,
+		di.HermesURLGetter,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesPromiseSettler,
+		di.IdentityRegistry,
 	)
 }
 

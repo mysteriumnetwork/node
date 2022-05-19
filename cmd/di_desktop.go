@@ -41,7 +41,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -137,12 +136,6 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
 		log.Error().Err(err).Msg("Failed to subscribe channel repository")
 		return errors.Wrap(err, "could not subscribe channel repository to relevant events")
-	}
-
-	if nodeOptions.Consumer {
-		log.Debug().Msg("Skipping hermes promise settler for consumer mode")
-		di.HermesPromiseSettler = &pingpong_noop.NoopHermesPromiseSettler{}
-		return nil
 	}
 
 	settler := pingpong.NewHermesPromiseSettler(
