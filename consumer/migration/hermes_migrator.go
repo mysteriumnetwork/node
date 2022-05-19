@@ -45,6 +45,7 @@ type HermesMigrator struct {
 	hermesURLGetter     *pingpong.HermesURLGetter
 	hermesCallerFactory pingpong.HermesCallerFactory
 	registry            registry.IdentityRegistry
+	cbt                 *pingpong.ConsumerBalanceTracker
 }
 
 // NewHermesMigrator create new HermesMigrator
@@ -55,6 +56,7 @@ func NewHermesMigrator(
 	hermesCallerFactory pingpong.HermesCallerFactory,
 	hps pingpong.HermesPromiseSettler,
 	registry registry.IdentityRegistry,
+	cbt *pingpong.ConsumerBalanceTracker,
 ) *HermesMigrator {
 	return &HermesMigrator{
 		transactor:          transactor,
@@ -63,6 +65,7 @@ func NewHermesMigrator(
 		hermesCallerFactory: hermesCallerFactory,
 		hps:                 hps,
 		registry:            registry,
+		cbt:                 cbt,
 	}
 }
 
@@ -138,7 +141,13 @@ func (m *HermesMigrator) Start(id string) error {
 
 	log.Debug().Msgf("Send transaction. Old Hermes: %s, new Hermes %s (channel: %s)", oldHermes, activeHermes, newChannel)
 
-	return m.hps.Withdraw(chainID, chainID, providerId, oldHermes, common.HexToAddress(newChannel), nil)
+	if err := m.hps.Withdraw(chainID, chainID, providerId, oldHermes, common.HexToAddress(newChannel), nil); err != nil {
+		return err
+	}
+
+	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
+
+	return nil
 }
 
 func (m *HermesMigrator) openChannel(id string, err error, chainID int64, activeHermes common.Address, registryAddress common.Address) error {
