@@ -747,22 +747,22 @@ func (client *Client) WithdrawalHistory(address string) (res contract.Settlement
 }
 
 // MigrateHermes migrate from old to active Hermes
-func (client *Client) MigrateHermes(address string) error {
+func (client *Client) MigrateHermes(address string) (b contract.BalanceDTO, err error) {
 	response, err := client.http.Post(fmt.Sprintf("identities/%s/migrate-hermes", address), nil)
 	if err != nil {
-		return err
+		return contract.BalanceDTO{}, err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return err
+			return contract.BalanceDTO{}, err
 		}
-		return fmt.Errorf("migration error: %s", body)
+		return contract.BalanceDTO{}, fmt.Errorf("migration error: %s", body)
 	}
 
-	return nil
+	return client.BalanceRefresh(address)
 }
 
 // MigrateHermesStatus check status of the migration
