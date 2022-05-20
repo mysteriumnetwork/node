@@ -431,6 +431,54 @@
         }
       }
     },
+    "/connection/proxy/ip": {
+      "get": {
+        "description": "Returns proxy public IP address",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Returns IP address",
+        "operationId": "getProxyIP",
+        "responses": {
+          "200": {
+            "description": "Public IP address",
+            "schema": {
+              "$ref": "#/definitions/IPDTO"
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/connection/proxy/location": {
+      "get": {
+        "description": "Returns proxy connection locations",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Returns proxy connection location",
+        "operationId": "getProxyLocation",
+        "responses": {
+          "200": {
+            "description": "Proxy connection locations",
+            "schema": {
+              "$ref": "#/definitions/LocationDTO"
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/connection/statistics": {
       "get": {
         "description": "Returns statistics about current connection",

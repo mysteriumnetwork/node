@@ -90,7 +90,7 @@ func (le *ConnectionLocationEndpoint) GetConnectionIP(c *gin.Context) {
 }
 
 // GetProxyIP responds with proxy ip, using its ip resolver
-// swagger:operation GET /connection/proxy/ip Connection getConnectionIP
+// swagger:operation GET /connection/proxy/ip Connection getProxyIP
 // ---
 // summary: Returns IP address
 // description: Returns proxy public IP address
