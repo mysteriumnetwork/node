@@ -24,12 +24,12 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/go-rest/apierror"
-
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 )
 
 type locationResolverMock struct {
@@ -49,6 +49,10 @@ func (r *locationResolverMock) DetectLocation() (locationstate.Location, error) 
 	}
 
 	return loc, nil
+}
+
+func (r *locationResolverMock) DetectProxyLocation(_ int) (locationstate.Location, error) {
+	return r.DetectLocation()
 }
 
 func (r *locationResolverMock) GetOrigin() locationstate.Location {
