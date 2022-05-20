@@ -49,6 +49,7 @@ import (
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
+	FetchCombinedFees(chainID int64) (registry.CombinedFeesResponse, error)
 	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
 	FetchSettleFees(chainID int64) (registry.FeesResponse, error)
 	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
@@ -119,9 +120,58 @@ func NewTransactorEndpoint(
 	}
 }
 
+// swagger:operation GET /v2/transactor/fees CombinedFeesResponse
+// ---
+// summary: Returns fees
+// description: Returns fees applied by Transactor
+// responses:
+//   200:
+//     description: Fees applied by Transactor
+//     schema:
+//       "$ref": "#/definitions/CombinedFeesResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
+	chainID := config.GetInt64(config.FlagChainID)
+	if qcid, err := cast.ToInt64E(c.Query("chain_id")); err == nil {
+		chainID = qcid
+	}
+
+	fees, err := te.transactor.FetchCombinedFees(chainID)
+	if err != nil {
+		c.Error(err)
+	}
+
+	hermes, err := te.addressProvider.GetActiveHermes(chainID)
+	if err != nil {
+		c.Error(apierror.Internal("Failed to get active hermes", contract.ErrCodeActiveHermes))
+		return
+	}
+
+	hermesFeePerMyriad, err := te.promiseSettler.GetHermesFee(chainID, hermes)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get hermes fee: "+err.Error(), contract.ErrCodeHermesFee))
+		return
+	}
+
+	hermesPercent := decimal.NewFromInt(int64(hermesFeePerMyriad)).Div(decimal.NewFromInt(10000))
+	f := contract.CombinedFeesResponse{
+		Current:    contract.NewTransactorFees(&fees.Current),
+		Last:       contract.NewTransactorFees(&fees.Last),
+		ServerTime: fees.ServerTime,
+
+		HermesPercent: hermesPercent.StringFixed(4),
+	}
+
+	utils.WriteAsJSON(f, c.Writer)
+}
+
 // swagger:operation GET /transactor/fees FeesDTO
 // ---
 // summary: Returns fees
+// deprecated: true
 // description: Returns fees applied by Transactor
 // responses:
 //   200:
@@ -329,13 +379,17 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 
 	regFee := big.NewInt(0)
 	if !te.canRegisterForFree(req, id) {
-		rf, err := te.transactor.FetchRegistrationFees(chainID)
-		if err != nil {
-			c.Error(err)
-			return
-		}
+		if req.Fee == nil || req.Fee.Cmp(big.NewInt(0)) == 0 {
+			rf, err := te.transactor.FetchRegistrationFees(chainID)
+			if err != nil {
+				c.Error(err)
+				return
+			}
 
-		regFee = rf.Fee
+			regFee = rf.Fee
+		} else {
+			regFee = req.Fee
+		}
 	}
 
 	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, req.Beneficiary, chainID, req.ReferralToken)
@@ -849,6 +903,10 @@ func AddRoutesForTransactor(
 			transGroup.POST("/settle/withdraw", te.Withdraw)
 			transGroup.GET("/token/:token/reward", a.TokenRewardAmount)
 			transGroup.GET("/chain-summary", te.ChainSummary)
+		}
+		transGroupV2 := e.Group("/v2/transactor")
+		{
+			transGroupV2.GET("/fees", te.TransactorFeesV2)
 		}
 		return nil
 	}
