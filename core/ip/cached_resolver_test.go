@@ -125,3 +125,7 @@ func (m *mockRealResolver) GetPublicIP() (string, error) {
 	m.getPublicIPCalls++
 	return "1.1.1.1", nil
 }
+
+func (m *mockRealResolver) GetProxyIP(_ int) (string, error) {
+	return m.GetPublicIP()
+}
