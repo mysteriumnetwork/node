@@ -25,8 +25,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/mysteriumnetwork/terms/terms-go"
-
 	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
@@ -39,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/terms/terms-go"
 )
 
 // CommandName is the name of this command
@@ -320,12 +319,12 @@ func (c *command) info(ctx *cli.Context) {
 		inf.set(infSessionID, status.SessionID)
 	}
 
-	ip, err := c.tequilapi.ConnectionIP()
+	ip, err := c.tequilapi.ProxyIP(ctx.Int(flagProxyPort.Name))
 	if err == nil {
 		inf.set(infIP, ip.IP)
 	}
 
-	location, err := c.tequilapi.ConnectionLocation()
+	location, err := c.tequilapi.ProxyLocation(ctx.Int(flagProxyPort.Name))
 	if err == nil {
 		inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.IPType, location.ISP))
 	}
