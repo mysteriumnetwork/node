@@ -293,6 +293,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		eventBus:                  di.EventBus,
 		connectionRegistry:        di.ConnectionRegistry,
 		feedbackReporter:          di.Reporter,
+		affiliator:                di.Affiliator,
 		transactor:                di.Transactor,
 		identityRegistry:          di.IdentityRegistry,
 		consumerBalanceTracker:    di.ConsumerBalanceTracker,
