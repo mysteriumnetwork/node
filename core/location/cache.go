@@ -21,10 +21,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/rs/zerolog/log"
 )
 
 // Cache allows us to cache location resolution
@@ -86,6 +87,11 @@ func (c *Cache) DetectLocation() (locationstate.Location, error) {
 		return c.location, nil
 	}
 	return c.fetchAndSave()
+}
+
+// DetectProxyLocation returns the proxy location.
+func (c *Cache) DetectProxyLocation(proxyPort int) (locationstate.Location, error) {
+	return c.locationDetector.DetectProxyLocation(proxyPort)
 }
 
 // HandleConnectionEvent handles connection state change and fetches the location info accordingly.
