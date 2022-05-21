@@ -157,6 +157,7 @@ release-snapshot:docker:
 release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
+  retry: 1
   script: go run mage.go -v ReleaseDebianPPASnapshot
   only:
     - master
