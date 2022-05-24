@@ -24,6 +24,7 @@ import (
 // Resolver allows resolving location by ip
 type Resolver interface {
 	DetectLocation() (locationstate.Location, error)
+	DetectProxyLocation(proxyPort int) (locationstate.Location, error)
 }
 
 // OriginResolver fetches the original country
