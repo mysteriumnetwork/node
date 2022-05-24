@@ -57,7 +57,7 @@ func (r *DBResolver) DetectLocation() (loc locationstate.Location, err error) {
 	return r.detectLocation(ipAddress)
 }
 
-// DetectLocation detects current IP-address provides location information for the IP.
+// DetectProxyLocation detects proxy IP-address provides location information for the IP.
 func (r *DBResolver) DetectProxyLocation(proxyPort int) (loc locationstate.Location, err error) {
 	ipAddress, err := r.ipResolver.GetProxyIP(proxyPort)
 	if err != nil {
