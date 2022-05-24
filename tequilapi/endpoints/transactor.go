@@ -141,7 +141,8 @@ func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
 
 	fees, err := te.transactor.FetchCombinedFees(chainID)
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to fetch fees", contract.ErrCodeTransactorFetchFees))
+		return
 	}
 
 	hermes, err := te.addressProvider.GetActiveHermes(chainID)
@@ -190,16 +191,17 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 
 	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to fetch fees", contract.ErrCodeTransactorFetchFees))
+		return
 	}
 	settlementFees, err := te.transactor.FetchSettleFees(chainID)
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to fetch fees", contract.ErrCodeTransactorFetchFees))
 		return
 	}
 	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee(chainID)
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to fetch fees", contract.ErrCodeTransactorFetchFees))
 		return
 	}
 
@@ -251,7 +253,7 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.ForceSettle)
 	if err != nil {
 		log.Err(err).Msg("Settle failed")
-		c.Error(apierror.Internal("Could not settle sync: "+err.Error(), contract.ErrCodeHermesSettle))
+		utils.ForwardError(c, err, apierror.Internal("Could not force settle", contract.ErrCodeHermesSettle))
 		return
 	}
 	c.Status(http.StatusOK)
@@ -285,7 +287,7 @@ func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		c.Error(apierror.Internal("Could not settle async: "+err.Error(), contract.ErrCodeHermesSettleAsync))
+		utils.ForwardError(c, err, apierror.Internal("Failed to force settle async", contract.ErrCodeHermesSettleAsync))
 		return
 	}
 
@@ -314,7 +316,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
-	return errors.Wrap(settler(chainID, identity.FromAddress(req.ProviderID), hermesIDs...), "settling failed")
+	return settler(chainID, identity.FromAddress(req.ProviderID), hermesIDs...)
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
@@ -382,7 +384,7 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 		if req.Fee == nil || req.Fee.Cmp(big.NewInt(0)) == 0 {
 			rf, err := te.transactor.FetchRegistrationFees(chainID)
 			if err != nil {
-				c.Error(err)
+				utils.ForwardError(c, err, apierror.Internal("Failed to fetch fees", contract.ErrCodeTransactorFetchFees))
 				return
 			}
 
@@ -395,7 +397,7 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 	err = te.transactor.RegisterIdentity(id.Address, big.NewInt(0), regFee, req.Beneficiary, chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
-		c.Error(apierror.Internal("Could not register identity: "+err.Error(), contract.ErrCodeTransactorRegistration))
+		utils.ForwardError(c, err, apierror.Internal("Failed to register identity", contract.ErrCodeTransactorRegistration))
 		return
 	}
 
@@ -489,7 +491,7 @@ func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
 	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, fees.Fee)
 	if err != nil {
 		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to decrease stake: "+err.Error(), contract.ErrCodeTransactorDecreaseStake))
 		return
 	}
 
@@ -566,7 +568,7 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 			"beneficiary":   req.Beneficiary,
 			"amount":        amount.String(),
 		}).Msg("Withdrawal failed")
-		c.Error(apierror.Internal("Could not withdraw: "+err.Error(), contract.ErrCodeTransactorWithdraw))
+		utils.ForwardError(c, err, apierror.Internal("Could not withdraw", contract.ErrCodeTransactorWithdraw))
 		return
 	}
 
@@ -607,7 +609,7 @@ func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.SettleIntoStake)
 	if err != nil {
 		log.Err(err).Msg("Settle into stake failed")
-		c.Error(apierror.Internal("Failed to settle into stake: "+err.Error(), contract.ErrCodeTransactorSettle))
+		utils.ForwardError(c, err, apierror.Internal("Could not settle into stake", contract.ErrCodeTransactorSettle))
 		return
 	}
 
@@ -642,7 +644,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		c.Error(apierror.Internal("Could not settle into stake async: "+err.Error(), contract.ErrCodeTransactorSettleAsync))
+		utils.ForwardError(c, err, apierror.Internal("Could not settle into stake async", contract.ErrCodeTransactorSettle))
 		return
 	}
 
@@ -741,7 +743,7 @@ func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 
 	res, err := te.transactor.GetFreeRegistrationEligibility(id)
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to check if free registration is possible", contract.ErrCodeTransactorRegistration))
 		return
 	}
 
@@ -763,7 +765,7 @@ func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context) {
 	res, err := te.transactor.GetFreeProviderRegistrationEligibility()
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Failed to check if free registration is possible", contract.ErrCodeTransactorRegistration))
 		return
 	}
 
