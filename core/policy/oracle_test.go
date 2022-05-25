@@ -83,7 +83,7 @@ func Test_Oracle_SubscribePolicies_WhenEndpointFails(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		fmt.Sprintf("initial fetch failed: failed to fetch policy rule {1 %s/1}: server responded with an error: 500 (%s/1) [internal] Something wong", server.URL, server.URL),
+		fmt.Sprintf("initial fetch failed: failed to fetch policy rule {1 %s/1}: Something wong", server.URL),
 	)
 	assert.Equal(t, []market.AccessPolicy{}, repo.Policies())
 }
