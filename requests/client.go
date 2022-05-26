@@ -182,7 +182,7 @@ func ParseResponseJSON(response *http.Response, dto interface{}) error {
 // ParseResponseError parses http.Response error.
 func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return apierror.Parse(response)
+		return apierror.TryParse(response)
 	}
 	return nil
 }

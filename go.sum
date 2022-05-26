@@ -1043,6 +1043,10 @@ github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-rest v0.2.2 h1:TO3HmNwKVHBOLQfPXrOtZQTL0r/m9Hjjrsuw1VH5qk4=
 github.com/mysteriumnetwork/go-rest v0.2.2/go.mod h1:35tE+2RLjD/f2jeF71Hc2R01yyTRpBkwMkParuvj32s=
+github.com/mysteriumnetwork/go-rest v0.2.3-0.20220524101913-0b44d14bd672 h1:bjBt56JmsRZf1dvCetKulVSFXXNGwgy6qIYg63w1/dY=
+github.com/mysteriumnetwork/go-rest v0.2.3-0.20220524101913-0b44d14bd672/go.mod h1:35tE+2RLjD/f2jeF71Hc2R01yyTRpBkwMkParuvj32s=
+github.com/mysteriumnetwork/go-rest v0.3.0 h1:VhvivEt066jpleSQJAVv4NS5M9xO/U7Jal+zuDy6H3U=
+github.com/mysteriumnetwork/go-rest v0.3.0/go.mod h1:35tE+2RLjD/f2jeF71Hc2R01yyTRpBkwMkParuvj32s=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N1RaVBCEBLi1VhmIrI=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1/go.mod h1:pWWNkO73g3vPSVb+6O+GzjG8lqv4ByNHR6thSG7WmtY=
 github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646 h1:/zKpFjML3m1nFA62OBtx2ejoijwBOzdzpFHAppNe/vM=
