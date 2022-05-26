@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -38,15 +39,22 @@ const (
 // NewHTTPClientWithTransport creates a new HTTP client with custom transport.
 func NewHTTPClientWithTransport(transport *http.Transport, timeout time.Duration) *HTTPClient {
 	c := &HTTPClient{
-		clientFactory: func() *http.Client {
+		clientFactory: func(proxyPort int) *http.Client {
+			t := transport.Clone()
+
+			if proxyPort > 0 {
+				url, _ := url.Parse(fmt.Sprintf("http://localhost:%d", proxyPort))
+				t.Proxy = http.ProxyURL(url)
+			}
+
 			return &http.Client{
 				Timeout:   timeout,
-				Transport: setUserAgent(transport, getUserAgent()),
+				Transport: setUserAgent(t, getUserAgent()),
 			}
 		},
 	}
 	// Create initial clean before any HTTP request is made.
-	c.client = c.clientFactory()
+	c.client = c.clientFactory(0)
 
 	return c
 }
@@ -81,7 +89,7 @@ func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
 type HTTPClient struct {
 	client        *http.Client
 	clientMu      sync.Mutex
-	clientFactory func() *http.Client
+	clientFactory func(proxyPort int) *http.Client
 }
 
 // Do sends an HTTP request and returns an HTTP response.
@@ -89,9 +97,25 @@ func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return c.resolveClient().Do(req)
 }
 
+// DoViaProxy sends an HTTP request via proxy and returns an HTTP response.
+func (c *HTTPClient) DoViaProxy(req *http.Request, proxyPort int) (*http.Response, error) {
+	return c.clientFactory(proxyPort).Do(req)
+}
+
 // DoRequest performs HTTP requests and parses error without returning response.
 func (c *HTTPClient) DoRequest(req *http.Request) error {
 	response, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return ParseResponseError(response)
+}
+
+// DoRequestViaProxy performs HTTP requests via proxy and parses error without returning response.
+func (c *HTTPClient) DoRequestViaProxy(req *http.Request, proxyPort int) error {
+	response, err := c.DoViaProxy(req, proxyPort)
 	if err != nil {
 		return err
 	}
@@ -118,13 +142,31 @@ func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface
 	return ParseResponseJSON(response, &resp)
 }
 
+// DoRequestViaProxyAndParseResponse performs HTTP requests and response from JSON.
+func (c *HTTPClient) DoRequestViaProxyAndParseResponse(req *http.Request, resp interface{}, proxyPort int) error {
+	response, err := c.DoViaProxy(req, proxyPort)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	httptrace.TraceRequestResponse(req, response)
+
+	err = ParseResponseError(response)
+	if err != nil {
+		return err
+	}
+
+	return ParseResponseJSON(response, &resp)
+}
+
 func (c *HTTPClient) resolveClient() *http.Client {
 	c.clientMu.Lock()
 	defer c.clientMu.Unlock()
 	if c.client != nil {
 		return c.client
 	}
-	c.client = c.clientFactory()
+	c.client = c.clientFactory(0)
 	return c.client
 }
 

@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -46,6 +47,36 @@ type FeesDTO struct {
 	HermesPercent       string   `json:"hermes_percent"`
 	DecreaseStake       *big.Int `json:"decreaseStake"`
 	DecreaseStakeTokens Tokens   `json:"decrease_stake_tokens"`
+}
+
+// CombinedFeesResponse represents transactor fees.
+// swagger:model CombinedFeesResponse
+type CombinedFeesResponse struct {
+	Current TransactorFees `json:"current"`
+	Last    TransactorFees `json:"last"`
+
+	ServerTime    time.Time `json:"server_time"`
+	HermesPercent string    `json:"hermes_percent"`
+}
+
+// TransactorFees represents transactor fees.
+// swagger:model TransactorFees
+type TransactorFees struct {
+	Registration  Tokens `json:"registration"`
+	Settlement    Tokens `json:"settlement"`
+	DecreaseStake Tokens `json:"decrease_stake"`
+
+	ValidUntil time.Time `json:"valid_until"`
+}
+
+// NewTransactorFees converts registry fees to public api.
+func NewTransactorFees(r *registry.Fees) TransactorFees {
+	return TransactorFees{
+		Registration:  NewTokens(r.Register),
+		Settlement:    NewTokens(r.Settle),
+		DecreaseStake: NewTokens(r.DecreaseStake),
+		ValidUntil:    r.ValidUntil,
+	}
 }
 
 // NewSettlementListQuery creates settlement list query with default values.

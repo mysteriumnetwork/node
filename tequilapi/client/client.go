@@ -26,9 +26,9 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/pkg/errors"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
@@ -323,6 +323,30 @@ func (client *Client) ConnectionIP() (ip contract.IPDTO, err error) {
 
 	err = parseResponseJSON(response, &ip)
 	return ip, err
+}
+
+// ProxyIP returns public ip of the proxy.
+func (client *Client) ProxyIP(proxyPort int) (ip contract.IPDTO, err error) {
+	response, err := client.http.Get("connection/proxy/ip", url.Values{"port": []string{strconv.Itoa(proxyPort)}})
+	if err != nil {
+		return ip, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &ip)
+	return ip, err
+}
+
+// ProxyLocation returns proxy location.
+func (client *Client) ProxyLocation(proxyPort int) (location contract.LocationDTO, err error) {
+	response, err := client.http.Get("connection/proxy/location", url.Values{"port": []string{strconv.Itoa(proxyPort)}})
+	if err != nil {
+		return location, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &location)
+	return location, err
 }
 
 // ConnectionLocation returns current location
@@ -795,7 +819,6 @@ func (client *Client) Beneficiary(address string) (res contract.IdentityBenefici
 // SetMMNApiKey sets MMN's API key in config and registers node to MMN
 func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
 	response, err := client.http.Post("mmn/api-key", data)
-
 	// non 200 status codes return a generic error and we can't use it, instead
 	// the response contains validation JSON which we can use to extract the error
 	if err != nil {

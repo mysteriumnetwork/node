@@ -86,6 +86,16 @@ func (r *CachedResolver) GetPublicIP() (string, error) {
 	return r.publicIP, nil
 }
 
+// GetProxyIP returns proxy public IP.
+func (r *CachedResolver) GetProxyIP(proxyPort int) (string, error) {
+	publicIP, err := r.resolver.GetProxyIP(proxyPort)
+	if err != nil {
+		return "", err
+	}
+
+	return publicIP, nil
+}
+
 // ClearCache clears ip cache.
 func (r *CachedResolver) ClearCache() {
 	log.Debug().Msg("Clearing ip resolver cache")
