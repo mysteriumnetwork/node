@@ -26,13 +26,12 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
-
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat"
@@ -80,11 +79,14 @@ func (m *mockNATProber) Probe(_ context.Context) (nat.NATType, error) {
 
 var mockedNATProber = &mockNATProber{"none", nil}
 
-type mockResolver struct {
-}
+type mockResolver struct{}
 
 func (r *mockResolver) DetectLocation() (locationstate.Location, error) {
 	return locationstate.Location{}, nil
+}
+
+func (r *mockResolver) DetectProxyLocation(_ int) (locationstate.Location, error) {
+	return r.DetectLocation()
 }
 
 type mockPricer struct {

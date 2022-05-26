@@ -230,6 +230,33 @@ func (t *Transactor) FetchStakeDecreaseFee(chainID int64) (FeesResponse, error) 
 	return f, err
 }
 
+// CombinedFeesResponse represents the combined fees response.
+type CombinedFeesResponse struct {
+	Current    Fees      `json:"current"`
+	Last       Fees      `json:"last"`
+	ServerTime time.Time `json:"server_time"`
+}
+
+// Fees represents fees for a given time frame.
+type Fees struct {
+	DecreaseStake *big.Int  `json:"decreaseStake"`
+	Settle        *big.Int  `json:"settle"`
+	Register      *big.Int  `json:"register"`
+	ValidUntil    time.Time `json:"valid_until"`
+}
+
+// FetchCombinedFees fetches current transactor fees.
+func (t *Transactor) FetchCombinedFees(chainID int64) (CombinedFeesResponse, error) {
+	f := CombinedFeesResponse{}
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v", chainID), nil)
+	if err != nil {
+		return f, errors.Wrap(err, "failed to fetch transactor fees")
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	return f, err
+}
+
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel
 func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.Promise) (string, error) {
 	payload := PromiseSettlementRequest{

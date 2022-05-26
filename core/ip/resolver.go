@@ -33,6 +33,7 @@ const apiClient = "goclient-v0.1"
 type Resolver interface {
 	GetOutboundIP() (string, error)
 	GetPublicIP() (string, error)
+	GetProxyIP(proxyPort int) (string, error)
 }
 
 // ResolverImpl represents data required to operate resolving
@@ -106,12 +107,35 @@ func (r *ResolverImpl) GetPublicIP() (string, error) {
 	return ipResponse.IP, nil
 }
 
+// GetProxyIP returns proxy public IP
+func (r *ResolverImpl) GetProxyIP(proxyPort int) (string, error) {
+	var ipResponse ipResponse
+
+	request, err := requests.NewGetRequest(r.url, "", nil)
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return "", err
+	}
+
+	request.Header.Set("User-Agent", apiClient)
+	request.Header.Set("Accept", "application/json")
+
+	err = r.httpClient.DoRequestViaProxyAndParseResponse(request, &ipResponse, proxyPort)
+	if err != nil {
+		log.Err(err).Msg("could not reach location service, will use fallbacks")
+		return r.findPublicIPViaFallbacks()
+	}
+
+	log.Debug().Msg("IP detected: " + ipResponse.IP)
+	return ipResponse.IP, nil
+}
+
 func (r *ResolverImpl) findPublicIPViaFallbacks() (string, error) {
 	// To prevent blocking for a long time on a service that might be dead, use the following fallback mechanic:
 	// Choose 3 fallback addresses at random and execute lookups on them in parallel.
 	// Return the first successful result or an error if such occurs.
 	// This prevents providers from not being able to provide sessions due to not having a fresh public IP address.
-	var desiredLength = 3
+	desiredLength := 3
 	res := make(chan string, desiredLength)
 	wg := sync.WaitGroup{}
 	wg.Add(desiredLength)

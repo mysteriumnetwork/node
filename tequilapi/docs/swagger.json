@@ -431,6 +431,54 @@
         }
       }
     },
+    "/connection/proxy/ip": {
+      "get": {
+        "description": "Returns proxy public IP address",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Returns IP address",
+        "operationId": "getProxyIP",
+        "responses": {
+          "200": {
+            "description": "Public IP address",
+            "schema": {
+              "$ref": "#/definitions/IPDTO"
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/connection/proxy/location": {
+      "get": {
+        "description": "Returns proxy connection locations",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Returns proxy connection location",
+        "operationId": "getProxyLocation",
+        "responses": {
+          "200": {
+            "description": "Proxy connection locations",
+            "schema": {
+              "$ref": "#/definitions/LocationDTO"
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/connection/statistics": {
       "get": {
         "description": "Returns statistics about current connection",
@@ -2202,6 +2250,7 @@
         "description": "Returns fees applied by Transactor",
         "summary": "Returns fees",
         "operationId": "FeesDTO",
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Fees applied by Transactor",
@@ -2788,6 +2837,27 @@
           }
         }
       }
+    },
+    "/v2/transactor/fees": {
+      "get": {
+        "description": "Returns fees applied by Transactor",
+        "summary": "Returns fees",
+        "operationId": "CombinedFeesResponse",
+        "responses": {
+          "200": {
+            "description": "Fees applied by Transactor",
+            "schema": {
+              "$ref": "#/definitions/CombinedFeesResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -2965,6 +3035,28 @@
         "username": {
           "type": "string",
           "x-go-name": "Username"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "CombinedFeesResponse": {
+      "type": "object",
+      "title": "CombinedFeesResponse represents transactor fees.",
+      "properties": {
+        "current": {
+          "$ref": "#/definitions/TransactorFees"
+        },
+        "hermes_percent": {
+          "type": "string",
+          "x-go-name": "HermesPercent"
+        },
+        "last": {
+          "$ref": "#/definitions/TransactorFees"
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "ServerTime"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3646,6 +3738,9 @@
           "description": "Beneficiary: beneficiary to set during registration. Optional.",
           "type": "string",
           "x-go-name": "Beneficiary"
+        },
+        "fee": {
+          "$ref": "#/definitions/Int"
         },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
@@ -4958,6 +5053,27 @@
         "wei": {
           "type": "string",
           "x-go-name": "Wei"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TransactorFees": {
+      "type": "object",
+      "title": "TransactorFees represents transactor fees.",
+      "properties": {
+        "decrease_stake": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "registration": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "settlement": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "ValidUntil"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

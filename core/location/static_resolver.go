@@ -18,10 +18,11 @@
 package location
 
 import (
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 )
 
 // StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
@@ -67,4 +68,9 @@ func (d *StaticResolver) DetectLocation() (locationstate.Location, error) {
 		IPType:  d.ipType,
 		IP:      pubIP,
 	}, d.err
+}
+
+// DetectProxyLocation detects current IP-address provides location information for the IP.
+func (d *StaticResolver) DetectProxyLocation(_ int) (locationstate.Location, error) {
+	return d.DetectLocation()
 }

@@ -18,9 +18,10 @@
 package location
 
 import (
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 )
 
 // ErrLocationResolutionFailed represents a failure to resolve location and running out of fallbacks to try
@@ -43,6 +44,20 @@ func (fr *FallbackResolver) DetectLocation() (locationstate.Location, error) {
 	log.Debug().Msg("Detecting with fallback resolver")
 	for _, v := range fr.LocationResolvers {
 		loc, err := v.DetectLocation()
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not resolve location")
+		} else {
+			return loc, err
+		}
+	}
+	return locationstate.Location{}, ErrLocationResolutionFailed
+}
+
+// DetectProxyLocation allows us to detect our current location via a proxy.
+func (fr *FallbackResolver) DetectProxyLocation(proxyPort int) (locationstate.Location, error) {
+	log.Debug().Msg("Detecting with fallback resolver")
+	for _, v := range fr.LocationResolvers {
+		loc, err := v.DetectProxyLocation(proxyPort)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not resolve location")
 		} else {

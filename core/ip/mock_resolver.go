@@ -66,6 +66,13 @@ func (client *mockResolver) GetPublicIP() (string, error) {
 	return client.publicIP, client.error
 }
 
+func (client *mockResolver) GetProxyIP(_ int) (string, error) {
+	if client.publicIPs != nil {
+		return client.getNextIP(), client.error
+	}
+	return client.publicIP, client.error
+}
+
 func (client *mockResolver) GetOutboundIP() (string, error) {
 	return client.outboundIP.String(), client.error
 }

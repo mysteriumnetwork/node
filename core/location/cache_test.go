@@ -21,9 +21,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCache_needsRefresh(t *testing.T) {
@@ -80,6 +81,10 @@ type mockResolver struct {
 func (mr *mockResolver) DetectLocation() (locationstate.Location, error) {
 	mr.called = true
 	return locationstate.Location{}, mr.errToReturn
+}
+
+func (mr *mockResolver) DetectProxyLocation(_ int) (locationstate.Location, error) {
+	return mr.DetectLocation()
 }
 
 type mockPublisher struct{}
