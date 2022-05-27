@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/payments/exchange"
 
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
@@ -108,7 +109,7 @@ func (mock *mockPilvytis) GetPaymentGatewayOrderInvoice(id identity.Identity, oi
 	return nil, nil
 }
 
-func (mock *mockPilvytis) GetPaymentGateways() ([]pilvytis.GatewaysResponse, error) {
+func (mock *mockPilvytis) GetPaymentGateways(_ exchange.Currency) ([]pilvytis.GatewaysResponse, error) {
 	return nil, nil
 }
 

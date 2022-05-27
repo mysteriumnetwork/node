@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"runtime"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/payments/exchange"
 )
 
 // API is object which exposes pilvytis API.
@@ -248,8 +250,10 @@ type GatewaysResponse struct {
 }
 
 // GetPaymentGateways returns a slice of supported gateways.
-func (a *API) GetPaymentGateways() ([]GatewaysResponse, error) {
-	req, err := requests.NewGetRequest(a.url, "api/v2/payment/gateways", nil)
+func (a *API) GetPaymentGateways(optionsCurrency exchange.Currency) ([]GatewaysResponse, error) {
+	query := url.Values{}
+	query.Set("options_currency", string(optionsCurrency))
+	req, err := requests.NewGetRequest(a.url, "api/v2/payment/gateways", query)
 	if err != nil {
 		return nil, err
 	}

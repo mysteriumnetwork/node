@@ -2819,6 +2819,15 @@
         ],
         "summary": "Get payment gateway configuration.",
         "operationId": "getPaymentGateways",
+        "parameters": [
+          {
+            "type": "string",
+            "default": "MYST",
+            "description": "Currency for payment order options",
+            "name": "options_currency",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of payment gateways",

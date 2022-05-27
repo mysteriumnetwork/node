@@ -26,6 +26,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/payments/exchange"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -863,8 +864,10 @@ func (client *Client) OrderInvoice(address identity.Identity, orderID string) ([
 }
 
 // PaymentOrderGateways returns all possible gateways and their data.
-func (client *Client) PaymentOrderGateways() ([]contract.GatewaysResponse, error) {
-	resp, err := client.http.Get("v2/payment-order-gateways", nil)
+func (client *Client) PaymentOrderGateways(optionsCurrency exchange.Currency) ([]contract.GatewaysResponse, error) {
+	query := url.Values{}
+	query.Set("options_currency", string(optionsCurrency))
+	resp, err := client.http.Get("v2/payment-order-gateways", query)
 	if err != nil {
 		return nil, err
 	}
