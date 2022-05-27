@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/mysteriumnetwork/payments/exchange"
 )
 
 // PaymentOrderResponse represents a payment order for mobile usage.
@@ -116,9 +117,14 @@ func newGatewayReponse(g []pilvytis.GatewaysResponse) []GatewaysResponse {
 	return result
 }
 
+// GetGatewaysRequest request for GetGateways.
+type GetGatewaysRequest struct {
+	OptionsCurrency string
+}
+
 // GetGateways returns possible payment gateways.
-func (mb *MobileNode) GetGateways() ([]byte, error) {
-	gateways, err := mb.pilvytis.GetPaymentGateways()
+func (mb *MobileNode) GetGateways(req *GetGatewaysRequest) ([]byte, error) {
+	gateways, err := mb.pilvytis.GetPaymentGateways(exchange.Currency(req.OptionsCurrency))
 	if err != nil {
 		return nil, err
 	}
