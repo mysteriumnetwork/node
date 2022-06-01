@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/observer"
+	"github.com/mysteriumnetwork/payments/observer"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,7 +47,7 @@ type addressProvider interface {
 }
 
 type observerApi interface {
-	GetHermesData(chainId int64, hermesAddress common.Address) (observer.HermesData, error)
+	GetHermesData(chainId int64, hermesAddress common.Address) (*observer.HermesResponse, error)
 }
 
 // NewHermesURLGetter creates a new instance of hermes url getter.
