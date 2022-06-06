@@ -47,6 +47,7 @@ type api interface {
 	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.GatewayOrderResponse, error)
 	GetPaymentGateways(optionsCurrency exchange.Currency) ([]pilvytis.GatewaysResponse, error)
 	GetRegistrationPaymentStatus(id identity.Identity) (*pilvytis.RegistrationPaymentResponse, error)
+	GatewayClientCallback(id identity.Identity, gateway string, payload any) error
 }
 
 type paymentsIssuer interface {

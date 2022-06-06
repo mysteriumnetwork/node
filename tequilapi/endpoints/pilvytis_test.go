@@ -125,6 +125,10 @@ func (mock *mockPilvytis) GetRegistrationPaymentStatus(id identity.Identity) (*p
 	}, nil
 }
 
+func (mock *mockPilvytis) GatewayClientCallback(id identity.Identity, gateway string, payload any) error {
+	return nil
+}
+
 type mockPilvytisLocation struct{}
 
 func (mock *mockPilvytisLocation) GetOrigin() locationstate.Location {

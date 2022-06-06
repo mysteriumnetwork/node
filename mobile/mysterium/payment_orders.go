@@ -187,3 +187,23 @@ func (mb *MobileNode) ListPaymentGatewayOrders(req *ListOrdersRequest) ([]byte, 
 
 	return json.Marshal(orders)
 }
+
+// GatewayClientCallbackReq is the payload for GatewayClientCallback.
+type GatewayClientCallbackReq struct {
+	IdentityAddress     string
+	Gateway             string
+	GooglePurchaseToken string
+	GoogleProductID     string
+}
+
+// GatewayClientCallback triggers payment callback for google from client side.
+func (mb *MobileNode) GatewayClientCallback(req *GatewayClientCallbackReq) error {
+	payload := struct {
+		PurchaseToken   string `json:"purchase_token"`
+		GoogleProductID string `json:"google_product_id"`
+	}{
+		PurchaseToken:   req.GooglePurchaseToken,
+		GoogleProductID: req.GoogleProductID,
+	}
+	return mb.pilvytis.GatewayClientCallback(identity.FromAddress(req.IdentityAddress), req.Gateway, payload)
+}

@@ -365,6 +365,17 @@ func (a *API) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([
 	return ioutil.ReadAll(res.Body)
 }
 
+// GatewayClientCallback triggers a payment callback from the client-side.
+// We will query the payment provider to verify the payment.
+func (a *API) GatewayClientCallback(id identity.Identity, gateway string, payload any) error {
+	req, err := requests.NewSignedPostRequest(a.url, fmt.Sprintf("api/v2/payment/%s/client-callback", gateway), payload, a.signer(id))
+	if err != nil {
+		return err
+	}
+	var resp struct{}
+	return a.sendRequestAndParseResp(req, &resp)
+}
+
 type paymentOrderRequest struct {
 	ChannelAddress string `json:"channel_address"`
 	MystAmount     string `json:"myst_amount"`
