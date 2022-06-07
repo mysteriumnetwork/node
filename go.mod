@@ -43,7 +43,7 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
-	github.com/mysteriumnetwork/payments v1.0.1-0.20220601085016-9e198b752e16
+	github.com/mysteriumnetwork/payments v1.0.1-0.20220606084227-9041ad3c0b5e
 	github.com/mysteriumnetwork/terms v0.0.40
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
@@ -222,7 +222,6 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.7 // indirect

@@ -1057,8 +1057,8 @@ github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646 h1:/zKpF
 github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646/go.mod h1:izNxG4qVO/POwdPoBfECCvgl4YHRrL6VKopeqj3gNew=
 github.com/mysteriumnetwork/metrics v0.0.19 h1:sqmUVStDWQOSUUxKTrEnxOZs6dy9nKrlICKBrzTbKSI=
 github.com/mysteriumnetwork/metrics v0.0.19/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
-github.com/mysteriumnetwork/payments v1.0.1-0.20220601085016-9e198b752e16 h1:gP3vv012U++quxZEmgJmTv2DHN0sznVOGdr1kn1yito=
-github.com/mysteriumnetwork/payments v1.0.1-0.20220601085016-9e198b752e16/go.mod h1:A8EmAl9WFPDzhXK7UZfiafxm8ndX2PuO2/RSfsxaUd8=
+github.com/mysteriumnetwork/payments v1.0.1-0.20220606084227-9041ad3c0b5e h1:ojpcJjfOSfIOGUeQ50bD/b635sHQ1mTbhX2OiriMzjo=
+github.com/mysteriumnetwork/payments v1.0.1-0.20220606084227-9041ad3c0b5e/go.mod h1:A8EmAl9WFPDzhXK7UZfiafxm8ndX2PuO2/RSfsxaUd8=
 github.com/mysteriumnetwork/terms v0.0.40 h1:Rv0ElMiiPcT3E3D4uvkxKzgJIE2J2x3uJoz9nfid2qc=
 github.com/mysteriumnetwork/terms v0.0.40/go.mod h1:HT76gKdQ4q9ZOVVczVc6Qdbz2jMlT7uxMIJXgk1FX3k=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
@@ -1468,7 +1468,6 @@ golang.org/x/lint v0.0.0-20200130185559-910be7a94367/go.mod h1:3xt1FjdF8hUf6vQPI
 golang.org/x/lint v0.0.0-20200302205851-738671d3881b/go.mod h1:3xt1FjdF8hUf6vQPIChWIBhFzV8gjjsPE/fR3IyQdNY=
 golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5/go.mod h1:3xt1FjdF8hUf6vQPIChWIBhFzV8gjjsPE/fR3IyQdNY=
 golang.org/x/mobile v0.0.0-20190312151609-d3739f865fa6/go.mod h1:z+o9i4GpDbdi3rU15maQ/Ox0txvL9dWGYEHz965HBQE=
-golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 h1:4+4C/Iv2U4fMZBiMCc98MG1In4gJY5YRhtpDNeDeHWs=
 golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028/go.mod h1:E/iHnbuqvinMTCcRqshq8CkpyQDoeVncDDYHnLhea+o=
 golang.org/x/mod v0.0.0-20190513183733-4bf6d317e70e/go.mod h1:mXi4GBBbnImb6dmsKGUJ2LatrhH/nqhxcFungHvyanc=
 golang.org/x/mod v0.1.0/go.mod h1:0QHyrYULN0/3qlju5TqG8bIK38QM8yzMo5ekMj3DlcY=

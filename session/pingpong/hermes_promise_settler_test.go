@@ -61,6 +61,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		ks,
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
+		&mockObserver{},
 		cfg)
 
 	settler.currentState[mockID] = settlementState{}
@@ -137,6 +138,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		ks,
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
+		&mockObserver{},
 		cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
@@ -179,7 +181,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 			ValidUntil: time.Now().Add(30 * time.Minute),
 		},
 	}
-	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, cfg)
+	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
@@ -280,6 +282,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		ks,
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
+		&mockObserver{},
 		cfg)
 
 	settler.handleNodeStart()
