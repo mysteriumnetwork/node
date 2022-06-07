@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/mysteriumnetwork/payments/observer"
 )
 
 const (
@@ -871,6 +872,17 @@ func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
 
 func (mp *mockPublisher) UnsubscribeWithUID(topic, uid string, fn interface{}) error {
 	return nil
+}
+
+type mockObserver struct {
+}
+
+func (mo *mockObserver) GetHermeses(f *observer.HermesFilter) (observer.HermesesResponse, error) {
+	return observer.HermesesResponse{}, nil
+}
+
+func (mo *mockObserver) GetHermesData(chainId int64, hermesAddress common.Address) (*observer.HermesResponse, error) {
+	return nil, nil
 }
 
 func TestInvoiceTracker_validateExchangeMessage(t *testing.T) {

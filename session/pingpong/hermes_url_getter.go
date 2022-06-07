@@ -47,6 +47,7 @@ type addressProvider interface {
 }
 
 type observerApi interface {
+	GetHermeses(f *observer.HermesFilter) (observer.HermesesResponse, error)
 	GetHermesData(chainId int64, hermesAddress common.Address) (*observer.HermesResponse, error)
 }
 
