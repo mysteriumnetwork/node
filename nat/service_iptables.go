@@ -95,7 +95,7 @@ func (svc *serviceIPTables) Del(rules []interface{}) (err error) {
 
 // Enable enables NAT service.
 func (svc *serviceIPTables) Enable() error {
-	if config.GetBool(config.FlagUserMode) {
+	if config.GetBool(config.FlagUserMode) || config.GetBool(config.FlagUserspace) {
 		log.Info().Msg("Usermode active, nothing to do with iptables")
 		return nil
 	}
@@ -114,7 +114,7 @@ func (svc *serviceIPTables) Enable() error {
 
 // Disable disables NAT service and deletes all rules.
 func (svc *serviceIPTables) Disable() error {
-	if config.GetBool(config.FlagUserMode) {
+	if config.GetBool(config.FlagUserMode) || config.GetBool(config.FlagUserspace) {
 		log.Info().Msg("Usermode active, nothing to do with iptables")
 		return nil
 	}
