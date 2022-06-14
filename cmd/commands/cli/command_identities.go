@@ -206,7 +206,7 @@ func (c *cliApp) unlockIdentity(actionArgs []string) (err error) {
 		passphrase = actionArgs[1]
 	}
 
-	clio.Info("Unlocking", address)
+	clio.Info("Unlocking ", address)
 	err = c.tequilapi.Unlock(address, passphrase)
 	if err != nil {
 		return err
