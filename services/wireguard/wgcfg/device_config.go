@@ -42,6 +42,7 @@ type DeviceConfig struct {
 	Subnet     net.IPNet `json:"subnet"`
 	PrivateKey string    `json:"private_key"`
 	ListenPort int       `json:"listen_port"`
+	DNSPort    int       `json:"dns_port,omitempty"`
 	DNS        []string  `json:"dns"`
 	// Used only for unix.
 	DNSScriptDir string `json:"dns_script_dir"`

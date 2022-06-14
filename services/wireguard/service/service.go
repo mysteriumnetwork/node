@@ -223,6 +223,7 @@ func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg
 		Subnet:     network,
 		PrivateKey: privateKey,
 		ListenPort: listenPort,
+		DNSPort:    m.dnsPort,
 		DNS:        nil,
 		Peer: wgcfg.Peer{
 			PublicKey: peerPublicKey,
