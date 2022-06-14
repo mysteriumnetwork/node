@@ -42,7 +42,7 @@ type client struct {
 	proxyClose func(context.Context) error
 }
 
-// New create new remote WireGuard client which communicates with supervisor.
+// New create new WireGuard client which serves requests via proxy.
 func New() (*client, error) {
 	log.Debug().Msg("Creating proxy wg client")
 	return &client{}, nil
