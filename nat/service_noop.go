@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,24 @@
 
 package nat
 
-import (
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
-)
+type serviceNoop struct{}
 
-// NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
-func NewService() NATService {
-	if config.GetBool(config.FlagUserspace) {
-		return &serviceNoop{}
-	}
+// Setup sets NAT/Firewall rules for the given NATOptions.
+func (svc *serviceNoop) Setup(opts Options) (appliedRules []interface{}, err error) {
+	return nil, nil
+}
 
-	return &serviceICS{
-		setICSAddresses: setICSAddresses,
-		powerShell:      cmdutil.PowerShell,
-	}
+// Del removes given NAT/Firewall rules that were previously set up.
+func (svc *serviceNoop) Del(rules []interface{}) error {
+	return nil
+}
+
+// Enable enables NAT service.
+func (svc *serviceNoop) Enable() error {
+	return nil
+}
+
+// Disable disables NAT service and deletes all rules.
+func (svc *serviceNoop) Disable() error {
+	return nil
 }

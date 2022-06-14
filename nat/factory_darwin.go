@@ -17,10 +17,17 @@
 
 package nat
 
-import "os/exec"
+import (
+	"os/exec"
+
+	"github.com/mysteriumnetwork/node/config"
+)
 
 // NewService returns fake nat service since there are no iptables on darwin
 func NewService() NATService {
+	if config.GetBool(config.FlagUserspace) {
+		return &serviceNoop{}
+	}
 	return &servicePFCtl{
 		ipForward: serviceIPForward{
 			CommandFactory: func(name string, arg ...string) Command {
