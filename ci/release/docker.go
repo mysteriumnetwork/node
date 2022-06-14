@@ -18,19 +18,31 @@
 package release
 
 import (
-	"github.com/rs/zerolog/log"
-
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/packages"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
 
 // ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repository in docker hub
 func ReleaseDockerSnapshot() error {
 	logconfig.Bootstrap()
 
+	err := env.EnsureEnvVars(
+		env.SnapshotBuild,
+		env.BuildVersion,
+	)
+	if err != nil {
+		return err
+	}
+
+	if !env.Bool(env.SnapshotBuild) {
+		log.Info().Msg("Not a snapshot build, skipping ReleaseDockerSnapshot action...")
+		return nil
+	}
+
 	return packages.BuildMystAlpineImage(
-		[]string{"mysteriumnetwork/myst:hermes-v3"},
+		[]string{"mysteriumnetwork/myst-snapshots:" + env.Str(env.BuildVersion) + "-alpine"},
 		true,
 	)
 }
