@@ -164,8 +164,8 @@ func (c *cliApp) getIdentity(actionArgs []string) (err error) {
 	if err != nil {
 		return err
 	}
-	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
-	clio.Info("Channel address:", identityStatus.ChannelAddress)
+	clio.Info("Registration Status: ", identityStatus.RegistrationStatus)
+	clio.Info("Channel address: ", identityStatus.ChannelAddress)
 	clio.Info(fmt.Sprintf("Balance: %s MYST", identityStatus.BalanceTokens))
 	clio.Info(fmt.Sprintf("Earnings: %s", money.New(identityStatus.Earnings)))
 	clio.Info(fmt.Sprintf("Earnings total: %s", money.New(identityStatus.EarningsTotal)))
@@ -206,7 +206,7 @@ func (c *cliApp) unlockIdentity(actionArgs []string) (err error) {
 		passphrase = actionArgs[1]
 	}
 
-	clio.Info("Unlocking", address)
+	clio.Info("Unlocking ", address)
 	err = c.tequilapi.Unlock(address, passphrase)
 	if err != nil {
 		return err

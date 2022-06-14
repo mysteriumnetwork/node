@@ -291,6 +291,18 @@ func (c *cliApp) connect(args []string) (err error) {
 	}
 
 	consumerID, providerID, serviceType := args[0], args[1], args[2]
+	migrationStatus, err := c.tequilapi.MigrateHermesStatus(consumerID)
+	if migrationStatus.Status == contract.MigrationStatusRequired {
+		clio.Infof("Hermes migration status: %s\n", migrationStatus.Status)
+		clio.Info("Migration started")
+		err := c.tequilapi.MigrateHermes(consumerID)
+		if err != nil {
+			return err
+		}
+		clio.Info("Migration finished successfully")
+		clio.Info("Try to reconnect")
+		return nil
+	}
 
 	if !services.IsTypeValid(serviceType) {
 		return fmt.Errorf("invalid service type, expected one of: %s", strings.Join(services.Types(), ","))
@@ -641,6 +653,9 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("export", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("import"),
 			readline.PcItem("withdraw", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("last-withdrawal", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("migrate-hermes", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("migrate-hermes-status", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem("status"),
 		readline.PcItem(
