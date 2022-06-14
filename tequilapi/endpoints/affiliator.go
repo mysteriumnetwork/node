@@ -63,7 +63,7 @@ func (a *affiliatorEndpoint) TokenRewardAmount(c *gin.Context) {
 	token := c.Param("token")
 	reward, err := a.affiliator.RegistrationTokenReward(token)
 	if err != nil {
-		c.Error(err)
+		utils.ForwardError(c, err, apierror.Internal("Could not fetch reward", contract.ErrCodeAffiliatorFailed))
 		return
 	}
 	if reward == nil {

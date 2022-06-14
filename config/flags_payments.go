@@ -171,7 +171,7 @@ var (
 	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
 	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
 		Name:   "payments.provider.invoice-frequency",
-		Value:  time.Second * 30,
+		Value:  time.Second * 5,
 		Usage:  "Determines how often the provider sends invoices.",
 		Hidden: true,
 	}

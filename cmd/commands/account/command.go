@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mysteriumnetwork/payments/exchange"
 	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
@@ -192,7 +193,7 @@ func (c *command) topup(ctx *cli.Context) {
 		return
 	}
 
-	gws, err := c.tequilapi.PaymentOrderGateways()
+	gws, err := c.tequilapi.PaymentOrderGateways(exchange.CurrencyMYST)
 	if err != nil {
 		clio.Info("Failed to get enabled gateways and their information")
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/payments/exchange"
 
 	"github.com/gin-gonic/gin"
 )
@@ -44,8 +45,9 @@ type api interface {
 	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.GatewayOrderResponse, error)
 	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
 	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.GatewayOrderResponse, error)
-	GetPaymentGateways() ([]pilvytis.GatewaysResponse, error)
+	GetPaymentGateways(optionsCurrency exchange.Currency) ([]pilvytis.GatewaysResponse, error)
 	GetRegistrationPaymentStatus(id identity.Identity) (*pilvytis.RegistrationPaymentResponse, error)
+	GatewayClientCallback(id identity.Identity, gateway string, payload any) error
 }
 
 type paymentsIssuer interface {
@@ -271,6 +273,13 @@ func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
 // ---
 // summary: Get payment gateway configuration.
 // description: Returns gateway configuration including supported currencies, minimum amounts, etc.
+// parameters:
+// - name: options_currency
+//   in: query
+//   description: Currency for payment order options
+//   type: string
+//   required: false
+//   default: MYST
 // responses:
 //   200:
 //     description: List of payment gateways
@@ -283,7 +292,8 @@ func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
-	resp, err := e.api.GetPaymentGateways()
+	optionsCurrency := exchange.Currency(strings.ToUpper(c.DefaultQuery("options_currency", "MYST")))
+	resp, err := e.api.GetPaymentGateways(optionsCurrency)
 	if err != nil {
 		utils.ForwardError(c, err, apierror.Internal("Failed to list payment gateways", contract.ErrCodePaymentListGateways))
 		return

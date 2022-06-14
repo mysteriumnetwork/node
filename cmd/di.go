@@ -73,7 +73,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/upnp"
-	"github.com/mysteriumnetwork/node/observer"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
@@ -87,6 +86,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	"github.com/mysteriumnetwork/payments/observer"
 )
 
 // UIServer represents our web server
@@ -764,7 +764,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	clients[options.Chains.Chain2.ChainID] = bcL2
 
 	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
-	di.ObserverAPI = observer.NewAPI(di.HTTPClient, options.ObserverAddress)
+	di.ObserverAPI = observer.NewAPI(options.ObserverAddress, time.Second*30)
 	di.bootstrapAddressProvider(options)
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider, di.ObserverAPI)
 
