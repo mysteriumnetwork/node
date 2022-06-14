@@ -96,7 +96,7 @@ var MainnetDefinition = NetworkDefinition{
 		},
 		KnownHermeses: []string{
 			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
-			"0x4f7265afc1373317975a306023574BE5Ec87157A",
+			"0x80ed28d84792d8b153bf2f25f0c4b7a1381de4ab",
 		},
 	},
 	MMNAddress:      "https://mystnodes.com",
