@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config/remote"
+	"github.com/mysteriumnetwork/payments/exchange"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -76,7 +77,7 @@ func (c *cliApp) gateways(args []string) (err error) {
 		return
 	}
 
-	resp, err := c.tequilapi.PaymentOrderGateways()
+	resp, err := c.tequilapi.PaymentOrderGateways(exchange.CurrencyMYST)
 	if err != nil {
 		return fmt.Errorf("could not get currencies: %w", err)
 	}
@@ -116,7 +117,7 @@ func (c *cliApp) orderCreate(args []string) (err error) {
 		return errors.New("top-up amount is required and must be greater than 0")
 	}
 
-	gws, err := c.tequilapi.PaymentOrderGateways()
+	gws, err := c.tequilapi.PaymentOrderGateways(exchange.CurrencyMYST)
 	if err != nil {
 		clio.Info("Failed to get enabled gateways and their information")
 		return

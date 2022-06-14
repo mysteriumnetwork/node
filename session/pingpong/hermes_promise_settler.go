@@ -42,6 +42,7 @@ import (
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/mysteriumnetwork/payments/observer"
 	"github.com/rs/zerolog/log"
 )
 
@@ -126,11 +127,35 @@ type hermesPromiseSettler struct {
 	paySettler                 paySettler
 	promiseStorage             promiseStorage
 	publisher                  eventbus.Publisher
+	hf                         hermesFees
+	observerApi                observerApi
 	// TODO: Consider adding chain ID to this as well.
 	currentState map[identity.Identity]settlementState
 	settleQueue  chan receivedPromise
 	stop         chan struct{}
 	once         sync.Once
+}
+
+type hermesFees struct {
+	fees map[string]uint16
+	m    sync.RWMutex
+}
+
+func (h *hermesFees) key(chainID int64, hermesID common.Address) string {
+	return fmt.Sprint(chainID, hermesID.Hex())
+}
+
+func (h *hermesFees) set(chainID int64, hermesID common.Address, fee uint16) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	h.fees[h.key(chainID, hermesID)] = fee
+}
+
+func (h *hermesFees) get(chainID int64, hermesID common.Address) (uint16, bool) {
+	h.m.RLock()
+	defer h.m.RUnlock()
+	got, ok := h.fees[h.key(chainID, hermesID)]
+	return got, ok
 }
 
 // HermesPromiseSettlerConfig configures the hermes promise settler accordingly.
@@ -148,7 +173,7 @@ type HermesPromiseSettlerConfig struct {
 var errFeeNotCovered = errors.New("fee not covered, cannot continue")
 
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
-func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
+func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, observerApi observerApi, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
 	return &hermesPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		ks:                         ks,
@@ -163,6 +188,10 @@ func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorag
 		promiseStorage:             promiseStorage,
 		paySettler:                 paySettler,
 		publisher:                  publisher,
+		hf: hermesFees{
+			fees: make(map[string]uint16),
+		},
+		observerApi: observerApi,
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
 		stop:        make(chan struct{}),
@@ -172,7 +201,18 @@ func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorag
 
 // GetHermesFee fetches the hermes fee.
 func (aps *hermesPromiseSettler) GetHermesFee(chainID int64, hermesID common.Address) (uint16, error) {
-	return aps.bc.GetHermesFee(chainID, hermesID)
+	got, ok := aps.hf.get(chainID, hermesID)
+	if !ok {
+		fees, err := aps.bc.GetHermesFee(chainID, hermesID)
+		if err != nil {
+			return 0, err
+		}
+
+		aps.hf.set(chainID, hermesID, fees)
+		return fees, nil
+	}
+
+	return got, nil
 }
 
 // loadInitialState loads the initial state for the given identity. Inteded to be called on service start.
@@ -452,6 +492,31 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 	}
 
 	return nil
+}
+
+// ForceSettleInactiveHermeses forces the settlement for the inactive hermeses
+func (aps *hermesPromiseSettler) ForceSettleInactiveHermeses(chainID int64, providerID identity.Identity) error {
+	active := false
+	approved := true
+	inactiveHermeses, err := aps.observerApi.GetHermeses(&observer.HermesFilter{
+		Active:   &active,
+		Approved: &approved,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get inactive hermeses: %w", err)
+	}
+	chainInactiveHermesesResponses, ok := inactiveHermeses[chainID]
+	if !ok {
+		log.Info().Msgf("no inactive hermeses found for chain: %d", chainID)
+		return nil
+	}
+
+	chainInactiveHermeses := make([]common.Address, len(chainInactiveHermesesResponses))
+	for i, h := range chainInactiveHermesesResponses {
+		chainInactiveHermeses[i] = h.HermesAddress
+	}
+
+	return aps.ForceSettle(chainID, providerID, chainInactiveHermeses...)
 }
 
 // ForceSettle forces the settlement for a provider
@@ -949,6 +1014,10 @@ func (aps *hermesPromiseSettler) settle(
 	}
 
 	amountToSettle := new(big.Int).Sub(updatedPromise.Amount, settled)
+	if amountToSettle.Cmp(big.NewInt(0)) <= 0 {
+		log.Warn().Msgf("Tried to settle for %s MYST", amountToSettle.String())
+		return nil
+	}
 
 	fee, err := aps.bc.CalculateHermesFee(promise.ChainID, hermesID, amountToSettle)
 	if err != nil {
@@ -1214,6 +1283,10 @@ func (aps *hermesPromiseSettler) handleNodeStart() {
 			err := aps.loadInitialState(aps.chainID(), address)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not load initial state for %v", addr)
+			}
+			err = aps.ForceSettleInactiveHermeses(aps.chainID(), addr)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not settle inactive hermeses %v", addr)
 			}
 		}(addr)
 	}

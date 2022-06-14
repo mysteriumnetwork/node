@@ -108,6 +108,8 @@ const (
 	// Transactor
 
 	ErrCodeTransactorRegistration          = "err_transactor_registration"
+	ErrCodeTransactorFetchFees             = "err_transactor_fetch_fees"
+	ErrCodeTransactorDecreaseStake         = "err_transactor_decrease_stake"
 	ErrCodeTransactorSettleHistory         = "err_transactor_settle_history"
 	ErrCodeTransactorSettleHistoryPaginate = "err_transactor_settle_history_paginate"
 	ErrCodeTransactorWithdraw              = "err_transactor_withdraw"
@@ -120,6 +122,7 @@ const (
 	// Affiliator
 
 	ErrCodeAffiliatorNoReward = "err_affiliator_no_reward"
+	ErrCodeAffiliatorFailed   = "err_affiliator_failed"
 
 	// Other
 

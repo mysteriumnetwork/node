@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"runtime"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/payments/exchange"
 )
 
 // API is object which exposes pilvytis API.
@@ -248,8 +250,10 @@ type GatewaysResponse struct {
 }
 
 // GetPaymentGateways returns a slice of supported gateways.
-func (a *API) GetPaymentGateways() ([]GatewaysResponse, error) {
-	req, err := requests.NewGetRequest(a.url, "api/v2/payment/gateways", nil)
+func (a *API) GetPaymentGateways(optionsCurrency exchange.Currency) ([]GatewaysResponse, error) {
+	query := url.Values{}
+	query.Set("options_currency", string(optionsCurrency))
+	req, err := requests.NewGetRequest(a.url, "api/v2/payment/gateways", query)
 	if err != nil {
 		return nil, err
 	}
@@ -359,6 +363,17 @@ func (a *API) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([
 		return nil, err
 	}
 	return ioutil.ReadAll(res.Body)
+}
+
+// GatewayClientCallback triggers a payment callback from the client-side.
+// We will query the payment provider to verify the payment.
+func (a *API) GatewayClientCallback(id identity.Identity, gateway string, payload any) error {
+	req, err := requests.NewSignedPostRequest(a.url, fmt.Sprintf("api/v2/payment/%s/client-callback", gateway), payload, a.signer(id))
+	if err != nil {
+		return err
+	}
+	var resp struct{}
+	return a.sendRequestAndParseResp(req, &resp)
 }
 
 type paymentOrderRequest struct {
