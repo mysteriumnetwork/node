@@ -221,6 +221,13 @@ var (
 		Value: false,
 	}
 
+	// FlagUserspace allows running a node without privileged permissions.
+	FlagUserspace = cli.BoolFlag{
+		Name:  "userspace",
+		Usage: "Run a node without privileged permissions",
+		Value: false,
+	}
+
 	// FlagVendorID identifies 3rd party vendor (distributor) of Mysterium node.
 	FlagVendorID = cli.StringFlag{
 		Name: "vendor.id",
@@ -325,6 +332,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagPProfEnable,
 		&FlagUserMode,
 		&FlagProxyMode,
+		&FlagUserspace,
 		&FlagVendorID,
 		&FlagLauncherVersion,
 		&FlagP2PListenPorts,
@@ -381,6 +389,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseBoolFlag(ctx, FlagProxyMode)
+	Current.ParseBoolFlag(ctx, FlagUserspace)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagLauncherVersion)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
