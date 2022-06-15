@@ -75,6 +75,7 @@ type HermesPromiseHandlerDeps struct {
 	HermesURLGetter      hermesURLGetter
 	HermesCallerFactory  HermesCallerFactory
 	Signer               identity.SignerFactory
+	Chains               []int64
 }
 
 // HermesPromiseHandler handles the hermes promises for ongoing sessions.
@@ -89,6 +90,10 @@ type HermesPromiseHandler struct {
 
 // NewHermesPromiseHandler returns a new instance of hermes promise handler.
 func NewHermesPromiseHandler(deps HermesPromiseHandlerDeps) *HermesPromiseHandler {
+	if len(deps.Chains) == 0 {
+		deps.Chains = []int64{config.GetInt64(config.FlagChain1ChainID), config.GetInt64(config.FlagChain2ChainID)}
+	}
+
 	return &HermesPromiseHandler{
 		deps:           deps,
 		queue:          make(chan enqueuedRequest, 100),
@@ -200,7 +205,7 @@ func (aph *HermesPromiseHandler) getFees(chainID int64) (*big.Int, error) {
 		return fee.Fee, nil
 	}
 
-	if err := aph.updateFees(); err != nil {
+	if err := aph.updateFees(chainID); err != nil {
 		return nil, err
 	}
 
@@ -211,16 +216,13 @@ func (aph *HermesPromiseHandler) getFees(chainID int64) (*big.Int, error) {
 	return nil, errors.New("failed to fetch fees")
 }
 
-func (aph *HermesPromiseHandler) updateFees() error {
-	chains := []int64{config.GetInt64(config.FlagChain1ChainID), config.GetInt64(config.FlagChain2ChainID)}
-	for _, v := range chains {
-		fees, err := aph.deps.FeeProvider.FetchSettleFees(v)
-		if err != nil {
-			return err
-		}
-		aph.transactorFees[v] = fees
+func (aph *HermesPromiseHandler) updateFees(chainID int64) error {
+	fees, err := aph.deps.FeeProvider.FetchSettleFees(chainID)
+	if err != nil {
+		return err
 	}
 
+	aph.transactorFees[chainID] = fees
 	return nil
 }
 
@@ -261,9 +263,12 @@ func (aph *HermesPromiseHandler) handleNodeEvents(e event.Payload) {
 	if e.Status == event.StatusStarted {
 		aph.startOnce.Do(
 			func() {
-				if err := aph.updateFees(); err != nil {
-					log.Warn().Err(err).Msg("could not fetch fees")
+				for _, c := range aph.deps.Chains {
+					if err := aph.updateFees(c); err != nil {
+						log.Warn().Err(err).Msg("could not fetch fees")
+					}
 				}
+
 				aph.handleRequests()
 			},
 		)

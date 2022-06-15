@@ -558,6 +558,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		Encryption:      di.Keystore,
 		EventBus:        di.EventBus,
 		Signer:          di.SignerFactory,
+		Chains:          []int64{nodeOptions.Chains.Chain1.ChainID, nodeOptions.Chains.Chain2.ChainID},
 	})
 
 	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
