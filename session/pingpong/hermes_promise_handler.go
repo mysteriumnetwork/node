@@ -194,16 +194,34 @@ func (aph *HermesPromiseHandler) PayAndSettle(r []byte, em crypto.ExchangeMessag
 	return er.errChan
 }
 
-func (aph *HermesPromiseHandler) updateFees() {
+func (aph *HermesPromiseHandler) getFees(chainID int64) (*big.Int, error) {
+	fee, ok := aph.transactorFees[chainID]
+	if ok && fee.IsValid() {
+		return fee.Fee, nil
+	}
+
+	if err := aph.updateFees(); err != nil {
+		return nil, err
+	}
+
+	if updatedFee, ok := aph.transactorFees[chainID]; ok {
+		return updatedFee.Fee, nil
+	}
+
+	return nil, errors.New("failed to fetch fees")
+}
+
+func (aph *HermesPromiseHandler) updateFees() error {
 	chains := []int64{config.GetInt64(config.FlagChain1ChainID), config.GetInt64(config.FlagChain2ChainID)}
 	for _, v := range chains {
 		fees, err := aph.deps.FeeProvider.FetchSettleFees(v)
 		if err != nil {
-			log.Warn().Err(err).Msg("could not fetch fees, ignoring")
-			continue
+			return err
 		}
 		aph.transactorFees[v] = fees
 	}
+
+	return nil
 }
 
 func (aph *HermesPromiseHandler) handleRequests() {
@@ -243,7 +261,9 @@ func (aph *HermesPromiseHandler) handleNodeEvents(e event.Payload) {
 	if e.Status == event.StatusStarted {
 		aph.startOnce.Do(
 			func() {
-				aph.updateFees()
+				if err := aph.updateFees(); err != nil {
+					log.Warn().Err(err).Msg("could not fetch fees")
+				}
 				aph.handleRequests()
 			},
 		)
@@ -256,14 +276,10 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	providerID := er.providerID
 	hermesID := common.HexToAddress(er.em.HermesID)
-	fee, ok := aph.transactorFees[er.em.ChainID]
-	if !ok {
-		er.errChan <- fmt.Errorf("no fees for chain %v", er.em.ChainID)
+	fee, err := aph.getFees(er.em.ChainID)
+	if err != nil {
+		er.errChan <- fmt.Errorf("no fees for chain %v: %w", er.em.ChainID, err)
 		return
-	}
-
-	if !fee.IsValid() {
-		aph.updateFees()
 	}
 
 	details := rRecoveryDetails{
@@ -285,7 +301,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	request := RequestPromise{
 		ExchangeMessage: er.em,
-		TransactorFee:   fee.Fee,
+		TransactorFee:   fee,
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
