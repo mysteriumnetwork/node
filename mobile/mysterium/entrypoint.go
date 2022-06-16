@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/rs/zerolog"
 
 	paymentClient "github.com/mysteriumnetwork/payments/client"
@@ -90,6 +91,7 @@ type MobileNode struct {
 	entertainmentEstimator    *entertainment.Estimator
 	residentCountry           *identity.ResidentCountry
 	filterPresetStorage       *proposal.FilterPresetStorage
+	hermesMigrator            *migration.HermesMigrator
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -117,6 +119,7 @@ type MobileNodeOptions struct {
 	HermesSCAddress                string
 	ChannelImplementationSCAddress string
 	CacheTTLSeconds                int
+	ObserverAddress                string
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -148,6 +151,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		RegistrySCAddress:              metadata.MainnetDefinition.Chain2.RegistryAddress,
 		HermesSCAddress:                metadata.MainnetDefinition.Chain2.HermesID,
 		ChannelImplementationSCAddress: metadata.MainnetDefinition.Chain2.ChannelImplAddress,
+		ObserverAddress:                metadata.MainnetDefinition.ObserverAddress,
 		CacheTTLSeconds:                5,
 	}
 }
@@ -273,6 +277,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		},
 		Consumer:        true,
 		PilvytisAddress: options.PilvytisAddress,
+		ObserverAddress: options.ObserverAddress,
 	}
 
 	err := di.Bootstrap(nodeOptions)
@@ -316,6 +321,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		),
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
+		hermesMigrator:      di.HermesMigrator,
 	}
 
 	return mobileNode, nil

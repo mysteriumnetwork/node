@@ -200,6 +200,7 @@ func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]propos
 			filter.NATCompatibility = natType
 		}
 	}
+	filter.CompatibilityMin = 2
 	allProposals, err := m.repository.Proposals(filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposals from repository: %w", err)
@@ -226,6 +227,7 @@ func (m *proposalsManager) getCountriesFromRepository(req *GetProposalsRequest) 
 			filter.NATCompatibility = natType
 		}
 	}
+	filter.CompatibilityMin = 2
 	countries, err := m.repository.Countries(filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposals from repository: %w", err)

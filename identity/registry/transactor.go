@@ -50,6 +50,7 @@ type AddressProvider interface {
 	GetActiveChannelImplementation(chainID int64) (common.Address, error)
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
+	GetKnownHermeses(chainID int64) ([]common.Address, error)
 }
 
 type feeType uint8
@@ -492,6 +493,126 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	}
 
 	return signature.Bytes(), nil
+}
+
+// OpenChannelRequest represents the open consumer channel request body
+type OpenChannelRequest struct {
+	TransactorFee   *big.Int `json:"transactorFee"`
+	Signature       string   `json:"signature"`
+	HermesID        string   `json:"hermesID"`
+	ChainID         int64    `json:"chainID"`
+	RegistryAddress string   `json:"registry_address"`
+}
+
+// sign OpenChannelRequest by identity's signer
+func (t *Transactor) signOpenChannelRequest(signer identity.Signer, req *OpenChannelRequest) error {
+	r := registration.OpenConsumerChannelRequest{
+		ChainID:         req.ChainID,
+		HermesID:        req.HermesID,
+		TransactorFee:   req.TransactorFee,
+		RegistryAddress: req.RegistryAddress,
+	}
+	message := r.GetMessage()
+
+	signature, err := signer.Sign(message)
+	if err != nil {
+		return fmt.Errorf("failed to sign a open channel request: %w", err)
+	}
+
+	err = pc.ReformatSignatureVForBC(signature.Bytes())
+	if err != nil {
+		return fmt.Errorf("signature reformat failed: %w", err)
+	}
+
+	signatureHex := common.Bytes2Hex(signature.Bytes())
+	req.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
+
+	return nil
+}
+
+// create request for open  channel
+func (t *Transactor) createOpenChannelRequest(chainID int64, id, hermesID, registryAddress string) (OpenChannelRequest, error) {
+	request := OpenChannelRequest{
+		TransactorFee:   new(big.Int),
+		HermesID:        hermesID,
+		ChainID:         chainID,
+		RegistryAddress: registryAddress,
+	}
+
+	signer := t.signerFactory(identity.FromAddress(id))
+	err := t.signOpenChannelRequest(signer, &request)
+	if err != nil {
+		return request, fmt.Errorf("failed to sign open channel request: %w", err)
+	}
+
+	return request, nil
+}
+
+// OpenChannel opens payment channel for consumer for certain Hermes
+func (t *Transactor) OpenChannel(chainID int64, id, hermesID, registryAddress string) error {
+	endpoint := "channel/open"
+	request, err := t.createOpenChannelRequest(chainID, id, hermesID, registryAddress)
+	if err != nil {
+		return fmt.Errorf("failed to create open channel request: %w", err)
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, endpoint, request)
+	if err != nil {
+		return fmt.Errorf("failed to do open channel request: %w", err)
+	}
+
+	return t.httpClient.DoRequest(req)
+}
+
+// ChannelStatusRequest request for channel status
+type ChannelStatusRequest struct {
+	Identity        string `json:"identity"`
+	HermesID        string `json:"hermesID"`
+	ChainID         int64  `json:"chainID"`
+	RegistryAddress string `json:"registry_address"`
+}
+
+// ChannelStatus represents status of the channel
+type ChannelStatus = string
+
+const (
+	// ChannelStatusNotFound channel is not opened and the request was not sent
+	ChannelStatusNotFound = ChannelStatus("not_found")
+	// ChannelStatusOpen channel successfully opened
+	ChannelStatusOpen = ChannelStatus("open")
+	// ChannelStatusFail channel open transaction fails
+	ChannelStatusFail = ChannelStatus("fail")
+	// ChannelStatusInProgress channel opening is in progress
+	ChannelStatusInProgress = ChannelStatus("in_progress")
+)
+
+// ChannelStatusResponse represents response with channel status
+type ChannelStatusResponse struct {
+	Status ChannelStatus `json:"status"`
+}
+
+// ChannelStatus check the status of the channel
+func (t *Transactor) ChannelStatus(chainID int64, id, hermesID, registryAddress string) (ChannelStatusResponse, error) {
+	endpoint := "channel/status"
+	request := ChannelStatusRequest{
+		HermesID:        hermesID,
+		Identity:        id,
+		ChainID:         chainID,
+		RegistryAddress: registryAddress,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, endpoint, request)
+	if err != nil {
+		return ChannelStatusResponse{}, fmt.Errorf("failed to create channel status request: %w", err)
+	}
+
+	res := ChannelStatusResponse{}
+	err = t.httpClient.DoRequestAndParseResponse(req, &res)
+	if err != nil {
+		return ChannelStatusResponse{}, fmt.Errorf("failed to do channel status request: %w", err)
+	}
+
+	return res, nil
 }
 
 // SettleWithBeneficiaryRequest represent the request for setting new beneficiary address.

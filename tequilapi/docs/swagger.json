@@ -3932,6 +3932,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "MigrationStatusResponse": {
+      "description": "MigrationStatusResponse represents status of the migration",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "MonitoringStatus": {
       "description": "MonitoringStatus enum",
       "type": "string",

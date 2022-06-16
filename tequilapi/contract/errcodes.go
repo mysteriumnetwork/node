@@ -37,6 +37,8 @@ const (
 	ErrCodeIDCalculateAddress            = "err_id_calculate_address"
 	ErrCodeIDSavePayoutAddress           = "err_id_save_payout_invalid_address"
 	ErrCodeIDGetPayoutAddress            = "err_id_get_payout_address"
+	ErrCodeHermesMigration               = "err_id_check_hermes_migration"
+	ErrCodeCheckHermesMigrationStatus    = "err_id_check_hermes_migration_status"
 
 	// Payment
 

@@ -28,6 +28,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -184,6 +185,7 @@ type Dependencies struct {
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 	AddressProvider          *paymentClient.MultiChainAddressProvider
 	HermesStatusChecker      *pingpong.HermesStatusChecker
+	HermesMigrator           *migration.HermesMigrator
 
 	MMN *mmn.MMN
 
@@ -556,6 +558,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		Encryption:      di.Keystore,
 		EventBus:        di.EventBus,
 		Signer:          di.SignerFactory,
+		Chains:          []int64{nodeOptions.Chains.Chain1.ChainID, nodeOptions.Chains.Chain2.ChainID},
 	})
 
 	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
@@ -621,6 +624,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		sessionProviderFunc,
 		di.IdentityManager,
 	)
+
+	di.HermesMigrator = di.bootstrapHermesMigrator()
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -993,6 +998,20 @@ func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
 		di.Storage,
 		di.BCHelper,
 		di.HermesPromiseSettler,
+	)
+}
+
+func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
+	return migration.NewHermesMigrator(
+		di.Transactor,
+		di.AddressProvider,
+		di.HermesURLGetter,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesPromiseSettler,
+		di.IdentityRegistry,
+		di.ConsumerBalanceTracker,
 	)
 }
 

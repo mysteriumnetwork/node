@@ -135,7 +135,9 @@ func Test_SettleAsync_OK(t *testing.T) {
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil, time.Minute)
 	a := registry.NewAffiliator(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL)
-	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, nil, nil, nil)(router)
+	err := AddRoutesForTransactor(mockIdentityRegistryInstance, tr, a, &mockSettler{}, &settlementHistoryProviderMock{}, &mockAddressProvider{}, &mockBeneficiaryProvider{
+		b: common.HexToAddress("0x0000000000000000000000000000000000000001"),
+	}, nil, nil)(router)
 	assert.NoError(t, err)
 
 	settleRequest := `{"hermes_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`

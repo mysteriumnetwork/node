@@ -62,7 +62,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:2.2.0
+    image: mysteriumnetwork/discovery:2.6.3
     expose:
       - 8080
     environment:
@@ -73,6 +73,8 @@ services:
       - UNIVERSE_JWT_SECRET=suchsecret
       - REDIS_ADDRESS=redis:6379
       - BADGER_ADDRESS=http://badger:1234
+      - QUALITY_CACHE_TTL=20m
+      - LOCATION_ADDRESS="badurl"
     depends_on:
       - db
       - redis
@@ -177,12 +179,14 @@ services:
       -MongoHost transactordatabase:27017
       -MongoReplSet ""
       -redisAddress "redis:6379"
-      -hermesesWithEnabledWithdrawals 0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      -observerBaseURI=""
+      -hermesesWithEnabledWithdrawals="0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
+      -fallbackChainHermeses="5=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed;80001=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
   redis:
-    image: bitnami/redis:5.0.8
+    image: bitnami/redis:6.2.6
     container_name: 'hermes_redis'
     expose:
       - 6379
@@ -263,7 +267,7 @@ services:
       - ./e2e/pilvytis:/home/wiremock
 
   hermes2:
-    image: mysteriumnetwork/hermes:2.3.17
+    image: mysteriumnetwork/hermes:3.2.10
     environment:
       LOG_LEVEL: trace
     expose:
@@ -298,9 +302,10 @@ services:
       -MongoDatabase hermes2
       -MongoReplSet ""
       -transactorBaseUri "http://transactor:8888/api/v1/"
-      -redisAddress "redis:6379"
+      -redisAddresses "redis:6379"
       -bindAddr="0.0.0.0:8889"
       -pilvytisBaseURL http://pilvytis-mock:8080
+      -enablePayAndSettle true
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
@@ -334,12 +339,14 @@ services:
       --chains.1.chainID=5
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.1.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --chains.2.chainID=80001
       --chain-id=80001
       --ether.client.rpcl2=ws://ganache2:8545
@@ -399,14 +406,16 @@ services:
       --chains.1.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.1.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --transactor.address=http://transactor:8888/api/v1
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --chains.2.chainID=80001
       --chain-id=80001
       --ip-detector=http://ipify:3000/?format=json
@@ -505,14 +514,16 @@ services:
       --chains.1.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.1.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.1.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --transactor.address=http://transactor:8888/api/v1
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --chains.2.chainID=80001
       --chain-id=80001
       --ip-detector=http://ipify:3000/?format=json
@@ -560,12 +571,14 @@ services:
       --chains.1.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
       --chains.1.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.1.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.1.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --chains.2.hermes=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
+      --chains.2.knownHermeses=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --chains.2.knownHermeses=0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed
       --chains.2.chainID=80001
       --chain-id=80001
       --ip-detector=http://ipify:3000/?format=json

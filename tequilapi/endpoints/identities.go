@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 
@@ -73,6 +74,7 @@ type identitiesAPI struct {
 	transactor       Transactor
 	bprovider        beneficiaryProvider
 	addressStorage   *payout.AddressStorage
+	hermesMigrator   *migration.HermesMigrator
 }
 
 // AddressProvider provides sc addresses.
@@ -450,24 +452,11 @@ func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 		utils.ForwardError(c, err, apierror.Internal("Failed to get beneficiary address", contract.ErrCodeBeneficiaryGet))
 		return
 	}
-	chainID := config.GetInt64(config.FlagChainID)
-	isChannel := false
-	hermeses, err := ia.addressProvider.GetKnownHermeses(chainID)
+
+	isChannel, err := isBenenficiarySetToChannel(ia.addressProvider, config.GetInt64(config.FlagChainID), identity, beneficiary)
 	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to get list of known hermeses", contract.ErrCodeBeneficiaryGet))
+		utils.ForwardError(c, err, apierror.Internal("Failed to check if beneficiary is set to channel address", contract.ErrCodeBeneficiaryGet))
 		return
-	}
-	for _, h := range hermeses {
-		channelAddr, err := ia.addressProvider.GetHermesChannelAddress(chainID, identity, h)
-		if err != nil {
-			log.Err(err).Msgf("could not generate channel address for chain %d and hermes %s", chainID, h.Hex())
-			utils.ForwardError(c, err, apierror.Internal("Failed to generate channel address", contract.ErrCodeBeneficiaryGet))
-			return
-		}
-		if channelAddr == beneficiary {
-			isChannel = true
-			break
-		}
 	}
 
 	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
@@ -612,6 +601,98 @@ func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
 	utils.WriteAsJSON(par, c.Writer)
 }
 
+// swagger:operation POST /identities/:id/migrate-hermes
+// ---
+// summary: Migrate Hermes
+// description: Migrate from old to new Hermes
+// parameters:
+// - in: path
+//   name: id
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Successfully migrated
+//   403:
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ia *identitiesAPI) MigrateHermes(c *gin.Context) {
+	id := c.Param("id")
+	if !ia.idm.IsUnlocked(id) {
+		c.Error(apierror.Forbidden("Identity is locked", contract.ErrCodeIDLocked))
+		return
+	}
+	err := ia.hermesMigrator.Start(id)
+	if err != nil {
+		c.Error(apierror.Internal(err.Error(), contract.ErrCodeHermesMigration))
+		log.Err(err).Msgf("could not migrate identity %s", id)
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// swagger:operation GEY /identities/:id/migrate-hermes/status
+// ---
+// summary: Migration Hermes status
+// description: Migrate from old to new Hermes
+// parameters:
+// - in: path
+//   name: id
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Successfully migrated
+//     schema:
+//       "$ref": "#/definitions/MigrationStatusResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ia *identitiesAPI) MigrationHermesStatus(c *gin.Context) {
+	id := c.Param("id")
+	r, err := ia.hermesMigrator.IsMigrationRequired(id)
+	if err != nil {
+		c.Error(apierror.Internal("Failed to check migration status", contract.ErrCodeCheckHermesMigrationStatus))
+		log.Err(err).Msgf("could not check Hermes migration status, id: %s", id)
+		return
+	}
+
+	var status contract.MigrationStatus
+	if r {
+		status = contract.MigrationStatusRequired
+	} else {
+		status = contract.MigrationStatusFinished
+	}
+
+	utils.WriteAsJSON(contract.MigrationStatusResponse{Status: status}, c.Writer)
+}
+
+func isBenenficiarySetToChannel(addressProvider addressProvider, chainID int64, identity, beneficiary common.Address) (bool, error) {
+	hermeses, err := addressProvider.GetKnownHermeses(chainID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get list of known hermeses: %w", err)
+	}
+	for _, h := range hermeses {
+		channelAddr, err := addressProvider.GetHermesChannelAddress(chainID, identity, h)
+		if err != nil {
+			log.Err(err).Msgf("could not generate channel address for chain %d and hermes %s", chainID, h.Hex())
+			return false, fmt.Errorf("failed to generate channel address: %w", err)
+		}
+		if channelAddr == beneficiary {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	idm identity.Manager,
@@ -625,6 +706,7 @@ func AddRoutesForIdentities(
 	bprovider beneficiaryProvider,
 	mover identityMover,
 	addressStorage *payout.AddressStorage,
+	hermesMigrator *migration.HermesMigrator,
 ) func(*gin.Engine) error {
 	idAPI := &identitiesAPI{
 		mover:            mover,
@@ -638,6 +720,7 @@ func AddRoutesForIdentities(
 		transactor:       transactor,
 		bprovider:        bprovider,
 		addressStorage:   addressStorage,
+		hermesMigrator:   hermesMigrator,
 	}
 	return func(e *gin.Engine) error {
 		identityGroup := e.Group("/identities")
@@ -653,6 +736,8 @@ func AddRoutesForIdentities(
 			identityGroup.GET("/:id/payout-address", idAPI.GetPayoutAddress)
 			identityGroup.PUT("/:id/payout-address", idAPI.SavePayoutAddress)
 			identityGroup.PUT("/:id/balance/refresh", idAPI.BalanceRefresh)
+			identityGroup.POST("/:id/migrate-hermes", idAPI.MigrateHermes)
+			identityGroup.GET("/:id/migrate-hermes/status", idAPI.MigrationHermesStatus)
 		}
 		e.POST("/identities-import", idAPI.Import)
 		return nil
