@@ -161,7 +161,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
-	m.markAsMigrate(id)
+	m.markAsMigrated(id)
 
 	return nil
 }
@@ -328,7 +328,7 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 	return status == registry.Registered, nil
 }
 
-func (m *HermesMigrator) markAsMigrate(id string) {
+func (m *HermesMigrator) markAsMigrated(id string) {
 	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(id), true)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not save migration state to local db")
