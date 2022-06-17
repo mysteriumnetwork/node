@@ -191,7 +191,7 @@ func (m *HermesMigrator) openChannel(id string, err error, chainID int64, active
 // IsMigrationRequired check whether migration required
 func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	if !m.isRequired(id) {
-		log.Info().Msg("Migration is already donw")
+		log.Info().Msg("Migration is already done")
 		return false, nil
 	}
 	chainID := config.GetInt64(config.FlagChainID)
@@ -257,7 +257,12 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return true, nil
 	}
 
-	return crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0, nil
+	required := crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0
+
+	if !required {
+		m.markAsMigrated(id)
+	}
+	return required, nil
 }
 
 func (m *HermesMigrator) waitForChannelOpened(chainID int64, id, hermesID, registryAddress common.Address, timeout time.Duration) error {
