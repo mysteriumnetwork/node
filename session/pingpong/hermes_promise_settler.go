@@ -103,7 +103,7 @@ type receivedPromise struct {
 // HermesPromiseSettler is responsible for settling the hermes promises.
 type HermesPromiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
-	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error
+	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address, preferredHermes common.Address) error
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
@@ -520,15 +520,39 @@ func (aps *hermesPromiseSettler) ForceSettleInactiveHermeses(chainID int64, prov
 }
 
 // ForceSettle forces the settlement for a provider
-func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary, hermesID common.Address) error {
-	channel, err := aps.channelProvider.Fetch(chainID, providerID, hermesID)
-	if err != nil {
-		log.Err(err).Fields(map[string]interface{}{
-			"chain_id":  chainID,
-			"provider":  providerID.Address,
-			"hermes_id": hermesID,
-		}).Msg("Failed to fetch a channel")
-		return ErrNothingToSettle
+func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address, preferredHermes common.Address) error {
+	var channel *HermesChannel = nil
+	maxUnsettled := big.NewInt(0)
+	for _, hermesID := range hermeses {
+		hchannel, err := aps.channelProvider.Fetch(chainID, providerID, hermesID)
+		if err != nil {
+			log.Err(err).Fields(map[string]interface{}{
+				"chain_id":  chainID,
+				"provider":  providerID.Address,
+				"hermes_id": hermesID,
+			}).Msg("Failed to fetch a channel")
+			return ErrNothingToSettle
+		}
+
+		if hchannel.lastPromise.Promise.Amount != nil {
+			settled := hchannel.Channel.Settled
+			if settled == nil {
+				settled = big.NewInt(0)
+			}
+			unsettledAmount := new(big.Int).Sub(hchannel.lastPromise.Promise.Amount, settled)
+			if hermesID == preferredHermes && unsettledAmount.Cmp(big.NewInt(0)) > 0 {
+				channel = &hchannel
+				break
+			}
+			if unsettledAmount.Cmp(maxUnsettled) > 0 {
+				maxUnsettled = unsettledAmount
+				channel = &hchannel
+			}
+		}
+	}
+
+	if channel == nil {
+		return fmt.Errorf("cannot settle: no hermes with unsettled funds was found")
 	}
 
 	hexR, err := hex.DecodeString(channel.lastPromise.R)
@@ -539,10 +563,10 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID
 	channel.lastPromise.Promise.R = hexR
 	return aps.settle(
 		func(promise crypto.Promise) (string, error) {
-			return aps.transactor.SettleWithBeneficiary(providerID.Address, beneficiary.Hex(), hermesID.Hex(), promise)
+			return aps.transactor.SettleWithBeneficiary(providerID.Address, beneficiary.Hex(), channel.HermesID.Hex(), promise)
 		},
 		providerID,
-		hermesID,
+		channel.HermesID,
 		channel.lastPromise.Promise,
 		beneficiary,
 		channel.Channel.Settled,

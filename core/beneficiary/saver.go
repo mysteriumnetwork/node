@@ -41,7 +41,7 @@ type multiChainBC interface {
 }
 
 type settler interface {
-	SettleWithBeneficiary(chainID int64, id identity.Identity, beneficiary, hermesID common.Address) error
+	SettleWithBeneficiary(chainID int64, id identity.Identity, beneficiary common.Address, hermeses []common.Address, preferredHermes common.Address) error
 }
 
 type addressProvider interface {
@@ -61,8 +61,8 @@ func NewSaver(currentChain int64, ad addressProvider, st storage, bc multiChainB
 }
 
 // SettleAndSaveBeneficiary executes a settlement transaction saving the beneficiary to the blockchain.
-func (b *Saver) SettleAndSaveBeneficiary(id identity.Identity, hermesID, beneficiary common.Address) error {
+func (b *Saver) SettleAndSaveBeneficiary(id identity.Identity, hermeses []common.Address, beneficiary common.Address, preferredHermes common.Address) error {
 	return b.executeWithStatusTracking(id, beneficiary, func() error {
-		return b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, hermesID)
+		return b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, hermeses, preferredHermes)
 	})
 }
