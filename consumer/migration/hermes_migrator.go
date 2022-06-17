@@ -82,18 +82,7 @@ type HermesClient interface {
 
 // Start begins migration from old hermes to new
 func (m *HermesMigrator) Start(id string) error {
-	if !m.isRequired(id) {
-		log.Info().Msg("Migration is already done")
-		return nil
-	}
 	chainID := config.GetInt64(config.FlagChainID)
-
-	registered, err := m.isRegistered(chainID, id)
-	if err != nil {
-		return fmt.Errorf("could not get identity register status: %w", err)
-	} else if !registered {
-		return errors.New("identity is unregistered")
-	}
 
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
@@ -109,6 +98,18 @@ func (m *HermesMigrator) Start(id string) error {
 		return nil
 	}
 	oldHermes := oldHermeses[0]
+
+	if !m.isRequired(oldHermes.Hex(), id) {
+		log.Info().Msg("Migration is already done")
+		return false, nil
+	}
+
+	registered, err := m.isRegistered(chainID, id)
+	if err != nil {
+		return fmt.Errorf("could not get identity register status: %w", err)
+	} else if !registered {
+		return errors.New("identity is unregistered")
+	}
 
 	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
 	if err != nil {
@@ -190,20 +191,7 @@ func (m *HermesMigrator) openChannel(id string, err error, chainID int64, active
 
 // IsMigrationRequired check whether migration required
 func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
-	if !m.isRequired(id) {
-		log.Info().Msg("Migration is already done")
-		return false, nil
-	}
 	chainID := config.GetInt64(config.FlagChainID)
-
-	registered, err := m.isRegistered(chainID, id)
-	if err != nil {
-		return false, fmt.Errorf("could not get identity register status: %w", err)
-	} else if !registered {
-		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
-		return false, nil
-	}
-
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
 		return false, fmt.Errorf("could not get hermes address: %w", err)
@@ -219,6 +207,19 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, nil
 	}
 	oldHermes := oldHermeses[0]
+
+	if !m.isRequired(oldHermes.Hex(), id) {
+		log.Info().Msg("Migration is already done")
+		return false, nil
+	}
+
+	registered, err := m.isRegistered(chainID, id)
+	if err != nil {
+		return false, fmt.Errorf("could not get identity register status: %w", err)
+	} else if !registered {
+		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
+		return false, nil
+	}
 
 	oldHermesData, err := m.getUserData(chainID, oldHermes.Hex(), id)
 	if err != nil {
@@ -260,7 +261,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	required := crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0
 
 	if !required {
-		m.markAsMigrated(id)
+		m.markAsMigrated(oldHermes.Hex(), id)
 	}
 	return required, nil
 }
@@ -333,22 +334,22 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 	return status == registry.Registered, nil
 }
 
-func (m *HermesMigrator) markAsMigrated(id string) {
-	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(id), true)
+func (m *HermesMigrator) markAsMigrated(hermesIdm id string) {
+	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), true)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not save migration state to local db")
 	}
 }
 
-func (m *HermesMigrator) isRequired(id string) bool {
+func (m *HermesMigrator) isRequired(hermesIdm id string) bool {
 	var finished bool
-	if err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(id), &finished); err != nil {
+	if err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), &finished); err != nil {
 		log.Warn().Err(err).Msg("Could not get migration state from local db")
 	}
 
 	return !finished
 }
 
-func (m *HermesMigrator) getMigrationKey(id string) string {
-	return fmt.Sprintf("%s_%s", hermesMigrationFinishedKey, id)
+func (m *HermesMigrator) getMigrationKey(hermesIdm id string) string {
+	return fmt.Sprintf("%s_%s_%s", hermesMigrationFinishedKey,hermesId, id)
 }
