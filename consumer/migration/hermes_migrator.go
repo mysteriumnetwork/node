@@ -46,6 +46,7 @@ type HermesMigrator struct {
 	hermesCallerFactory pingpong.HermesCallerFactory
 	registry            registry.IdentityRegistry
 	cbt                 *pingpong.ConsumerBalanceTracker
+	st                  *Storage
 }
 
 // NewHermesMigrator create new HermesMigrator
@@ -57,6 +58,7 @@ func NewHermesMigrator(
 	hps pingpong.HermesPromiseSettler,
 	registry registry.IdentityRegistry,
 	cbt *pingpong.ConsumerBalanceTracker,
+	st *Storage,
 ) *HermesMigrator {
 	return &HermesMigrator{
 		transactor:          transactor,
@@ -66,6 +68,7 @@ func NewHermesMigrator(
 		hps:                 hps,
 		registry:            registry,
 		cbt:                 cbt,
+		st:                  st,
 	}
 }
 
@@ -77,6 +80,10 @@ type HermesClient interface {
 // Start begins migration from old hermes to new
 func (m *HermesMigrator) Start(id string) error {
 	chainID := config.GetInt64(config.FlagChainID)
+	if !m.st.isMigrationRequired(chainID, id) {
+		log.Info().Msg("Migration is already done")
+		return nil
+	}
 
 	registered, err := m.isRegistered(chainID, id)
 	if err != nil {
@@ -95,6 +102,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
 	if len(oldHermeses) != 1 {
+		log.Info().Msg("Migration interupted: there are more than 1 Hermes, cannot know which is which.")
 		return nil
 	}
 	oldHermes := oldHermeses[0]
@@ -108,6 +116,7 @@ func (m *HermesMigrator) Start(id string) error {
 		return fmt.Errorf("error during getting balance: %w", err)
 	}
 	if data.IsOffchain {
+		m.st.markAsMigrated(chainID, id)
 		return nil
 	}
 	oldBalance := data.Balance
@@ -139,7 +148,7 @@ func (m *HermesMigrator) Start(id string) error {
 			log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
 			return m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
 		}
-		log.Debug().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
+		log.Info().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
 		return nil
 	}
 
@@ -150,6 +159,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
+	m.st.markAsMigrated(chainID, id)
 
 	return nil
 }
@@ -179,11 +189,17 @@ func (m *HermesMigrator) openChannel(id string, err error, chainID int64, active
 // IsMigrationRequired check whether migration required
 func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	chainID := config.GetInt64(config.FlagChainID)
+	if !m.st.isMigrationRequired(chainID, id) {
+		log.Info().Msg("Skipping require check, migration is already done or was never needed")
+		return false, nil
+	}
 
 	registered, err := m.isRegistered(chainID, id)
 	if err != nil {
 		return false, fmt.Errorf("could not get identity register status: %w", err)
 	} else if !registered {
+		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
+		m.st.markAsMigrated(chainID, id)
 		return false, nil
 	}
 
@@ -198,6 +214,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
 	if len(oldHermeses) != 1 {
+		log.Info().Msg("Migration interupted: there are more than 1 Hermes, cannot know which is which.")
 		return false, nil
 	}
 	oldHermes := oldHermeses[0]
@@ -207,6 +224,8 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, fmt.Errorf("error during getting balance: %w", err)
 	}
 	if oldHermesData.IsOffchain {
+		log.Info().Msg("Migration not required: identity is offchain")
+		m.st.markAsMigrated(chainID, id)
 		return false, nil
 	}
 
@@ -238,7 +257,12 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return true, nil
 	}
 
-	return crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0, nil
+	required := crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0
+	if !required {
+		m.st.markAsMigrated(chainID, id)
+	}
+
+	return required, nil
 }
 
 func (m *HermesMigrator) waitForChannelOpened(chainID int64, id, hermesID, registryAddress common.Address, timeout time.Duration) error {
