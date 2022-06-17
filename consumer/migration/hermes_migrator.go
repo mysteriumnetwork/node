@@ -334,14 +334,14 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 	return status == registry.Registered, nil
 }
 
-func (m *HermesMigrator) markAsMigrated(hermesIdm id string) {
+func (m *HermesMigrator) markAsMigrated(hermesIdm, id string) {
 	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), true)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not save migration state to local db")
 	}
 }
 
-func (m *HermesMigrator) isRequired(hermesIdm id string) bool {
+func (m *HermesMigrator) isRequired(hermesIdm, id string) bool {
 	var finished bool
 	if err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), &finished); err != nil {
 		log.Warn().Err(err).Msg("Could not get migration state from local db")
@@ -350,6 +350,6 @@ func (m *HermesMigrator) isRequired(hermesIdm id string) bool {
 	return !finished
 }
 
-func (m *HermesMigrator) getMigrationKey(hermesIdm id string) string {
-	return fmt.Sprintf("%s_%s_%s", hermesMigrationFinishedKey,hermesId, id)
+func (m *HermesMigrator) getMigrationKey(hermesIdm, id string) string {
+	return fmt.Sprintf("%s_%s_%s", hermesMigrationFinishedKey, hermesId, id)
 }
