@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"time"
 
+	storm "github.com/asdine/storm/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -101,7 +102,7 @@ func (m *HermesMigrator) Start(id string) error {
 
 	if !m.isRequired(oldHermes.Hex(), id) {
 		log.Info().Msg("Migration is already done")
-		return false, nil
+		return nil
 	}
 
 	registered, err := m.isRegistered(chainID, id)
@@ -162,7 +163,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
-	m.markAsMigrated(id)
+	m.markAsMigrated(oldHermes.Hex(), id)
 
 	return nil
 }
@@ -334,22 +335,26 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 	return status == registry.Registered, nil
 }
 
-func (m *HermesMigrator) markAsMigrated(hermesIdm, id string) {
+func (m *HermesMigrator) markAsMigrated(hermesId, id string) {
 	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), true)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not save migration state to local db")
 	}
 }
 
-func (m *HermesMigrator) isRequired(hermesIdm, id string) bool {
+func (m *HermesMigrator) isRequired(hermesId, id string) bool {
 	var finished bool
-	if err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), &finished); err != nil {
-		log.Warn().Err(err).Msg("Could not get migration state from local db")
+	err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), &finished)
+	if err != nil {
+		if !errors.Is(err, storm.ErrNotFound) {
+			log.Warn().Err(err).Msg("Could not get migration state from local db")
+		}
+		return true
 	}
 
 	return !finished
 }
 
-func (m *HermesMigrator) getMigrationKey(hermesIdm, id string) string {
+func (m *HermesMigrator) getMigrationKey(hermesId, id string) string {
 	return fmt.Sprintf("%s_%s_%s", hermesMigrationFinishedKey, hermesId, id)
 }
