@@ -23,10 +23,8 @@ import (
 	"math/big"
 	"time"
 
-	storm "github.com/asdine/storm/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -35,8 +33,6 @@ import (
 )
 
 const oldBalanceMigrationMinimumMyst = 0.1
-const hermesMigrationBucketName = "hermes_migration"
-const hermesMigrationFinishedKey = "migration_finished"
 
 var openChannelTimeout = time.Hour
 
@@ -50,7 +46,7 @@ type HermesMigrator struct {
 	hermesCallerFactory pingpong.HermesCallerFactory
 	registry            registry.IdentityRegistry
 	cbt                 *pingpong.ConsumerBalanceTracker
-	db                  *boltdb.Bolt
+	st                  *Storage
 }
 
 // NewHermesMigrator create new HermesMigrator
@@ -62,7 +58,7 @@ func NewHermesMigrator(
 	hps pingpong.HermesPromiseSettler,
 	registry registry.IdentityRegistry,
 	cbt *pingpong.ConsumerBalanceTracker,
-	db *boltdb.Bolt,
+	st *Storage,
 ) *HermesMigrator {
 	return &HermesMigrator{
 		transactor:          transactor,
@@ -72,7 +68,7 @@ func NewHermesMigrator(
 		hps:                 hps,
 		registry:            registry,
 		cbt:                 cbt,
-		db:                  db,
+		st:                  st,
 	}
 }
 
@@ -84,23 +80,7 @@ type HermesClient interface {
 // Start begins migration from old hermes to new
 func (m *HermesMigrator) Start(id string) error {
 	chainID := config.GetInt64(config.FlagChainID)
-
-	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
-	if err != nil {
-		return fmt.Errorf("could not get hermes address: %w", err)
-	}
-	knownHermeses, err := m.addressProvider.GetKnownHermeses(chainID)
-	if err != nil {
-		return fmt.Errorf("could not get hermes address: %w", err)
-	}
-	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
-	if len(oldHermeses) != 1 {
-		log.Info().Msg("Migration interupted: there are more then 1 Hermes.")
-		return nil
-	}
-	oldHermes := oldHermeses[0]
-
-	if !m.isRequired(oldHermes.Hex(), id) {
+	if !m.st.isMigrationRequired(chainID, id) {
 		log.Info().Msg("Migration is already done")
 		return nil
 	}
@@ -112,6 +92,21 @@ func (m *HermesMigrator) Start(id string) error {
 		return errors.New("identity is unregistered")
 	}
 
+	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
+	if err != nil {
+		return fmt.Errorf("could not get hermes address: %w", err)
+	}
+	knownHermeses, err := m.addressProvider.GetKnownHermeses(chainID)
+	if err != nil {
+		return fmt.Errorf("could not get hermes address: %w", err)
+	}
+	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
+	if len(oldHermeses) != 1 {
+		log.Info().Msg("Migration interupted: there are more than 1 Hermes, cannot know which is which.")
+		return nil
+	}
+	oldHermes := oldHermeses[0]
+
 	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
 	if err != nil {
 		return fmt.Errorf("could not get registry address: %w", err)
@@ -121,6 +116,7 @@ func (m *HermesMigrator) Start(id string) error {
 		return fmt.Errorf("error during getting balance: %w", err)
 	}
 	if data.IsOffchain {
+		m.st.markAsMigrated(chainID, id)
 		return nil
 	}
 	oldBalance := data.Balance
@@ -163,7 +159,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
-	m.markAsMigrated(oldHermes.Hex(), id)
+	m.st.markAsMigrated(chainID, id)
 
 	return nil
 }
@@ -193,6 +189,20 @@ func (m *HermesMigrator) openChannel(id string, err error, chainID int64, active
 // IsMigrationRequired check whether migration required
 func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	chainID := config.GetInt64(config.FlagChainID)
+	if !m.st.isMigrationRequired(chainID, id) {
+		log.Info().Msg("Skipping require check, migration is already done or was never needed")
+		return false, nil
+	}
+
+	registered, err := m.isRegistered(chainID, id)
+	if err != nil {
+		return false, fmt.Errorf("could not get identity register status: %w", err)
+	} else if !registered {
+		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
+		m.st.markAsMigrated(chainID, id)
+		return false, nil
+	}
+
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
 		return false, fmt.Errorf("could not get hermes address: %w", err)
@@ -204,23 +214,10 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
 	if len(oldHermeses) != 1 {
-		log.Info().Msg("Migration interupted: there are more then 1 Hermes.")
+		log.Info().Msg("Migration interupted: there are more than 1 Hermes, cannot know which is which.")
 		return false, nil
 	}
 	oldHermes := oldHermeses[0]
-
-	if !m.isRequired(oldHermes.Hex(), id) {
-		log.Info().Msg("Migration is already done")
-		return false, nil
-	}
-
-	registered, err := m.isRegistered(chainID, id)
-	if err != nil {
-		return false, fmt.Errorf("could not get identity register status: %w", err)
-	} else if !registered {
-		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
-		return false, nil
-	}
 
 	oldHermesData, err := m.getUserData(chainID, oldHermes.Hex(), id)
 	if err != nil {
@@ -228,6 +225,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 	if oldHermesData.IsOffchain {
 		log.Info().Msg("Migration not required: identity is offchain")
+		m.st.markAsMigrated(chainID, id)
 		return false, nil
 	}
 
@@ -260,10 +258,10 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 
 	required := crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0
-
 	if !required {
-		m.markAsMigrated(oldHermes.Hex(), id)
+		m.st.markAsMigrated(chainID, id)
 	}
+
 	return required, nil
 }
 
@@ -333,28 +331,4 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 		return false, err
 	}
 	return status == registry.Registered, nil
-}
-
-func (m *HermesMigrator) markAsMigrated(hermesId, id string) {
-	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), true)
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not save migration state to local db")
-	}
-}
-
-func (m *HermesMigrator) isRequired(hermesId, id string) bool {
-	var finished bool
-	err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(hermesId, id), &finished)
-	if err != nil {
-		if !errors.Is(err, storm.ErrNotFound) {
-			log.Warn().Err(err).Msg("Could not get migration state from local db")
-		}
-		return true
-	}
-
-	return !finished
-}
-
-func (m *HermesMigrator) getMigrationKey(hermesId, id string) string {
-	return fmt.Sprintf("%s_%s_%s", hermesMigrationFinishedKey, hermesId, id)
 }
