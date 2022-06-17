@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -33,6 +34,8 @@ import (
 )
 
 const oldBalanceMigrationMinimumMyst = 0.1
+const hermesMigrationBucketName = "hermes_migration"
+const hermesMigrationFinishedKey = "migration_finished"
 
 var openChannelTimeout = time.Hour
 
@@ -46,6 +49,7 @@ type HermesMigrator struct {
 	hermesCallerFactory pingpong.HermesCallerFactory
 	registry            registry.IdentityRegistry
 	cbt                 *pingpong.ConsumerBalanceTracker
+	db                  *boltdb.Bolt
 }
 
 // NewHermesMigrator create new HermesMigrator
@@ -57,6 +61,7 @@ func NewHermesMigrator(
 	hps pingpong.HermesPromiseSettler,
 	registry registry.IdentityRegistry,
 	cbt *pingpong.ConsumerBalanceTracker,
+	db *boltdb.Bolt,
 ) *HermesMigrator {
 	return &HermesMigrator{
 		transactor:          transactor,
@@ -66,6 +71,7 @@ func NewHermesMigrator(
 		hps:                 hps,
 		registry:            registry,
 		cbt:                 cbt,
+		db:                  db,
 	}
 }
 
@@ -76,6 +82,10 @@ type HermesClient interface {
 
 // Start begins migration from old hermes to new
 func (m *HermesMigrator) Start(id string) error {
+	if !m.isRequired(id) {
+		log.Info().Msg("Migration is already done")
+		return nil
+	}
 	chainID := config.GetInt64(config.FlagChainID)
 
 	registered, err := m.isRegistered(chainID, id)
@@ -95,6 +105,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
 	if len(oldHermeses) != 1 {
+		log.Info().Msg("Migration interupted: there are more then 1 Hermes.")
 		return nil
 	}
 	oldHermes := oldHermeses[0]
@@ -139,7 +150,7 @@ func (m *HermesMigrator) Start(id string) error {
 			log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
 			return m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
 		}
-		log.Debug().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
+		log.Info().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
 		return nil
 	}
 
@@ -150,6 +161,7 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
+	m.markAsMigrate(id)
 
 	return nil
 }
@@ -178,12 +190,17 @@ func (m *HermesMigrator) openChannel(id string, err error, chainID int64, active
 
 // IsMigrationRequired check whether migration required
 func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
+	if !m.isRequired(id) {
+		log.Info().Msg("Migration is already donw")
+		return false, nil
+	}
 	chainID := config.GetInt64(config.FlagChainID)
 
 	registered, err := m.isRegistered(chainID, id)
 	if err != nil {
 		return false, fmt.Errorf("could not get identity register status: %w", err)
 	} else if !registered {
+		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
 		return false, nil
 	}
 
@@ -198,6 +215,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
 	if len(oldHermeses) != 1 {
+		log.Info().Msg("Migration interupted: there are more then 1 Hermes.")
 		return false, nil
 	}
 	oldHermes := oldHermeses[0]
@@ -207,6 +225,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, fmt.Errorf("error during getting balance: %w", err)
 	}
 	if oldHermesData.IsOffchain {
+		log.Info().Msg("Migration not required: identity is offchain")
 		return false, nil
 	}
 
@@ -307,4 +326,24 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 		return false, err
 	}
 	return status == registry.Registered, nil
+}
+
+func (m *HermesMigrator) markAsMigrate(id string) {
+	err := m.db.SetValue(hermesMigrationBucketName, m.getMigrationKey(id), true)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not save migration state to local db")
+	}
+}
+
+func (m *HermesMigrator) isRequired(id string) bool {
+	var finished bool
+	if err := m.db.GetValue(hermesMigrationBucketName, m.getMigrationKey(id), &finished); err != nil {
+		log.Warn().Err(err).Msg("Could not get migration state from local db")
+	}
+
+	return !finished
+}
+
+func (m *HermesMigrator) getMigrationKey(id string) string {
+	return fmt.Sprintf("%s_%s", hermesMigrationFinishedKey, id)
 }

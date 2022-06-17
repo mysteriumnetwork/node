@@ -1012,6 +1012,7 @@ func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
 		di.HermesPromiseSettler,
 		di.IdentityRegistry,
 		di.ConsumerBalanceTracker,
+		di.Storage,
 	)
 }
 
