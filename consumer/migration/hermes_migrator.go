@@ -103,10 +103,14 @@ func (m *HermesMigrator) Start(id string) error {
 	if err != nil {
 		return fmt.Errorf("could not get registry address: %w", err)
 	}
-	oldBalance, err := m.getBalance(chainID, oldHermes.Hex(), id)
+	data, err := m.getUserData(chainID, oldHermes.Hex(), id)
 	if err != nil {
 		return fmt.Errorf("error during getting balance: %w", err)
 	}
+	if data.IsOffchain {
+		return nil
+	}
+	oldBalance := data.Balance
 
 	if err = m.openChannel(id, err, chainID, activeHermes, registryAddress); err != nil {
 		return fmt.Errorf("open channel error: %w", err)
@@ -198,6 +202,14 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 	oldHermes := oldHermeses[0]
 
+	oldHermesData, err := m.getUserData(chainID, oldHermes.Hex(), id)
+	if err != nil {
+		return false, fmt.Errorf("error during getting balance: %w", err)
+	}
+	if oldHermesData.IsOffchain {
+		return false, nil
+	}
+
 	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
 	if err != nil {
 		return false, fmt.Errorf("could not get registry address: %w", err)
@@ -211,11 +223,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return true, nil
 	}
 
-	oldBalance, err := m.getBalance(chainID, oldHermes.Hex(), id)
-	if err != nil {
-		return false, fmt.Errorf("error during getting balance: %w", err)
-	}
-	newBalance, err := m.getBalance(chainID, activeHermes.Hex(), id)
+	newHermesData, err := m.getUserData(chainID, activeHermes.Hex(), id)
 	if err != nil {
 		return false, fmt.Errorf("error during getting balance: %w", err)
 	}
@@ -230,7 +238,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return true, nil
 	}
 
-	return crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) < 0 && newBalance.Cmp(new(big.Int)) == 0, nil
+	return crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0, nil
 }
 
 func (m *HermesMigrator) waitForChannelOpened(chainID int64, id, hermesID, registryAddress common.Address, timeout time.Duration) error {
@@ -264,21 +272,22 @@ func (m *HermesMigrator) getHermesCaller(chainID int64, hermesID string) (Hermes
 }
 
 // getBalance gets the current balance for given identity
-func (m *HermesMigrator) getBalance(chainID int64, hermesID, id string) (*big.Int, error) {
+func (m *HermesMigrator) getUserData(chainID int64, hermesID, id string) (pingpong.HermesUserInfo, error) {
+	var data pingpong.HermesUserInfo
 	c, err := m.getHermesCaller(chainID, hermesID)
 	if err != nil {
-		return nil, err
+		return data, err
 	}
 
-	data, err := c.GetConsumerData(chainID, id)
+	data, err = c.GetConsumerData(chainID, id)
 	if err != nil {
 		if errors.Is(err, pingpong.ErrHermesNotFound) {
-			return new(big.Int), nil
+			return data, nil
 		}
-		return nil, err
+		return data, err
 	}
 
-	return data.Balance, nil
+	return data, nil
 }
 
 func getOldHermeses(knownHermeses []common.Address, activeHermes common.Address) []common.Address {
