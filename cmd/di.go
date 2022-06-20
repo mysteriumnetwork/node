@@ -1013,6 +1013,7 @@ func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
 		di.IdentityRegistry,
 		di.ConsumerBalanceTracker,
 		migration.NewStorage(di.Storage, di.AddressProvider),
+		di.BCHelper,
 	)
 }
 

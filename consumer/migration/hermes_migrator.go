@@ -23,11 +23,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
@@ -35,6 +37,10 @@ import (
 const oldBalanceMigrationMinimumMyst = 0.1
 
 var openChannelTimeout = time.Hour
+
+type blockchain interface {
+	GetConsumerChannel(chainID int64, addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error)
+}
 
 // HermesMigrator migrate identity from old hermes to new.
 // It opens a new channel for new Hermes and sends all MYST to a new payment channel.
@@ -47,6 +53,7 @@ type HermesMigrator struct {
 	registry            registry.IdentityRegistry
 	cbt                 *pingpong.ConsumerBalanceTracker
 	st                  *Storage
+	bc                  blockchain
 }
 
 // NewHermesMigrator create new HermesMigrator
@@ -59,6 +66,7 @@ func NewHermesMigrator(
 	registry registry.IdentityRegistry,
 	cbt *pingpong.ConsumerBalanceTracker,
 	st *Storage,
+	bc blockchain,
 ) *HermesMigrator {
 	return &HermesMigrator{
 		transactor:          transactor,
@@ -69,6 +77,7 @@ func NewHermesMigrator(
 		registry:            registry,
 		cbt:                 cbt,
 		st:                  st,
+		bc:                  bc,
 	}
 }
 
@@ -111,6 +120,16 @@ func (m *HermesMigrator) Start(id string) error {
 	if err != nil {
 		return fmt.Errorf("could not get registry address: %w", err)
 	}
+
+	opened, err := m.isChannelOpened(chainID, common.HexToAddress(id), activeHermes, registryAddress)
+	if err != nil {
+		return fmt.Errorf("could not check channel status: %w", err)
+	}
+	if opened {
+		m.st.markAsMigrated(chainID, id)
+		return nil
+	}
+
 	data, err := m.getUserData(chainID, oldHermes.Hex(), id)
 	if err != nil {
 		return fmt.Errorf("error during getting balance: %w", err)
@@ -198,7 +217,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("could not get identity register status: %w", err)
 	} else if !registered {
-		log.Info().Msg("Migration not required: identity is not registered in old Hermes")
+		log.Info().Msg("Migration is not required: identity is not registered in old Hermes")
 		m.st.markAsMigrated(chainID, id)
 		return false, nil
 	}
@@ -206,6 +225,21 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
 		return false, fmt.Errorf("could not get hermes address: %w", err)
+	}
+
+	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
+	if err != nil {
+		return false, fmt.Errorf("could not get registry address: %w", err)
+	}
+
+	opened, err := m.isChannelOpened(chainID, common.HexToAddress(id), activeHermes, registryAddress)
+	if err != nil {
+		return false, fmt.Errorf("could not check channel status: %w", err)
+	}
+	if opened {
+		log.Info().Msg("Migration is not required: channel is already opened in blockchain")
+		m.st.markAsMigrated(chainID, id)
+		return false, nil
 	}
 
 	knownHermeses, err := m.addressProvider.GetKnownHermeses(chainID)
@@ -224,14 +258,9 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, fmt.Errorf("error during getting balance: %w", err)
 	}
 	if oldHermesData.IsOffchain {
-		log.Info().Msg("Migration not required: identity is offchain")
+		log.Info().Msg("Migration is not required: identity is offchain")
 		m.st.markAsMigrated(chainID, id)
 		return false, nil
-	}
-
-	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
-	if err != nil {
-		return false, fmt.Errorf("could not get registry address: %w", err)
 	}
 
 	statusResponse, err := m.transactor.ChannelStatus(chainID, id, activeHermes.Hex(), registryAddress.Hex())
@@ -331,4 +360,32 @@ func (m *HermesMigrator) isRegistered(chainID int64, id string) (bool, error) {
 		return false, err
 	}
 	return status == registry.Registered, nil
+}
+
+func (m *HermesMigrator) isChannelOpened(chainID int64, identity, hermesID, registryAddress common.Address) (bool, error) {
+	channelImpl, err := m.addressProvider.GetChannelImplementationForHermes(chainID, hermesID)
+	if err != nil {
+		return false, err
+	}
+
+	channelAddress, err := crypto.GenerateChannelAddress(identity.Hex(), hermesID.Hex(), registryAddress.Hex(), channelImpl.Hex())
+
+	if err != nil {
+		return false, err
+	}
+
+	mystAddress, err := m.addressProvider.GetMystAddress(chainID)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = m.bc.GetConsumerChannel(chainID, common.HexToAddress(channelAddress), mystAddress)
+	if err != nil && errors.Is(err, bind.ErrNoCode) {
+		return false, nil
+
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
