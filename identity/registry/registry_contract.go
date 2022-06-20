@@ -48,17 +48,20 @@ type transactor interface {
 	FetchRegistrationStatus(id string) ([]TransactorStatusResponse, error)
 }
 
+type RegisterCallback = func(chainID int64, identity string)
+
 type contractRegistry struct {
-	storage    registryStorage
-	stop       chan struct{}
-	once       sync.Once
-	publisher  eventbus.Publisher
-	lock       sync.Mutex
-	ethC       paymentClient.EtherClient
-	ap         AddressProvider
-	hermes     hermesCaller
-	transactor transactor
-	cfg        IdentityRegistryConfig
+	storage          registryStorage
+	stop             chan struct{}
+	once             sync.Once
+	publisher        eventbus.Publisher
+	lock             sync.Mutex
+	ethC             paymentClient.EtherClient
+	ap               AddressProvider
+	hermes           hermesCaller
+	transactor       transactor
+	cfg              IdentityRegistryConfig
+	registerCallback RegisterCallback
 }
 
 // IdentityRegistryConfig contains the configuration for registry contract.
@@ -68,16 +71,17 @@ type IdentityRegistryConfig struct {
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient paymentClient.EtherClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller, transactor transactor, cfg IdentityRegistryConfig) (*contractRegistry, error) {
+func NewIdentityRegistryContract(ethClient paymentClient.EtherClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller, transactor transactor, cfg IdentityRegistryConfig, registerCallback RegisterCallback) (*contractRegistry, error) {
 	return &contractRegistry{
-		storage:    registryStorage,
-		stop:       make(chan struct{}),
-		publisher:  publisher,
-		ethC:       ethClient,
-		ap:         ap,
-		hermes:     caller,
-		transactor: transactor,
-		cfg:        cfg,
+		storage:          registryStorage,
+		stop:             make(chan struct{}),
+		publisher:        publisher,
+		ethC:             ethClient,
+		ap:               ap,
+		hermes:           caller,
+		transactor:       transactor,
+		cfg:              cfg,
+		registerCallback: registerCallback,
 	}, nil
 }
 
@@ -256,6 +260,7 @@ func (registry *contractRegistry) subscribeToRegistrationEventViaTransactor(ev I
 			switch resp.Status {
 			case TransactorRegistrationEntryStatusSucceed:
 				registry.resyncWithBC(ev.ChainID, ev.Identity)
+				registry.registerCallback(ev.ChainID, ev.Identity)
 				return
 			case TransactorRegistrationEntryStatusFailed:
 				log.Error().Msg("registration reported as failed by transactor, will check in bc just in case")
