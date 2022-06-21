@@ -123,6 +123,15 @@ func (m *HermesMigrator) Start(id string) error {
 	// get data from old hermes
 	data, err := m.getUserData(chainID, oldHermes.Hex(), id)
 	if err != nil {
+		newHermesData, err := m.getUserData(chainID, activeHermes.Hex(), id)
+		if err != nil {
+			return fmt.Errorf("error during getting balance from hermes: %w", err)
+		}
+		// old hermes unavailable, but user already using new hermes
+		if newHermesData.Balance.Cmp(big.NewInt(0)) > 0 || (newHermesData.LatestPromise.Amount != nil && newHermesData.LatestPromise.Amount.Cmp(big.NewInt(0)) > 0) {
+			m.st.MarkAsMigrated(chainID, id)
+			return nil
+		}
 		return fmt.Errorf("error during getting balance: %w", err)
 	}
 	// skip migration for offchain identities
