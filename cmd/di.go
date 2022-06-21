@@ -624,6 +624,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	)
 
 	di.HermesMigrator = di.bootstrapHermesMigrator()
+	if err := di.HermesMigrator.Subscribe(di.EventBus); err != nil {
+		return fmt.Errorf("error during subscribe: %w", err)
+	}
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -794,11 +797,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		TransactorPollTimeout:  options.Payments.RegistryTransactorPollTimeout,
 	}
 
-	migrationStorage := migration.NewStorage(di.Storage, di.AddressProvider)
-	registerCallback := func(chainID int64, identity string) {
-		migrationStorage.MarkAsMigrated(chainID, identity)
-	}
-	if di.IdentityRegistry, err = registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg, registerCallback); err != nil {
+	if di.IdentityRegistry, err = registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg); err != nil {
 		return err
 	}
 
