@@ -25,19 +25,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/go-rest/apierror"
-	"github.com/mysteriumnetwork/payments/client"
-
-	"github.com/mysteriumnetwork/node/session/pingpong"
-	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
-
-	"github.com/gin-gonic/gin"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/assert"
-
+	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/client"
+	"github.com/stretchr/testify/assert"
 )
 
 const identityUrl = "/irrelevant"
@@ -500,6 +496,14 @@ type mockAddressProvider struct {
 }
 
 func (ma *mockAddressProvider) GetActiveChannelImplementation(chainID int64) (common.Address, error) {
+	return ma.channelToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetChannelImplementationForHermes(chainID int64, hermes common.Address) (common.Address, error) {
+	return ma.channelToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetMystAddress(chainID int64) (common.Address, error) {
 	return ma.channelToReturn, nil
 }
 

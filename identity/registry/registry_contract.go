@@ -48,6 +48,7 @@ type transactor interface {
 	FetchRegistrationStatus(id string) ([]TransactorStatusResponse, error)
 }
 
+// RegisterCallback calls when registration is finished
 type RegisterCallback = func(chainID int64, identity string)
 
 type contractRegistry struct {
