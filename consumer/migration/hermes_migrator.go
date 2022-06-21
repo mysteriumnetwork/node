@@ -293,6 +293,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	return required, nil
 }
 
+// Subscribe for EventBus events
 func (m *HermesMigrator) Subscribe(eb eventbus.Subscriber) error {
 	return eb.Subscribe(registry.AppTopicTransactorRegistration, m.handleRegistrationEvent)
 }
