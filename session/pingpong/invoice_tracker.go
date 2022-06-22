@@ -387,6 +387,7 @@ func (it *InvoiceTracker) updateMaxUnpaid() {
 	}
 
 	it.deps.MaxNotPaidInvoice = bigger
+	log.Debug().Str("invoice_amount", it.deps.MaxNotPaidInvoice.String()).Msg("Max invoice amount increased")
 }
 
 func (it *InvoiceTracker) updateTimer() {
@@ -400,6 +401,7 @@ func (it *InvoiceTracker) updateTimer() {
 		newMaxTime = maxTime
 	}
 	it.deps.ChargePeriod = newMaxTime
+	log.Debug().Int64("change_period (ms)", it.deps.ChargePeriod.Milliseconds()).Msg("Max charge period increased")
 }
 
 // WaitFirstInvoice waits for a first invoice to be paid.
