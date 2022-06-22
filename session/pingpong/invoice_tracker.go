@@ -400,6 +400,7 @@ func (it *InvoiceTracker) updateTimer() {
 	if it.deps.ChargePeriod >= maxTime {
 		return
 	}
+	fmt.Println("limit")
 
 	newMaxTime := it.deps.ChargePeriod/sessionInvoiceIncreaseSlope + it.deps.ChargePeriod
 	fmt.Println("new time", newMaxTime)
