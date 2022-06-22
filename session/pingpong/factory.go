@@ -87,7 +87,7 @@ func InvoiceFactoryCreator(
 			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 			LimitNotPaidInvoice:        limitUnpaidInvoiceValue,
 			ChargePeriod:               balanceSendPeriod,
-			LimitChargePeriod:          balanceSendPeriod,
+			LimitChargePeriod:          limitBalanceSendPeriod,
 			ChargePeriodLeeway:         2 * time.Minute,
 			Observer:                   observer,
 		}
