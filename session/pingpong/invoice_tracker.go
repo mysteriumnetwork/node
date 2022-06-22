@@ -322,6 +322,9 @@ func (it *InvoiceTracker) Start() error {
 		case <-it.stop:
 			return nil
 		case critical := <-it.invoiceChannel:
+			fmt.Println()
+			fmt.Println(time.Now(), "sending invoice")
+			fmt.Println()
 			err := it.sendInvoice(critical)
 			if err != nil {
 				if stdErr.Is(err, p2p.ErrSendTimeout) {
@@ -367,6 +370,9 @@ func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
 				it.invoiceChannel <- false
 
 				it.updateTimer()
+				fmt.Println()
+				fmt.Println("timer increase", it.deps.ChargePeriod)
+				fmt.Println()
 			}
 		}
 	}
