@@ -48,7 +48,8 @@ func NewStorage(db respository, ap registry.AddressProvider) *Storage {
 	}
 }
 
-func (s *Storage) markAsMigrated(chainID int64, identity string) {
+// MarkAsMigrated set migration flag do not try to migrate again
+func (s *Storage) MarkAsMigrated(chainID int64, identity string) {
 	activeHermes, err := s.ap.GetActiveHermes(chainID)
 	if err != nil {
 		log.Err(err).Msg("No active hermes set, will skip marking migration status")

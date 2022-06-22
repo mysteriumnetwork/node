@@ -51,6 +51,8 @@ type AddressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
 	GetKnownHermeses(chainID int64) ([]common.Address, error)
+	GetChannelImplementationForHermes(chainID int64, hermes common.Address) (common.Address, error)
+	GetMystAddress(chainID int64) (common.Address, error)
 }
 
 type feeType uint8
