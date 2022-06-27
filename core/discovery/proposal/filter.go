@@ -36,6 +36,7 @@ type Filter struct {
 	IPType                             string
 	AccessPolicy, AccessPolicySource   string
 	CompatibilityMin, CompatibilityMax int
+	BandwidthMin                       float64
 	QualityMin                         float32
 	ExcludeUnsupported                 bool
 	IncludeMonitoringFailed            bool
@@ -100,6 +101,7 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 		AccessPolicy:            filter.AccessPolicy,
 		AccessPolicySource:      filter.AccessPolicySource,
 		QualityMin:              filter.QualityMin,
+		BandwidthMin:            filter.BandwidthMin,
 		IncludeMonitoringFailed: filter.IncludeMonitoringFailed,
 		NATCompatibility:        filter.NATCompatibility,
 	}
