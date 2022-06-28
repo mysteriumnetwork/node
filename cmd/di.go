@@ -28,16 +28,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/consumer/migration"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	psort "github.com/mysteriumnetwork/payments/client/sort"
-
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
@@ -86,7 +80,11 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
 	"github.com/mysteriumnetwork/payments/observer"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // UIServer represents our web server
@@ -626,6 +624,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	)
 
 	di.HermesMigrator = di.bootstrapHermesMigrator()
+	if err := di.HermesMigrator.Subscribe(di.EventBus); err != nil {
+		return fmt.Errorf("error during subscribe: %w", err)
+	}
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
@@ -1013,6 +1014,7 @@ func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
 		di.IdentityRegistry,
 		di.ConsumerBalanceTracker,
 		migration.NewStorage(di.Storage, di.AddressProvider),
+		di.BCHelper,
 	)
 }
 
