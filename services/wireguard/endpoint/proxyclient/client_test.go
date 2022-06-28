@@ -49,7 +49,7 @@ func Test_ConfigureDevice_ConfigureErrors(t *testing.T) {
 			expected: "DNS addr list is empty",
 		},
 		{
-			name: "DNS list not provided",
+			name: "DNS list contain empty value",
 			config: wgcfg.DeviceConfig{
 				Subnet: net.IPNet{IP: net.ParseIP("10.0.182.2"), Mask: net.IPv4Mask(255, 255, 255, 0)},
 				DNS:    []string{""},
