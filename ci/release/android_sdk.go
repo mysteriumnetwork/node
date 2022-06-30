@@ -18,6 +18,7 @@
 package release
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -114,10 +115,10 @@ func releaseAndroidSDK(rel releaseOpts, rep repositoryOpts) error {
 	}
 
 	publisher := newMavenPublisher(&rel, &rep)
-	if err := publisher.upload("build/package/Mysterium.aar"); err != nil {
+	if err := publisher.upload(fmt.Sprintf("build/package/mysterium-node-%s.aar", rel.version)); err != nil {
 		return err
 	}
-	if err := publisher.upload("build/package/mvn.pom"); err != nil {
+	if err := publisher.upload(fmt.Sprintf("build/package/mobile-node-%s.pom", rel.version)); err != nil {
 		return err
 	}
 	return nil
