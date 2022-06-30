@@ -39,40 +39,6 @@ const (
 	MavenToken = env.BuildVar("MAVEN_TOKEN")
 )
 
-// ReleaseAndroidSDKSnapshot releases Android SDK snapshot from master branch to maven repo
-func ReleaseAndroidSDKSnapshot() error {
-	logconfig.Bootstrap()
-
-	err := env.EnsureEnvVars(
-		env.SnapshotBuild,
-		env.BuildVersion,
-	)
-	if err != nil {
-		return err
-	}
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseAndroidSDKSnapshot action...")
-		return nil
-	}
-	err = env.EnsureEnvVars(MavenToken)
-	if err != nil {
-		return err
-	}
-	repositoryURL, _ := url.Parse("https://maven.mysterium.network/snapshots")
-	return releaseAndroidSDK(
-		releaseOpts{
-			groupId:    "network.mysterium",
-			artifactId: "mobile-node",
-			version:    env.Str(env.BuildVersion),
-		},
-		repositoryOpts{
-			repositoryURL: repositoryURL,
-			username:      "snapshots",
-			password:      env.Str(MavenToken),
-		},
-	)
-}
-
 // ReleaseAndroidSDK releases tag Android SDK to maven repo
 func ReleaseAndroidSDK() error {
 	logconfig.Bootstrap()

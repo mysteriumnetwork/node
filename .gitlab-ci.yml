@@ -170,13 +170,6 @@ release-snapshot:goreport:
   only:
     - master
 
-release-snapshot:android-sdk:
-  stage: release-snapshot
-  tags: [go]
-  script: go run mage.go -v ReleaseAndroidSDKSnapshot
-  only:
-    - master
-
 release-nightly:node:
   stage: release-snapshot
   tags: [go]
