@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	gogithub "github.com/google/go-github/v28/github"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/github"
 	"github.com/mysteriumnetwork/node/ci/storage"
@@ -59,6 +60,11 @@ func releaseGithub(opts *releaseGithubOpts) error {
 	for _, f := range artifactFilenames {
 		p := path.Join("build/package", f.Name())
 		err := release.UploadAsset(p)
+		var githubErr *gogithub.ErrorResponse
+		if errors.As(err, &githubErr) && len(githubErr.Errors) == 1 && githubErr.Errors[0].Code == "already_exists" {
+			log.Info().Msg("Release artifact already exists: " + f.Name())
+			continue
+		}
 		if err != nil {
 			return errors.Wrap(err, "could not upload artifact "+p)
 		}
