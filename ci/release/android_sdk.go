@@ -22,9 +22,9 @@ import (
 
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -46,10 +46,9 @@ func ReleaseAndroidSDK() error {
 	if err := env.EnsureEnvVars(env.TagBuild, env.BuildVersion); err != nil {
 		return err
 	}
-	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping ReleaseAndroidSDK action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.TagBuild)
+	})
 
 	if err := storage.DownloadArtifacts(); err != nil {
 		return err

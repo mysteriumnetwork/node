@@ -20,7 +20,8 @@ package release
 import (
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	"github.com/mysteriumnetwork/go-ci/job"
+	"github.com/mysteriumnetwork/node/logconfig"
 
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
@@ -63,19 +64,19 @@ func ppaVersion(buildVersion string) string {
 
 // ReleaseDebianPPASnapshot releases to node-dev PPA
 func ReleaseDebianPPASnapshot() error {
-	err := env.EnsureEnvVars(
+	logconfig.Bootstrap()
+
+	if err := env.EnsureEnvVars(
 		env.SnapshotBuild,
 		env.BuildVersion,
 		env.BuildNumber,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
+	job.Precondition(func() bool {
+		return env.Bool(env.SnapshotBuild)
+	})
 
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
-		return nil
-	}
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:  "node-dev",
 		version:     ppaVersion(env.Str(env.BuildVersion)),
@@ -85,23 +86,19 @@ func ReleaseDebianPPASnapshot() error {
 
 // ReleaseDebianPPAPreRelease releases to node-pre PPA (which is then manually promoted to node PPA)
 func ReleaseDebianPPAPreRelease() error {
-	err := env.EnsureEnvVars(
+	logconfig.Bootstrap()
+
+	if err := env.EnsureEnvVars(
 		env.TagBuild,
 		env.RCBuild,
 		env.BuildVersion,
 		env.BuildNumber,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-
-	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPAPreRelease action...")
-		return nil
-	} else if env.Bool(env.RCBuild) {
-		log.Info().Msg("RC build, skipping ReleaseDebianPPAPreRelease action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.TagBuild) && !env.Bool(env.RCBuild)
+	})
 
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:  "node-pre",

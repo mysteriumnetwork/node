@@ -19,27 +19,24 @@ package release
 
 import (
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/node/ci/packages"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/rs/zerolog/log"
 )
 
 // ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repository in docker hub
 func ReleaseDockerSnapshot() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
+	if err := env.EnsureEnvVars(
 		env.SnapshotBuild,
 		env.BuildVersion,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseDockerSnapshot action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.SnapshotBuild)
+	})
 
 	return packages.BuildMystAlpineImage(
 		[]string{"mysteriumnetwork/myst-snapshots:" + env.Str(env.BuildVersion) + "-alpine"},
@@ -51,22 +48,19 @@ func ReleaseDockerSnapshot() error {
 func ReleaseDockerTag() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
+	if err := env.EnsureEnvVars(
 		env.TagBuild,
 		env.RCBuild,
 		env.BuildVersion,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-
-	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping ReleaseDockerTag action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.TagBuild)
+	})
 
 	if env.Bool(env.RCBuild) {
-		err = packages.BuildMystAlpineImage(
+		err := packages.BuildMystAlpineImage(
 			[]string{"mysteriumnetwork/myst:" + env.Str(env.BuildVersion) + "-alpine"},
 			true,
 		)
@@ -82,7 +76,7 @@ func ReleaseDockerTag() error {
 			return err
 		}
 	} else {
-		err = packages.BuildMystAlpineImage(
+		err := packages.BuildMystAlpineImage(
 			[]string{
 				"mysteriumnetwork/myst:" + env.Str(env.BuildVersion) + "-alpine",
 				"mysteriumnetwork/myst:latest-alpine",
