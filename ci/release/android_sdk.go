@@ -18,15 +18,9 @@
 package release
 
 import (
-	"io"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"path"
-	"strings"
-	"time"
+	"fmt"
 
+	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -34,53 +28,22 @@ import (
 )
 
 const (
-	// MavenToken token of the MavenUsername
-	MavenToken = env.BuildVar("MAVEN_TOKEN")
+	// MAVEN_USER user part of token for Sonatype.
+	MAVEN_USER = env.BuildVar("MAVEN_USER")
+	// MAVEN_PASS password part of token for Sonatype.
+	MAVEN_PASS = env.BuildVar("MAVEN_PASS")
+
+	// REPOSITORY_ID references reposity ID in mvn.settings.
+	REPOSITORY_ID = "ossrh"
+	// REPOSITORY_URL URL for uploading the artifacts.
+	REPOSITORY_URL = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
 )
 
-// ReleaseAndroidSDKSnapshot releases Android SDK snapshot from master branch to maven repo
-func ReleaseAndroidSDKSnapshot() error {
-	logconfig.Bootstrap()
-
-	err := env.EnsureEnvVars(
-		env.SnapshotBuild,
-		env.BuildVersion,
-	)
-	if err != nil {
-		return err
-	}
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseAndroidSDKSnapshot action...")
-		return nil
-	}
-	err = env.EnsureEnvVars(MavenToken)
-	if err != nil {
-		return err
-	}
-	repositoryURL, _ := url.Parse("https://maven.mysterium.network/snapshots")
-	return releaseAndroidSDK(
-		releaseOpts{
-			groupId:    "network.mysterium",
-			artifactId: "mobile-node",
-			version:    env.Str(env.BuildVersion),
-		},
-		repositoryOpts{
-			repositoryURL: repositoryURL,
-			username:      "snapshots",
-			password:      env.Str(MavenToken),
-		},
-	)
-}
-
-// ReleaseAndroidSDK releases tag Android SDK to maven repo
+// ReleaseAndroidSDK releases tag Android SDK to maven repo.
 func ReleaseAndroidSDK() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
-		env.TagBuild,
-		env.BuildVersion,
-	)
-	if err != nil {
+	if err := env.EnsureEnvVars(env.TagBuild, env.BuildVersion); err != nil {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
@@ -88,108 +51,44 @@ func ReleaseAndroidSDK() error {
 		return nil
 	}
 
-	err = env.EnsureEnvVars(MavenToken)
-	if err != nil {
-		return err
-	}
-	repositoryURL, _ := url.Parse("https://maven.mysterium.network/releases")
-	return releaseAndroidSDK(
-		releaseOpts{
-			groupId:    "network.mysterium",
-			artifactId: "mobile-node",
-			version:    env.Str(env.BuildVersion),
-		},
-		repositoryOpts{
-			repositoryURL: repositoryURL,
-			username:      "releases",
-			password:      env.Str(MavenToken),
-		},
-	)
-}
-
-func releaseAndroidSDK(rel releaseOpts, rep repositoryOpts) error {
-	err := storage.DownloadArtifacts()
-	if err != nil {
+	if err := storage.DownloadArtifacts(); err != nil {
 		return err
 	}
 
-	publisher := newMavenPublisher(&rel, &rep)
-	if err := publisher.upload("build/package/Mysterium.aar"); err != nil {
+	artifactBaseName := fmt.Sprintf("build/package/mobile-node-%s", env.Str(env.BuildVersion))
+
+	// Deploy AAR (android archive)
+	if err := sh.RunWithV(map[string]string{
+		"MAVEN_USER": env.Str(MAVEN_USER),
+		"MAVEN_PASS": env.Str(MAVEN_PASS),
+	}, "mvn",
+		"gpg:sign-and-deploy-file",
+		"--settings=bin/package/android/mvn.settings",
+		"-DrepositoryId="+REPOSITORY_ID,
+		"-Durl="+REPOSITORY_URL,
+		"-DpomFile="+artifactBaseName+".pom",
+		"-Dfile="+artifactBaseName+".aar",
+		"-Dpackaging=aar",
+	); err != nil {
 		return err
 	}
-	if err := publisher.upload("build/package/mvn.pom"); err != nil {
+
+	// Deploy sources JAR
+	if err := sh.RunWithV(map[string]string{
+		"MAVEN_USER": env.Str(MAVEN_USER),
+		"MAVEN_PASS": env.Str(MAVEN_PASS),
+	}, "mvn",
+		"gpg:sign-and-deploy-file",
+		"--settings=bin/package/android/mvn.settings",
+		"-DrepositoryId="+REPOSITORY_ID,
+		"-Durl="+REPOSITORY_URL,
+		"-DpomFile="+artifactBaseName+".pom",
+		"-Dfile="+artifactBaseName+"-sources.jar",
+		"-Dpackaging=jar",
+		"-Dclassifier=sources",
+	); err != nil {
 		return err
 	}
+
 	return nil
-}
-
-type releaseOpts struct {
-	groupId, artifactId, version string
-}
-
-type repositoryOpts struct {
-	repositoryURL      *url.URL
-	username, password string
-}
-
-// mavenPublisher uploads artifacts to maven repo
-type mavenPublisher struct {
-	client         *http.Client
-	releaseOpts    *releaseOpts
-	repositoryOpts *repositoryOpts
-}
-
-func newMavenPublisher(releaseOpts *releaseOpts, repositoryOpts *repositoryOpts) *mavenPublisher {
-	return &mavenPublisher{
-		client:         &http.Client{Timeout: 30 * time.Second},
-		releaseOpts:    releaseOpts,
-		repositoryOpts: repositoryOpts,
-	}
-}
-
-func (up *mavenPublisher) upload(filename string) error {
-	log.Info().Msg("Uploading: " + filename)
-
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	requestURL := uploadURL(*up.releaseOpts, *up.repositoryOpts, filename)
-	return up.apiRequest(http.MethodPut, *requestURL, file)
-}
-
-func (up *mavenPublisher) apiRequest(method string, url url.URL, body io.Reader) error {
-	log.Info().Msgf("API request [%s] %s", method, url.String())
-	req, err := http.NewRequest(method, url.String(), body)
-	if err != nil {
-		return err
-	}
-	req.SetBasicAuth(up.repositoryOpts.username, up.repositoryOpts.password)
-	res, err := up.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	resBytes, err := httputil.DumpResponse(res, true)
-	if err != nil {
-		return err
-	}
-
-	log.Info().Msgf("API response: %v", string(resBytes))
-	return nil
-}
-
-// uploadURL constructs URL for artifact upload
-func uploadURL(r releaseOpts, b repositoryOpts, filename string) *url.URL {
-	segments := []string{b.repositoryURL.Path}
-	segments = append(segments, strings.Split(r.groupId, ".")...)
-
-	remoteFilename := r.artifactId + "-" + r.version + path.Ext(filename)
-	segments = append(segments, r.artifactId, r.version, remoteFilename)
-
-	resultURL, _ := url.Parse(b.repositoryURL.String())
-	resultURL.Path = path.Join(segments...)
-	return resultURL
 }
