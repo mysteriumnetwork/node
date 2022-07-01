@@ -53,6 +53,7 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/shopspring/decimal v1.2.0
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
+	github.com/sirupsen/logrus v1.7.0
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.1
@@ -66,6 +67,7 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220327210214-530d0810a4d0
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	golang.zx2c4.com/wireguard v0.0.0-20220407013110-ef5c587f782d
 	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
@@ -227,7 +229,6 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.8-0.20211105212822-18b340fc7af2 // indirect
-	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20211104114900-415007cec224 // indirect

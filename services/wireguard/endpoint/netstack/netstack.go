@@ -9,6 +9,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack/handler"
+
+
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/tun"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -22,6 +25,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
+
 )
 
 type netTun struct {
@@ -108,6 +112,9 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 
 	udpFwd := udp.NewForwarder(dev.stack, dev.acceptUDP)
 	dev.stack.SetTransportProtocolHandler(udp.ProtocolNumber, udpFwd.HandlePacket)
+
+	icmpHandler := handler.ICMPHandler(dev.stack)
+	dev.stack.SetTransportProtocolHandler(icmp.ProtocolNumber4, icmpHandler)
 
 	tcpipErr := dev.stack.CreateNIC(1, (*endpoint)(dev))
 	if tcpipErr != nil {
