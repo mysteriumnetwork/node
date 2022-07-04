@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v35/github"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 
@@ -180,24 +181,16 @@ func replaceVersion(file, content, version string) (out string) {
 func CreateAvadoPR() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
+	if err := env.EnsureEnvVars(
 		env.GithubAPIToken,
 		env.GithubOwner,
 		env.BuildVersion,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-
-	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping Avado PR action...")
-		return nil
-	}
-
-	if env.Bool(env.RCBuild) {
-		log.Info().Msg("RC build, skipping Avado PR action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.TagBuild) && !env.Bool(env.RCBuild)
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()

@@ -23,9 +23,11 @@ import (
 	"path"
 	"time"
 
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	gogithub "github.com/google/go-github/v28/github"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/github"
 	"github.com/mysteriumnetwork/node/ci/storage"
@@ -59,6 +61,11 @@ func releaseGithub(opts *releaseGithubOpts) error {
 	for _, f := range artifactFilenames {
 		p := path.Join("build/package", f.Name())
 		err := release.UploadAsset(p)
+		var githubErr *gogithub.ErrorResponse
+		if errors.As(err, &githubErr) && len(githubErr.Errors) == 1 && githubErr.Errors[0].Code == "already_exists" {
+			log.Info().Msg("Release artifact already exists: " + f.Name())
+			continue
+		}
 		if err != nil {
 			return errors.Wrap(err, "could not upload artifact "+p)
 		}
@@ -85,20 +92,18 @@ func tagReleaseGithub(opts *releaseGithubOpts) (*github.Release, error) {
 func ReleaseGithubSnapshot() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
+	if err := env.EnsureEnvVars(
 		env.SnapshotBuild,
 		env.GithubOwner,
 		env.GithubSnapshotRepository,
 		env.BuildVersion,
 		env.GithubAPIToken,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info().Msg("Not a snapshot build, skipping ReleaseGithubSnapshot action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.SnapshotBuild)
+	})
 
 	return releaseGithub(&releaseGithubOpts{
 		owner:      env.Str(env.GithubOwner),
@@ -113,19 +118,16 @@ func ReleaseGithubSnapshot() error {
 func ReleaseGithubNightly() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
+	if err := env.EnsureEnvVars(
 		env.GithubOwner,
 		env.BuildVersion,
 		env.GithubAPIToken,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-
-	if !env.Bool("NIGHTLY_BUILD") {
-		log.Info().Msg("Not a nightly build, skipping ReleaseGithubNightly action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool("NIGHTLY_BUILD")
+	})
 
 	return releaseGithub(&releaseGithubOpts{
 		owner:      env.Str(env.GithubOwner),
@@ -140,22 +142,20 @@ func ReleaseGithubNightly() error {
 func ReleaseGithubTag() error {
 	logconfig.Bootstrap()
 
-	err := env.EnsureEnvVars(
+	if err := env.EnsureEnvVars(
 		env.SnapshotBuild,
 		env.GithubOwner,
 		env.GithubRepository,
 		env.BuildVersion,
 		env.GithubAPIToken,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping ReleaseGithubTag action...")
-		return nil
-	}
+	job.Precondition(func() bool {
+		return env.Bool(env.TagBuild)
+	})
 
-	err = releaseGithub(&releaseGithubOpts{
+	err := releaseGithub(&releaseGithubOpts{
 		owner:      env.Str(env.GithubOwner),
 		repository: env.Str(env.GithubRepository),
 		version:    env.Str(env.BuildVersion),
