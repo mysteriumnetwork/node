@@ -57,6 +57,9 @@ func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
 	if err != nil {
 		return fmt.Errorf("could not parse local addr: %w", err)
 	}
+	if len(cfg.DNS) == 0 {
+		return fmt.Errorf("DNS addr list is empty")
+	}
 	dnsAddr, err := netip.ParseAddr(cfg.DNS[0])
 	if err != nil {
 		return fmt.Errorf("could not parse DNS addr: %w", err)
