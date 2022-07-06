@@ -339,7 +339,7 @@ func (c *cliApp) setPayoutAddress(args []string) error {
 	return nil
 }
 
-const usageSetBeneficiary = "beneficiary-set <providerIdentity> <beneficiary>"
+const usageSetBeneficiary = "beneficiary-set <providerIdentity> <beneficiary> [hermesID]"
 
 func (c *cliApp) setBeneficiary(actionArgs []string) error {
 	if len(actionArgs) < 2 || len(actionArgs) > 3 {
@@ -349,12 +349,12 @@ func (c *cliApp) setBeneficiary(actionArgs []string) error {
 
 	address := actionArgs[0]
 	benef := actionArgs[1]
-	hermesID, err := c.config.GetHermesID()
-	if err != nil {
-		return err
+	hermesID := ""
+	if len(actionArgs) == 3 {
+		hermesID = actionArgs[2]
 	}
 
-	err = c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
+	err := c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
 	if err != nil {
 		return err
 	}

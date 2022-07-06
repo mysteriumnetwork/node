@@ -103,7 +103,7 @@ type receivedPromise struct {
 // HermesPromiseSettler is responsible for settling the hermes promises.
 type HermesPromiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
-	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address, preferredHermes common.Address) error
+	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address) error
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
@@ -520,7 +520,7 @@ func (aps *hermesPromiseSettler) ForceSettleInactiveHermeses(chainID int64, prov
 }
 
 // ForceSettle forces the settlement for a provider
-func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address, preferredHermes common.Address) error {
+func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address) error {
 	var channel *HermesChannel = nil
 	maxUnsettled := big.NewInt(0)
 	for _, hermesID := range hermeses {
@@ -540,10 +540,6 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID
 				settled = big.NewInt(0)
 			}
 			unsettledAmount := new(big.Int).Sub(hchannel.lastPromise.Promise.Amount, settled)
-			if hermesID == preferredHermes && unsettledAmount.Cmp(big.NewInt(0)) > 0 {
-				channel = &hchannel
-				break
-			}
 			if unsettledAmount.Cmp(maxUnsettled) > 0 {
 				maxUnsettled = unsettledAmount
 				channel = &hchannel
@@ -552,6 +548,12 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID
 	}
 
 	if channel == nil {
+		if len(hermeses) == 0 {
+			return fmt.Errorf("cannot settle: no hermes provided")
+		}
+		if len(hermeses) == 1 {
+			return fmt.Errorf("cannot settle: no unsettled funds for hermes: %s", hermeses[0].Hex())
+		}
 		return fmt.Errorf("cannot settle: no hermes with unsettled funds was found")
 	}
 
