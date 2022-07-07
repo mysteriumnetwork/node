@@ -76,7 +76,7 @@ type addressProvider interface {
 }
 
 type beneficiarySaver interface {
-	SettleAndSaveBeneficiary(id identity.Identity, hermeses []common.Address, beneficiary, preferredHermes common.Address) error
+	SettleAndSaveBeneficiary(id identity.Identity, hermeses []common.Address, beneficiary common.Address) error
 	CleanupAndGetChangeStatus(id identity.Identity, currentBeneficiary string) (*beneficiary.ChangeStatus, error)
 }
 
@@ -866,14 +866,17 @@ func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
 	chainID := config.GetInt64(config.FlagChainID)
 
 	hermesID := common.HexToAddress(req.HermesID)
-	hermeses, err := te.addressProvider.GetKnownHermeses(chainID)
-	if err != nil {
-		c.Error(err)
-		return
+	hermeses := []common.Address{hermesID}
+	if hermesID == common.HexToAddress("") {
+		hermeses, err = te.addressProvider.GetKnownHermeses(chainID)
+		if err != nil {
+			c.Error(err)
+			return
+		}
 	}
 
 	go func() {
-		err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), hermeses, common.HexToAddress(req.Beneficiary), hermesID)
+		err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), hermeses, common.HexToAddress(req.Beneficiary))
 		if err != nil {
 			log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
 		}
