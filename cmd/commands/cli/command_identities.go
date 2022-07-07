@@ -568,7 +568,10 @@ func (c *cliApp) exportIdentity(actionsArgs []string) (err error) {
 	}
 
 	clio.Success("Private key exported: ")
-	fmt.Println(string(blob))
+
+	quoted := strconv.Quote(string(blob))
+	fmt.Println(quoted[1 : len(quoted)-1])
+
 	return nil
 }
 
@@ -589,6 +592,7 @@ func (c *cliApp) importIdentity(actionsArgs []string) (err error) {
 		if err != nil {
 			return fmt.Errorf("can't read provided file: %s reason: %w", key, err)
 		}
+		blob = []byte(strings.ReplaceAll(string(blob), `\"`, `"`))
 	}
 
 	id, err := c.tequilapi.ImportIdentity(blob, passphrase, true)
