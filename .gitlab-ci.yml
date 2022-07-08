@@ -77,12 +77,12 @@ test-e2e-nat:
 #   tags: [go,high_performance]
 #   script: go run mage.go -v TestE2ECompatibility
 
-test-install-script:
-  stage: test
-  tags: [go,dedicated]
-  script: go run mage.go -v TestInstallScript
-  only:
-    - master
+#test-install-script:
+#  stage: test
+#  tags: [go,dedicated]
+#  script: go run mage.go -v TestInstallScript
+#  only:
+#    - master
 
 create-bucket:
   stage: pre-release
