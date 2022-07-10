@@ -4369,6 +4369,11 @@
           "type": "number",
           "format": "double",
           "x-go-name": "Quality"
+        },
+        "uptime": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Uptime"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
