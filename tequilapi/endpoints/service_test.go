@@ -159,7 +159,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
-                      "bandwidth": 10
+                      "bandwidth": 10,
+					  "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -204,7 +205,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		            "quality": {
 		              "quality": 2.0,
 		              "latency": 50,
-		              "bandwidth": 10
+		              "bandwidth": 10,
+					  "uptime": 20
 		            },
 					"price": {
 					  "currency": "MYST",
@@ -249,7 +251,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		            "quality": {
 		              "quality": 2.0,
 		              "latency": 50,
-		              "bandwidth": 10
+		              "bandwidth": 10,
+					  "uptime": 20
 		            },
 					"price": {
 					  "currency": "MYST",
@@ -446,7 +449,8 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				"quality": {
 				  "quality": 2.0,
 				  "latency": 50,
-				  "bandwidth": 10
+				  "bandwidth": 10,
+				  "uptime": 20
 				},
 				"price": {
                   "currency": "MYST",
@@ -549,7 +553,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				"quality": {
 				  "quality": 2.0,
 				  "latency": 50,
-				  "bandwidth": 10
+				  "bandwidth": 10,
+				  "uptime": 20
 				},
 				"price": {
                   "currency": "MYST",

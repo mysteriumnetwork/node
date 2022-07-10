@@ -43,6 +43,7 @@ func NewProposalDTO(p proposal.PricedServiceProposal) ProposalDTO {
 			Quality:   p.Quality.Quality,
 			Latency:   p.Quality.Latency,
 			Bandwidth: p.Quality.Bandwidth,
+			Uptime:    p.Quality.Uptime,
 		},
 		Price: Price{
 			Currency:      money.CurrencyMyst.String(),
@@ -166,4 +167,5 @@ type Quality struct {
 	Quality   float64 `json:"quality"`
 	Latency   float64 `json:"latency"`
 	Bandwidth float64 `json:"bandwidth"`
+	Uptime    float64 `json:"uptime"`
 }
