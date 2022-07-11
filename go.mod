@@ -37,7 +37,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/EventBus v0.0.0-20220415063055-d22cb121672c
 	github.com/mysteriumnetwork/feedback v1.1.2-0.20211228095831-9dfca34c9ab7
-	github.com/mysteriumnetwork/go-ci v0.0.0-20220328103729-c16a61419959
+	github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d
 	github.com/mysteriumnetwork/go-dvpn-web v1.17.1
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.3.0
@@ -66,7 +66,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
-	golang.org/x/sys v0.0.0-20220327210214-530d0810a4d0
+	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d
 	golang.zx2c4.com/wireguard v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
@@ -222,12 +222,12 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
-	golang.org/x/tools v0.1.10 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/tools v0.1.11 // indirect
+	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	golang.zx2c4.com/wintun v0.0.0-20211104114900-415007cec224 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
