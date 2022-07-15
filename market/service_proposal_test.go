@@ -61,7 +61,7 @@ func Test_ServiceProposal_Serialize(t *testing.T) {
         "quality": 2.0,
         "latency": 5,
         "bandwidth": 100,
-		"uptime": 20
+        "uptime": 20
       },
       "contacts": []
 	}`

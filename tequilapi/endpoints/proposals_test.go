@@ -139,7 +139,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10,
-					  "uptime": 20
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -211,7 +211,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10,
-					  "uptime": 20
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -346,7 +346,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10,
-					  "uptime": 20
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -378,7 +378,7 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                       "quality": 2.0,
                       "latency": 50,
                       "bandwidth": 10,
-					  "uptime": 20
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
