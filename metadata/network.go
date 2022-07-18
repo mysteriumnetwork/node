@@ -140,5 +140,44 @@ var LocalnetDefinition = NetworkDefinition{
 	DefaultChainID: 1,
 }
 
+// TestnetDefinition defines parameters for testnet network
+var TestnetDefinition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v3",
+	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
+	TransactorAddress:         "https://transactor-testnet.mysterium.network/api/v1",
+	Chain1: ChainDefinition{
+		ChainID: 1,
+		EtherClientRPC: []string{
+			"https://ethereum1.mysterium.network/",
+			"https://cloudflare-eth.com/",
+		},
+	},
+	Chain2: ChainDefinition{
+		RegistryAddress:    "0x1ba2DF26371E83D87Afee2F27a42f5A7FE9e5219",
+		ChannelImplAddress: "0x6FE3E5e5008e49821BF7282870eC831BA9694dDB",
+		HermesID:           "0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
+		ChainID:            80001,
+		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
+		EtherClientRPC: []string{
+			"https://matic-mumbai.chainstacklabs.com",
+		},
+		KnownHermeses: []string{
+			"0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
+		},
+	},
+	ObserverAddress: "https://observer-testnet.mysterium.network",
+	DefaultChainID:  80001,
+	DefaultCurrency: "MYST",
+	LocationAddress: "https://location.mysterium.network/api/v1/location",
+	Payments: Payments{
+		Consumer: Consumer{
+			DataLeewayMegabytes: 20,
+			PriceGiBMax:         "500000000000000000", // 0.5 MYSTT
+			PriceHourMax:        "180000000000000",    // 0.0018 MYSTT
+		},
+	},
+}
+
 // DefaultNetwork defines default network values when no runtime parameters are given
 var DefaultNetwork = MainnetDefinition
