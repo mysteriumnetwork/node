@@ -59,7 +59,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 					Country: "US",
 					IPType:  "residential",
 				},
-				Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
+				Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10, Uptime: 20},
 			}),
 			Price: market.Price{
 				PricePerHour: big.NewInt(1),
@@ -103,7 +103,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 					Country: "US",
 					IPType:  "residential",
 				},
-				Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10},
+				Quality: &market.Quality{Quality: 2, Latency: 50, Bandwidth: 10, Uptime: 20},
 			}),
 			Price: market.Price{
 				PricePerHour: big.NewInt(1),
