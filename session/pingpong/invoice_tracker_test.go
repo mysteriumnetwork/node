@@ -89,7 +89,7 @@ func (mac *mockHermesCaller) SyncProviderPromise(promise crypto.Promise, signer 
 	return nil
 }
 
-func (m *mockHermesCaller) RefreshLatestProviderPromise(chainID int64, id string, hashlock, recoveryData []byte, signer identity.Signer) (crypto.Promise, error) {
+func (mac *mockHermesCaller) RefreshLatestProviderPromise(chainID int64, id string, hashlock, recoveryData []byte, signer identity.Signer) (crypto.Promise, error) {
 	return crypto.Promise{}, nil
 }
 
