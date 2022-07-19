@@ -180,4 +180,4 @@ var TestnetDefinition = NetworkDefinition{
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given
-var DefaultNetwork = MainnetDefinition
+var DefaultNetwork = TestnetDefinition
