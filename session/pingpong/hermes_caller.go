@@ -253,12 +253,44 @@ func (ac *HermesCaller) SyncProviderPromise(promise crypto.Promise, signer ident
 		return fmt.Errorf("could not make promise sync request: %w", err)
 	}
 
-	err = ac.doRequest(req, map[string]interface{}{})
+	err = ac.doRequest(req, map[string]any{})
 	if err != nil {
 		return fmt.Errorf("could not sync promise hermes: %w", err)
 	}
 
 	return nil
+}
+
+type refreshPromiseRequest struct {
+	ChainID       int64  `json:"chain_id"`
+	Identity      string `json:"identity"`
+	Hashlock      string `json:"hashlock"`
+	RRecoveryData string `json:"r_recovery_data"`
+}
+
+// RefreshLatestProviderPromise reissue latest promise with a new hashlock.
+func (ac *HermesCaller) RefreshLatestProviderPromise(chainID int64, id string, hashlock, recoveryData []byte, signer identity.Signer) (crypto.Promise, error) {
+	res := crypto.Promise{}
+	toSend := refreshPromiseRequest{
+		ChainID:       chainID,
+		Identity:      id,
+		Hashlock:      common.Bytes2Hex(hashlock),
+		RRecoveryData: common.Bytes2Hex(recoveryData),
+	}
+
+	req, err := requests.NewSignedPostRequest(ac.hermesBaseURI, "refresh_promise", toSend, signer)
+	if err != nil {
+		return res, fmt.Errorf("could not make promise sync request: %w", err)
+	}
+
+	err = ac.doRequest(req, &res)
+	if err != nil {
+		if errors.Is(err, ErrTooManyRequests) {
+			return res, fmt.Errorf("could not refresh promise: %w", err)
+		}
+	}
+
+	return res, nil
 }
 
 // GetConsumerData gets consumer data from hermes
@@ -288,16 +320,7 @@ func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (HermesUserInf
 
 // GetProviderData gets provider data from hermes
 func (ac *HermesCaller) GetProviderData(chainID int64, id string) (HermesUserInfo, error) {
-	data, err := ac.getProviderData(chainID, id)
-	if err != nil {
-		return HermesUserInfo{}, err
-	}
-	err = data.LatestPromise.isValid(id)
-	if err != nil {
-		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
-	}
-
-	return data, nil
+	return ac.getProviderData(chainID, id)
 }
 
 // ProviderPromiseAmountUnsafe returns the provider promise amount.
@@ -334,7 +357,7 @@ func (ac *HermesCaller) getProviderData(chainID int64, id string) (HermesUserInf
 	return data, nil
 }
 
-func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
+func (ac *HermesCaller) doRequest(req *http.Request, to any) error {
 	resp, err := ac.transport.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not execute request: %w", err)
@@ -356,6 +379,11 @@ func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
 
 	// parse error body
 	hermesError := HermesErrorResponse{}
+	if string(body) == "" {
+		hermesError.ErrorMessage = "Unknown error"
+		return hermesError
+	}
+
 	err = json.Unmarshal(body, &hermesError)
 	if err != nil {
 		return fmt.Errorf("could not unmarshal error body: %w", err)
