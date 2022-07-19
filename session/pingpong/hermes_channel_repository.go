@@ -304,13 +304,13 @@ func (hcr *HermesChannelRepository) handleIdentityUnlock(payload identity.AppEve
 
 			bytes, err := json.Marshal(details)
 			if err != nil {
-				log.Err(err).Msgf("could not marshal R recovery details: %w", err)
+				log.Err(err).Msgf("could not marshal R recovery details: %s", err)
 				return
 			}
 
 			encrypted, err := hcr.encryption.Encrypt(payload.ID.ToCommonAddress(), bytes)
 			if err != nil {
-				log.Err(err).Msgf("could not encrypt R: %w", err)
+				log.Err(err).Msgf("could not encrypt R: %s", err)
 				return
 			}
 			signer := hcr.signer(payload.ID)
