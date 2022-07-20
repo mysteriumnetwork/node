@@ -20,11 +20,11 @@ package release
 import (
 	"strings"
 
-	"github.com/mysteriumnetwork/go-ci/job"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/deb"
+	"github.com/mysteriumnetwork/node/logconfig"
 )
 
 type releaseDebianOpts struct {
