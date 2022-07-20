@@ -285,9 +285,7 @@ func (ac *HermesCaller) RefreshLatestProviderPromise(chainID int64, id string, h
 
 	err = ac.doRequest(req, &res)
 	if err != nil {
-		if errors.Is(err, ErrTooManyRequests) {
-			return res, fmt.Errorf("could not refresh promise: %w", err)
-		}
+		return res, fmt.Errorf("could not refresh promise: %w", err)
 	}
 
 	return res, nil

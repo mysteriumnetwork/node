@@ -44,7 +44,7 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
-	github.com/mysteriumnetwork/payments v1.0.1-0.20220606084227-9041ad3c0b5e
+	github.com/mysteriumnetwork/payments v1.0.1-0.20220720081954-16b01862be9a
 	github.com/mysteriumnetwork/terms v0.0.40
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
@@ -237,3 +237,5 @@ require (
 	gvisor.dev/gvisor v0.0.0-20211020211948-f76a604701b6 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
 )
+
+replace github.com/mysteriumnetwork/payments => /Users/andrey/go/src/github.com/mysterium/payments

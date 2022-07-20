@@ -467,12 +467,6 @@ func (it *InvoiceTracker) getNotSentExchangeMessageCount() uint64 {
 	return it.notSentExchangeMessageCount
 }
 
-func (it *InvoiceTracker) generateR() []byte {
-	r := make([]byte, 32)
-	crand.Read(r)
-	return r
-}
-
 func (it *InvoiceTracker) saveLastExchangeMessage(em crypto.ExchangeMessage) {
 	it.lastExchangeMessageLock.Lock()
 	defer it.lastExchangeMessageLock.Unlock()
@@ -507,7 +501,7 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
-	r := it.generateR()
+	r := crypto.GenerateR()
 	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r, it.chainID())
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)

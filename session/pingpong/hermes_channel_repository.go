@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -280,65 +279,66 @@ func (hcr *HermesChannelRepository) handleIdentityUnlock(payload identity.AppEve
 		log.Err(err).Msg("failed to get active Hermes")
 		return
 	}
-	hermesChannel, err := hcr.Fetch(payload.ChainID, payload.ID, hermes)
-	if err != nil {
-		log.Err(err).Msg("failed to get hermes channel info")
+	hermesChannel, exists := hcr.Get(payload.ChainID, payload.ID, hermes)
+	if exists {
 		return
 	}
 
 	unsettledBalance := hermesChannel.UnsettledBalance()
-	if unsettledBalance.Cmp(big.NewInt(0)) == 0 {
-		data, err := hcr.hermesCaller.GetProviderData(payload.ChainID, payload.ID.Address)
+	if unsettledBalance.Cmp(big.NewInt(0)) != 0 {
+		return
+	}
+	data, err := hcr.hermesCaller.GetProviderData(payload.ChainID, payload.ID.Address)
 
+	if err != nil {
+		log.Err(err).Msg("failed to get provider data")
+		return
+	}
+
+	if data.LatestPromise.Amount != nil && data.LatestPromise.Amount.Cmp(big.NewInt(0)) != 0 {
+		R := crypto.GenerateR()
+		hashlock := ethcrypto.Keccak256(R)
+		details := rRecoveryDetails{
+			R:           hex.EncodeToString(R),
+			AgreementID: big.NewInt(0),
+		}
+
+		bytes, err := json.Marshal(details)
 		if err != nil {
-			log.Err(err).Msg("failed to get provider data")
+			log.Err(err).Msgf("could not marshal R recovery details")
+			return
 		}
 
-		if data.LatestPromise.Amount != nil && data.LatestPromise.Amount.Cmp(big.NewInt(0)) != 0 {
-			R := generateR()
-			hashlock := ethcrypto.Keccak256(R)
-			details := rRecoveryDetails{
-				R:           hex.EncodeToString(R),
-				AgreementID: big.NewInt(0),
-			}
-
-			bytes, err := json.Marshal(details)
-			if err != nil {
-				log.Err(err).Msgf("could not marshal R recovery details: %s", err)
-				return
-			}
-
-			encrypted, err := hcr.encryption.Encrypt(payload.ID.ToCommonAddress(), bytes)
-			if err != nil {
-				log.Err(err).Msgf("could not encrypt R: %s", err)
-				return
-			}
-			signer := hcr.signer(payload.ID)
-			promise, err := hcr.hermesCaller.RefreshLatestProviderPromise(config.GetInt64(config.FlagChainID), payload.ID.Address, hashlock, encrypted, signer)
-			if err != nil {
-				log.Err(err).Msgf("failed to refresh promise")
-				return
-			}
-			hermesPromise := HermesPromise{
-				R:         hex.EncodeToString(R),
-				ChannelID: data.ChannelID,
-				Identity:  identity.FromAddress(data.Identity),
-				HermesID:  hermes,
-				Promise:   promise,
-				Revealed:  false,
-			}
-
-			err = hcr.promiseProvider.Store(hermesPromise)
-			if err != nil {
-				log.Err(err).Msg("could not store hermes promise")
-				return
-			}
-			hcr.publisher.Publish(pingEvent.AppTopicHermesPromise, pingEvent.AppEventHermesPromise{
-				Promise:    promise,
-				HermesID:   hermes,
-				ProviderID: identity.FromAddress(data.Identity),
-			})
+		encrypted, err := hcr.encryption.Encrypt(payload.ID.ToCommonAddress(), bytes)
+		if err != nil {
+			log.Err(err).Msgf("could not encrypt R")
+			return
 		}
+		signer := hcr.signer(payload.ID)
+		promise, err := hcr.hermesCaller.RefreshLatestProviderPromise(config.GetInt64(config.FlagChainID), payload.ID.Address, hashlock, encrypted, signer)
+		if err != nil {
+			log.Err(err).Msgf("failed to refresh promise")
+			return
+		}
+		hermesPromise := HermesPromise{
+			R:         hex.EncodeToString(R),
+			ChannelID: data.ChannelID,
+			Identity:  identity.FromAddress(data.Identity),
+			HermesID:  hermes,
+			Promise:   promise,
+			Revealed:  false,
+		}
+
+		err = hcr.promiseProvider.Store(hermesPromise)
+		if err != nil {
+			log.Err(err).Msg("could not store hermes promise")
+			return
+		}
+		hcr.publisher.Publish(pingEvent.AppTopicHermesPromise, pingEvent.AppEventHermesPromise{
+			Promise:    promise,
+			HermesID:   hermes,
+			ProviderID: identity.FromAddress(data.Identity),
+		})
 	}
 }
 
@@ -445,13 +445,4 @@ func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChann
 		Previous: *earningsOld,
 		Current:  *earningsNew,
 	})
-}
-
-func generateR() []byte {
-	r := make([]byte, 32)
-	_, err := rand.Read(r)
-	if err != nil {
-		panic(err)
-	}
-	return r
 }
