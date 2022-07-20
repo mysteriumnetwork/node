@@ -934,7 +934,7 @@ func (aps *hermesPromiseSettler) settlePayAndSettleWithRetry(
 }
 
 func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
-	r := aps.generateR()
+	r := crypto.GenerateR()
 	agreementID := aps.generateAgreementID()
 	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, toChain)
 	invoice.Provider = providerID.ToCommonAddress().Hex()
@@ -952,15 +952,6 @@ func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amou
 	}
 
 	return msg, nil
-}
-
-func (aps *hermesPromiseSettler) generateR() []byte {
-	r := make([]byte, 32)
-	_, err := rand.Read(r)
-	if err != nil {
-		panic(err)
-	}
-	return r
 }
 
 func (aps *hermesPromiseSettler) generateAgreementID() *big.Int {

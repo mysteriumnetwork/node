@@ -20,9 +20,6 @@ package cmd
 import (
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -41,6 +38,8 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -131,6 +130,10 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.BCHelper,
 		di.EventBus,
 		di.BeneficiaryProvider,
+		di.HermesCaller,
+		di.AddressProvider,
+		di.SignerFactory,
+		di.Keystore,
 	)
 
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
