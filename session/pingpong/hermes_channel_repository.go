@@ -240,7 +240,7 @@ func (hcr *HermesChannelRepository) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return fmt.Errorf("could not subscribe to AppTopicHermesPromise event: %w", err)
 	}
-	err = bus.Subscribe(identity.AppTopicIdentityUnlock, hcr.handleIdentityUnlock)
+	err = bus.SubscribeAsync(identity.AppTopicIdentityUnlock, hcr.handleIdentityUnlock)
 	if err != nil {
 		return fmt.Errorf("could not subscribe to AppTopicIdentityUnlock event: %w", err)
 	}

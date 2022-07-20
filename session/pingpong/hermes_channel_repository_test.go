@@ -153,7 +153,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
 	mockHermesCaller := &mockHermesCaller{}
 	addrProv := &mockAddressProvider{}
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), mockBeneficiaryProvider, mockHermesCaller, addrProv, signerFactory, &mockEncryptor{})
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, mockBeneficiaryProvider, mockHermesCaller, addrProv, signerFactory, &mockEncryptor{})
 
 	// when
 	promiseProvider.toReturn = expectedPromise1
