@@ -237,5 +237,3 @@ require (
 	gvisor.dev/gvisor v0.0.0-20211020211948-f76a604701b6 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
 )
-
-replace github.com/mysteriumnetwork/payments => /Users/andrey/go/src/github.com/mysterium/payments
