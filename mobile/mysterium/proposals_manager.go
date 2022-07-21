@@ -28,7 +28,9 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/services/data_transfer"
 	"github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 )
 
@@ -208,9 +210,15 @@ func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]propos
 
 	// Ideally api should allow to pass multiple service types to skip noop
 	// proposals, but for now just filter in memory.
+	serviceTypesDict := map[string]bool{
+		openvpn.ServiceType:       true,
+		wireguard.ServiceType:     true,
+		data_transfer.ServiceType: true,
+		scraping.ServiceType:      true,
+	}
 	var res []proposal.PricedServiceProposal
 	for _, p := range allProposals {
-		if p.ServiceType == openvpn.ServiceType || p.ServiceType == wireguard.ServiceType {
+		if serviceTypesDict[p.ServiceType] {
 			res = append(res, p)
 		}
 	}

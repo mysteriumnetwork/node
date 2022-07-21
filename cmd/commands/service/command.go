@@ -35,6 +35,8 @@ import (
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/mysteriumnetwork/node/services/data_transfer"
+	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -111,9 +113,8 @@ type serviceCommand struct {
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	arg := ctx.Args().Get(0)
-	// If no service type specified we are starting wireguard only.
-	// Other services could be started only explicitly.
-	serviceTypes := []string{wireguard.ServiceType}
+	// If no service type specified we are starting wireguard, scraping and data_transfer.
+	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, data_transfer.ServiceType}
 	if arg != "" {
 		serviceTypes = strings.Split(arg, ",")
 	}
