@@ -29,9 +29,11 @@ import (
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/services/datatransfer"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
@@ -57,6 +59,8 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 	di.bootstrapServiceWireguard(nodeOptions)
+	di.bootstrapServiceScraping(nodeOptions)
+	di.bootstrapServiceDataTransfer(nodeOptions)
 
 	return nil
 }
@@ -64,6 +68,56 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
+		func(serviceOptions service.Options) (service.Service, error) {
+			loc, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, err
+			}
+
+			wgOptions := serviceOptions.(wireguard_service.Options)
+
+			svc := wireguard_service.NewManager(
+				di.IPResolver,
+				loc.Country,
+				di.NATService,
+				di.EventBus,
+				wgOptions,
+				di.PortPool,
+				di.ServiceFirewall,
+			)
+			return svc, nil
+		},
+	)
+}
+
+func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options) {
+	di.ServiceRegistry.Register(
+		scraping.ServiceType,
+		func(serviceOptions service.Options) (service.Service, error) {
+			loc, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, err
+			}
+
+			wgOptions := serviceOptions.(wireguard_service.Options)
+
+			svc := wireguard_service.NewManager(
+				di.IPResolver,
+				loc.Country,
+				di.NATService,
+				di.EventBus,
+				wgOptions,
+				di.PortPool,
+				di.ServiceFirewall,
+			)
+			return svc, nil
+		},
+	)
+}
+
+func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options) {
+	di.ServiceRegistry.Register(
+		datatransfer.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
@@ -243,6 +297,8 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
 	di.registerWireguardConnection(nodeOptions)
+	di.registerScrapingConnection(nodeOptions)
+	di.registerDataTransferConnection(nodeOptions)
 }
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
@@ -260,6 +316,40 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
+}
+
+func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
+	scraping.Bootstrap()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		return endpoint.NewConnectionEndpoint(resourceAllocator)
+	}
+	connFactory := func() (connection.Connection, error) {
+		opts := wireguard_connection.Options{
+			DNSScriptDir:     nodeOptions.Directories.Script,
+			HandshakeTimeout: 1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
+	}
+	di.ConnectionRegistry.Register(scraping.ServiceType, connFactory)
+}
+
+func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options) {
+	datatransfer.Bootstrap()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		return endpoint.NewConnectionEndpoint(resourceAllocator)
+	}
+	connFactory := func() (connection.Connection, error) {
+		opts := wireguard_connection.Options{
+			DNSScriptDir:     nodeOptions.Directories.Script,
+			HandshakeTimeout: 1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
+	}
+	di.ConnectionRegistry.Register(datatransfer.ServiceType, connFactory)
 }
 
 func (di *Dependencies) bootstrapMMN() error {
