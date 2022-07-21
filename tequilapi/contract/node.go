@@ -26,3 +26,7 @@ import (
 type NodeStatusResponse struct {
 	Status node.MonitoringStatus `json:"status"`
 }
+
+type MonitoringAgentResponse struct {
+	Status string `json:"status"`
+}

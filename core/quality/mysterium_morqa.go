@@ -288,6 +288,37 @@ func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
 	return responseBody.Connects
 }
 
+// ProviderStatuses fetch provider connectivity statuses from prometheus (monitoring agent)
+func (m *MysteriumMORQA) ProviderStatuses(providerID string) map[string]map[string]int {
+
+	providerID = "0x8fa8c543dc321b33eb5908d0907b7d6fd87af37e"
+
+	request, err := m.newRequestJSON(http.MethodGet, fmt.Sprintf("providers/statuses?provider_id=%s", providerID), nil)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to create provider monitoring agent statuses request")
+		return nil
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to request provider monitoring agent statuses")
+		return nil
+	}
+	defer response.Body.Close()
+
+	var responseBody struct {
+		Statuses map[string]map[string]int `json:"statuses"`
+	}
+
+	if err = parseResponseJSON(response, &responseBody); err != nil {
+		log.Warn().Err(err).Msg("Failed to parse provider monitoring agent statuses")
+		return nil
+	}
+
+	return responseBody.Statuses
+
+}
+
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{

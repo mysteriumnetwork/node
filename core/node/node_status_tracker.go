@@ -78,6 +78,44 @@ func (k *MonitoringStatusTracker) Status() MonitoringStatus {
 	return Pending
 }
 
+// MonitoringAgentStatuses enum
+type MonitoringAgentStatuses map[string]map[string]int
+
+type ProviderStatuses func(providerID string) map[string]map[string]int
+
+type MonitoringAgentTracker struct {
+	providerStatuses ProviderStatuses
+	currentIdentity  currentIdentity
+}
+
+// NewMonitoringAgentTracker constructor
+func NewMonitoringAgentTracker(
+	providerStatuses ProviderStatuses,
+	currentIdentity currentIdentity,
+) *MonitoringAgentTracker {
+	mat := &MonitoringAgentTracker{
+		providerStatuses: providerStatuses,
+		currentIdentity:  currentIdentity,
+	}
+	return mat
+}
+
+// Statuses retrieves and resolved monitoring status from quality oracle
+func (m *MonitoringAgentTracker) Statuses() string {
+
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+
+	if ok {
+		return resolveMonitoringAgentStatuses(m.providerStatuses(id.Address))
+	}
+
+	return "SUPER"
+}
+
+func resolveMonitoringAgentStatuses(statuses map[string]map[string]int) string {
+	return "SUPER-SUPER"
+}
+
 func resolveMonitoringStatus(sessions []Session) MonitoringStatus {
 	wgSession, ok := findWireGuard(sessions)
 	if !ok {

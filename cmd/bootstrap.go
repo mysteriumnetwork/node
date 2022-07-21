@@ -74,7 +74,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, config.GetString(config.FlagAccessPolicyAddress)),
 			tequilapi_endpoints.AddRoutesForNAT(di.StateKeeper, di.NATProber),
 			tequilapi_endpoints.AddRoutesForNodeUI(versionmanager.NewVersionManager(di.UIServer, di.HTTPClient, di.uiVersionConfig)),
-			tequilapi_endpoints.AddRoutesForNode(di.NodeStatusTracker),
+			tequilapi_endpoints.AddRoutesForNode(di.NodeStatusTracker, di.MonitoringAgentTracker),
 			tequilapi_endpoints.AddRoutesForTransactor(di.IdentityRegistry, di.Transactor, di.Affiliator, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiaryProvider, di.BeneficiarySaver, di.PilvytisAPI),
 			tequilapi_endpoints.AddRoutesForAffiliator(di.Affiliator),
 			tequilapi_endpoints.AddRoutesForConfig,
