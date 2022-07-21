@@ -210,7 +210,7 @@ func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]propos
 
 	// Ideally api should allow to pass multiple service types to skip noop
 	// proposals, but for now just filter in memory.
-	serviceTypesDict := map[string]bool{
+	serviceTypes := map[string]bool{
 		openvpn.ServiceType:      true,
 		wireguard.ServiceType:    true,
 		datatransfer.ServiceType: true,
@@ -218,7 +218,7 @@ func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]propos
 	}
 	var res []proposal.PricedServiceProposal
 	for _, p := range allProposals {
-		if serviceTypesDict[p.ServiceType] {
+		if serviceTypes[p.ServiceType] {
 			res = append(res, p)
 		}
 	}
