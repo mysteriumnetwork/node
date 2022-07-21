@@ -29,7 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
-	"github.com/mysteriumnetwork/node/services/data_transfer"
+	"github.com/mysteriumnetwork/node/services/datatransfer"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -117,7 +117,7 @@ func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
-		data_transfer.ServiceType,
+		datatransfer.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
@@ -336,7 +336,7 @@ func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options) {
-	data_transfer.Bootstrap()
+	datatransfer.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
 		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
@@ -349,7 +349,7 @@ func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options)
 		}
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
-	di.ConnectionRegistry.Register(data_transfer.ServiceType, connFactory)
+	di.ConnectionRegistry.Register(datatransfer.ServiceType, connFactory)
 }
 
 func (di *Dependencies) bootstrapMMN() error {

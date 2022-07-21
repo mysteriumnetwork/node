@@ -14,11 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package data_transfer
+package datatransfer
 
-import "github.com/mysteriumnetwork/node/market"
-
-// Bootstrap is called on program initialization time and registers various deserializers related to data_transfer service
-func Bootstrap() {
-	market.RegisterServiceType(ServiceType)
-}
+//ServiceType indicates "data_transfer" service type
+const ServiceType = "data_transfer"
