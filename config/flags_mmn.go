@@ -25,13 +25,13 @@ import (
 var (
 	// FlagMMNAddress URL Of my.mysterium.network API.
 	FlagMMNAddress = cli.StringFlag{
-		Name:  "mmn.web-address",
+		Name:  metadata.FlagNames.MMNAddress,
 		Usage: "URL of MMN WEB",
 		Value: metadata.DefaultNetwork.MMNAddress,
 	}
 	// FlagMMNAPIAddress URL Of my.mysterium.network API.
 	FlagMMNAPIAddress = cli.StringFlag{
-		Name:  "mmn.api-address",
+		Name:  metadata.FlagNames.MMNAPIAddress,
 		Usage: "URL of MMN API",
 		Value: metadata.DefaultNetwork.MMNAPIAddress,
 	}

@@ -27,7 +27,7 @@ import (
 var (
 	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
 	FlagAccessPolicyAddress = cli.StringFlag{
-		Name:  "access-policy.address",
+		Name:  metadata.FlagNames.AccessPolicyOracleAddress,
 		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
 	}

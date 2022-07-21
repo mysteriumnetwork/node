@@ -26,7 +26,7 @@ import (
 var (
 	// FlagAffiliatorAddress affiliator URL.
 	FlagAffiliatorAddress = cli.StringFlag{
-		Name:  "affiliator.address",
+		Name:  metadata.FlagNames.AffiliatorAddress,
 		Usage: "Affiliator URL address",
 		Value: metadata.DefaultNetwork.AffiliatorAddress,
 	}

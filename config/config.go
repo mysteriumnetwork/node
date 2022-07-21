@@ -26,6 +26,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/utils/jsonutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -377,6 +378,39 @@ func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFl
 	}
 }
 
+// ParseBlockchainNetworkFlag parses a cli.StringFlag as a blockchain network
+// from command's context and sets default values for network parameters
+// and CLI values for the network to the application configuration.
+func (cfg *Config) ParseBlockchainNetworkFlag(ctx *cli.Context, flag cli.StringFlag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		network, err := ParseBlockchainNetwork(ctx.String(flag.Name))
+		if err != nil {
+			log.Err(err).Msg("invalid network option used as flag, ignoring")
+			cfg.RemoveCLI(flag.Name)
+			return
+		}
+		cfg.SetCLI(flag.Name, network)
+		var flags map[string]any
+		switch network {
+		case Mainnet:
+			flags = metadata.MainnetDefinition.GetDefaultFlagValues()
+		case Testnet:
+			flags = metadata.TestnetDefinition.GetDefaultFlagValues()
+		case Localnet:
+			flags = metadata.LocalnetDefinition.GetDefaultFlagValues()
+		default:
+			log.Error().Str("network", string(network)).Msg("cannot handle this blockchain network option, ignoring")
+			return
+		}
+		for flagName, flagValue := range flags {
+			cfg.SetDefault(flagName, flagValue)
+		}
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
 // GetBool shorthand for getting current configuration value for cli.BoolFlag.
 func GetBool(flag cli.BoolFlag) bool {
 	return Current.GetBool(flag.Name)
@@ -395,6 +429,11 @@ func GetInt64(flag cli.Int64Flag) int64 {
 // GetString shorthand for getting current configuration value for cli.StringFlag.
 func GetString(flag cli.StringFlag) string {
 	return Current.GetString(flag.Name)
+}
+
+// GetBlockchainNetwork shorthand for getting current configuration value for blockchain network.
+func GetBlockchainNetwork(flag cli.StringFlag) BlockchainNetwork {
+	return BlockchainNetwork(Current.GetString(flag.Name))
 }
 
 // GetStringSlice shorthand for getting current configuration value for cli.StringSliceFlag.
