@@ -297,6 +297,8 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
 	di.registerWireguardConnection(nodeOptions)
+	di.registerScrapingConnection(nodeOptions)
+	di.registerDataTransferConnection(nodeOptions)
 }
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
@@ -314,6 +316,40 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
+}
+
+func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
+	scraping.Bootstrap()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		return endpoint.NewConnectionEndpoint(resourceAllocator)
+	}
+	connFactory := func() (connection.Connection, error) {
+		opts := wireguard_connection.Options{
+			DNSScriptDir:     nodeOptions.Directories.Script,
+			HandshakeTimeout: 1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
+	}
+	di.ConnectionRegistry.Register(scraping.ServiceType, connFactory)
+}
+
+func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options) {
+	data_transfer.Bootstrap()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		return endpoint.NewConnectionEndpoint(resourceAllocator)
+	}
+	connFactory := func() (connection.Connection, error) {
+		opts := wireguard_connection.Options{
+			DNSScriptDir:     nodeOptions.Directories.Script,
+			HandshakeTimeout: 1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
+	}
+	di.ConnectionRegistry.Register(data_transfer.ServiceType, connFactory)
 }
 
 func (di *Dependencies) bootstrapMMN() error {
