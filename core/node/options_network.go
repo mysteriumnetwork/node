@@ -17,11 +17,11 @@
 
 package node
 
+import "github.com/mysteriumnetwork/node/config"
+
 // OptionsNetwork describes possible parameters of network configuration
 type OptionsNetwork struct {
-	Localnet bool
-	Mainnet  bool
-
+	Network             config.BlockchainNetwork
 	MysteriumAPIAddress string
 	BrokerAddresses     []string
 	EtherClientRPCL1    []string

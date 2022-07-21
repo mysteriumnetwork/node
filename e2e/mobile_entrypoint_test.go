@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/mobile/mysterium"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
@@ -38,7 +39,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &mysterium.MobileNodeOptions{
-		Mainnet:                        true,
+		Network:                        config.Mainnet,
 		MysteriumAPIAddress:            "http://discovery:8080/api/v3",
 		BrokerAddresses:                []string{"broker"},
 		EtherClientRPCL1:               []string{"http://ganache:8545"},
