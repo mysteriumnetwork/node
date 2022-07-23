@@ -55,15 +55,15 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 // swagger:operation GET /node/monitoring-agent-statuses NODE
 // ---
 // summary: Provides Node connectivity statuses from monitoring agent
-// description: Node statuses as seen by monitoring agent
+// description: Node connectivity statuses as seen by monitoring agent
 // responses:
 //   200:
-//     description: Node monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
+//     description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
 //     schema:
 //       "$ref": "#/definitions/MonitoringAgentResponse"
 
 func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
-	utils.WriteAsJSON(contract.MonitoringAgentResponse{Status: ne.nodeMonitoringAgent.Statuses()}, c.Writer)
+	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: ne.nodeMonitoringAgent.Statuses()}, c.Writer)
 }
 
 // AddRoutesForNode adds nat routes to given router

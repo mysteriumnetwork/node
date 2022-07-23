@@ -45,7 +45,7 @@ type nodeStatusProvider interface {
 }
 
 type nodeMonitoringAgent interface {
-	Statuses() string
+	Statuses() node.MonitoringAgentStatuses
 }
 
 // NewNATEndpoint creates and returns nat endpoint

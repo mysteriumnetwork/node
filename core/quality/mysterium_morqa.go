@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/mysteriumnetwork/node/core/node"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -289,11 +290,9 @@ func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
 }
 
 // ProviderStatuses fetch provider connectivity statuses from prometheus (monitoring agent)
-func (m *MysteriumMORQA) ProviderStatuses(providerID string) map[string]map[string]int {
+func (m *MysteriumMORQA) ProviderStatuses(providerID string) node.MonitoringAgentStatuses {
 
-	providerID = "0x8fa8c543dc321b33eb5908d0907b7d6fd87af37e"
-
-	request, err := m.newRequestJSON(http.MethodGet, fmt.Sprintf("providers/statuses?provider_id=%s", providerID), nil)
+	request, err := m.newRequestJSON(http.MethodGet, fmt.Sprintf("providers/statuses?provider_id=%s", providerID), "")
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to create provider monitoring agent statuses request")
 		return nil
@@ -306,17 +305,14 @@ func (m *MysteriumMORQA) ProviderStatuses(providerID string) map[string]map[stri
 	}
 	defer response.Body.Close()
 
-	var responseBody struct {
-		Statuses map[string]map[string]int `json:"statuses"`
-	}
+	var statuses node.MonitoringAgentStatuses
 
-	if err = parseResponseJSON(response, &responseBody); err != nil {
+	if err = parseResponseJSON(response, &statuses); err != nil {
 		log.Warn().Err(err).Msg("Failed to parse provider monitoring agent statuses")
 		return nil
 	}
 
-	return responseBody.Statuses
-
+	return statuses
 }
 
 // SendMetric submits new metric.
