@@ -859,6 +859,20 @@ func (client *Client) OrderCreate(id identity.Identity, gw string, order contrac
 	return res, parseResponseJSON(resp, &res)
 }
 
+// GetRegistrationPaymentStatus returns the registration payment status
+func (client *Client) GetRegistrationPaymentStatus(identity string) (contract.RegistrationPaymentResponse, error) {
+	resp := contract.RegistrationPaymentResponse{}
+
+	res, err := client.http.Get(fmt.Sprintf("v2/identities/%s/registration-payment", identity), nil)
+	if err != nil {
+		return resp, err
+	}
+	defer res.Body.Close()
+
+	err = parseResponseJSON(res, &resp)
+	return resp, err
+}
+
 // OrderGet returns a single order istance given it's ID.
 func (client *Client) OrderGet(address identity.Identity, orderID string) (contract.PaymentOrderResponse, error) {
 	path := fmt.Sprintf("v2/identities/%s/payment-order/%s", address.Address, orderID)
