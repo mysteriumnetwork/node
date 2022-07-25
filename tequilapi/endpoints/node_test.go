@@ -36,16 +36,25 @@ type mockNodeStatusProvider struct {
 	status node.MonitoringStatus
 }
 
+type mockMonitoringAgent struct {
+	status node.MonitoringAgentStatuses
+}
+
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
 	return nodeStatusTracker.status
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) Statuses() node.MonitoringAgentStatuses {
+	return nodeMonitoringAgentTracker.status
 }
 
 func Test_NodeStatus(t *testing.T) {
 	// given:
 	mockStatusTracker := &mockNodeStatusProvider{}
+	mockMOnitoringAgentTracker := &mockMonitoringAgent{}
 
 	router := gin.Default()
-	err := AddRoutesForNode(mockStatusTracker)(router)
+	err := AddRoutesForNode(mockStatusTracker, mockMOnitoringAgentTracker)(router)
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodGet, "/node/monitoring-status", nil)
