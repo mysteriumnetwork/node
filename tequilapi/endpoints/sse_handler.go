@@ -125,13 +125,14 @@ func (h *Handler) Sub(c *gin.Context) {
 
 	h.newClients <- messageChan
 
-	go func() {
-		<-req.Context().Done()
+	defer func() {
 		h.deadClients <- messageChan
 	}()
 
 	for {
 		select {
+		case <-req.Context().Done():
+			return
 		case msg, open := <-messageChan:
 			if !open {
 				return
@@ -139,7 +140,7 @@ func (h *Handler) Sub(c *gin.Context) {
 
 			_, err := fmt.Fprintf(resp, "data: %s\n\n", msg)
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				log.Error().Err(err).Msg("failed to print data in response")
 				return
 			}
 
@@ -181,7 +182,11 @@ func (h *Handler) serve() {
 			close(s)
 		case msg := <-h.messages:
 			for s := range h.clients {
-				s <- msg
+				//non-locking send to each client
+				select {
+				case s <- msg:
+				default:
+				}
 			}
 		}
 	}
