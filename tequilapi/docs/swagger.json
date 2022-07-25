@@ -1390,7 +1390,7 @@
       "get": {
         "description": "Node connectivity statuses as seen by monitoring agent",
         "summary": "Provides Node connectivity statuses from monitoring agent",
-        "operationId": "NODE",
+        "operationId": "MonitoringAgentStatuses",
         "responses": {
           "200": {
             "description": "Monitoring agent statuses (\"success\"/\"cancelled\"/\"connect_drop/\"connect_fail/\"internet_fail)",

@@ -52,7 +52,7 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 }
 
 // MonitoringAgentStatuses Statuses from monitoring agent
-// swagger:operation GET /node/monitoring-agent-statuses NODE
+// swagger:operation GET /node/monitoring-agent-statuses MonitoringAgentStatuses
 // ---
 // summary: Provides Node connectivity statuses from monitoring agent
 // description: Node connectivity statuses as seen by monitoring agent
