@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/mysteriumnetwork/node/core/node"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -31,6 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
