@@ -27,7 +27,7 @@ import (
 var (
 	// FlagTransactorAddress transactor URL.
 	FlagTransactorAddress = cli.StringFlag{
-		Name:  "transactor.address",
+		Name:  metadata.FlagNames.TransactorAddress,
 		Usage: "Transactor URL address",
 		Value: metadata.DefaultNetwork.TransactorAddress,
 	}

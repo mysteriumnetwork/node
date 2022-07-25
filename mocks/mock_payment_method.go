@@ -27,5 +27,6 @@ func Quality() market.Quality {
 		Quality:   2.0,
 		Latency:   50,
 		Bandwidth: 10,
+		Uptime:    20,
 	}
 }

@@ -18,6 +18,8 @@
 package pingpong
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -25,6 +27,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/mysteriumnetwork/node/config"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -38,10 +41,16 @@ import (
 type promiseProvider interface {
 	Get(chainID int64, channelID string) (HermesPromise, error)
 	List(filter HermesPromiseFilter) ([]HermesPromise, error)
+	Store(promise HermesPromise) error
 }
 
 type channelProvider interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+}
+
+type hermesCaller interface {
+	GetProviderData(chainID int64, id string) (HermesUserInfo, error)
+	RefreshLatestProviderPromise(chainID int64, id string, hashlock, recoveryData []byte, signer identity.Signer) (crypto.Promise, error)
 }
 
 type beneficiaryProvider interface {
@@ -54,18 +63,26 @@ type HermesChannelRepository struct {
 	channelProvider channelProvider
 	publisher       eventbus.Publisher
 	channels        map[int64][]HermesChannel
+	addressProvider addressProvider
+	hermesCaller    hermesCaller
+	encryption      encryption
 	bprovider       beneficiaryProvider
 	lock            sync.RWMutex
+	signer          identity.SignerFactory
 }
 
 // NewHermesChannelRepository returns a new instance of HermesChannelRepository.
-func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, bprovider beneficiaryProvider) *HermesChannelRepository {
+func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, bprovider beneficiaryProvider, hermesCaller hermesCaller, addressProvider addressProvider, signer identity.SignerFactory, encryption encryption) *HermesChannelRepository {
 	return &HermesChannelRepository{
 		promiseProvider: promiseProvider,
 		channelProvider: channelProvider,
 		publisher:       publisher,
 		bprovider:       bprovider,
+		hermesCaller:    hermesCaller,
+		addressProvider: addressProvider,
 		channels:        make(map[int64][]HermesChannel, 0),
+		signer:          signer,
+		encryption:      encryption,
 	}
 }
 
@@ -223,6 +240,10 @@ func (hcr *HermesChannelRepository) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return fmt.Errorf("could not subscribe to AppTopicHermesPromise event: %w", err)
 	}
+	err = bus.SubscribeAsync(identity.AppTopicIdentityUnlock, hcr.handleIdentityUnlock)
+	if err != nil {
+		return fmt.Errorf("could not subscribe to AppTopicIdentityUnlock event: %w", err)
+	}
 	return nil
 }
 
@@ -250,6 +271,75 @@ func (hcr *HermesChannelRepository) handleNodeStart(payload nodeEvent.Payload) {
 		return
 	}
 	hcr.fetchKnownChannels(config.GetInt64(config.FlagChainID))
+}
+
+func (hcr *HermesChannelRepository) handleIdentityUnlock(payload identity.AppEventIdentityUnlock) {
+	hermes, err := hcr.addressProvider.GetActiveHermes(payload.ChainID)
+	if err != nil {
+		log.Err(err).Msg("failed to get active Hermes")
+		return
+	}
+	hermesChannel, exists := hcr.Get(payload.ChainID, payload.ID, hermes)
+	if exists {
+		return
+	}
+
+	unsettledBalance := hermesChannel.UnsettledBalance()
+	if unsettledBalance.Cmp(big.NewInt(0)) != 0 {
+		return
+	}
+	data, err := hcr.hermesCaller.GetProviderData(payload.ChainID, payload.ID.Address)
+
+	if err != nil {
+		log.Err(err).Msg("failed to get provider data")
+		return
+	}
+
+	if data.LatestPromise.Amount != nil && data.LatestPromise.Amount.Cmp(big.NewInt(0)) != 0 {
+		R := crypto.GenerateR()
+		hashlock := ethcrypto.Keccak256(R)
+		details := rRecoveryDetails{
+			R:           hex.EncodeToString(R),
+			AgreementID: big.NewInt(0),
+		}
+
+		bytes, err := json.Marshal(details)
+		if err != nil {
+			log.Err(err).Msgf("could not marshal R recovery details")
+			return
+		}
+
+		encrypted, err := hcr.encryption.Encrypt(payload.ID.ToCommonAddress(), bytes)
+		if err != nil {
+			log.Err(err).Msgf("could not encrypt R")
+			return
+		}
+		signer := hcr.signer(payload.ID)
+		promise, err := hcr.hermesCaller.RefreshLatestProviderPromise(config.GetInt64(config.FlagChainID), payload.ID.Address, hashlock, encrypted, signer)
+		if err != nil {
+			log.Err(err).Msgf("failed to refresh promise")
+			return
+		}
+		hermesPromise := HermesPromise{
+			R:         hex.EncodeToString(R),
+			ChannelID: data.ChannelID,
+			Identity:  identity.FromAddress(data.Identity),
+			HermesID:  hermes,
+			Promise:   promise,
+			Revealed:  false,
+		}
+
+		err = hcr.promiseProvider.Store(hermesPromise)
+		if err != nil {
+			log.Err(err).Msg("could not store hermes promise")
+			return
+		}
+		hcr.publisher.Publish(pingEvent.AppTopicHermesPromise, pingEvent.AppEventHermesPromise{
+			Promise:    promise,
+			HermesID:   hermes,
+			ProviderID: identity.FromAddress(data.Identity),
+		})
+	}
 }
 
 func (hcr *HermesChannelRepository) fetchKnownChannels(chainID int64) {

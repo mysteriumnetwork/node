@@ -15,17 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package scraping
 
-import "github.com/mysteriumnetwork/node/config"
+import "github.com/mysteriumnetwork/node/market"
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Network             config.BlockchainNetwork
-	MysteriumAPIAddress string
-	BrokerAddresses     []string
-	EtherClientRPCL1    []string
-	EtherClientRPCL2    []string
-	ChainID             int64
-	DNSMap              map[string][]string
+// Bootstrap is called on program initialization time and registers various deserializers related to scraping service
+func Bootstrap() {
+	market.RegisterServiceType(ServiceType)
 }

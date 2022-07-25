@@ -653,10 +653,12 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	network := metadata.DefaultNetwork
 
 	switch {
-	case optionsNetwork.Mainnet:
+	case optionsNetwork.Network.IsMainnet():
 		network = metadata.MainnetDefinition
-	case optionsNetwork.Localnet:
+	case optionsNetwork.Network.IsLocalnet():
 		network = metadata.LocalnetDefinition
+	case optionsNetwork.Network.IsTestnet():
+		network = metadata.TestnetDefinition
 	}
 
 	// override defined values one by one from options

@@ -18,50 +18,48 @@
 package config
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
-	// FlagLocalnet uses local network.
-	FlagLocalnet = cli.BoolFlag{
-		Name:  "localnet",
-		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
-	}
-	// FlagMainnet uses mainnet network.
-	FlagMainnet = cli.BoolFlag{
-		Name:  "mainnet",
-		Usage: "Defines mainnet configuration",
-		Value: true,
+	// FlagBlockchainNetwork uses specified blockchain network.
+	FlagBlockchainNetwork = cli.StringFlag{
+		Name:  "network",
+		Usage: "Defines default blockchain network configuration",
+		Value: string(Mainnet),
 	}
 	// FlagAPIAddress Mysterium API URL
 	FlagAPIAddress = cli.StringFlag{
-		Name:  "api.address",
+		Name:  metadata.FlagNames.MysteriumAPIAddress,
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	}
 	// FlagChainID chain id to use
 	FlagChainID = cli.Int64Flag{
-		Name:  "chain-id",
+		Name:  metadata.FlagNames.DefaultChainIDFlag,
 		Usage: "The chain ID to use",
 		Value: metadata.DefaultNetwork.DefaultChainID,
 	}
 	// FlagBrokerAddress message broker URI.
 	FlagBrokerAddress = cli.StringSliceFlag{
-		Name:  "broker-address",
+		Name:  metadata.FlagNames.BrokerAddressesFlag,
 		Usage: "URI of message broker",
 		Value: cli.NewStringSlice(metadata.DefaultNetwork.BrokerAddresses...),
 	}
 	// FlagEtherRPCL1 URL or IPC socket to connect to Ethereum node.
 	FlagEtherRPCL1 = cli.StringSliceFlag{
-		Name:  "ether.client.rpcl1",
+		Name:  metadata.FlagNames.Chain1Flag.EtherClientRPCFlag,
 		Usage: "L1 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain1.EtherClientRPC...),
 	}
 	// FlagEtherRPCL2 URL or IPC socket to connect to Ethereum node.
 	FlagEtherRPCL2 = cli.StringSliceFlag{
-		Name:  "ether.client.rpcl2",
+		Name:  metadata.FlagNames.Chain2Flag.EtherClientRPCFlag,
 		Usage: "L2 URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: cli.NewStringSlice(metadata.DefaultNetwork.Chain2.EtherClientRPC...),
 	}
@@ -139,7 +137,6 @@ var (
 func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		&FlagLocalnet,
 		&FlagPortMapping,
 		&FlagNATHolePunching,
 		&FlagAPIAddress,
@@ -148,7 +145,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagEtherRPCL2,
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
-		&FlagMainnet,
 		&FlagChainID,
 		&FlagKeepConnectedOnFail,
 		&FlagAutoReconnect,
@@ -162,8 +158,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) {
-	Current.ParseBoolFlag(ctx, FlagLocalnet)
-	Current.ParseBoolFlag(ctx, FlagMainnet)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL1)
@@ -180,4 +174,57 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
 	Current.ParseStringFlag(ctx, FlagTraversal)
 	Current.ParseStringFlag(ctx, FlagPortCheckServers)
+}
+
+//BlockchainNetwork defines a blockchain network
+type BlockchainNetwork string
+
+var (
+	//Mainnet defines the mainnet blockchain network
+	Mainnet BlockchainNetwork = "mainnet"
+	//Testnet defines the testnet blockchain network
+	Testnet BlockchainNetwork = "testnet"
+	//Localnet defines the localnet blockchain network
+	Localnet BlockchainNetwork = "localnet"
+)
+
+//ParseBlockchainNetwork parses a string argument into blockchain network
+func ParseBlockchainNetwork(network string) (BlockchainNetwork, error) {
+	if isValidBlockchainNetwork(network) {
+		return BlockchainNetwork(strings.ToLower(network)), nil
+	}
+	return Mainnet, fmt.Errorf("unknown blockchain network: %s", network)
+}
+
+func isValidBlockchainNetwork(network string) bool {
+	parsedNetwork := BlockchainNetwork(strings.ToLower(network))
+	return parsedNetwork.IsMainnet() || parsedNetwork.IsTestnet() || parsedNetwork.IsLocalnet()
+}
+
+//IsMainnet returns whether the blockchain network is mainnet or not
+func (n BlockchainNetwork) IsMainnet() bool {
+	return n == Mainnet
+}
+
+//IsTestnet returns whether the blockchain network is testnet or not
+func (n BlockchainNetwork) IsTestnet() bool {
+	return n == Testnet
+}
+
+//IsLocalnet returns whether the blockchain network is localnet or not
+func (n BlockchainNetwork) IsLocalnet() bool {
+	return n == Localnet
+}
+
+// ParseFlagsBlockchainNetwork function fills in directory options from CLI context
+func ParseFlagsBlockchainNetwork(ctx *cli.Context) {
+	Current.ParseBlockchainNetworkFlag(ctx, FlagBlockchainNetwork)
+}
+
+// RegisterFlagsBlockchainNetwork function registers blockchain network flags to flag list
+func RegisterFlagsBlockchainNetwork(flags *[]cli.Flag) {
+	*flags = append(
+		*flags,
+		&FlagBlockchainNetwork,
+	)
 }

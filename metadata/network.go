@@ -17,6 +17,8 @@
 
 package metadata
 
+import "fmt"
+
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {
 	MysteriumAPIAddress       string
@@ -24,7 +26,6 @@ type NetworkDefinition struct {
 	BrokerAddresses           []string
 	TransactorAddress         string
 	AffiliatorAddress         string
-	TransactorIdentity        string
 	Chain1                    ChainDefinition
 	Chain2                    ChainDefinition
 	MMNAddress                string
@@ -35,7 +36,6 @@ type NetworkDefinition struct {
 	DefaultChainID            int64
 	DefaultCurrency           string
 	LocationAddress           string
-	Testnet3HermesURL         string
 	Payments                  Payments
 }
 
@@ -52,15 +52,7 @@ type ChainDefinition struct {
 
 // Payments defines payments configuration
 type Payments struct {
-	Consumer Consumer
-}
-
-// Consumer defines consumer side settings
-type Consumer struct {
 	DataLeewayMegabytes uint64
-	PriceGiBMax         string
-	PriceHourMax        string
-	EtherClientRPC      string
 }
 
 // MainnetDefinition defines parameters for mainnet network (currently default network)
@@ -112,16 +104,11 @@ var MainnetDefinition = NetworkDefinition{
 		"pilvytis.mysterium.network":   {"51.15.116.186", "51.15.72.87"},
 		"observer.mysterium.network":   {"51.15.116.186", "51.15.72.87"},
 	},
-	DefaultChainID:    137,
-	DefaultCurrency:   "MYST",
-	LocationAddress:   "https://location.mysterium.network/api/v1/location",
-	Testnet3HermesURL: "https://testnet3-hermes.mysterium.network/api/v1",
+	DefaultChainID:  137,
+	DefaultCurrency: "MYST",
+	LocationAddress: "https://location.mysterium.network/api/v1/location",
 	Payments: Payments{
-		Consumer: Consumer{
-			DataLeewayMegabytes: 20,
-			PriceGiBMax:         "500000000000000000", // 0.5 MYSTT
-			PriceHourMax:        "180000000000000",    // 0.0018 MYSTT
-		},
+		DataLeewayMegabytes: 20,
 	},
 }
 
@@ -140,5 +127,157 @@ var LocalnetDefinition = NetworkDefinition{
 	DefaultChainID: 1,
 }
 
+// TestnetDefinition defines parameters for testnet network
+var TestnetDefinition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v3",
+	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
+	TransactorAddress:         "https://transactor-testnet.mysterium.network/api/v1",
+	AffiliatorAddress:         "https://affiliator.mysterium.network/api/v1",
+	Chain1: ChainDefinition{
+		ChainID: 1,
+		EtherClientRPC: []string{
+			"https://ethereum1.mysterium.network/",
+			"https://cloudflare-eth.com/",
+		},
+	},
+	Chain2: ChainDefinition{
+		RegistryAddress:    "0x1ba2DF26371E83D87Afee2F27a42f5A7FE9e5219",
+		ChannelImplAddress: "0x6FE3E5e5008e49821BF7282870eC831BA9694dDB",
+		HermesID:           "0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
+		ChainID:            80001,
+		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
+		EtherClientRPC: []string{
+			"http://mumbai1.mysterium.network:8545",
+			"https://matic-mumbai.chainstacklabs.com",
+		},
+		KnownHermeses: []string{
+			"0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
+		},
+	},
+	MMNAddress:      "https://mystnodes.com",
+	MMNAPIAddress:   "https://mystnodes.com/api/v1",
+	PilvytisAddress: "https://pilvytis-testnet.mysterium.network",
+	ObserverAddress: "https://observer-testnet.mysterium.network",
+	DNSMap: map[string][]string{
+		"discovery.mysterium.network":  {"51.15.116.186", "51.15.72.87"},
+		"trust.mysterium.network":      {"51.15.116.186", "51.15.72.87"},
+		"broker.mysterium.network":     {"51.15.116.186", "51.15.72.87"},
+		"affiliator.mysterium.network": {"51.15.116.186", "51.15.72.87"},
+	},
+	DefaultChainID:  80001,
+	DefaultCurrency: "MYST",
+	LocationAddress: "https://location.mysterium.network/api/v1/location",
+	Payments: Payments{
+		DataLeewayMegabytes: 20,
+	},
+}
+
+// GetDefaultFlagValues returns a map of flag name to default value for the network
+func (n *NetworkDefinition) GetDefaultFlagValues() map[string]any {
+	res := map[string]any{
+		FlagNames.MysteriumAPIAddress:       n.MysteriumAPIAddress,
+		FlagNames.AccessPolicyOracleAddress: n.AccessPolicyOracleAddress,
+		FlagNames.BrokerAddressesFlag:       n.BrokerAddresses,
+		FlagNames.TransactorAddress:         n.TransactorAddress,
+		FlagNames.AffiliatorAddress:         n.AffiliatorAddress,
+
+		FlagNames.MMNAddress:                  n.MMNAddress,
+		FlagNames.MMNAPIAddress:               n.MMNAPIAddress,
+		FlagNames.PilvytisAddress:             n.PilvytisAddress,
+		FlagNames.ObserverAddress:             n.ObserverAddress,
+		FlagNames.DefaultChainIDFlag:          n.DefaultChainID,
+		FlagNames.DefaultCurrency:             n.DefaultCurrency,
+		FlagNames.LocationAddress:             n.LocationAddress,
+		FlagNames.PaymentsDataLeewayMegabytes: n.Payments.DataLeewayMegabytes,
+	}
+
+	//chain 1
+	for k, v := range n.getChainFlagValues(1) {
+		res[k] = v
+	}
+	//chain 2
+	for k, v := range n.getChainFlagValues(2) {
+		res[k] = v
+	}
+
+	return res
+}
+
+// NetworkDefinitionFlagNames structure holds all parameters which define the flags for a network
+type NetworkDefinitionFlagNames struct {
+	NetworkDefinition
+	BrokerAddressesFlag         string
+	Chain1Flag                  ChainDefinitionFlagNames
+	Chain2Flag                  ChainDefinitionFlagNames
+	DefaultChainIDFlag          string
+	PaymentsDataLeewayMegabytes string
+}
+
+// ChainDefinitionFlagNames structure holds all parameters which define the flags for a chain
+type ChainDefinitionFlagNames struct {
+	ChainDefinition
+	ChainIDFlag        string
+	EtherClientRPCFlag string
+	KnownHermesesFlag  string
+}
+
+// FlagNames defines the flag that sets each network parameter
+var FlagNames = NetworkDefinitionFlagNames{
+	NetworkDefinition: NetworkDefinition{
+		MysteriumAPIAddress:       "api.address",
+		AccessPolicyOracleAddress: "access-policy.address",
+		TransactorAddress:         "transactor.address",
+		AffiliatorAddress:         "affiliator.address",
+		MMNAddress:                "mmn.web-address",
+		MMNAPIAddress:             "mmn.api-address",
+		PilvytisAddress:           "pilvytis.address",
+		ObserverAddress:           "observer.address",
+		DefaultCurrency:           "default-currency",
+		LocationAddress:           "location.address",
+	},
+	BrokerAddressesFlag:         "broker-address",
+	Chain1Flag:                  getChainDefinitionFlagNames(1),
+	Chain2Flag:                  getChainDefinitionFlagNames(2),
+	DefaultChainIDFlag:          "chain-id",
+	PaymentsDataLeewayMegabytes: "payments.consumer.data-leeway-megabytes",
+}
+
 // DefaultNetwork defines default network values when no runtime parameters are given
 var DefaultNetwork = MainnetDefinition
+
+func getChainDefinitionFlagNames(chainIndex int) ChainDefinitionFlagNames {
+	return ChainDefinitionFlagNames{
+		ChainDefinition: ChainDefinition{
+			RegistryAddress:    fmt.Sprintf("chains.%v.registry", chainIndex),
+			HermesID:           fmt.Sprintf("chains.%v.hermes", chainIndex),
+			ChannelImplAddress: fmt.Sprintf("chains.%v.channelImplementation", chainIndex),
+			MystAddress:        fmt.Sprintf("chains.%v.myst", chainIndex),
+		},
+		ChainIDFlag:        fmt.Sprintf("chains.%v.chainID", chainIndex),
+		EtherClientRPCFlag: fmt.Sprintf("ether.client.rpcl%v", chainIndex),
+		KnownHermesesFlag:  fmt.Sprintf("chains.%v.knownHermeses", chainIndex),
+	}
+}
+
+func (n *NetworkDefinition) getChainFlagValues(chainIndex int) map[string]any {
+	chainDefinition := n.Chain1
+	if chainIndex == 2 {
+		chainDefinition = n.Chain2
+	}
+
+	flagNames := FlagNames.Chain1Flag
+	if chainIndex == 2 {
+		flagNames = FlagNames.Chain2Flag
+	}
+
+	return map[string]any{
+		flagNames.RegistryAddress:    chainDefinition.RegistryAddress,
+		flagNames.HermesID:           chainDefinition.HermesID,
+		flagNames.ChannelImplAddress: chainDefinition.ChannelImplAddress,
+		flagNames.ChainIDFlag:        chainDefinition.ChainID,
+		flagNames.MystAddress:        chainDefinition.MystAddress,
+		flagNames.EtherClientRPCFlag: chainDefinition.EtherClientRPC,
+		flagNames.KnownHermesesFlag:  chainDefinition.KnownHermeses,
+	}
+}

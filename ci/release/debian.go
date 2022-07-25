@@ -20,12 +20,11 @@ package release
 import (
 	"strings"
 
-	"github.com/mysteriumnetwork/go-ci/job"
-	"github.com/mysteriumnetwork/node/logconfig"
-
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/deb"
+	"github.com/mysteriumnetwork/node/logconfig"
 )
 
 type releaseDebianOpts struct {
@@ -39,7 +38,7 @@ func releaseDebianPPA(opts *releaseDebianOpts) error {
 		return err
 	}
 
-	for _, codename := range []string{"bionic", "focal", "impish", "jammy"} {
+	for _, codename := range []string{"bionic", "focal", "jammy"} {
 		err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, codename).Run()
 		if err != nil {
 			return err

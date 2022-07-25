@@ -96,8 +96,7 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Mainnet                        bool
-	Localnet                       bool
+	Network                        config.BlockchainNetwork
 	KeepConnectedOnFail            bool
 	MysteriumAPIAddress            string
 	BrokerAddresses                []string
@@ -131,7 +130,7 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Mainnet:                        true,
+		Network:                        config.Mainnet,
 		KeepConnectedOnFail:            true,
 		MysteriumAPIAddress:            metadata.MainnetDefinition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.MainnetDefinition.BrokerAddresses,
@@ -178,8 +177,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 
 	network := node.OptionsNetwork{
-		Mainnet:             options.Mainnet,
-		Localnet:            options.Localnet,
+		Network:             options.Network,
 		MysteriumAPIAddress: options.MysteriumAPIAddress,
 		BrokerAddresses:     options.BrokerAddresses,
 		EtherClientRPCL1:    options.EtherClientRPCL1,

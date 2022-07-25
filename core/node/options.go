@@ -90,8 +90,7 @@ type Options struct {
 // GetOptions retrieves node options from the app configuration.
 func GetOptions() *Options {
 	network := OptionsNetwork{
-		Localnet:            config.GetBool(config.FlagLocalnet),
-		Mainnet:             config.GetBool(config.FlagMainnet),
+		Network:             config.GetBlockchainNetwork(config.FlagBlockchainNetwork),
 		MysteriumAPIAddress: config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:     config.GetStringSlice(config.FlagBrokerAddress),
 		EtherClientRPCL1:    config.GetStringSlice(config.FlagEtherRPCL1),
