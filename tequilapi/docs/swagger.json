@@ -1386,6 +1386,21 @@
         }
       }
     },
+    "/node/monitoring-agent-statuses": {
+      "get": {
+        "description": "Node connectivity statuses as seen by monitoring agent",
+        "summary": "Provides Node connectivity statuses from monitoring agent",
+        "operationId": "NODE",
+        "responses": {
+          "200": {
+            "description": "Monitoring agent statuses (\"success\"/\"cancelled\"/\"connect_drop/\"connect_fail/\"internet_fail)",
+            "schema": {
+              "$ref": "#/definitions/MonitoringAgentResponse"
+            }
+          }
+        }
+      }
+    },
     "/node/monitoring-status": {
       "get": {
         "description": "Node Status as seen by monitoring agent",
@@ -3942,6 +3957,28 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "MonitoringAgentResponse": {
+      "description": "MonitoringAgentResponse a monitoring agent statuses reflects amount of connectivity statuses for each service_type and status",
+      "type": "object",
+      "properties": {
+        "statuses": {
+          "$ref": "#/definitions/MonitoringAgentStatuses"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "MonitoringAgentStatuses": {
+      "description": "MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each status type",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
     "MonitoringStatus": {
       "description": "MonitoringStatus enum",
