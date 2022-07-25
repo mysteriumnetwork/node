@@ -61,7 +61,6 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 //     description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
 //     schema:
 //       "$ref": "#/definitions/MonitoringAgentResponse"
-
 func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: ne.nodeMonitoringAgent.Statuses()}, c.Writer)
 }
