@@ -44,10 +44,6 @@ type nodeStatusProvider interface {
 	Status() node.MonitoringStatus
 }
 
-type nodeMonitoringAgent interface {
-	Statuses() node.MonitoringAgentStatuses
-}
-
 // NewNATEndpoint creates and returns nat endpoint
 func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoint {
 	return &NATEndpoint{

@@ -27,8 +27,9 @@ type NodeStatusResponse struct {
 	Status node.MonitoringStatus `json:"status"`
 }
 
-// MonitoringAgentResponse a monitoring agent statuses reflects amount of connectivity statuses for each service_type and status
+// MonitoringAgentResponse reflects amount of connectivity statuses for each service_type.
 // swagger:model MonitoringAgentResponse
 type MonitoringAgentResponse struct {
 	Statuses node.MonitoringAgentStatuses `json:"statuses"`
+	Error    string                       `json:"error,omitempty"`
 }

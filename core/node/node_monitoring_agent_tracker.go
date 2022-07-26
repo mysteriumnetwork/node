@@ -17,11 +17,13 @@
 
 package node
 
-// MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each status type
+import "github.com/pkg/errors"
+
+// MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.
 type MonitoringAgentStatuses map[string]map[string]int
 
 // ProviderStatuses should return provider statuses from monitoring agent
-type ProviderStatuses func(providerID string) MonitoringAgentStatuses
+type ProviderStatuses func(providerID string) (MonitoringAgentStatuses, error)
 
 // MonitoringAgentTracker tracks monitoring agent statuses for service
 type MonitoringAgentTracker struct {
@@ -43,11 +45,11 @@ func NewMonitoringAgentTracker(
 }
 
 // Statuses retrieves and resolved monitoring status from quality oracle
-func (m *MonitoringAgentTracker) Statuses() MonitoringAgentStatuses {
+func (m *MonitoringAgentTracker) Statuses() (MonitoringAgentStatuses, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
 		return m.providerStatuses(id.Address)
 	}
 
-	return MonitoringAgentStatuses{}
+	return MonitoringAgentStatuses{}, errors.New("identity not found")
 }

@@ -44,17 +44,17 @@ func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus 
 	return nodeStatusTracker.status
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) Statuses() node.MonitoringAgentStatuses {
-	return nodeMonitoringAgentTracker.status
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) Statuses() (node.MonitoringAgentStatuses, error) {
+	return nodeMonitoringAgentTracker.status, nil
 }
 
 func Test_NodeStatus(t *testing.T) {
 	// given:
 	mockStatusTracker := &mockNodeStatusProvider{}
-	mockMOnitoringAgentTracker := &mockMonitoringAgent{}
+	mockMonitoringAgentTracker := &mockMonitoringAgent{}
 
 	router := gin.Default()
-	err := AddRoutesForNode(mockStatusTracker, mockMOnitoringAgentTracker)(router)
+	err := AddRoutesForNode(mockStatusTracker, mockMonitoringAgentTracker)(router)
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodGet, "/node/monitoring-status", nil)

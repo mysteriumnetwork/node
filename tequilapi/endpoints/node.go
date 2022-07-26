@@ -19,9 +19,15 @@ package endpoints
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"net/http"
 )
+
+type nodeMonitoringAgent interface {
+	Statuses() (node.MonitoringAgentStatuses, error)
+}
 
 // NodeEndpoint struct represents endpoints about node status
 type NodeEndpoint struct {
@@ -62,7 +68,12 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/MonitoringAgentResponse"
 func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
-	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: ne.nodeMonitoringAgent.Statuses()}, c.Writer)
+	res, err := ne.nodeMonitoringAgent.Statuses()
+	if err == nil {
+		utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
+	} else {
+		utils.WriteAsJSON(contract.MonitoringAgentResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+	}
 }
 
 // AddRoutesForNode adds nat routes to given router
