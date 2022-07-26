@@ -69,11 +69,11 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 //       "$ref": "#/definitions/MonitoringAgentResponse"
 func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.Statuses()
-	if err == nil {
-		utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
-	} else {
+	if err != nil {
 		utils.WriteAsJSON(contract.MonitoringAgentResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
 	}
+
+	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
 }
 
 // AddRoutesForNode adds nat routes to given router

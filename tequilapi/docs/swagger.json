@@ -3959,9 +3959,13 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "MonitoringAgentResponse": {
-      "description": "MonitoringAgentResponse a monitoring agent statuses reflects amount of connectivity statuses for each service_type and status",
       "type": "object",
+      "title": "MonitoringAgentResponse reflects amount of connectivity statuses for each service_type.",
       "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
         "statuses": {
           "$ref": "#/definitions/MonitoringAgentStatuses"
         }
@@ -3969,8 +3973,8 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "MonitoringAgentStatuses": {
-      "description": "MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each status type",
       "type": "object",
+      "title": "MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.",
       "additionalProperties": {
         "type": "object",
         "additionalProperties": {
