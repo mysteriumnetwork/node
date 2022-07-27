@@ -38,7 +38,7 @@ func errUnknownSubCommand(cmd string) error {
 func formatForHuman(err error) string {
 	var apiErr *apierror.APIError
 	if errors.As(err, &apiErr) {
-		return apiErr.Detail()
+		return apiErr.Error()
 	}
 	msg := err.Error()
 	if len(msg) < 1 {
