@@ -819,7 +819,14 @@ func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
 	status, err := te.bhandler.CleanupAndGetChangeStatus(id, current.Hex())
 	if err != nil {
 		if errors.Is(err, storm.ErrNotFound) {
-			c.Status(http.StatusNotFound)
+			utils.WriteAsJSON(
+				&contract.BeneficiaryTxStatus{
+					State:    beneficiary.NotFound,
+					Error:    "",
+					ChangeTo: "",
+				},
+				c.Writer,
+			)
 			return
 		}
 		c.Error(apierror.Internal("Failed to get current transaction status: "+err.Error(), contract.ErrCodeTransactorBeneficiaryTxStatus))
