@@ -72,6 +72,7 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.Statuses()
 	if err != nil {
 		utils.WriteAsJSON(contract.MonitoringAgentResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+		return
 	}
 
 	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
