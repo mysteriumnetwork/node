@@ -30,6 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
@@ -286,6 +287,31 @@ func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
 		return nil
 	}
 	return responseBody.Connects
+}
+
+// ProviderStatuses fetch provider connectivity statuses from quality oracle.
+func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAgentStatuses, error) {
+	request, err := m.newRequestJSON(http.MethodGet, fmt.Sprintf("providers/statuses?provider_id=%s", providerID), "")
+	if err != nil {
+		log.Err(err).Msg("Failed to create provider monitoring agent statuses request")
+		return nil, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		log.Err(err).Msg("Failed to request provider monitoring agent statuses")
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var statuses node.MonitoringAgentStatuses
+
+	if err = parseResponseJSON(response, &statuses); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring agent statuses")
+		return nil, err
+	}
+
+	return statuses, nil
 }
 
 // SendMetric submits new metric.

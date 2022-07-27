@@ -18,20 +18,29 @@
 package endpoints
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+type nodeMonitoringAgent interface {
+	Statuses() (node.MonitoringAgentStatuses, error)
+}
+
 // NodeEndpoint struct represents endpoints about node status
 type NodeEndpoint struct {
-	nodeStatusProvider nodeStatusProvider
+	nodeStatusProvider  nodeStatusProvider
+	nodeMonitoringAgent nodeMonitoringAgent
 }
 
 // NewNodeEndpoint creates and returns node endpoints
-func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider) *NodeEndpoint {
+func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) *NodeEndpoint {
 	return &NodeEndpoint{
-		nodeStatusProvider: nodeStatusProvider,
+		nodeStatusProvider:  nodeStatusProvider,
+		nodeMonitoringAgent: nodeMonitoringAgent,
 	}
 }
 
@@ -49,14 +58,35 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.nodeStatusProvider.Status()}, c.Writer)
 }
 
+// MonitoringAgentStatuses Statuses from monitoring agent
+// swagger:operation GET /node/monitoring-agent-statuses MonitoringAgentStatuses
+// ---
+// summary: Provides Node connectivity statuses from monitoring agent
+// description: Node connectivity statuses as seen by monitoring agent
+// responses:
+//   200:
+//     description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
+//     schema:
+//       "$ref": "#/definitions/MonitoringAgentResponse"
+func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
+	res, err := ne.nodeMonitoringAgent.Statuses()
+	if err != nil {
+		utils.WriteAsJSON(contract.MonitoringAgentResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
-func AddRoutesForNode(nodeStatusProvider nodeStatusProvider) func(*gin.Engine) error {
-	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider)
+func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
+	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
 
 	return func(e *gin.Engine) error {
 		nodeGroup := e.Group("/node")
 		{
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
+			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
 		}
 		return nil
 	}
