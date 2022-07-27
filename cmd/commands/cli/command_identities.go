@@ -416,7 +416,7 @@ func (c *cliApp) getBeneficiaryStatus(actionArgs []string) error {
 	}
 
 	if st.State == beneficiary.NotFound {
-		return nil
+		clio.Info("No last change request information")
 	}
 	clio.Info("Last change request information:")
 	clio.Info(fmt.Sprintf("Change to: %s", st.ChangeTo))
