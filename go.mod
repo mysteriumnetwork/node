@@ -40,7 +40,7 @@ require (
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d
 	github.com/mysteriumnetwork/go-dvpn-web v1.17.1
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
-	github.com/mysteriumnetwork/go-rest v0.3.0
+	github.com/mysteriumnetwork/go-rest v0.3.1
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
