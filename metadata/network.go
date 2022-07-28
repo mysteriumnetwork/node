@@ -129,9 +129,9 @@ var LocalnetDefinition = NetworkDefinition{
 
 // TestnetDefinition defines parameters for testnet network
 var TestnetDefinition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v3",
+	MysteriumAPIAddress:       "https://discovery-testnet.mysterium.network/api/v3",
 	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
+	BrokerAddresses:           []string{"nats://broker.mysterium.network:4223"},
 	TransactorAddress:         "https://transactor-testnet.mysterium.network/api/v1",
 	AffiliatorAddress:         "https://affiliator.mysterium.network/api/v1",
 	Chain1: ChainDefinition{
@@ -160,7 +160,6 @@ var TestnetDefinition = NetworkDefinition{
 	PilvytisAddress: "https://pilvytis-testnet.mysterium.network",
 	ObserverAddress: "https://observer-testnet.mysterium.network",
 	DNSMap: map[string][]string{
-		"discovery.mysterium.network":  {"51.15.116.186", "51.15.72.87"},
 		"trust.mysterium.network":      {"51.15.116.186", "51.15.72.87"},
 		"broker.mysterium.network":     {"51.15.116.186", "51.15.72.87"},
 		"affiliator.mysterium.network": {"51.15.116.186", "51.15.72.87"},
