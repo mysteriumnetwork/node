@@ -4231,6 +4231,11 @@
           "type": "string",
           "x-go-name": "ProjectID",
           "example": "mysteriumvpn, mystnodes"
+        },
+        "state": {
+          "type": "string",
+          "x-go-name": "State",
+          "example": "MO"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4291,6 +4296,10 @@
         "receive_myst": {
           "type": "string",
           "x-go-name": "ReceiveMYST"
+        },
+        "state": {
+          "type": "string",
+          "x-go-name": "State"
         },
         "status": {
           "type": "string",

@@ -449,12 +449,6 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		return
 	}
 
-	// TODO: Remove this once apps update
-	if req.Country == "" {
-		org := e.lf.GetOrigin()
-		req.Country = strings.ToUpper(org.Country)
-	}
-
 	rid := identity.FromAddress(c.Param("id"))
 
 	resp, err := e.pt.CreatePaymentGatewayOrder(req.GatewayOrderRequest(rid, c.Param("gw")))

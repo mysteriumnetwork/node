@@ -128,6 +128,7 @@ type PaymentOrderResponse struct {
 	PayAmount   string `json:"pay_amount"`
 	PayCurrency string `json:"pay_currency"`
 	Country     string `json:"country"`
+	State       string `json:"state"`
 
 	Currency      string `json:"currency"`
 	ItemsSubTotal string `json:"items_sub_total"`
@@ -151,6 +152,7 @@ func NewPaymentOrderResponse(r *pilvytis.GatewayOrderResponse) PaymentOrderRespo
 		PayAmount:         r.PayAmount,
 		PayCurrency:       r.PayCurrency,
 		Country:           r.Country,
+		State:             r.State,
 		Currency:          r.Currency,
 		ItemsSubTotal:     r.ItemsSubTotal,
 		TaxRate:           r.TaxRate,
@@ -219,6 +221,9 @@ type PaymentOrderRequest struct {
 	// example: US
 	Country string `json:"country"`
 
+	// example: MO
+	State string `json:"state"`
+
 	// example: mysteriumvpn, mystnodes
 	ProjectID string `json:"project_id"`
 
@@ -235,6 +240,7 @@ func (o *PaymentOrderRequest) GatewayOrderRequest(identity identity.Identity, ga
 		AmountUSD:   o.AmountUSD,
 		PayCurrency: o.PayCurrency,
 		Country:     o.Country,
+		State:       o.State,
 		ProjectID:   o.ProjectID,
 		CallerData:  o.CallerData,
 	}
