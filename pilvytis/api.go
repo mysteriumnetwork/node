@@ -278,6 +278,7 @@ type GatewayOrderResponse struct {
 	PayCurrency string `json:"pay_currency"`
 
 	Country string `json:"country"`
+	State   string `json:"state"`
 
 	Currency      string `json:"currency"`
 	ItemsSubTotal string `json:"items_sub_total"`
@@ -382,6 +383,7 @@ type paymentOrderRequest struct {
 	AmountUSD      string `json:"amount_usd"`
 	PayCurrency    string `json:"pay_currency"`
 	Country        string `json:"country"`
+	State          string `json:"state"`
 	ChainID        int64  `json:"chain_id"`
 	ProjectId      string `json:"project_id"`
 
@@ -396,6 +398,7 @@ type GatewayOrderRequest struct {
 	AmountUSD   string
 	PayCurrency string
 	Country     string
+	State       string
 	ProjectID   string
 	CallerData  json.RawMessage
 }
@@ -415,6 +418,7 @@ func (a *API) createPaymentGatewayOrder(cgo GatewayOrderRequest) (*GatewayOrderR
 		AmountUSD:         cgo.AmountUSD,
 		PayCurrency:       cgo.PayCurrency,
 		Country:           cgo.Country,
+		State:             cgo.State,
 		ChainID:           chainID,
 		GatewayCallerData: cgo.CallerData,
 		ProjectId:         cgo.ProjectID,
