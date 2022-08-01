@@ -172,6 +172,11 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 	return json.Marshal(res)
 }
 
+// ListOrdersRequest a request to list orders.
+type ListOrdersRequest struct {
+	IdentityAddress string
+}
+
 // ListPaymentGatewayOrders lists all payment orders.
 func (mb *MobileNode) ListPaymentGatewayOrders(req *ListOrdersRequest) ([]byte, error) {
 	orders, err := mb.pilvytis.GetPaymentGatewayOrders(identity.FromAddress(req.IdentityAddress))
