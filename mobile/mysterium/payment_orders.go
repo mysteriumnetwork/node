@@ -140,6 +140,7 @@ type CreatePaymentGatewayOrderReq struct {
 	AmountUSD       string
 	PayCurrency     string
 	Country         string
+	State           string
 	// GatewayCallerData is marshaled json that is accepting by the payment gateway.
 	GatewayCallerData []byte
 }
@@ -158,6 +159,7 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 			AmountUSD:   req.AmountUSD,
 			PayCurrency: req.PayCurrency,
 			Country:     req.Country,
+			State:       req.State,
 			CallerData:  req.GatewayCallerData,
 		},
 	)
@@ -168,6 +170,11 @@ func (mb *MobileNode) CreatePaymentGatewayOrder(req *CreatePaymentGatewayOrderRe
 	res := newPaymentOrderResponse(*order)
 
 	return json.Marshal(res)
+}
+
+// ListOrdersRequest a request to list orders.
+type ListOrdersRequest struct {
+	IdentityAddress string
 }
 
 // ListPaymentGatewayOrders lists all payment orders.
@@ -206,4 +213,34 @@ func (mb *MobileNode) GatewayClientCallback(req *GatewayClientCallbackReq) error
 		GoogleProductID: req.GoogleProductID,
 	}
 	return mb.pilvytis.GatewayClientCallback(identity.FromAddress(req.IdentityAddress), req.Gateway, payload)
+}
+
+// OrderUpdatedCallbackPayload is the payload of OrderUpdatedCallback.
+type OrderUpdatedCallbackPayload struct {
+	OrderID     string
+	Status      string
+	PayAmount   string
+	PayCurrency string
+}
+
+// OrderUpdatedCallback is a callback when order status changes.
+type OrderUpdatedCallback interface {
+	OnUpdate(payload *OrderUpdatedCallbackPayload)
+}
+
+// RegisterOrderUpdatedCallback registers OrderStatusChanged callback.
+func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
+	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderUpdated, func(e pilvytis.AppEventOrderUpdated) {
+		payload := OrderUpdatedCallbackPayload{}
+		payload.OrderID = e.ID
+		payload.Status = e.Status.Status()
+		payload.PayAmount = e.PayAmount
+		payload.PayCurrency = e.PayCurrency
+		cb.OnUpdate(&payload)
+	})
+}
+
+// ExchangeRate returns MYST rate in quote currency.
+func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
+	return mb.pilvytis.GetMystExchangeRateFor(quote)
 }

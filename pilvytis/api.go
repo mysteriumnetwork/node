@@ -26,7 +26,6 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
@@ -50,12 +49,7 @@ type locationProvider interface {
 	GetOrigin() locationstate.Location
 }
 
-const (
-	orderEndpoint        = "api/v1/payment/orders"
-	currencyEndpoint     = "api/v1/payment/currencies"
-	orderOptionsEndpoint = "api/v1/payment/order-options"
-	exchangeEndpoint     = "api/v1/payment/exchange-rate"
-)
+const exchangeEndpoint = "api/v1/payment/exchange-rate"
 
 type addressProvider interface {
 	GetActiveChannelAddress(chainID int64, id common.Address) (common.Address, error)
@@ -74,142 +68,6 @@ func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, 
 		lp:                lp,
 		channelCalculator: cc,
 	}
-}
-
-// OrderStatus is a Coingate order status.
-type OrderStatus string
-
-// OrderStatus values.
-const (
-	OrderStatusNew        OrderStatus = "new"
-	OrderStatusPending    OrderStatus = "pending"
-	OrderStatusConfirming OrderStatus = "confirming"
-	OrderStatusPaid       OrderStatus = "paid"
-	OrderStatusInvalid    OrderStatus = "invalid"
-	OrderStatusExpired    OrderStatus = "expired"
-	OrderStatusCanceled   OrderStatus = "canceled"
-	OrderStatusRefunded   OrderStatus = "refunded"
-)
-
-// Incomplete tells if the order is incomplete and its status needs to be tracked for updates.
-func (o OrderStatus) Incomplete() bool {
-	switch o {
-	case OrderStatusNew, OrderStatusPending, OrderStatusConfirming:
-		return true
-	}
-	return false
-}
-
-// Status returns a current status.
-// Its part of StatusProvider interface.
-func (o OrderStatus) Status() string {
-	return string(o)
-}
-
-// Paid tells if the order has been paid for.
-func (o OrderStatus) Paid() bool {
-	return o == OrderStatusPaid
-}
-
-// OrderResponse is returned from the pilvytis order endpoints.
-type OrderResponse struct {
-	ID       uint64      `json:"id"`
-	Status   OrderStatus `json:"status"`
-	Identity string      `json:"identity"`
-
-	MystAmount    float64  `json:"myst_amount"`
-	PriceAmount   *float64 `json:"price_amount"`
-	PriceCurrency string   `json:"price_currency"`
-
-	PayAmount      *float64 `json:"pay_amount,omitempty"`
-	PayCurrency    *string  `json:"pay_currency,omitempty"`
-	PaymentAddress string   `json:"payment_address"`
-	PaymentURL     string   `json:"payment_url"`
-
-	ReceiveAmount   *float64 `json:"receive_amount"`
-	ReceiveCurrency string   `json:"receive_currency"`
-
-	ExpiresAt time.Time `json:"expire_at"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type orderRequest struct {
-	ChannelAddress   string  `json:"channel_address"`
-	MystAmount       float64 `json:"myst_amount"`
-	PayCurrency      string  `json:"pay_currency"`
-	LightningNetwork bool    `json:"lightning_network"`
-	ChainID          int64   `json:"chain_id"`
-}
-
-// createPaymentOrder creates a new payment order in the API service.
-func (a *API) createPaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
-	chainID := config.Current.GetInt64(config.FlagChainID.Name)
-
-	ch, err := a.channelCalculator.GetActiveChannelAddress(chainID, id.ToCommonAddress())
-	if err != nil {
-		return nil, fmt.Errorf("could get channel address: %w", err)
-	}
-
-	payload := orderRequest{
-		ChannelAddress:   ch.Hex(),
-		MystAmount:       mystAmount,
-		PayCurrency:      payCurrency,
-		LightningNetwork: lightning,
-		ChainID:          chainID,
-	}
-
-	req, err := requests.NewSignedPostRequest(a.url, orderEndpoint, payload, a.signer(id))
-	if err != nil {
-		return nil, err
-	}
-
-	var resp OrderResponse
-	return &resp, a.sendRequestAndParseResp(req, &resp)
-}
-
-// GetPaymentOrder returns a payment order by ID from the API
-// service that belongs to a given identity.
-func (a *API) GetPaymentOrder(id identity.Identity, oid uint64) (*OrderResponse, error) {
-	req, err := requests.NewSignedGetRequest(a.url, fmt.Sprintf("%s/%d", orderEndpoint, oid), a.signer(id))
-	if err != nil {
-		return nil, err
-	}
-
-	var resp OrderResponse
-	return &resp, a.sendRequestAndParseResp(req, &resp)
-}
-
-// GetPaymentOrders returns a list of payment orders from the API service made by a given identity.
-func (a *API) GetPaymentOrders(id identity.Identity) ([]OrderResponse, error) {
-	req, err := requests.NewSignedGetRequest(a.url, orderEndpoint, a.signer(id))
-	if err != nil {
-		return nil, err
-	}
-
-	var resp []OrderResponse
-	return resp, a.sendRequestAndParseResp(req, &resp)
-}
-
-// GetPaymentOrderCurrencies returns a slice of currencies supported for payment orders
-func (a *API) GetPaymentOrderCurrencies() ([]string, error) {
-	req, err := requests.NewGetRequest(a.url, currencyEndpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp []string
-	return resp, a.sendRequestAndParseResp(req, &resp)
-}
-
-// GetPaymentOrderOptions return payment order options
-func (a *API) GetPaymentOrderOptions() (*PaymentOrderOptions, error) {
-	req, err := requests.NewGetRequest(a.url, orderOptionsEndpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp PaymentOrderOptions
-	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // PaymentOrderOptions represents pilvytis payment order options
@@ -278,6 +136,7 @@ type GatewayOrderResponse struct {
 	PayCurrency string `json:"pay_currency"`
 
 	Country string `json:"country"`
+	State   string `json:"state"`
 
 	Currency      string `json:"currency"`
 	ItemsSubTotal string `json:"items_sub_total"`
@@ -382,6 +241,7 @@ type paymentOrderRequest struct {
 	AmountUSD      string `json:"amount_usd"`
 	PayCurrency    string `json:"pay_currency"`
 	Country        string `json:"country"`
+	State          string `json:"state"`
 	ChainID        int64  `json:"chain_id"`
 	ProjectId      string `json:"project_id"`
 
@@ -396,6 +256,7 @@ type GatewayOrderRequest struct {
 	AmountUSD   string
 	PayCurrency string
 	Country     string
+	State       string
 	ProjectID   string
 	CallerData  json.RawMessage
 }
@@ -415,6 +276,7 @@ func (a *API) createPaymentGatewayOrder(cgo GatewayOrderRequest) (*GatewayOrderR
 		AmountUSD:         cgo.AmountUSD,
 		PayCurrency:       cgo.PayCurrency,
 		Country:           cgo.Country,
+		State:             cgo.State,
 		ChainID:           chainID,
 		GatewayCallerData: cgo.CallerData,
 		ProjectId:         cgo.ProjectID,
