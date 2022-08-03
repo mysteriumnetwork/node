@@ -291,9 +291,10 @@ func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
 
 // ProviderStatuses fetch provider connectivity statuses from quality oracle.
 func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAgentStatuses, error) {
-	request, err := m.newRequestJSON(http.MethodGet, fmt.Sprintf("providers/statuses?provider_id=%s", providerID), "")
+	id := identity.FromAddress(providerID)
+
+	request, err := requests.NewSignedGetRequest(m.baseURL, "provider/statuses", m.signer(id))
 	if err != nil {
-		log.Err(err).Msg("Failed to create provider monitoring agent statuses request")
 		return nil, err
 	}
 
