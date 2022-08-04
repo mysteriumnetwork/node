@@ -349,6 +349,6 @@ type mockPriceValidator struct {
 	toReturn bool
 }
 
-func (mpv *mockPriceValidator) IsPriceValid(in market.Price, nodeType, country string) bool {
+func (mpv *mockPriceValidator) IsPriceValid(in market.Price, nodeType, country, ServiceType string) bool {
 	return mpv.toReturn
 }
