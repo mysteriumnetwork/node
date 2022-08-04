@@ -596,7 +596,7 @@ func (cbt *ConsumerBalanceTracker) getTransactorBalance(ctx context.Context, cha
 		return nil
 	}
 
-	if data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
+	if data.BountyAmount == nil || data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
 		// if we've got no bounty, get myst balance from BC and use that as bounty
 		b, err := cbt.getUnregisteredChannelBalance(chainID, id)
 		if err != nil {
