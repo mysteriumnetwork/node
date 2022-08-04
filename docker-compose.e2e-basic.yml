@@ -587,7 +587,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v3
+      --api.address=http://discovery:8080/api/v4
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
