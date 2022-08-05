@@ -62,7 +62,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:2.6.3
+    image: mysteriumnetwork/discovery:2.8.5
     expose:
       - 8080
     environment:
@@ -358,7 +358,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v3
+      --api.address=http://discovery:8080/api/v4
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
@@ -424,7 +424,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v3
+      --api.address=http://discovery:8080/api/v4
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
@@ -477,7 +477,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v3
+      --api.address=http://discovery:8080/api/v4
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
@@ -532,7 +532,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v3
+      --api.address=http://discovery:8080/api/v4
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
@@ -587,7 +587,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v3
+      --api.address=http://discovery:8080/api/v4
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
       --keystore.lightweight
