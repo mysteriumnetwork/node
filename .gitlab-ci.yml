@@ -42,14 +42,14 @@ env:
 checks:
   stage: test
   tags: [go]
-  retry: 1
+  retry: 2
   script:
     - go run mage.go -v Check
 
 test:
   stage: test
   tags: [go]
-  retry: 1
+  retry: 2
   script:
     - go run mage.go -v TestWithCoverage
     - touch $CI_PROJECT_DIR/success
@@ -62,13 +62,13 @@ test:
 test-e2e-basic:
   stage: test
   tags: [go,high_performance]
-  retry: 1
+  retry: 2
   script: go run mage.go -v TestE2EBasic
 
 test-e2e-nat:
   stage: test
   tags: [go,high_performance]
-  retry: 1
+  retry: 2
   script: go run mage.go -v TestE2ENAT
 
 # with the new payments, we're making a breaking change, so no compatibility for now
@@ -157,7 +157,7 @@ release-snapshot:docker:
 release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
-  retry: 1
+  retry: 2
   script: go run mage.go -v ReleaseDebianPPASnapshot
   only:
     - master
@@ -165,7 +165,7 @@ release-snapshot:debian-ppa:
 release-snapshot:goreport:
   stage: release-snapshot
   tags: [go]
-  retry: 1
+  retry: 2
   script: bin/release_goreport
   only:
     - master
