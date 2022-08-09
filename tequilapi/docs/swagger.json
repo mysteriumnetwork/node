@@ -3319,31 +3319,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/go-rest/apierror"
     },
-    "Error": {
-      "description": "Error represents a single error in an ErrorResponse",
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "x-go-name": "Message"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
-    },
-    "ErrorResponse": {
-      "description": "ErrorResponse represent HTTP error payload",
-      "type": "object",
-      "properties": {
-        "errors": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Error"
-          },
-          "x-go-name": "Errors"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
-    },
     "FeesDTO": {
       "description": "FeesDTO represents the transactor fees",
       "type": "object",
