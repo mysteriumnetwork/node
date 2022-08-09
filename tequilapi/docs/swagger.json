@@ -1256,6 +1256,29 @@
         }
       }
     },
+    "/node/monitoring-agent-sessions": {
+      "get": {
+        "description": "Node sessions metrics as seen by monitoring agent during a period of time",
+        "summary": "Provides Node sessions data from monitoring agent during a period of time",
+        "operationId": "MonitoringAgentSessions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monitoring agent sessions list",
+            "schema": {
+              "$ref": "#/definitions/MonitoringAgentSessionsResponse"
+            }
+          }
+        }
+      }
+    },
     "/node/monitoring-agent-statuses": {
       "get": {
         "description": "Node connectivity statuses as seen by monitoring agent",
@@ -3296,6 +3319,31 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/go-rest/apierror"
     },
+    "Error": {
+      "description": "Error represents a single error in an ErrorResponse",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
+    },
+    "ErrorResponse": {
+      "description": "ErrorResponse represent HTTP error payload",
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Error"
+          },
+          "x-go-name": "Errors"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/feedback/client"
+    },
     "FeesDTO": {
       "description": "FeesDTO represents the transactor fees",
       "type": "object",
@@ -3785,6 +3833,28 @@
         },
         "statuses": {
           "$ref": "#/definitions/MonitoringAgentStatuses"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "MonitoringAgentSessions": {
+      "type": "array",
+      "title": "MonitoringAgentSessions a object represent a sessions list of monitoring metrics.",
+      "items": {
+        "$ref": "#/definitions/SessionItem"
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
+    },
+    "MonitoringAgentSessionsResponse": {
+      "type": "object",
+      "title": "MonitoringAgentSessionsResponse reflects a list of sessions metrics during a period of time.",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "sessions": {
+          "$ref": "#/definitions/MonitoringAgentSessions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4524,6 +4594,40 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionItem": {
+      "type": "object",
+      "title": "SessionItem represents information about session monitoring metrics.",
+      "properties": {
+        "consumer_country": {
+          "type": "string",
+          "x-go-name": "ConsumerCountry"
+        },
+        "duration": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Duration"
+        },
+        "earning": {
+          "type": "string",
+          "x-go-name": "Earning"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "started_at": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "StartedAt"
+        },
+        "transferred": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Transferred"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
     "SessionListResponse": {
       "type": "object",
