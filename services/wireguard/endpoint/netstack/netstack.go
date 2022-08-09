@@ -216,6 +216,11 @@ func (tun *netTun) addAddress(ip tcpip.Address) error {
 }
 
 func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
+	if isPrivateIP(net.IP(r.ID().LocalAddress)) {
+		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", r.ID().LocalAddress.String())
+		return
+	}
+
 	reqDetails := r.ID()
 
 	tun.addAddress(reqDetails.LocalAddress)
@@ -265,6 +270,11 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 }
 
 func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
+	if isPrivateIP(net.IP(req.ID().LocalAddress)) {
+		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", req.ID().LocalAddress.String())
+		return
+	}
+
 	sess := req.ID()
 
 	tun.addAddress(sess.LocalAddress)
@@ -287,7 +297,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 		remoteAddr.Port = tun.dnsPort
 		remoteAddr.IP = net.ParseIP("127.0.0.1")
 	}
-
+	
 	proxyConn, err := net.ListenUDP("udp", proxyAddr)
 	if err != nil {
 		log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr)
