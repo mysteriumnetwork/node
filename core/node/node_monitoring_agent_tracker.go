@@ -25,20 +25,26 @@ type MonitoringAgentStatuses map[string]map[string]int
 // ProviderStatuses should return provider statuses from monitoring agent
 type ProviderStatuses func(providerID string) (MonitoringAgentStatuses, error)
 
+// ProviderSessionsList should return provider sessions list
+type ProviderSessionsList func(providerID, rangeTime string) (MonitoringAgentSessions, error)
+
 // MonitoringAgentTracker tracks monitoring agent statuses for service
 type MonitoringAgentTracker struct {
-	providerStatuses ProviderStatuses
-	currentIdentity  currentIdentity
+	providerStatuses     ProviderStatuses
+	providerSessionsList ProviderSessionsList
+	currentIdentity      currentIdentity
 }
 
 // NewMonitoringAgentTracker constructor
 func NewMonitoringAgentTracker(
 	providerStatuses ProviderStatuses,
+	providerSessions ProviderSessionsList,
 	currentIdentity currentIdentity,
 ) *MonitoringAgentTracker {
 	mat := &MonitoringAgentTracker{
-		providerStatuses: providerStatuses,
-		currentIdentity:  currentIdentity,
+		providerStatuses:     providerStatuses,
+		providerSessionsList: providerSessions,
+		currentIdentity:      currentIdentity,
 	}
 
 	return mat
@@ -52,4 +58,27 @@ func (m *MonitoringAgentTracker) Statuses() (MonitoringAgentStatuses, error) {
 	}
 
 	return MonitoringAgentStatuses{}, errors.New("identity not found")
+}
+
+// SessionItem represents information about session monitoring metrics.
+type SessionItem struct {
+	ID              string `json:"id"`
+	ConsumerCountry string `json:"consumer_country"`
+	Duration        int64  `json:"duration"`
+	StartedAt       int64  `json:"started_at"`
+	Earning         string `json:"earning"`
+	Transferred     int64  `json:"transferred"`
+}
+
+// MonitoringAgentSessions a object represent a sessions list of monitoring metrics.
+type MonitoringAgentSessions []SessionItem
+
+// Sessions retrieves and resolved monitoring status from quality oracle
+func (m *MonitoringAgentTracker) Sessions(rangeTime string) (MonitoringAgentSessions, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerSessionsList(id.Address, rangeTime)
+	}
+
+	return MonitoringAgentSessions{}, errors.New("identity not found")
 }

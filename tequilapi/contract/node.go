@@ -33,3 +33,10 @@ type MonitoringAgentResponse struct {
 	Statuses node.MonitoringAgentStatuses `json:"statuses"`
 	Error    string                       `json:"error,omitempty"`
 }
+
+// MonitoringAgentSessionsResponse reflects a list of sessions metrics during a period of time.
+// swagger:model MonitoringAgentSessionsResponse
+type MonitoringAgentSessionsResponse struct {
+	Statuses node.MonitoringAgentSessions `json:"sessions"`
+	Error    string                       `json:"error,omitempty"`
+}

@@ -30,6 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
@@ -313,6 +314,32 @@ func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAge
 	}
 
 	return statuses, nil
+}
+
+// ProviderSessionsList fetch provider sessions list from quality oracle.
+func (m *MysteriumMORQA) ProviderSessionsList(providerID, rangeTime string) (node.MonitoringAgentSessions, error) {
+	id := identity.FromAddress(providerID)
+
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/sessions?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		log.Err(err).Msg("Failed to request provider monitoring sessions list")
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var sessions node.MonitoringAgentSessions
+
+	if err = parseResponseJSON(response, &sessions); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring sessions list")
+		return nil, err
+	}
+
+	return sessions, nil
 }
 
 // SendMetric submits new metric.

@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -28,6 +29,7 @@ import (
 
 type nodeMonitoringAgent interface {
 	Statuses() (node.MonitoringAgentStatuses, error)
+	Sessions(rangeTime string) (node.MonitoringAgentSessions, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -78,6 +80,32 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
 }
 
+// MonitoringAgentSessions Sessions metrics from monitoring agent during a period of time
+// swagger:operation GET /node/monitoring-agent-sessions MonitoringAgentSessions
+// ---
+// summary: Provides Node sessions data from monitoring agent during a period of time
+// description: Node sessions metrics as seen by monitoring agent during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Monitoring agent sessions list
+//     schema:
+//       "$ref": "#/definitions/MonitoringAgentSessionsResponse"
+func (ne *NodeEndpoint) MonitoringAgentSessions(c *gin.Context) {
+	rangeTime := c.Param("range")
+	res, err := ne.nodeMonitoringAgent.Sessions(rangeTime)
+	if err != nil {
+		utils.WriteAsJSON(contract.MonitoringAgentSessionsResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.MonitoringAgentSessionsResponse{Statuses: res}, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
 func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
 	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
@@ -87,6 +115,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 		{
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
 			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
+			nodeGroup.GET("/monitoring-agent-sessions", nodeEndpoints.MonitoringAgentSessions)
 		}
 		return nil
 	}

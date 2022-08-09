@@ -28,6 +28,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
@@ -83,8 +86,6 @@ import (
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	psort "github.com/mysteriumnetwork/payments/client/sort"
 	"github.com/mysteriumnetwork/payments/observer"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // UIServer represents our web server
@@ -626,6 +627,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.MonitoringAgentTracker = node.NewMonitoringAgentTracker(
 		di.QualityClient.ProviderStatuses,
+		di.QualityClient.ProviderSessionsList,
 		di.IdentityManager,
 	)
 
