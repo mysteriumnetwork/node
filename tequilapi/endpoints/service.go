@@ -70,7 +70,8 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
-	instances := se.serviceManager.List()
+	instances := se.serviceManager.ListAll()
+
 	statusResponse, err := se.toServiceListResponse(instances)
 	if err != nil {
 		c.Error(apierror.Internal("Cannot list services: "+err.Error(), contract.ErrCodeServiceList))
@@ -307,20 +308,26 @@ func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *servic
 		return contract.ServiceInfoDTO{}, err
 	}
 
+	var prop *contract.ProposalDTO
+	if len(id) > 0 {
+		tmp := contract.NewProposalDTO(priced)
+		prop = &tmp
+	}
+
 	return contract.ServiceInfoDTO{
 		ID:         string(id),
 		ProviderID: instance.ProviderID.Address,
 		Type:       instance.Type,
 		Options:    instance.Options,
 		Status:     string(instance.State()),
-		Proposal:   contract.NewProposalDTO(priced),
+		Proposal:   prop,
 	}, nil
 }
 
-func (se *ServiceEndpoint) toServiceListResponse(instances map[service.ID]*service.Instance) (contract.ServiceListResponse, error) {
+func (se *ServiceEndpoint) toServiceListResponse(instances []*service.Instance) (contract.ServiceListResponse, error) {
 	res := make([]contract.ServiceInfoDTO, 0)
-	for id, instance := range instances {
-		mapped, err := se.toServiceInfoResponse(id, instance)
+	for _, instance := range instances {
+		mapped, err := se.toServiceInfoResponse(instance.ID, instance)
 		if err != nil {
 			return nil, err
 		}
@@ -352,4 +359,5 @@ type ServiceManager interface {
 	Service(id service.ID) *service.Instance
 	Kill() error
 	List() map[service.ID]*service.Instance
+	ListAll() []*service.Instance
 }

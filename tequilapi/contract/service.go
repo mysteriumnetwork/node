@@ -54,11 +54,11 @@ type ServiceListResponse []ServiceInfoDTO
 // swagger:model ServiceInfoDTO
 type ServiceInfoDTO struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-	ID string `json:"id"`
+	ID string `json:"id,omitempty"`
 
 	// provider identity
 	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
+	ProviderID string `json:"provider_id,omitempty"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// example: openvpn
@@ -66,14 +66,14 @@ type ServiceInfoDTO struct {
 
 	// options with which service was started. Every service has a unique list of allowed options.
 	// example: {"port": 1123, "protocol": "udp"}
-	Options interface{} `json:"options"`
+	Options interface{} `json:"options,omitempty"`
 
 	// example: Running
 	Status string `json:"status"`
 
-	Proposal ProposalDTO `json:"proposal"`
+	Proposal *ProposalDTO `json:"proposal,omitempty"`
 
-	ConnectionStatistics ServiceStatisticsDTO `json:"connection_statistics"`
+	ConnectionStatistics *ServiceStatisticsDTO `json:"connection_statistics,omitempty"`
 }
 
 // ServiceStatisticsDTO shows the successful and attempted connection count

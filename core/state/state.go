@@ -250,13 +250,14 @@ func (k *Keeper) updateServices() {
 			log.Warn().Msgf("could not load price for proposal %v(%v)", v.Proposal.ProviderID, v.Proposal.ServiceType)
 		}
 
+		prop := contract.NewProposalDTO(priced)
 		result[i] = contract.ServiceInfoDTO{
 			ID:                   string(key),
 			ProviderID:           v.ProviderID.Address,
 			Type:                 v.Type,
 			Options:              v.Options,
 			Status:               string(v.State()),
-			Proposal:             contract.NewProposalDTO(priced),
+			Proposal:             &prop,
 			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++
