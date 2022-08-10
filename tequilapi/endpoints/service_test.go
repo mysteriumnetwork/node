@@ -105,6 +105,9 @@ func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
 		"11111111-9dad-11d1-80b4-00c04fd430c0": mockServiceStopped,
 	}
 }
+func (sm *mockServiceManager) ListAll() []*service.Instance {
+	return []*service.Instance{mockServiceStopped}
+}
 func (sm *mockServiceManager) Kill() error { return nil }
 
 var fakeOptionsParser = map[string]services.ServiceOptionsParser{
