@@ -196,10 +196,10 @@ type Dependencies struct {
 
 	ResidentCountry *identity.ResidentCountry
 
-	PayoutAddressStorage   *payout.AddressStorage
-	NodeStatusTracker      *node.MonitoringStatusTracker
-	MonitoringAgentTracker *node.MonitoringAgentTracker
-	uiVersionConfig        versionmanager.NodeUIVersionConfig
+	PayoutAddressStorage *payout.AddressStorage
+	NodeStatusTracker    *node.MonitoringStatusTracker
+	NodeStatsTracker     *node.StatsTracker
+	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -625,7 +625,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
-	di.MonitoringAgentTracker = node.NewMonitoringAgentTracker(
+	di.NodeStatsTracker = node.NewNodeStatsTracker(
 		di.QualityClient.ProviderStatuses,
 		di.QualityClient.ProviderSessionsList,
 		di.IdentityManager,

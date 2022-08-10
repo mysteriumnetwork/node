@@ -29,7 +29,7 @@ import (
 
 type nodeMonitoringAgent interface {
 	Statuses() (node.MonitoringAgentStatuses, error)
-	Sessions(rangeTime string) (node.MonitoringAgentSessions, error)
+	Sessions(rangeTime string) (node.SessionsList, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -80,11 +80,11 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
 }
 
-// MonitoringAgentSessions Sessions metrics from monitoring agent during a period of time
-// swagger:operation GET /node/monitoring-agent-sessions MonitoringAgentSessions
+// GetProviderSessions A list of sessions metrics during a period of time
+// swagger:operation GET /node/provider/sessions GetProviderSessions
 // ---
-// summary: Provides Node sessions data from monitoring agent during a period of time
-// description: Node sessions metrics as seen by monitoring agent during a period of time
+// summary: Provides Node sessions data during a period of time
+// description: Node sessions metrics during a period of time
 // parameters:
 //   - in: query
 //     name: range
@@ -92,18 +92,18 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 //     type: string
 // responses:
 //   200:
-//     description: Monitoring agent sessions list
+//     description: Provider sessions list
 //     schema:
-//       "$ref": "#/definitions/MonitoringAgentSessionsResponse"
-func (ne *NodeEndpoint) MonitoringAgentSessions(c *gin.Context) {
+//       "$ref": "#/definitions/ProviderSessionsResponse"
+func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 	rangeTime := c.Param("range")
 	res, err := ne.nodeMonitoringAgent.Sessions(rangeTime)
 	if err != nil {
-		utils.WriteAsJSON(contract.MonitoringAgentSessionsResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+		utils.WriteAsJSON(contract.ProviderSessionsResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
 		return
 	}
 
-	utils.WriteAsJSON(contract.MonitoringAgentSessionsResponse{Statuses: res}, c.Writer)
+	utils.WriteAsJSON(contract.ProviderSessionsResponse{Statuses: res}, c.Writer)
 }
 
 // AddRoutesForNode adds nat routes to given router
@@ -115,7 +115,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 		{
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
 			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
-			nodeGroup.GET("/monitoring-agent-sessions", nodeEndpoints.MonitoringAgentSessions)
+			nodeGroup.GET("/provider/sessions", nodeEndpoints.GetProviderSessions)
 		}
 		return nil
 	}

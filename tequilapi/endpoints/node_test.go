@@ -37,7 +37,7 @@ type mockNodeStatusProvider struct {
 
 type mockMonitoringAgent struct {
 	status   node.MonitoringAgentStatuses
-	sessions node.MonitoringAgentSessions
+	sessions node.SessionsList
 }
 
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
@@ -48,7 +48,7 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) Statuses() (node.Monitori
 	return nodeMonitoringAgentTracker.status, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) Sessions(_ string) (node.MonitoringAgentSessions, error) {
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) Sessions(_ string) (node.SessionsList, error) {
 	return nodeMonitoringAgentTracker.sessions, nil
 }
 

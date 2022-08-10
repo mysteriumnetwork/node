@@ -26,22 +26,22 @@ type MonitoringAgentStatuses map[string]map[string]int
 type ProviderStatuses func(providerID string) (MonitoringAgentStatuses, error)
 
 // ProviderSessionsList should return provider sessions list
-type ProviderSessionsList func(providerID, rangeTime string) (MonitoringAgentSessions, error)
+type ProviderSessionsList func(providerID, rangeTime string) (SessionsList, error)
 
-// MonitoringAgentTracker tracks monitoring agent statuses for service
-type MonitoringAgentTracker struct {
+// StatsTracker tracks metrics for service
+type StatsTracker struct {
 	providerStatuses     ProviderStatuses
 	providerSessionsList ProviderSessionsList
 	currentIdentity      currentIdentity
 }
 
-// NewMonitoringAgentTracker constructor
-func NewMonitoringAgentTracker(
+// NewNodeStatsTracker constructor
+func NewNodeStatsTracker(
 	providerStatuses ProviderStatuses,
 	providerSessions ProviderSessionsList,
 	currentIdentity currentIdentity,
-) *MonitoringAgentTracker {
-	mat := &MonitoringAgentTracker{
+) *StatsTracker {
+	mat := &StatsTracker{
 		providerStatuses:     providerStatuses,
 		providerSessionsList: providerSessions,
 		currentIdentity:      currentIdentity,
@@ -51,7 +51,7 @@ func NewMonitoringAgentTracker(
 }
 
 // Statuses retrieves and resolved monitoring status from quality oracle
-func (m *MonitoringAgentTracker) Statuses() (MonitoringAgentStatuses, error) {
+func (m *StatsTracker) Statuses() (MonitoringAgentStatuses, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
 		return m.providerStatuses(id.Address)
@@ -70,15 +70,15 @@ type SessionItem struct {
 	Transferred     int64  `json:"transferred"`
 }
 
-// MonitoringAgentSessions a object represent a sessions list of monitoring metrics.
-type MonitoringAgentSessions []SessionItem
+// SessionsList a object represent a sessions list.
+type SessionsList []SessionItem
 
 // Sessions retrieves and resolved monitoring status from quality oracle
-func (m *MonitoringAgentTracker) Sessions(rangeTime string) (MonitoringAgentSessions, error) {
+func (m *StatsTracker) Sessions(rangeTime string) (SessionsList, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
 		return m.providerSessionsList(id.Address, rangeTime)
 	}
 
-	return MonitoringAgentSessions{}, errors.New("identity not found")
+	return SessionsList{}, errors.New("identity not found")
 }

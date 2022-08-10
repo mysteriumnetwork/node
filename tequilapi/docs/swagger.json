@@ -1256,29 +1256,6 @@
         }
       }
     },
-    "/node/monitoring-agent-sessions": {
-      "get": {
-        "description": "Node sessions metrics as seen by monitoring agent during a period of time",
-        "summary": "Provides Node sessions data from monitoring agent during a period of time",
-        "operationId": "MonitoringAgentSessions",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "period of time (\"1d\", \"7d\", \"30d\")",
-            "name": "range",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Monitoring agent sessions list",
-            "schema": {
-              "$ref": "#/definitions/MonitoringAgentSessionsResponse"
-            }
-          }
-        }
-      }
-    },
     "/node/monitoring-agent-statuses": {
       "get": {
         "description": "Node connectivity statuses as seen by monitoring agent",
@@ -1304,6 +1281,29 @@
             "description": "Node status (\"passed\"/\"failed\"/\"pending)",
             "schema": {
               "$ref": "#/definitions/NodeStatusResponse"
+            }
+          }
+        }
+      }
+    },
+    "/node/provider/sessions": {
+      "get": {
+        "description": "Node sessions metrics during a period of time",
+        "summary": "Provides Node sessions data during a period of time",
+        "operationId": "GetProviderSessions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions list",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsResponse"
             }
           }
         }
@@ -3812,28 +3812,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "MonitoringAgentSessions": {
-      "type": "array",
-      "title": "MonitoringAgentSessions a object represent a sessions list of monitoring metrics.",
-      "items": {
-        "$ref": "#/definitions/SessionItem"
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
-    },
-    "MonitoringAgentSessionsResponse": {
-      "type": "object",
-      "title": "MonitoringAgentSessionsResponse reflects a list of sessions metrics during a period of time.",
-      "properties": {
-        "error": {
-          "type": "string",
-          "x-go-name": "Error"
-        },
-        "sessions": {
-          "$ref": "#/definitions/MonitoringAgentSessions"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "MonitoringAgentStatuses": {
       "type": "object",
       "title": "MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.",
@@ -4164,6 +4142,20 @@
           "type": "string",
           "x-go-name": "ServiceType",
           "example": "openvpn"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSessionsResponse": {
+      "type": "object",
+      "title": "ProviderSessionsResponse reflects a list of sessions metrics during a period of time.",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "sessions": {
+          "$ref": "#/definitions/SessionsList"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4703,6 +4695,14 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionsList": {
+      "type": "array",
+      "title": "SessionsList a object represent a sessions list.",
+      "items": {
+        "$ref": "#/definitions/SessionItem"
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
     "SettleRequestDTO": {
       "description": "SettleRequest represents the request to settle hermes promises",

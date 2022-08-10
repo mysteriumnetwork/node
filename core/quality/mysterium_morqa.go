@@ -317,7 +317,7 @@ func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAge
 }
 
 // ProviderSessionsList fetch provider sessions list from quality oracle.
-func (m *MysteriumMORQA) ProviderSessionsList(providerID, rangeTime string) (node.MonitoringAgentSessions, error) {
+func (m *MysteriumMORQA) ProviderSessionsList(providerID, rangeTime string) (node.SessionsList, error) {
 	id := identity.FromAddress(providerID)
 
 	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/sessions?range=%s", rangeTime), m.signer(id))
@@ -332,7 +332,7 @@ func (m *MysteriumMORQA) ProviderSessionsList(providerID, rangeTime string) (nod
 	}
 	defer response.Body.Close()
 
-	var sessions node.MonitoringAgentSessions
+	var sessions node.SessionsList
 
 	if err = parseResponseJSON(response, &sessions); err != nil {
 		log.Err(err).Msg("Failed to parse provider monitoring sessions list")
