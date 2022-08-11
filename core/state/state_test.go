@@ -101,11 +101,15 @@ func (slm *serviceListerMock) interactions() int {
 	return slm.numInteractions
 }
 
-func (slm *serviceListerMock) List() map[service.ID]*service.Instance {
+func (slm *serviceListerMock) List(includeAll bool) []*service.Instance {
 	slm.lock.Lock()
 	defer slm.lock.Unlock()
 	slm.numInteractions++
-	return slm.servicesToReturn
+	list := make([]*service.Instance, 0, len(slm.servicesToReturn))
+	for _, instance := range slm.servicesToReturn {
+		list = append(list, instance)
+	}
+	return list
 }
 
 func Test_ConsumesSessionEvents(t *testing.T) {

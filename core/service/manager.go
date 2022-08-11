@@ -228,20 +228,18 @@ func generateID() (ID, error) {
 	return ID(uid.String()), nil
 }
 
-// List returns array of running service instances.
-func (manager *Manager) List() map[ID]*Instance {
-	return manager.servicePool.List()
-}
+// List returns array of service instances.
+func (manager *Manager) List(includeAll bool) []*Instance {
+	runningInstances := manager.servicePool.List()
+	if !includeAll {
+		return runningInstances
+	}
 
-// ListAll returns array of all services
-func (manager *Manager) ListAll() []*Instance {
 	added := map[string]bool{
 		wireguard.ServiceType:    false,
 		scraping.ServiceType:     false,
 		datatransfer.ServiceType: false,
 	}
-
-	runningInstances := manager.List()
 
 	result := make([]*Instance, 0, len(added))
 	for _, instance := range runningInstances {
@@ -253,6 +251,7 @@ func (manager *Manager) ListAll() []*Instance {
 		if alreadyAdded {
 			continue
 		}
+
 		result = append(result, &Instance{
 			Type:  serviceType,
 			state: servicestate.NotRunning,
