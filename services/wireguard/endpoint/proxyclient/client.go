@@ -30,8 +30,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun/netstack"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
@@ -39,10 +39,10 @@ import (
 type client struct {
 	mu         sync.Mutex
 	Device     *device.Device
-	proxyClose func(context.Context) error
+	proxyClose func() error
 }
 
-// New create new remote WireGuard client which communicates with supervisor.
+// New create new WireGuard client which serves requests via proxy.
 func New() (*client, error) {
 	log.Debug().Msg("Creating proxy wg client")
 	return &client{}, nil
@@ -119,13 +119,14 @@ func (c *client) Close() (err error) {
 	defer c.mu.Unlock()
 
 	if c.proxyClose != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		c.proxyClose(ctx)
+		c.proxyClose()
 	}
+
 	if c.Device != nil {
-		c.Device.Down()
-		c.Device.Close()
+		go func() {
+			time.Sleep(2 * time.Minute)
+			c.Device.Close()
+		}()
 	}
 	return nil
 }
@@ -144,7 +145,13 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 	}
 
 	log.Info().Msgf("Starting proxy server at :%d ...", proxyPort)
-	c.proxyClose = server.Shutdown
+	c.proxyClose = func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		server.Shutdown(ctx)
+
+		return server.Close()
+	}
 
 	go func() {
 		err := server.ListenAndServe()
