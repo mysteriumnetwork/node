@@ -83,15 +83,7 @@ func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
 		}
 	}
 
-	instances := make([]*service.Instance, 0)
-	if includeAll {
-		instances = se.serviceManager.ListAll()
-	} else {
-		instancesMap := se.serviceManager.List()
-		for _, instance := range instancesMap {
-			instances = append(instances, instance)
-		}
-	}
+	instances := se.serviceManager.List(includeAll)
 
 	statusResponse, err := se.toServiceListResponse(instances)
 	if err != nil {
@@ -240,7 +232,7 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 }
 
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
-	for _, instance := range se.serviceManager.List() {
+	for _, instance := range se.serviceManager.List(false) {
 		if instance.ProviderID.Address == sr.ProviderID && instance.Type == sr.Type {
 			return true
 		}
@@ -379,6 +371,5 @@ type ServiceManager interface {
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error
-	List() map[service.ID]*service.Instance
-	ListAll() []*service.Instance
+	List(includeAll bool) []*service.Instance
 }
