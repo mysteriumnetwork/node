@@ -68,7 +68,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d
 	golang.zx2c4.com/wireguard v0.0.0-20220318042302-193cf8d6a5d6
-	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	google.golang.org/protobuf v1.27.1
 	gvisor.dev/gvisor v0.0.0-20220801230058-850e42eb4444
