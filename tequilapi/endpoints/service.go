@@ -19,7 +19,9 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -70,7 +72,26 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
-	instances := se.serviceManager.ListAll()
+	includeAll := false
+	includeAllStr := c.Request.URL.Query().Get("include_all")
+	if len(includeAllStr) > 0 {
+		var err error
+		includeAll, err = strconv.ParseBool(includeAllStr)
+		if err != nil {
+			c.Error(apierror.BadRequestField(fmt.Sprintf("Failed to parse request: %s", err.Error()), "include_all", contract.ErrCodeServiceList))
+			return
+		}
+	}
+
+	instances := make([]*service.Instance, 0)
+	if includeAll {
+		instances = se.serviceManager.ListAll()
+	} else {
+		instancesMap := se.serviceManager.List()
+		for _, instance := range instancesMap {
+			instances = append(instances, instance)
+		}
+	}
 
 	statusResponse, err := se.toServiceListResponse(instances)
 	if err != nil {
