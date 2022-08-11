@@ -123,6 +123,17 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 		dnsServers:     dnsServers,
 		mtu:            mtu,
 	}
+
+	sack := tcpip.TCPSACKEnabled(true)
+	if err := dev.stack.SetTransportProtocolOption(tcp.ProtocolNumber, &sack); err != nil {
+		return nil, nil, fmt.Errorf("enabling SACK failed: %v", err)
+	}
+
+	moderation := tcpip.TCPModerateReceiveBufferOption(true)
+	if err := dev.stack.SetTransportProtocolOption(tcp.ProtocolNumber, &moderation); err != nil {
+		return nil, nil, fmt.Errorf("failed to set TCP moderate receive buffer option: %v", err)
+	}
+
 	tcpipErr := dev.stack.CreateNIC(1, (*endpoint)(dev))
 	if tcpipErr != nil {
 		return nil, nil, fmt.Errorf("CreateNIC: %v", tcpipErr)
