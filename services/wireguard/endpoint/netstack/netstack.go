@@ -9,7 +9,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/shaper"
+
 	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -32,6 +35,8 @@ type netTun struct {
 	mtu            int
 	dnsPort        int
 	localAddresses []netip.Addr
+
+	limiter *rate.Limiter
 }
 
 type (
@@ -90,10 +95,16 @@ func (e *endpoint) AddHeader(tcpip.LinkAddress, tcpip.LinkAddress, tcpip.Network
 }
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
+	log.Error().Msg("CreateNetTUN >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+
 	opts := stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol, icmp.NewProtocol6, icmp.NewProtocol4},
 	}
+
+	// 4 Mbps in total
+	limiter := rate.NewLimiter(rate.Limit(4*1024*1024/8), 4*1024*1024/8)
+
 	dev := &netTun{
 		stack:          stack.New(opts),
 		events:         make(chan tun.Event, 10),
@@ -101,6 +112,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		mtu:            mtu,
 		dnsPort:        dnsPort,
 		localAddresses: localAddresses,
+		limiter:        limiter,
 	}
 
 	tcpFwd := tcp.NewForwarder(dev.stack, 0, 128, dev.acceptTCP)
@@ -255,11 +267,13 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 
 	connClosed := make(chan error, 2)
 	go func() {
-		_, err := io.Copy(server, client)
+		r := shaper.NewReader(client, tun.limiter)
+		_, err := io.Copy(server, r)
 		connClosed <- err
 	}()
 	go func() {
-		_, err := io.Copy(client, server)
+		r := shaper.NewReader(server, tun.limiter)
+		_, err := io.Copy(client, r)
 		connClosed <- err
 	}()
 
@@ -297,7 +311,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 		remoteAddr.Port = tun.dnsPort
 		remoteAddr.IP = net.ParseIP("127.0.0.1")
 	}
-	
+
 	proxyConn, err := net.ListenUDP("udp", proxyAddr)
 	if err != nil {
 		log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr)
@@ -354,6 +368,13 @@ func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net
 					log.Trace().Msgf("Failed to read packed from %s", srcAddr)
 				}
 				return
+			}
+			if n > 0 && tun.limiter != nil {
+				err := tun.limiter.WaitN(ctx, n)
+				if err != nil {
+					log.Trace().Msgf("Shaper error: %v", err)
+					return
+				}
 			}
 
 			_, err = dst.WriteTo(buf[:n], dstAddr)
