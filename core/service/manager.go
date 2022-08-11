@@ -31,6 +31,9 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/services/datatransfer"
+	"github.com/mysteriumnetwork/node/services/scraping"
+	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/node/utils/reftracker"
@@ -225,9 +228,37 @@ func generateID() (ID, error) {
 	return ID(uid.String()), nil
 }
 
-// List returns array of running service instances.
-func (manager *Manager) List() map[ID]*Instance {
-	return manager.servicePool.List()
+// List returns array of service instances.
+func (manager *Manager) List(includeAll bool) []*Instance {
+	runningInstances := manager.servicePool.List()
+	if !includeAll {
+		return runningInstances
+	}
+
+	added := map[string]bool{
+		wireguard.ServiceType:    false,
+		scraping.ServiceType:     false,
+		datatransfer.ServiceType: false,
+	}
+
+	result := make([]*Instance, 0, len(added))
+	for _, instance := range runningInstances {
+		result = append(result, instance)
+		added[instance.Type] = true
+	}
+
+	for serviceType, alreadyAdded := range added {
+		if alreadyAdded {
+			continue
+		}
+
+		result = append(result, &Instance{
+			Type:  serviceType,
+			state: servicestate.NotRunning,
+		})
+	}
+
+	return result
 }
 
 // Kill stops all services.

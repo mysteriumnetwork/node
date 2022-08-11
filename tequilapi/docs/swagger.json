@@ -3151,6 +3151,10 @@
         },
         "price_per_hour_tokens": {
           "$ref": "#/definitions/Tokens"
+        },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
