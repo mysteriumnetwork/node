@@ -251,6 +251,9 @@ func (k *Keeper) updateServices() {
 		}
 
 		prop := contract.NewProposalDTO(priced)
+		if match.ConnectionStatistics == nil {
+			match.ConnectionStatistics = &contract.ServiceStatisticsDTO{}
+		}
 		result[i] = contract.ServiceInfoDTO{
 			ID:                   string(key),
 			ProviderID:           v.ProviderID.Address,
