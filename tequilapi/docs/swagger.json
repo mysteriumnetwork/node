@@ -1305,6 +1305,18 @@
             "schema": {
               "$ref": "#/definitions/ProviderSessionsResponse"
             }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           }
         }
       }
@@ -4150,12 +4162,12 @@
       "type": "object",
       "title": "ProviderSessionsResponse reflects a list of sessions metrics during a period of time.",
       "properties": {
-        "error": {
-          "type": "string",
-          "x-go-name": "Error"
-        },
         "sessions": {
-          "$ref": "#/definitions/SessionsList"
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SessionItem"
+          },
+          "x-go-name": "Statuses"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4583,6 +4595,10 @@
           "type": "string",
           "x-go-name": "ID"
         },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
+        },
         "started_at": {
           "type": "integer",
           "format": "int64",
@@ -4695,14 +4711,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "SessionsList": {
-      "type": "array",
-      "title": "SessionsList a object represent a sessions list.",
-      "items": {
-        "$ref": "#/definitions/SessionItem"
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
     "SettleRequestDTO": {
       "description": "SettleRequest represents the request to settle hermes promises",

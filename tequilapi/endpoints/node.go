@@ -22,6 +22,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -29,7 +30,7 @@ import (
 
 type nodeMonitoringAgent interface {
 	Statuses() (node.MonitoringAgentStatuses, error)
-	Sessions(rangeTime string) (node.SessionsList, error)
+	Sessions(rangeTime string) ([]node.SessionItem, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -95,11 +96,27 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 //     description: Provider sessions list
 //     schema:
 //       "$ref": "#/definitions/ProviderSessionsResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 	rangeTime := c.Param("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSessions))
+		return
+	}
+
 	res, err := ne.nodeMonitoringAgent.Sessions(rangeTime)
 	if err != nil {
-		utils.WriteAsJSON(contract.ProviderSessionsResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+		c.Error(apierror.Internal("Could not get provider sessions list: "+err.Error(), contract.ErrorCodeProviderSessions))
 		return
 	}
 

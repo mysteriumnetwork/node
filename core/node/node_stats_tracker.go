@@ -17,7 +17,11 @@
 
 package node
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/identity"
+)
 
 // MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.
 type MonitoringAgentStatuses map[string]map[string]int
@@ -26,7 +30,7 @@ type MonitoringAgentStatuses map[string]map[string]int
 type ProviderStatuses func(providerID string) (MonitoringAgentStatuses, error)
 
 // ProviderSessionsList should return provider sessions list
-type ProviderSessionsList func(providerID, rangeTime string) (SessionsList, error)
+type ProviderSessionsList func(id identity.Identity, rangeTime string) ([]SessionItem, error)
 
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
@@ -64,21 +68,19 @@ func (m *StatsTracker) Statuses() (MonitoringAgentStatuses, error) {
 type SessionItem struct {
 	ID              string `json:"id"`
 	ConsumerCountry string `json:"consumer_country"`
+	ServiceType     string `json:"service_type"`
 	Duration        int64  `json:"duration"`
 	StartedAt       int64  `json:"started_at"`
 	Earning         string `json:"earning"`
 	Transferred     int64  `json:"transferred"`
 }
 
-// SessionsList a object represent a sessions list.
-type SessionsList []SessionItem
-
 // Sessions retrieves and resolved monitoring status from quality oracle
-func (m *StatsTracker) Sessions(rangeTime string) (SessionsList, error) {
+func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
-		return m.providerSessionsList(id.Address, rangeTime)
+		return m.providerSessionsList(id, rangeTime)
 	}
 
-	return SessionsList{}, errors.New("identity not found")
+	return []SessionItem{}, errors.New("identity not found")
 }

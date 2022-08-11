@@ -26,11 +26,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
-
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
@@ -317,9 +317,7 @@ func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAge
 }
 
 // ProviderSessionsList fetch provider sessions list from quality oracle.
-func (m *MysteriumMORQA) ProviderSessionsList(providerID, rangeTime string) (node.SessionsList, error) {
-	id := identity.FromAddress(providerID)
-
+func (m *MysteriumMORQA) ProviderSessionsList(id identity.Identity, rangeTime string) ([]node.SessionItem, error) {
 	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/sessions?range=%s", rangeTime), m.signer(id))
 	if err != nil {
 		return nil, err
@@ -327,12 +325,11 @@ func (m *MysteriumMORQA) ProviderSessionsList(providerID, rangeTime string) (nod
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		log.Err(err).Msg("Failed to request provider monitoring sessions list")
-		return nil, err
+		return nil, errors.Wrap(err, "failed to request provider monitoring sessions list")
 	}
 	defer response.Body.Close()
 
-	var sessions node.SessionsList
+	var sessions []node.SessionItem
 
 	if err = parseResponseJSON(response, &sessions); err != nil {
 		log.Err(err).Msg("Failed to parse provider monitoring sessions list")
