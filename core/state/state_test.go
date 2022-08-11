@@ -184,7 +184,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
 	keeper.state.Services = []contract.ServiceInfoDTO{
-		{ID: myID},
+		{ID: myID, ConnectionStatistics: &contract.ServiceStatisticsDTO{}},
 	}
 	keeper.state.Sessions = []session.History{
 		expected,
@@ -318,7 +318,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.Options, actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
 	expt, _ := mpr.EnrichProposalWithPrice(expected.Proposal)
-	assert.EqualValues(t, contract.NewProposalDTO(expt), actual.Proposal)
+	assert.EqualValues(t, contract.NewProposalDTO(expt), *actual.Proposal)
 }
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
@@ -588,8 +588,8 @@ func Test_incrementConnectionCount(t *testing.T) {
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
 	keeper.state.Services = []contract.ServiceInfoDTO{
-		{ID: myID},
-		{ID: "mock"},
+		{ID: myID, ConnectionStatistics: &contract.ServiceStatisticsDTO{}},
+		{ID: "mock", ConnectionStatistics: &contract.ServiceStatisticsDTO{}},
 	}
 
 	keeper.incrementConnectCount(myID, false)

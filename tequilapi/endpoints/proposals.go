@@ -314,6 +314,8 @@ func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 	}
 
 	utils.WriteAsJSON(contract.CurrentPriceResponse{
+		ServiceType: serviceType,
+
 		PricePerHour: price.PricePerHour,
 		PricePerGiB:  price.PricePerGiB,
 
