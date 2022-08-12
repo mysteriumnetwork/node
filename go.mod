@@ -68,9 +68,9 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d
 	golang.zx2c4.com/wireguard v0.0.0-20220318042302-193cf8d6a5d6
-	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220318042302-193cf8d6a5d6
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	google.golang.org/protobuf v1.27.1
+	gvisor.dev/gvisor v0.0.0-20220801230058-850e42eb4444
 )
 
 require (
@@ -234,6 +234,5 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	gvisor.dev/gvisor v0.0.0-20211020211948-f76a604701b6 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
 )
