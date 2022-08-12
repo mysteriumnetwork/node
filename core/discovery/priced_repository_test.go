@@ -174,7 +174,7 @@ type mockPriceInfoProvider struct {
 	errorToReturn error
 }
 
-func (mpip *mockPriceInfoProvider) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
+func (mpip *mockPriceInfoProvider) GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error) {
 	return mpip.priceToReturn, mpip.errorToReturn
 }
 
