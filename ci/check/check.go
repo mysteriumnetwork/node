@@ -50,7 +50,7 @@ func CheckCopyright() error {
 
 // CheckGoLint reports linting errors in the solution.
 func CheckGoLint() error {
-	return commands.GoLintD(".", "docs")
+	return commands.GoLintD(".", "docs", "services/wireguard/endpoint/netstack")
 }
 
 // CheckGoVet checks that the source is compliant with go vet.
