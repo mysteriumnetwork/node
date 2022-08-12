@@ -105,7 +105,7 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
-	rangeTime := c.Param("range")
+	rangeTime := c.Query("range")
 
 	switch rangeTime {
 	case "1d", "7d", "30d":
