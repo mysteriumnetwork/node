@@ -1259,6 +1259,9 @@
     "/node/monitoring-agent-statuses": {
       "get": {
         "description": "Node connectivity statuses as seen by monitoring agent",
+        "tags": [
+          "provider"
+        ],
         "summary": "Provides Node connectivity statuses from monitoring agent",
         "operationId": "MonitoringAgentStatuses",
         "responses": {
@@ -1274,8 +1277,11 @@
     "/node/monitoring-status": {
       "get": {
         "description": "Node Status as seen by monitoring agent",
+        "tags": [
+          "provider"
+        ],
         "summary": "Provides Node proposal status",
-        "operationId": "NODE",
+        "operationId": "NodeStatus",
         "responses": {
           "200": {
             "description": "Node status (\"passed\"/\"failed\"/\"pending)",
@@ -1289,6 +1295,9 @@
     "/node/provider/sessions": {
       "get": {
         "description": "Node sessions metrics during a period of time",
+        "tags": [
+          "provider"
+        ],
         "summary": "Provides Node sessions data during a period of time",
         "operationId": "GetProviderSessions",
         "parameters": [
@@ -4162,6 +4171,42 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProviderSession": {
+      "description": "ProviderSession contains provided session ifnromation",
+      "type": "object",
+      "properties": {
+        "consumer_country": {
+          "type": "string",
+          "x-go-name": "ConsumerCountry"
+        },
+        "duration_seconds": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "DurationSeconds"
+        },
+        "earnings": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
+        },
+        "started_at": {
+          "type": "string",
+          "x-go-name": "StartedAt"
+        },
+        "transferred_bytes": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TransferredBytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ProviderSessionsResponse": {
       "type": "object",
       "title": "ProviderSessionsResponse reflects a list of sessions metrics during a period of time.",
@@ -4169,9 +4214,9 @@
         "sessions": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SessionItem"
+            "$ref": "#/definitions/ProviderSession"
           },
-          "x-go-name": "Statuses"
+          "x-go-name": "Sessions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4577,44 +4622,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "SessionItem": {
-      "type": "object",
-      "title": "SessionItem represents information about session monitoring metrics.",
-      "properties": {
-        "consumer_country": {
-          "type": "string",
-          "x-go-name": "ConsumerCountry"
-        },
-        "duration": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Duration"
-        },
-        "earning": {
-          "type": "string",
-          "x-go-name": "Earning"
-        },
-        "id": {
-          "type": "string",
-          "x-go-name": "ID"
-        },
-        "service_type": {
-          "type": "string",
-          "x-go-name": "ServiceType"
-        },
-        "started_at": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "StartedAt"
-        },
-        "transferred": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Transferred"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
     "SessionListResponse": {
       "type": "object",

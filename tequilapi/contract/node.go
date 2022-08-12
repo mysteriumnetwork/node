@@ -18,7 +18,10 @@
 package contract
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/shopspring/decimal"
 )
 
 // NodeStatusResponse a node status reflects monitoring agent POV on node availability
@@ -37,5 +40,39 @@ type MonitoringAgentResponse struct {
 // ProviderSessionsResponse reflects a list of sessions metrics during a period of time.
 // swagger:model ProviderSessionsResponse
 type ProviderSessionsResponse struct {
-	Statuses []node.SessionItem `json:"sessions"`
+	Sessions []ProviderSession `json:"sessions"`
+}
+
+// NewProviderSessionsResponse creates response from node.SessionItem slice
+func NewProviderSessionsResponse(sessionItems []node.SessionItem) *ProviderSessionsResponse {
+	var r = ProviderSessionsResponse{}
+	for _, si := range sessionItems {
+		earningsDecimalEther, err := decimal.NewFromString(si.Earning)
+		if err != nil {
+			earningsDecimalEther = decimal.Zero
+		}
+
+		r.Sessions = append(r.Sessions, ProviderSession{
+			ID:               si.ID,
+			ConsumerCountry:  si.ConsumerCountry,
+			ServiceType:      si.ServiceType,
+			DurationSeconds:  si.Duration,
+			StartedAt:        time.Unix(si.StartedAt, 0).Format(time.RFC3339),
+			Earnings:         NewTokensFromDecimal(earningsDecimalEther),
+			TransferredBytes: si.Transferred,
+		})
+	}
+	return &r
+}
+
+// ProviderSession contains provided session ifnromation
+// swagger:model ProviderSession
+type ProviderSession struct {
+	ID               string `json:"id"`
+	ConsumerCountry  string `json:"consumer_country"`
+	ServiceType      string `json:"service_type"`
+	DurationSeconds  int64  `json:"duration_seconds"`
+	StartedAt        string `json:"started_at"`
+	Earnings         Tokens `json:"earnings"`
+	TransferredBytes int64  `json:"transferred_bytes"`
 }
