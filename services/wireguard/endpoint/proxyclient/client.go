@@ -124,7 +124,7 @@ func (c *client) Close() (err error) {
 
 	if c.Device != nil {
 		go func() {
-			time.Sleep(2 * time.Minute)
+			time.Sleep(time.Minute)
 			c.Device.Close()
 		}()
 	}
