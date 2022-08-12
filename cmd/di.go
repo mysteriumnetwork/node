@@ -28,6 +28,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
@@ -83,8 +86,6 @@ import (
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	psort "github.com/mysteriumnetwork/payments/client/sort"
 	"github.com/mysteriumnetwork/payments/observer"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // UIServer represents our web server
@@ -195,10 +196,10 @@ type Dependencies struct {
 
 	ResidentCountry *identity.ResidentCountry
 
-	PayoutAddressStorage   *payout.AddressStorage
-	NodeStatusTracker      *node.MonitoringStatusTracker
-	MonitoringAgentTracker *node.MonitoringAgentTracker
-	uiVersionConfig        versionmanager.NodeUIVersionConfig
+	PayoutAddressStorage *payout.AddressStorage
+	NodeStatusTracker    *node.MonitoringStatusTracker
+	NodeStatsTracker     *node.StatsTracker
+	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -624,8 +625,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
-	di.MonitoringAgentTracker = node.NewMonitoringAgentTracker(
+	di.NodeStatsTracker = node.NewNodeStatsTracker(
 		di.QualityClient.ProviderStatuses,
+		di.QualityClient.ProviderSessionsList,
 		di.IdentityManager,
 	)
 

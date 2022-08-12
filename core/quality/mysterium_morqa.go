@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 
@@ -313,6 +314,29 @@ func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAge
 	}
 
 	return statuses, nil
+}
+
+// ProviderSessionsList fetch provider sessions list from quality oracle.
+func (m *MysteriumMORQA) ProviderSessionsList(id identity.Identity, rangeTime string) ([]node.SessionItem, error) {
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/sessions?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to request provider monitoring sessions list")
+	}
+	defer response.Body.Close()
+
+	var sessions []node.SessionItem
+
+	if err = parseResponseJSON(response, &sessions); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring sessions list")
+		return nil, err
+	}
+
+	return sessions, nil
 }
 
 // SendMetric submits new metric.

@@ -24,12 +24,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/node"
-
 	"github.com/gin-gonic/gin"
-
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
 
 type mockNodeStatusProvider struct {
@@ -37,7 +36,8 @@ type mockNodeStatusProvider struct {
 }
 
 type mockMonitoringAgent struct {
-	status node.MonitoringAgentStatuses
+	status   node.MonitoringAgentStatuses
+	sessions []node.SessionItem
 }
 
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
@@ -46,6 +46,10 @@ func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus 
 
 func (nodeMonitoringAgentTracker *mockMonitoringAgent) Statuses() (node.MonitoringAgentStatuses, error) {
 	return nodeMonitoringAgentTracker.status, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) Sessions(_ string) ([]node.SessionItem, error) {
+	return nodeMonitoringAgentTracker.sessions, nil
 }
 
 func Test_NodeStatus(t *testing.T) {

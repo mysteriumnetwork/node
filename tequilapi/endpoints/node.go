@@ -21,6 +21,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -28,6 +30,7 @@ import (
 
 type nodeMonitoringAgent interface {
 	Statuses() (node.MonitoringAgentStatuses, error)
+	Sessions(rangeTime string) ([]node.SessionItem, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -78,6 +81,48 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
 }
 
+// GetProviderSessions A list of sessions metrics during a period of time
+// swagger:operation GET /node/provider/sessions GetProviderSessions
+// ---
+// summary: Provides Node sessions data during a period of time
+// description: Node sessions metrics during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Provider sessions list
+//     schema:
+//       "$ref": "#/definitions/ProviderSessionsResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
+	rangeTime := c.Param("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSessions))
+		return
+	}
+
+	res, err := ne.nodeMonitoringAgent.Sessions(rangeTime)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider sessions list: "+err.Error(), contract.ErrorCodeProviderSessions))
+		return
+	}
+
+	utils.WriteAsJSON(contract.ProviderSessionsResponse{Statuses: res}, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
 func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
 	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
@@ -87,6 +132,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 		{
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
 			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
+			nodeGroup.GET("/provider/sessions", nodeEndpoints.GetProviderSessions)
 		}
 		return nil
 	}

@@ -1286,6 +1286,41 @@
         }
       }
     },
+    "/node/provider/sessions": {
+      "get": {
+        "description": "Node sessions metrics during a period of time",
+        "summary": "Provides Node sessions data during a period of time",
+        "operationId": "GetProviderSessions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions list",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/proposals": {
       "get": {
         "description": "Returns list of proposals filtered by provider id",
@@ -4127,6 +4162,20 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProviderSessionsResponse": {
+      "type": "object",
+      "title": "ProviderSessionsResponse reflects a list of sessions metrics during a period of time.",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SessionItem"
+          },
+          "x-go-name": "Statuses"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "Quality": {
       "type": "object",
       "title": "Quality holds proposal quality metrics.",
@@ -4528,6 +4577,44 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionItem": {
+      "type": "object",
+      "title": "SessionItem represents information about session monitoring metrics.",
+      "properties": {
+        "consumer_country": {
+          "type": "string",
+          "x-go-name": "ConsumerCountry"
+        },
+        "duration": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Duration"
+        },
+        "earning": {
+          "type": "string",
+          "x-go-name": "Earning"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
+        },
+        "started_at": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "StartedAt"
+        },
+        "transferred": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Transferred"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
     "SessionListResponse": {
       "type": "object",
