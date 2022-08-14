@@ -32,23 +32,29 @@ type ProviderStatuses func(providerID string) (MonitoringAgentStatuses, error)
 // ProviderSessionsList should return provider sessions list
 type ProviderSessionsList func(id identity.Identity, rangeTime string) ([]SessionItem, error)
 
+// ProviderSessionsCount should return provider sessions count
+type ProviderSessionsCount func(id identity.Identity, rangeTime string) (SessionsCount, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
-	providerStatuses     ProviderStatuses
-	providerSessionsList ProviderSessionsList
-	currentIdentity      currentIdentity
+	providerStatuses      ProviderStatuses
+	providerSessionsList  ProviderSessionsList
+	providerSessionsCount ProviderSessionsCount
+	currentIdentity       currentIdentity
 }
 
 // NewNodeStatsTracker constructor
 func NewNodeStatsTracker(
 	providerStatuses ProviderStatuses,
 	providerSessions ProviderSessionsList,
+	providerSessionsCount ProviderSessionsCount,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
-		providerStatuses:     providerStatuses,
-		providerSessionsList: providerSessions,
-		currentIdentity:      currentIdentity,
+		providerStatuses:      providerStatuses,
+		providerSessionsList:  providerSessions,
+		providerSessionsCount: providerSessionsCount,
+		currentIdentity:       currentIdentity,
 	}
 
 	return mat
@@ -75,6 +81,11 @@ type SessionItem struct {
 	Transferred     int64  `json:"transferred"`
 }
 
+// SessionsCount represent a information about number of sessions during a period of time
+type SessionsCount struct {
+	Count int `json:"count"`
+}
+
 // Sessions retrieves and resolved monitoring status from quality oracle
 func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
@@ -83,4 +94,14 @@ func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	}
 
 	return []SessionItem{}, errors.New("identity not found")
+}
+
+// SessionsCount retrieves and resolved numbers of sessions
+func (m *StatsTracker) SessionsCount(rangeTime string) (SessionsCount, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerSessionsCount(id, rangeTime)
+	}
+
+	return SessionsCount{}, errors.New("identity not found")
 }

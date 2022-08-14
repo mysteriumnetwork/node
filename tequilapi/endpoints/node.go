@@ -31,6 +31,7 @@ import (
 type nodeMonitoringAgent interface {
 	Statuses() (node.MonitoringAgentStatuses, error)
 	Sessions(rangeTime string) ([]node.SessionItem, error)
+	SessionsCount(rangeTime string) (node.SessionsCount, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -123,6 +124,48 @@ func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 	utils.WriteAsJSON(contract.NewProviderSessionsResponse(res), c.Writer)
 }
 
+// GetProviderSessionsCount A number of sessions during a period of time
+// swagger:operation GET /node/provider/sessions-count provider GetProviderSessionsCount
+// ---
+// summary: Provides Node sessions number during a period of time
+// description: Node sessions count during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Provider sessions count
+//     schema:
+//       "$ref": "#/definitions/ProviderSessionsCountResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
+	rangeTime := c.Query("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSessionsCount))
+		return
+	}
+
+	res, err := ne.nodeMonitoringAgent.SessionsCount(rangeTime)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider sessions count: "+err.Error(), contract.ErrorCodeProviderSessionsCount))
+		return
+	}
+
+	utils.WriteAsJSON(contract.ProviderSessionsCountResponse{Count: res.Count}, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
 func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
 	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
@@ -133,6 +176,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
 			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
 			nodeGroup.GET("/provider/sessions", nodeEndpoints.GetProviderSessions)
+			nodeGroup.GET("/provider/sessions-count", nodeEndpoints.GetProviderSessionsCount)
 		}
 		return nil
 	}
