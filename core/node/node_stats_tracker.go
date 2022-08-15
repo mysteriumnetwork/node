@@ -32,23 +32,29 @@ type ProviderStatuses func(providerID string) (MonitoringAgentStatuses, error)
 // ProviderSessionsList should return provider sessions list
 type ProviderSessionsList func(id identity.Identity, rangeTime string) ([]SessionItem, error)
 
+// ProviderTransferredData should return total traffic served by the provider during a period of time
+type ProviderTransferredData func(id identity.Identity, rangeTime string) (TransferredData, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
-	providerStatuses     ProviderStatuses
-	providerSessionsList ProviderSessionsList
-	currentIdentity      currentIdentity
+	providerStatuses        ProviderStatuses
+	providerSessionsList    ProviderSessionsList
+	providerTransferredData ProviderTransferredData
+	currentIdentity         currentIdentity
 }
 
 // NewNodeStatsTracker constructor
 func NewNodeStatsTracker(
 	providerStatuses ProviderStatuses,
 	providerSessions ProviderSessionsList,
+	providerTransferredData ProviderTransferredData,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
-		providerStatuses:     providerStatuses,
-		providerSessionsList: providerSessions,
-		currentIdentity:      currentIdentity,
+		providerStatuses:        providerStatuses,
+		providerSessionsList:    providerSessions,
+		providerTransferredData: providerTransferredData,
+		currentIdentity:         currentIdentity,
 	}
 
 	return mat
@@ -75,6 +81,11 @@ type SessionItem struct {
 	Transferred     int64  `json:"transferred"`
 }
 
+// TransferredData represent information about total traffic served by the provider during a period of time
+type TransferredData struct {
+	Bytes int `json:"transferred_data"`
+}
+
 // Sessions retrieves and resolved monitoring status from quality oracle
 func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
@@ -83,4 +94,14 @@ func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	}
 
 	return []SessionItem{}, errors.New("identity not found")
+}
+
+// TransferredData retrieves and resolved total traffic served by the provider
+func (m *StatsTracker) TransferredData(rangeTime string) (TransferredData, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerTransferredData(id, rangeTime)
+	}
+
+	return TransferredData{}, errors.New("identity not found")
 }

@@ -20,8 +20,9 @@ package contract
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/shopspring/decimal"
+
+	"github.com/mysteriumnetwork/node/core/node"
 )
 
 // NodeStatusResponse a node status reflects monitoring agent POV on node availability
@@ -63,6 +64,12 @@ func NewProviderSessionsResponse(sessionItems []node.SessionItem) *ProviderSessi
 		})
 	}
 	return &r
+}
+
+// ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.
+// swagger:model ProviderTransferredDataResponse
+type ProviderTransferredDataResponse struct {
+	Bytes int `json:"transferred_data"`
 }
 
 // ProviderSession contains provided session ifnromation

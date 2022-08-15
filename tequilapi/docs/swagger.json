@@ -1330,6 +1330,44 @@
         }
       }
     },
+    "/node/provider/transferred-data": {
+      "get": {
+        "description": "Node transferred data during a period of time",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides total traffic served by the provider during a period of time",
+        "operationId": "GetProviderTransferredData",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider transferred data",
+            "schema": {
+              "$ref": "#/definitions/ProviderTransferredDataResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/proposals": {
       "get": {
         "description": "Returns list of proposals filtered by provider id",
@@ -4217,6 +4255,18 @@
             "$ref": "#/definitions/ProviderSession"
           },
           "x-go-name": "Sessions"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderTransferredDataResponse": {
+      "type": "object",
+      "title": "ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.",
+      "properties": {
+        "transferred_data": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Bytes"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
