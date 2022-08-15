@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/shopspring/decimal"
 )
 
 // TokensZero zero amount
@@ -48,6 +49,15 @@ func NewTokens(amount *big.Int) Tokens {
 		Wei:   amount.String(),
 		Ether: ethers.String(),
 		Human: ethers.Truncate(HumanPrecision).String(),
+	}
+}
+
+// NewTokensFromDecimal convenience constructor for Tokens
+func NewTokensFromDecimal(amount decimal.Decimal) Tokens {
+	return Tokens{
+		Wei:   crypto.DecimalToBigMyst(amount).String(),
+		Ether: amount.String(),
+		Human: amount.Truncate(HumanPrecision).String(),
 	}
 }
 

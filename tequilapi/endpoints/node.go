@@ -48,7 +48,7 @@ func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent 
 }
 
 // NodeStatus Status provides Node proposal status
-// swagger:operation GET /node/monitoring-status NODE
+// swagger:operation GET /node/monitoring-status provider NodeStatus
 // ---
 // summary: Provides Node proposal status
 // description: Node Status as seen by monitoring agent
@@ -62,7 +62,7 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 }
 
 // MonitoringAgentStatuses Statuses from monitoring agent
-// swagger:operation GET /node/monitoring-agent-statuses MonitoringAgentStatuses
+// swagger:operation GET /node/monitoring-agent-statuses provider MonitoringAgentStatuses
 // ---
 // summary: Provides Node connectivity statuses from monitoring agent
 // description: Node connectivity statuses as seen by monitoring agent
@@ -82,7 +82,7 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 }
 
 // GetProviderSessions A list of sessions metrics during a period of time
-// swagger:operation GET /node/provider/sessions GetProviderSessions
+// swagger:operation GET /node/provider/sessions provider GetProviderSessions
 // ---
 // summary: Provides Node sessions data during a period of time
 // description: Node sessions metrics during a period of time
@@ -105,7 +105,7 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
-	rangeTime := c.Param("range")
+	rangeTime := c.Query("range")
 
 	switch rangeTime {
 	case "1d", "7d", "30d":
@@ -120,7 +120,7 @@ func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 		return
 	}
 
-	utils.WriteAsJSON(contract.ProviderSessionsResponse{Statuses: res}, c.Writer)
+	utils.WriteAsJSON(contract.NewProviderSessionsResponse(res), c.Writer)
 }
 
 // AddRoutesForNode adds nat routes to given router
