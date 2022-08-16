@@ -4263,7 +4263,7 @@
       "type": "object",
       "title": "ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.",
       "properties": {
-        "transferred_data": {
+        "transferred_data_bytes": {
           "type": "integer",
           "format": "int64",
           "x-go-name": "Bytes"

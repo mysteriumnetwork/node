@@ -83,7 +83,7 @@ type SessionItem struct {
 
 // TransferredData represent information about total traffic served by the provider during a period of time
 type TransferredData struct {
-	Bytes int `json:"transferred_data"`
+	Bytes int `json:"transferred_data_bytes"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
