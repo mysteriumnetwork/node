@@ -7,8 +7,10 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/shaper"
 
 	"github.com/rs/zerolog/log"
@@ -25,6 +27,10 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
+)
+
+const (
+	tcpWaitTimeout = 50 * time.Second
 )
 
 type netTun struct {
@@ -95,15 +101,17 @@ func (e *endpoint) AddHeader(tcpip.LinkAddress, tcpip.LinkAddress, tcpip.Network
 }
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
-	log.Error().Msg("CreateNetTUN >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-
 	opts := stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol, icmp.NewProtocol6, icmp.NewProtocol4},
 	}
 
-	// 4 Mbps in total
-	limiter := rate.NewLimiter(rate.Limit(4*1024*1024/8), 4*1024*1024/8)
+	var limiter *rate.Limiter
+	if config.GetBool(config.FlagShaperEnabled) {
+		log.Warn().Msgf("Shaper bandwidth: %v", config.GetUInt64(config.FlagShaperBandwidth))
+		bandwidthBytes := config.GetUInt64(config.FlagShaperBandwidth) * 1024
+		limiter = rate.NewLimiter(rate.Limit(bandwidthBytes), int(bandwidthBytes))
+	}
 
 	dev := &netTun{
 		stack:          stack.New(opts),
@@ -115,7 +123,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		limiter:        limiter,
 	}
 
-	tcpFwd := tcp.NewForwarder(dev.stack, 0, 128, dev.acceptTCP)
+	tcpFwd := tcp.NewForwarder(dev.stack, 0, 10000, dev.acceptTCP)
 	dev.stack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpFwd.HandlePacket)
 
 	udpFwd := udp.NewForwarder(dev.stack, dev.acceptUDP)
@@ -265,21 +273,25 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 	}
 	defer server.Close()
 
-	connClosed := make(chan error, 2)
-	go func() {
-		r := shaper.NewReader(client, tun.limiter)
-		_, err := io.Copy(server, r)
-		connClosed <- err
-	}()
-	go func() {
-		r := shaper.NewReader(server, tun.limiter)
-		_, err := io.Copy(client, r)
-		connClosed <- err
-	}()
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go tun.relay(&wg, server, client)
+	go tun.relay(&wg, client, server)
+	wg.Wait()
+}
 
-	err = <-connClosed
+func (tun *netTun) relay(wg *sync.WaitGroup, dst, src net.Conn) {
+	defer wg.Done()
+
+	r := shaper.NewReader(src, tun.limiter)
+	_, err := io.Copy(dst, r)
 	if err != nil {
-		log.Trace().Err(err).Msgf("Proxy connection closed: %s", dialAddrStr)
+		log.Trace().Err(err).Msgf("io.Copy")
+	}
+
+	err = dst.SetReadDeadline(time.Now().Add(-1)) // make another Copy exit
+	if err != nil {
+		log.Trace().Err(err).Msgf("dst.SetReadDeadline")
 	}
 }
 
@@ -326,20 +338,8 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	idleTimeout := 2 * time.Minute
-	timeout := time.AfterFunc(idleTimeout, func() {
-		log.Trace().Msgf("Session timed out, %s<->%s", proxyAddr, remoteAddr)
-
-		cancel()
-		client.Close()
-		proxyConn.Close()
-	})
-	extend := func() {
-		timeout.Reset(idleTimeout)
-	}
-
-	go tun.proxy(ctx, cancel, client, clientAddr, proxyConn, extend)
-	go tun.proxy(ctx, cancel, proxyConn, remoteAddr, client, extend)
+	go tun.proxy(ctx, cancel, client, clientAddr, proxyConn) // loc <- remote
+	go tun.proxy(ctx, cancel, proxyConn, remoteAddr, client) // remote <- loc
 }
 
 func (tun *netTun) isLocal(remoteAddr tcpip.Address) bool {
@@ -352,7 +352,11 @@ func (tun *netTun) isLocal(remoteAddr tcpip.Address) bool {
 	return false
 }
 
-func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn, extend func()) {
+const (
+	idleTimeout = 2 * time.Minute
+)
+
+func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
 	defer cancel()
 
 	buf := make([]byte, tun.mtu)
@@ -362,6 +366,8 @@ func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net
 		case <-ctx.Done():
 			return
 		default:
+			src.SetReadDeadline(time.Now().Add(idleTimeout))
+
 			n, srcAddr, err := src.ReadFrom(buf)
 			if err != nil {
 				if ctx.Err() == nil {
@@ -369,6 +375,8 @@ func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net
 				}
 				return
 			}
+
+			// delay according to bandwidth limit
 			if n > 0 && tun.limiter != nil {
 				err := tun.limiter.WaitN(ctx, n)
 				if err != nil {
@@ -384,7 +392,7 @@ func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net
 				}
 				return
 			}
-			extend()
+			dst.SetReadDeadline(time.Now().Add(idleTimeout))
 		}
 	}
 }
