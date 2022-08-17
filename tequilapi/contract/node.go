@@ -46,7 +46,7 @@ type ProviderSessionsResponse struct {
 
 // NewProviderSessionsResponse creates response from node.SessionItem slice
 func NewProviderSessionsResponse(sessionItems []node.SessionItem) *ProviderSessionsResponse {
-	var r = ProviderSessionsResponse{}
+	r := ProviderSessionsResponse{Sessions: []ProviderSession{}}
 	for _, si := range sessionItems {
 		earningsDecimalEther, err := decimal.NewFromString(si.Earning)
 		if err != nil {
