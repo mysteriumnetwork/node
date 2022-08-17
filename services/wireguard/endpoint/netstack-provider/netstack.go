@@ -33,6 +33,7 @@ import (
 	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
 	"gvisor.dev/gvisor/pkg/bufferv2"
+	"gvisor.dev/gvisor/pkg/refs"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -121,6 +122,8 @@ func (e *endpoint) AddHeader(p *stack.PacketBuffer) {
 }
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
+	refs.SetLeakMode(refs.NoLeakChecking)
+
 	opts := stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol, icmp.NewProtocol6, icmp.NewProtocol4},
@@ -215,7 +218,6 @@ func (tun *netTun) Write(buf []byte, offset int) (int, error) {
 	case 6:
 		tun.dispatcher.DeliverNetworkPacket(ipv6.ProtocolNumber, pkb)
 	}
-	pkb.DecRef()
 
 	return len(buf), nil
 }
