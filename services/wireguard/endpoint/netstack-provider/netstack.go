@@ -1,4 +1,4 @@
-package netstack
+package netstack_provider
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/shaper"
 
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
@@ -283,15 +282,15 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 func (tun *netTun) relay(wg *sync.WaitGroup, dst, src net.Conn) {
 	defer wg.Done()
 
-	r := shaper.NewReader(src, tun.limiter)
+	r := NewReader(src, tun.limiter)
 	_, err := io.Copy(dst, r)
 	if err != nil {
-		log.Trace().Err(err).Msgf("io.Copy")
+		log.Trace().Err(err).Msg("relay: data copy")
 	}
 
 	err = dst.SetReadDeadline(time.Now().Add(-1)) // make another Copy exit
 	if err != nil {
-		log.Trace().Err(err).Msgf("dst.SetReadDeadline")
+		log.Trace().Err(err).Msg("relay: setting read deadline")
 	}
 }
 

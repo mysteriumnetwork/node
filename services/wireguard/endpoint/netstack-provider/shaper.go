@@ -1,4 +1,4 @@
-package shaper
+package netstack_provider
 
 import (
 	"context"

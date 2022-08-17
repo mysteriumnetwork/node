@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
@@ -47,7 +47,7 @@ func newWGClient() (WgClient, error) {
 	}
 
 	if config.GetBool(config.FlagUserspace) {
-		return netstack.New()
+		return netstack_provider.New()
 	}
 
 	if config.GetBool(config.FlagUserMode) {

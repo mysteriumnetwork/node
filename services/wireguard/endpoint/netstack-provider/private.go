@@ -1,4 +1,4 @@
-package netstack
+package netstack_provider
 
 import (
 	"net"
