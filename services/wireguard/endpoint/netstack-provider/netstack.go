@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- package netstack_provider
+package netstack_provider
 
 import (
 	"context"
@@ -32,9 +32,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -45,15 +45,11 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-const (
-	tcpWaitTimeout = 50 * time.Second
-)
-
 type netTun struct {
 	stack          *stack.Stack
 	dispatcher     stack.NetworkDispatcher
 	events         chan tun.Event
-	incomingPacket chan buffer.VectorisedView
+	incomingPacket chan *bufferv2.View
 	mtu            int
 	dnsPort        int
 	localAddresses []netip.Addr
@@ -96,13 +92,21 @@ func (*endpoint) LinkAddress() tcpip.LinkAddress {
 
 func (*endpoint) Wait() {}
 
-func (e *endpoint) WritePacket(_ stack.RouteInfo, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
-	e.incomingPacket <- buffer.NewVectorisedView(pkt.Size(), pkt.Views())
+func (e *endpoint) WritePacket(pkt *stack.PacketBuffer) tcpip.Error {
+	e.incomingPacket <- pkt.ToView()
 	return nil
 }
 
-func (e *endpoint) WritePackets(stack.RouteInfo, stack.PacketBufferList, tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
-	panic("not implemented")
+func (e *endpoint) WritePackets(pl stack.PacketBufferList) (size int, err tcpip.Error) {
+	for _, pkt := range pl.AsSlice() {
+		size += pkt.Size()
+		err = e.WritePacket(pkt)
+		if err != nil {
+			return size, err
+		}
+	}
+
+	return size, nil
 }
 
 func (e *endpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error {
@@ -113,7 +117,7 @@ func (*endpoint) ARPHardwareType() header.ARPHardwareType {
 	return header.ARPHardwareNone
 }
 
-func (e *endpoint) AddHeader(tcpip.LinkAddress, tcpip.LinkAddress, tcpip.NetworkProtocolNumber, *stack.PacketBuffer) {
+func (e *endpoint) AddHeader(p *stack.PacketBuffer) {
 }
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
@@ -132,7 +136,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 	dev := &netTun{
 		stack:          stack.New(opts),
 		events:         make(chan tun.Event, 10),
-		incomingPacket: make(chan buffer.VectorisedView),
+		incomingPacket: make(chan *bufferv2.View),
 		mtu:            mtu,
 		dnsPort:        dnsPort,
 		localAddresses: localAddresses,
@@ -201,13 +205,17 @@ func (tun *netTun) Write(buf []byte, offset int) (int, error) {
 		return 0, nil
 	}
 
-	pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{Data: buffer.NewVectorisedView(len(packet), []buffer.View{buffer.NewViewFromBytes(packet)})})
+	pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{
+		Payload: bufferv2.MakeWithData(append([]byte(nil), packet...)),
+	})
+
 	switch packet[0] >> 4 {
 	case 4:
-		tun.dispatcher.DeliverNetworkPacket("", "", ipv4.ProtocolNumber, pkb)
+		tun.dispatcher.DeliverNetworkPacket(ipv4.ProtocolNumber, pkb)
 	case 6:
-		tun.dispatcher.DeliverNetworkPacket("", "", ipv6.ProtocolNumber, pkb)
+		tun.dispatcher.DeliverNetworkPacket(ipv6.ProtocolNumber, pkb)
 	}
+	pkb.DecRef()
 
 	return len(buf), nil
 }
