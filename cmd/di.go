@@ -628,7 +628,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.NodeStatsTracker = node.NewNodeStatsTracker(
 		di.QualityClient.ProviderStatuses,
 		di.QualityClient.ProviderSessionsList,
-		di.QualityClient.TransferredData,
+		di.QualityClient.ProviderTransferredData,
 		di.IdentityManager,
 	)
 
