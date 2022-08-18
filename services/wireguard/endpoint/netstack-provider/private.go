@@ -19,6 +19,9 @@ package netstack_provider
 
 import (
 	"net"
+	"strings"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 func mustParseCIDR(cidrs []string) []*net.IPNet {
@@ -33,24 +36,22 @@ func mustParseCIDR(cidrs []string) []*net.IPNet {
 	return ipnets
 }
 
-var privateIPv4Block []*net.IPNet
-
-var txtPrivateIPv4Block = []string{
-	// "127.0.0.0/8",    // IPv4 loopback
-	// "10.0.0.0/8",     // RFC1918 // used by VPN itself:
-	"100.64.0.0/10",  // https://en.wikipedia.org/wiki/Reserved_IP_addresses
-	"172.16.0.0/12",  // RFC1918
-	"192.168.0.0/16", // RFC1918
-	"169.254.0.0/16", // RFC3927 link-local
-}
+var (
+	privateIPv4Block   []*net.IPNet
+	allowedPrivateIPv4 net.IP
+)
 
 func init() {
-	privateIPv4Block = mustParseCIDR(txtPrivateIPv4Block)
+	privateIPv4Block = mustParseCIDR(strings.Split(config.FlagFirewallProtectedNetworks.GetValue(), ","))
+	allowedPrivateIPv4 = net.ParseIP("10.182.0.1")
 }
 
 // isPublicAddr retruns true if the IP is a private address
 func isPrivateIP(ip net.IP) bool {
 	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return false
+	}
+	if ip.Equal(allowedPrivateIPv4) {
 		return false
 	}
 

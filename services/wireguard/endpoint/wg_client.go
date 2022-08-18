@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
+	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
