@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 func mustParseCIDR(cidrs []string) []*net.IPNet {
@@ -36,22 +37,17 @@ func mustParseCIDR(cidrs []string) []*net.IPNet {
 	return ipnets
 }
 
-var (
-	privateIPv4Block   []*net.IPNet
-	allowedPrivateIPv4 net.IP
-)
+var privateIPv4Block []*net.IPNet
 
-func init() {
+func initPrivateIPList() {
 	privateIPv4Block = mustParseCIDR(strings.Split(config.FlagFirewallProtectedNetworks.GetValue(), ","))
-	allowedPrivateIPv4 = net.ParseIP("10.182.0.1")
 }
 
-// isPublicAddr retruns true if the IP is a private address
-func isPrivateIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return false
-	}
-	if ip.Equal(allowedPrivateIPv4) {
+// isPublicAddr retruns true if the IP is private / restricted
+func (tun *netTun) isPrivateIP(ip net.IP) bool {
+
+	// allow access to local address of Wireguard provider, like 10.182.0.1
+	if tun.isLocal(tcpip.Address(ip)) {
 		return false
 	}
 

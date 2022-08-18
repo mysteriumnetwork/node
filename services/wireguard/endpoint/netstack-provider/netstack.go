@@ -123,6 +123,7 @@ func (e *endpoint) AddHeader(p *stack.PacketBuffer) {
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
 	refs.SetLeakMode(refs.NoLeakChecking)
+	initPrivateIPList()
 
 	opts := stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
@@ -262,12 +263,12 @@ func (tun *netTun) addAddress(ip tcpip.Address) error {
 }
 
 func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
-	if isPrivateIP(net.IP(r.ID().LocalAddress)) {
+	reqDetails := r.ID()
+
+	if tun.isPrivateIP(net.IP(reqDetails.LocalAddress)) {
 		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", r.ID().LocalAddress.String())
 		return
 	}
-
-	reqDetails := r.ID()
 
 	tun.addAddress(reqDetails.LocalAddress)
 
@@ -322,12 +323,12 @@ func (tun *netTun) relay(wg *sync.WaitGroup, dst, src net.Conn) {
 }
 
 func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
-	if isPrivateIP(net.IP(req.ID().LocalAddress)) {
+	sess := req.ID()
+
+	if tun.isPrivateIP(net.IP(sess.LocalAddress)) {
 		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", req.ID().LocalAddress.String())
 		return
 	}
-
-	sess := req.ID()
 
 	tun.addAddress(sess.LocalAddress)
 
