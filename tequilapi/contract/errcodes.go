@@ -127,15 +127,16 @@ const (
 
 	// Other
 
-	ErrCodeActiveHermes            = "err_get_active_hermes"
-	ErrCodeHermesFee               = "err_hermes_fee"
-	ErrCodeHermesSettle            = "err_hermes_settle"
-	ErrCodeHermesSettleAsync       = "err_hermes_settle_async"
-	ErrCodeUILocalVersions         = "err_ui_local_versions"
-	ErrCodeUISwitchVersion         = "err_ui_switch_version"
-	ErrCodeUIDownload              = "err_ui_download"
-	ErrCodeUIBundledVersion        = "err_ui_bundled_version"
-	ErrCodeUIUsedVersion           = "err_ui_used_version"
-	ErrorCodeProviderSessions      = "err_provider_sessions"
-	ErrorCodeProviderSessionsCount = "err_provider_sessions_count"
+	ErrCodeActiveHermes              = "err_get_active_hermes"
+	ErrCodeHermesFee                 = "err_hermes_fee"
+	ErrCodeHermesSettle              = "err_hermes_settle"
+	ErrCodeHermesSettleAsync         = "err_hermes_settle_async"
+	ErrCodeUILocalVersions           = "err_ui_local_versions"
+	ErrCodeUISwitchVersion           = "err_ui_switch_version"
+	ErrCodeUIDownload                = "err_ui_download"
+	ErrCodeUIBundledVersion          = "err_ui_bundled_version"
+	ErrCodeUIUsedVersion             = "err_ui_used_version"
+	ErrorCodeProviderSessions        = "err_provider_sessions"
+	ErrorCodeProviderTransferredData = "err_provider_transferred_data"
+	ErrorCodeProviderSessionsCount   = "err_provider_sessions_count"
 )

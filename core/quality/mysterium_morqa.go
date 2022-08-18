@@ -339,6 +339,28 @@ func (m *MysteriumMORQA) ProviderSessionsList(id identity.Identity, rangeTime st
 	return sessions, nil
 }
 
+// ProviderTransferredData fetch total traffic served by the provider during a period of time from quality oracle.
+func (m *MysteriumMORQA) ProviderTransferredData(id identity.Identity, rangeTime string) (node.TransferredData, error) {
+	var data node.TransferredData
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/transferred-data?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider transferred data")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider transferred data")
+		return data, err
+	}
+
+	return data, nil
+}
+
 // ProviderSessionsCount fetch provider sessions number from quality oracle.
 func (m *MysteriumMORQA) ProviderSessionsCount(id identity.Identity, rangeTime string) (node.SessionsCount, error) {
 	var count node.SessionsCount

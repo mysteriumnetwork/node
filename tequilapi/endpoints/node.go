@@ -31,6 +31,7 @@ import (
 type nodeMonitoringAgent interface {
 	Statuses() (node.MonitoringAgentStatuses, error)
 	Sessions(rangeTime string) ([]node.SessionItem, error)
+	TransferredData(rangeTime string) (node.TransferredData, error)
 	SessionsCount(rangeTime string) (node.SessionsCount, error)
 }
 
@@ -124,6 +125,48 @@ func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 	utils.WriteAsJSON(contract.NewProviderSessionsResponse(res), c.Writer)
 }
 
+// GetProviderTransferredData A number of bytes transferred during a period of time
+// swagger:operation GET /node/provider/transferred-data provider GetProviderTransferredData
+// ---
+// summary: Provides total traffic served by the provider during a period of time
+// description: Node transferred data during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Provider transferred data
+//     schema:
+//       "$ref": "#/definitions/ProviderTransferredDataResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
+	rangeTime := c.Query("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderTransferredData))
+		return
+	}
+
+	res, err := ne.nodeMonitoringAgent.TransferredData(rangeTime)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider transferred data: "+err.Error(), contract.ErrorCodeProviderTransferredData))
+		return
+	}
+
+	utils.WriteAsJSON(contract.ProviderTransferredDataResponse{Bytes: res.Bytes}, c.Writer)
+}
+
 // GetProviderSessionsCount A number of sessions during a period of time
 // swagger:operation GET /node/provider/sessions-count provider GetProviderSessionsCount
 // ---
@@ -176,6 +219,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
 			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
 			nodeGroup.GET("/provider/sessions", nodeEndpoints.GetProviderSessions)
+			nodeGroup.GET("/provider/transferred-data", nodeEndpoints.GetProviderTransferredData)
 			nodeGroup.GET("/provider/sessions-count", nodeEndpoints.GetProviderSessionsCount)
 		}
 		return nil

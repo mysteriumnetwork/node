@@ -66,6 +66,12 @@ func NewProviderSessionsResponse(sessionItems []node.SessionItem) *ProviderSessi
 	return &r
 }
 
+// ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.
+// swagger:model ProviderTransferredDataResponse
+type ProviderTransferredDataResponse struct {
+	Bytes int `json:"transferred_data_bytes"`
+}
+
 // ProviderSessionsCountResponse reflects a number of sessions during a period of time.
 // swagger:model ProviderSessionsCountResponse
 type ProviderSessionsCountResponse struct {
