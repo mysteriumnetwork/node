@@ -37,7 +37,7 @@ var privateIPv4Block []*net.IPNet
 
 var txtPrivateIPv4Block = []string{
 	// "127.0.0.0/8",    // IPv4 loopback
-	// "10.0.0.0/8",     // RFC1918 // used by VPN itself: 
+	// "10.0.0.0/8",     // RFC1918 // used by VPN itself:
 	"100.64.0.0/10",  // https://en.wikipedia.org/wiki/Reserved_IP_addresses
 	"172.16.0.0/12",  // RFC1918
 	"192.168.0.0/16", // RFC1918

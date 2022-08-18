@@ -352,7 +352,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 	proxyConn, err := net.ListenUDP("udp", proxyAddr)
 	if err != nil {
-		log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr)
+		log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr.Port)
 		proxyAddr.Port = 0
 
 		proxyConn, err = net.ListenUDP("udp", proxyAddr)
