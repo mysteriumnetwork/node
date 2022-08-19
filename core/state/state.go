@@ -52,7 +52,7 @@ type publisher interface {
 }
 
 type serviceLister interface {
-	List(includeAll bool) []*service.Instance
+	List() map[service.ID]*service.Instance
 }
 
 type identityProvider interface {
@@ -237,30 +237,26 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 }
 
 func (k *Keeper) updateServices() {
-	services := k.deps.ServiceLister.List(false)
+	services := k.deps.ServiceLister.List()
 	result := make([]contract.ServiceInfoDTO, len(services))
 
 	i := 0
-	for _, v := range services {
+	for key, v := range services {
 		// merge in the connection statistics
-		match, _ := k.getServiceByID(string(v.ID))
+		match, _ := k.getServiceByID(string(key))
 
 		priced, err := k.deps.ProposalPricer.EnrichProposalWithPrice(v.Proposal)
 		if err != nil {
 			log.Warn().Msgf("could not load price for proposal %v(%v)", v.Proposal.ProviderID, v.Proposal.ServiceType)
 		}
 
-		prop := contract.NewProposalDTO(priced)
-		if match.ConnectionStatistics == nil {
-			match.ConnectionStatistics = &contract.ServiceStatisticsDTO{}
-		}
 		result[i] = contract.ServiceInfoDTO{
-			ID:                   string(v.ID),
+			ID:                   string(key),
 			ProviderID:           v.ProviderID.Address,
 			Type:                 v.Type,
 			Options:              v.Options,
 			Status:               string(v.State()),
-			Proposal:             &prop,
+			Proposal:             contract.NewProposalDTO(priced),
 			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++

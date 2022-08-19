@@ -22,7 +22,6 @@ import "math/big"
 // CurrentPriceResponse represents the price.
 // swagger:model CurrentPriceResponse
 type CurrentPriceResponse struct {
-	ServiceType string `json:"service_type"`
 	// deprecated
 	PricePerHour       *big.Int `json:"price_per_hour"`
 	PricePerHourTokens Tokens   `json:"price_per_hour_tokens"`

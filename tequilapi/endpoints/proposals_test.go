@@ -282,7 +282,6 @@ func TestCurrentPrices(t *testing.T) {
 		t,
 		`
 				{
-				  "service_type": "wireguard",
 				  "price_per_hour": 123000000000000000,
 				  "price_per_hour_tokens": {
 					"wei": "123000000000000000",
