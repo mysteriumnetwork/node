@@ -57,7 +57,7 @@ type Payments struct {
 
 // MainnetDefinition defines parameters for mainnet network (currently default network)
 var MainnetDefinition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v4",
+	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v3",
 	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
 	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
