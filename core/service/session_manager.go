@@ -112,7 +112,7 @@ type PaymentEngineFactory func(providerID, consumerID identity.Identity, chainID
 
 // PriceValidator allows to validate prices against those in discovery.
 type PriceValidator interface {
-	IsPriceValid(in market.Price, nodeType string, country string, serviceType string) bool
+	IsPriceValid(in market.Price, nodeType string, country string) bool
 }
 
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
@@ -208,8 +208,8 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 	return manager.providerService(session, manager.channel)
 }
 
-func (manager *SessionManager) validatePrice(in market.Price, nodeType, country, serviceType string) error {
-	if !manager.priceValidator.IsPriceValid(in, nodeType, country, serviceType) {
+func (manager *SessionManager) validatePrice(in market.Price, nodeType, country string) error {
+	if !manager.priceValidator.IsPriceValid(in, nodeType, country) {
 		return errors.New("consumer asking for invalid price")
 	}
 
@@ -271,7 +271,7 @@ func (manager *SessionManager) validateSession(session *Session, prices market.P
 		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
 	}
 
-	return manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country, manager.service.Proposal.ServiceType)
+	return manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country)
 }
 
 func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, serviceType string) {

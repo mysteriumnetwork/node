@@ -88,7 +88,6 @@ const (
 	ErrCodeProposalsDetectLocation = "err_proposals_detect_location"
 	ErrCodeProposalsPrices         = "err_proposals_prices"
 	ErrCodeProposalsPresets        = "err_proposals_presets"
-	ErrCodeProposalsServiceType    = "err_proposals_service_type"
 
 	// Service
 

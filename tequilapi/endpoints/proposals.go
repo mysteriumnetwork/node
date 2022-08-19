@@ -28,9 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/services/datatransfer"
-	"github.com/mysteriumnetwork/node/services/scraping"
-	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -41,7 +38,7 @@ type QualityFinder interface {
 }
 
 type priceAPI interface {
-	GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error)
+	GetCurrentPrice(nodeType string, country string) (market.Price, error)
 }
 
 type proposalsEndpoint struct {
@@ -293,78 +290,25 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
-	serviceType := c.Request.URL.Query().Get("service_type")
-	if len(serviceType) == 0 {
-		serviceType = wireguard.ServiceType
-	} else if serviceType != wireguard.ServiceType && serviceType != scraping.ServiceType && serviceType != datatransfer.ServiceType {
-		c.Error(apierror.BadRequest("Invalid service type", contract.ErrCodeProposalsServiceType))
-		return
-	}
-
 	loc, err := pe.locationResolver.DetectLocation()
 	if err != nil {
 		c.Error(apierror.Internal("Cannot detect location", contract.ErrCodeProposalsDetectLocation))
 		return
 	}
 
-	price, err := pe.pricer.GetCurrentPrice(loc.IPType, loc.Country, serviceType)
+	price, err := pe.pricer.GetCurrentPrice(loc.IPType, loc.Country)
 	if err != nil {
 		c.Error(apierror.Internal("Cannot retrieve current prices: "+err.Error(), contract.ErrCodeProposalsPrices))
 		return
 	}
 
 	utils.WriteAsJSON(contract.CurrentPriceResponse{
-		ServiceType: serviceType,
-
 		PricePerHour: price.PricePerHour,
 		PricePerGiB:  price.PricePerGiB,
 
 		PricePerHourTokens: contract.NewTokens(price.PricePerHour),
 		PricePerGiBTokens:  contract.NewTokens(price.PricePerGiB),
 	}, c.Writer)
-}
-
-// swagger:operation GET /v2/prices/current
-// ---
-// summary: Returns prices
-// description: Returns prices for all service types
-// responses:
-//   200:
-//     description: Current price for service type
-//     schema:
-//       "$ref": "#/definitions/CurrentPriceResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (pe *proposalsEndpoint) CurrentPrices(c *gin.Context) {
-	loc, err := pe.locationResolver.DetectLocation()
-	if err != nil {
-		c.Error(apierror.Internal("Cannot detect location", contract.ErrCodeProposalsDetectLocation))
-		return
-	}
-
-	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
-	result := make([]contract.CurrentPriceResponse, len(serviceTypes))
-
-	for i, serviceType := range serviceTypes {
-		price, err := pe.pricer.GetCurrentPrice(loc.IPType, loc.Country, serviceType)
-		if err != nil {
-			c.Error(apierror.Internal("Cannot retrieve current prices: "+err.Error(), contract.ErrCodeProposalsPrices))
-			return
-		}
-
-		result[i] = contract.CurrentPriceResponse{
-			ServiceType:  serviceType,
-			PricePerHour: price.PricePerHour,
-			PricePerGiB:  price.PricePerGiB,
-
-			PricePerHourTokens: contract.NewTokens(price.PricePerHour),
-			PricePerGiBTokens:  contract.NewTokens(price.PricePerGiB),
-		}
-	}
-
-	utils.WriteAsJSON(result, c.Writer)
 }
 
 // swagger:operation GET /proposals/filter-presets Proposal proposalFilterPresets
@@ -411,7 +355,6 @@ func AddRoutesForProposals(
 		}
 
 		e.GET("/prices/current", pe.CurrentPrice)
-		e.GET("/v2/prices/current", pe.CurrentPrices)
 		return nil
 	}
 }
