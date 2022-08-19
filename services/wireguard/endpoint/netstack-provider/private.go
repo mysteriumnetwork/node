@@ -19,28 +19,20 @@ package netstack_provider
 
 import (
 	"net"
-	"strings"
 
-	"github.com/mysteriumnetwork/node/config"
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
-func mustParseCIDR(cidrs []string) []*net.IPNet {
-	ipnets := make([]*net.IPNet, len(cidrs))
-	for i, cidr := range cidrs {
+func parseCIDR(cidrs []string) []*net.IPNet {
+	ipnets := make([]*net.IPNet, 0, len(cidrs))
+	for _, cidr := range cidrs {
 		_, ipnet, err := net.ParseCIDR(cidr)
 		if err != nil {
-			panic(err)
+			continue
 		}
-		ipnets[i] = ipnet
+		ipnets = append(ipnets, ipnet)
 	}
 	return ipnets
-}
-
-var privateIPv4Block []*net.IPNet
-
-func initPrivateIPList() {
-	privateIPv4Block = mustParseCIDR(strings.Split(config.FlagFirewallProtectedNetworks.GetValue(), ","))
 }
 
 // isPublicAddr retruns true if the IP is private / restricted
@@ -51,7 +43,7 @@ func (tun *netTun) isPrivateIP(ip net.IP) bool {
 		return false
 	}
 
-	for _, block := range privateIPv4Block {
+	for _, block := range tun.privateIPv4Blocks {
 		if block.Contains(ip) {
 			return true
 		}

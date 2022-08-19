@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -55,7 +56,8 @@ type netTun struct {
 	dnsPort        int
 	localAddresses []netip.Addr
 
-	limiter *rate.Limiter
+	limiter           *rate.Limiter
+	privateIPv4Blocks []*net.IPNet
 }
 
 type (
@@ -123,7 +125,6 @@ func (e *endpoint) AddHeader(p *stack.PacketBuffer) {
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
 	refs.SetLeakMode(refs.NoLeakChecking)
-	initPrivateIPList()
 
 	opts := stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
@@ -137,14 +138,16 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		limiter = rate.NewLimiter(rate.Limit(bandwidthBytes), int(bandwidthBytes))
 	}
 
+	privateIPv4Blocks := parseCIDR(strings.Split(config.FlagFirewallProtectedNetworks.GetValue(), ","))
 	dev := &netTun{
-		stack:          stack.New(opts),
-		events:         make(chan tun.Event, 10),
-		incomingPacket: make(chan *bufferv2.View),
-		mtu:            mtu,
-		dnsPort:        dnsPort,
-		localAddresses: localAddresses,
-		limiter:        limiter,
+		stack:             stack.New(opts),
+		events:            make(chan tun.Event, 10),
+		incomingPacket:    make(chan *bufferv2.View),
+		mtu:               mtu,
+		dnsPort:           dnsPort,
+		localAddresses:    localAddresses,
+		limiter:           limiter,
+		privateIPv4Blocks: privateIPv4Blocks,
 	}
 
 	tcpFwd := tcp.NewForwarder(dev.stack, 0, 10000, dev.acceptTCP)
@@ -341,6 +344,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 	}
 
 	client := gonet.NewUDPConn(tun.stack, &wq, ep)
+	//TODO: defer client.Close()
 
 	clientAddr := &net.UDPAddr{IP: net.IP([]byte(sess.RemoteAddress)), Port: int(sess.RemotePort)}
 	remoteAddr := &net.UDPAddr{IP: net.IP([]byte(sess.LocalAddress)), Port: int(sess.LocalPort)}
