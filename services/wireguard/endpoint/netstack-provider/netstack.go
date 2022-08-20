@@ -344,7 +344,6 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 	}
 
 	client := gonet.NewUDPConn(tun.stack, &wq, ep)
-	//TODO: defer client.Close()
 
 	clientAddr := &net.UDPAddr{IP: net.IP([]byte(sess.RemoteAddress)), Port: int(sess.RemotePort)}
 	remoteAddr := &net.UDPAddr{IP: net.IP([]byte(sess.LocalAddress)), Port: int(sess.LocalPort)}
@@ -362,7 +361,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 		proxyConn, err = net.ListenUDP("udp", proxyAddr)
 		if err != nil {
-			log.Error().Err(err).Msgf("Failed to bind local random port %s", proxyAddr)
+			log.Error().Err(err).Msgf("Failed to bind local random port %v", proxyAddr)
 			return
 		}
 	}
@@ -389,9 +388,9 @@ const (
 
 func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
 	defer cancel()
+	defer dst.Close()
 
 	buf := make([]byte, tun.mtu)
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -423,6 +422,7 @@ func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net
 				}
 				return
 			}
+
 			dst.SetReadDeadline(time.Now().Add(idleTimeout))
 		}
 	}
