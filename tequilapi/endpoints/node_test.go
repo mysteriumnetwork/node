@@ -39,6 +39,7 @@ type mockMonitoringAgent struct {
 	status   node.MonitoringAgentStatuses
 	sessions []node.SessionItem
 	data     node.TransferredData
+	count    node.SessionsCount
 }
 
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
@@ -55,6 +56,10 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) Sessions(_ string) ([]nod
 
 func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredData(_ string) (node.TransferredData, error) {
 	return nodeMonitoringAgentTracker.data, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsCount(_ string) (node.SessionsCount, error) {
+	return nodeMonitoringAgentTracker.count, nil
 }
 
 func Test_NodeStatus(t *testing.T) {

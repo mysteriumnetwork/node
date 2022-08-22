@@ -629,6 +629,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.QualityClient.ProviderStatuses,
 		di.QualityClient.ProviderSessionsList,
 		di.QualityClient.ProviderTransferredData,
+		di.QualityClient.ProviderSessionsCount,
 		di.IdentityManager,
 	)
 

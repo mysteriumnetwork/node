@@ -35,11 +35,15 @@ type ProviderSessionsList func(id identity.Identity, rangeTime string) ([]Sessio
 // ProviderTransferredData should return total traffic served by the provider during a period of time
 type ProviderTransferredData func(id identity.Identity, rangeTime string) (TransferredData, error)
 
+// ProviderSessionsCount should return provider sessions count
+type ProviderSessionsCount func(id identity.Identity, rangeTime string) (SessionsCount, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
 	providerStatuses        ProviderStatuses
 	providerSessionsList    ProviderSessionsList
 	providerTransferredData ProviderTransferredData
+	providerSessionsCount   ProviderSessionsCount
 	currentIdentity         currentIdentity
 }
 
@@ -48,12 +52,14 @@ func NewNodeStatsTracker(
 	providerStatuses ProviderStatuses,
 	providerSessions ProviderSessionsList,
 	providerTransferredData ProviderTransferredData,
+	providerSessionsCount ProviderSessionsCount,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
 		providerStatuses:        providerStatuses,
 		providerSessionsList:    providerSessions,
 		providerTransferredData: providerTransferredData,
+		providerSessionsCount:   providerSessionsCount,
 		currentIdentity:         currentIdentity,
 	}
 
@@ -86,6 +92,11 @@ type TransferredData struct {
 	Bytes int `json:"transferred_data_bytes"`
 }
 
+// SessionsCount represent a information about number of sessions during a period of time
+type SessionsCount struct {
+	Count int `json:"count"`
+}
+
 // Sessions retrieves and resolved monitoring status from quality oracle
 func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
@@ -104,4 +115,14 @@ func (m *StatsTracker) TransferredData(rangeTime string) (TransferredData, error
 	}
 
 	return TransferredData{}, errors.New("identity not found")
+}
+
+// SessionsCount retrieves and resolved numbers of sessions
+func (m *StatsTracker) SessionsCount(rangeTime string) (SessionsCount, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerSessionsCount(id, rangeTime)
+	}
+
+	return SessionsCount{}, errors.New("identity not found")
 }

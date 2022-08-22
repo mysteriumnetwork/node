@@ -72,6 +72,12 @@ type ProviderTransferredDataResponse struct {
 	Bytes int `json:"transferred_data_bytes"`
 }
 
+// ProviderSessionsCountResponse reflects a number of sessions during a period of time.
+// swagger:model ProviderSessionsCountResponse
+type ProviderSessionsCountResponse struct {
+	Count int `json:"count"`
+}
+
 // ProviderSession contains provided session ifnromation
 // swagger:model ProviderSession
 type ProviderSession struct {

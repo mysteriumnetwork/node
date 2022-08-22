@@ -137,4 +137,5 @@ const (
 	ErrCodeUIUsedVersion             = "err_ui_used_version"
 	ErrorCodeProviderSessions        = "err_provider_sessions"
 	ErrorCodeProviderTransferredData = "err_provider_transferred_data"
+	ErrorCodeProviderSessionsCount   = "err_provider_sessions_count"
 )

@@ -1330,6 +1330,44 @@
         }
       }
     },
+    "/node/provider/sessions-count": {
+      "get": {
+        "description": "Node sessions count during a period of time",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node sessions number during a period of time",
+        "operationId": "GetProviderSessionsCount",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions count",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/provider/transferred-data": {
       "get": {
         "description": "Node transferred data during a period of time",
@@ -4237,6 +4275,18 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TransferredBytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSessionsCountResponse": {
+      "type": "object",
+      "title": "ProviderSessionsCountResponse reflects a number of sessions during a period of time.",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Count"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
