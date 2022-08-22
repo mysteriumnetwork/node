@@ -20,8 +20,6 @@ package main
 import (
 	"os"
 	"sync"
-	"net/http"
-	_ "net/http/pprof"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/account"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
@@ -59,13 +57,6 @@ var (
 
 func main() {
 	logconfig.Bootstrap()
-
-	// Server for pprof
-	go func() {
-		err := http.ListenAndServe("localhost:8080", nil)
-		log.Err(err).Msg("err")
-	}()
-
 	app, err := NewCommand()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create command: ")
