@@ -38,12 +38,16 @@ type ProviderTransferredData func(id identity.Identity, rangeTime string) (Trans
 // ProviderSessionsCount should return provider sessions count
 type ProviderSessionsCount func(id identity.Identity, rangeTime string) (SessionsCount, error)
 
+// ProviderConsumersCount should return unique consumers count
+type ProviderConsumersCount func(id identity.Identity, rangeTime string) (ConsumersCount, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
 	providerStatuses        ProviderStatuses
 	providerSessionsList    ProviderSessionsList
 	providerTransferredData ProviderTransferredData
 	providerSessionsCount   ProviderSessionsCount
+	providerConsumersCount  ProviderConsumersCount
 	currentIdentity         currentIdentity
 }
 
@@ -53,6 +57,7 @@ func NewNodeStatsTracker(
 	providerSessions ProviderSessionsList,
 	providerTransferredData ProviderTransferredData,
 	providerSessionsCount ProviderSessionsCount,
+	providerConsumersCount ProviderConsumersCount,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
@@ -60,6 +65,7 @@ func NewNodeStatsTracker(
 		providerSessionsList:    providerSessions,
 		providerTransferredData: providerTransferredData,
 		providerSessionsCount:   providerSessionsCount,
+		providerConsumersCount:  providerConsumersCount,
 		currentIdentity:         currentIdentity,
 	}
 
@@ -97,6 +103,11 @@ type SessionsCount struct {
 	Count int `json:"count"`
 }
 
+// ConsumersCount represent a information about number of consumers served during a period of time
+type ConsumersCount struct {
+	Count int `json:"count"`
+}
+
 // Sessions retrieves and resolved monitoring status from quality oracle
 func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
@@ -125,4 +136,14 @@ func (m *StatsTracker) SessionsCount(rangeTime string) (SessionsCount, error) {
 	}
 
 	return SessionsCount{}, errors.New("identity not found")
+}
+
+// ConsumersCount retrieves and resolved numbers of consumers server during period of time
+func (m *StatsTracker) ConsumersCount(rangeTime string) (ConsumersCount, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerConsumersCount(id, rangeTime)
+	}
+
+	return ConsumersCount{}, errors.New("identity not found")
 }

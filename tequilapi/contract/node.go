@@ -78,6 +78,12 @@ type ProviderSessionsCountResponse struct {
 	Count int `json:"count"`
 }
 
+// ProviderConsumersCountResponse reflects a number of unique consumers served during a period of time.
+// swagger:model ProviderConsumersCountResponse
+type ProviderConsumersCountResponse struct {
+	Count int `json:"count"`
+}
+
 // ProviderSession contains provided session ifnromation
 // swagger:model ProviderSession
 type ProviderSession struct {

@@ -383,6 +383,28 @@ func (m *MysteriumMORQA) ProviderSessionsCount(id identity.Identity, rangeTime s
 	return count, nil
 }
 
+// ProviderConsumersCount fetch consumers number served by provider from quality oracle.
+func (m *MysteriumMORQA) ProviderConsumersCount(id identity.Identity, rangeTime string) (node.ConsumersCount, error) {
+	var count node.ConsumersCount
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/consumers-count?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return count, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return count, errors.Wrap(err, "failed to request provider monitoring consumers count")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &count); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring consumers count")
+		return count, err
+	}
+
+	return count, nil
+}
+
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{
