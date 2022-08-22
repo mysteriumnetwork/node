@@ -53,33 +53,13 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 			PerCountry: make(map[string]*market.PriceHistory),
 			Defaults: &market.PriceHistory{
 				Current: &market.PriceByType{
-					Residential: &market.PriceByServiceType{
-						Wireguard: &market.Price{
-							PricePerHour: defaultPrice.PricePerHour,
-							PricePerGiB:  defaultPrice.PricePerGiB,
-						},
-						Scraping: &market.Price{
-							PricePerHour: defaultPrice.PricePerHour,
-							PricePerGiB:  defaultPrice.PricePerGiB,
-						},
-						DataTransfer: &market.Price{
-							PricePerHour: defaultPrice.PricePerHour,
-							PricePerGiB:  defaultPrice.PricePerGiB,
-						},
+					Residential: &market.Price{
+						PricePerHour: defaultPrice.PricePerHour,
+						PricePerGiB:  defaultPrice.PricePerGiB,
 					},
-					Other: &market.PriceByServiceType{
-						Wireguard: &market.Price{
-							PricePerHour: defaultPrice.PricePerHour,
-							PricePerGiB:  defaultPrice.PricePerGiB,
-						},
-						Scraping: &market.Price{
-							PricePerHour: defaultPrice.PricePerHour,
-							PricePerGiB:  defaultPrice.PricePerGiB,
-						},
-						DataTransfer: &market.Price{
-							PricePerHour: defaultPrice.PricePerHour,
-							PricePerGiB:  defaultPrice.PricePerGiB,
-						},
+					Other: &market.Price{
+						PricePerHour: defaultPrice.PricePerHour,
+						PricePerGiB:  defaultPrice.PricePerGiB,
 					},
 				},
 			},
@@ -90,10 +70,10 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 }
 
 // GetCurrentPrice gets the current price from cache if possible, fetches it otherwise.
-func (p *Pricer) GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error) {
+func (p *Pricer) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
 	pricing := p.getPricing()
 
-	return *p.getCurrentByType(pricing, nodeType, country, serviceType), nil
+	return *p.getCurrentByType(pricing, nodeType, country), nil
 }
 
 func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string) *market.PriceHistory {
@@ -104,49 +84,38 @@ func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string)
 	return pricing.Defaults
 }
 
-func (p *Pricer) getCurrentByType(pricing market.LatestPrices, nodeType string, country string, serviceType string) *market.Price {
+func (p *Pricer) getCurrentByType(pricing market.LatestPrices, nodeType string, country string) *market.Price {
 	base := p.getPriceForCountry(pricing, country)
 	switch strings.ToLower(nodeType) {
 	case "residential":
-		return p.getCurrentByServiceType(base.Current.Residential, serviceType)
+		return base.Current.Residential
 	default:
-		return p.getCurrentByServiceType(base.Current.Other, serviceType)
+		return base.Current.Other
 	}
 }
 
-func (p *Pricer) getCurrentByServiceType(pricingByServiceType *market.PriceByServiceType, serviceType string) *market.Price {
-	switch strings.ToLower(serviceType) {
-	case "wireguard":
-		return pricingByServiceType.Wireguard
-	case "scraping":
-		return pricingByServiceType.Scraping
-	default:
-		return pricingByServiceType.DataTransfer
-	}
-}
-
-func (p *Pricer) getPreviousByType(pricing market.LatestPrices, nodeType string, country string, serviceType string) *market.Price {
+func (p *Pricer) getPreviousByType(pricing market.LatestPrices, nodeType string, country string) *market.Price {
 	base := p.getPriceForCountry(pricing, country)
 	switch strings.ToLower(nodeType) {
 	case "residential":
-		return p.getCurrentByServiceType(base.Previous.Residential, serviceType)
+		return base.Previous.Residential
 	default:
-		return p.getCurrentByServiceType(base.Previous.Other, serviceType)
+		return base.Previous.Other
 	}
 }
 
 // IsPriceValid checks if the given price is valid or not.
-func (p *Pricer) IsPriceValid(in market.Price, nodeType string, country string, serviceType string) bool {
+func (p *Pricer) IsPriceValid(in market.Price, nodeType string, country string) bool {
 	if config.GetBool(config.FlagPaymentsDuringSessionDebug) {
 		log.Info().Msg("Payments debug bas been enabled, will agree with any price given")
 		return true
 	}
 
 	pricing := p.getPricing()
-	if p.pricesEqual(p.getCurrentByType(pricing, nodeType, country, serviceType), in) {
+	if p.pricesEqual(p.getCurrentByType(pricing, nodeType, country), in) {
 		return true
 	}
-	if p.pricesEqual(p.getPreviousByType(pricing, nodeType, country, serviceType), in) {
+	if p.pricesEqual(p.getPreviousByType(pricing, nodeType, country), in) {
 		return true
 	}
 
