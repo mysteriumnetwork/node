@@ -475,7 +475,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v4
+      --discovery.address=http://discovery:8080/api/v4
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
@@ -585,7 +585,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v4
+      --discovery.address=http://discovery:8080/api/v4
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
@@ -653,7 +653,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --tequilapi.allowed-hostnames=.
-      --api.address=http://discovery:8080/api/v4
+      --discovery.address=http://discovery:8080/api/v4
       --chains.2.myst=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --chains.2.registry=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --chains.2.channelImplementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
@@ -726,7 +726,7 @@ services:
       --tequilapi.allowed-hostnames=.
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
-      --api.address=http://discovery:8080/api/v4
+      --discovery.address=http://discovery:8080/api/v4
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v3
@@ -793,7 +793,7 @@ services:
       --ether.client.rpcl2=ws://ganache2:8545
       --ether.client.rpcl1=http://ganache:8545
       --firewall.protected.networks=""
-      --api.address=http://discovery:8080/api/v4
+      --discovery.address=http://discovery:8080/api/v4
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug

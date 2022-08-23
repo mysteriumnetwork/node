@@ -13,7 +13,7 @@ exec /node/build/myst/myst \
   --ip-detector=http://ipify:3000/?format=json \
   --location.type=manual \
   --broker-address=broker \
-  --api.address=http://discovery:8080/api/v3 \
+  --discovery.address=http://discovery:8080/api/v4 \
   --ether.client.rpc=http://ganache:8545 \
   --keystore.lightweight \
   --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75 \

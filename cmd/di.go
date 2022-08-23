@@ -666,8 +666,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	// override defined values one by one from options
-	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
-		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
+	if optionsNetwork.DiscoveryAddress != metadata.DefaultNetwork.DiscoveryAddress {
+		network.DiscoveryAddress = optionsNetwork.DiscoveryAddress
 	}
 
 	if !reflect.DeepEqual(optionsNetwork.BrokerAddresses, metadata.DefaultNetwork.BrokerAddresses) {
@@ -696,7 +696,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	dialer.ResolveContext = resolver
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
-	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.DiscoveryAddress)
 	di.PricingHelper = pingpong.NewPricer(di.MysteriumAPI)
 	err = di.PricingHelper.Subscribe(di.EventBus)
 	if err != nil {
@@ -814,7 +814,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	allow := []string{
-		network.MysteriumAPIAddress,
+		network.DiscoveryAddress,
 		options.Transactor.TransactorEndpointAddress,
 		options.Affiliator.AffiliatorEndpointAddress,
 		hermesURL,
@@ -1129,7 +1129,7 @@ func getUDPListenPorts() (port.Range, error) {
 }
 
 func (di *Dependencies) allowTrustedDomainBypassTunnel() {
-	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow := []string{di.NetworkDefinition.DiscoveryAddress}
 	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
 
 	if err := router.ExcludeURL(allow...); err != nil {
@@ -1138,7 +1138,7 @@ func (di *Dependencies) allowTrustedDomainBypassTunnel() {
 }
 
 func (di *Dependencies) disallowTrustedDomainBypassTunnel() {
-	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow := []string{di.NetworkDefinition.DiscoveryAddress}
 	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
 
 	if err := router.RemoveExcludedURL(allow...); err != nil {

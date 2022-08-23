@@ -21,7 +21,9 @@ import "fmt"
 
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {
+	// Deprecated: use DiscoveryAddress
 	MysteriumAPIAddress       string
+	DiscoveryAddress          string
 	AccessPolicyOracleAddress string
 	BrokerAddresses           []string
 	TransactorAddress         string
@@ -58,6 +60,7 @@ type Payments struct {
 // MainnetDefinition defines parameters for mainnet network (currently default network)
 var MainnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://discovery.mysterium.network/api/v4",
+	DiscoveryAddress:          "https://discovery.mysterium.network/api/v4",
 	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
 	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
@@ -116,6 +119,7 @@ var MainnetDefinition = NetworkDefinition{
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "http://localhost:8001/v1",
+	DiscoveryAddress:          "http://localhost:8001/v1",
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddresses:           []string{"localhost"},
 	MMNAddress:                "http://localhost/",
@@ -129,7 +133,8 @@ var LocalnetDefinition = NetworkDefinition{
 
 // TestnetDefinition defines parameters for testnet network
 var TestnetDefinition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://discovery-testnet.mysterium.network/api/v3",
+	MysteriumAPIAddress:       "https://discovery-testnet.mysterium.network/api/v4",
+	DiscoveryAddress:          "https://discovery-testnet.mysterium.network/api/v4",
 	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://broker.mysterium.network:4223"},
 	TransactorAddress:         "https://transactor-testnet.mysterium.network/api/v1",
@@ -176,6 +181,7 @@ var TestnetDefinition = NetworkDefinition{
 func (n *NetworkDefinition) GetDefaultFlagValues() map[string]any {
 	res := map[string]any{
 		FlagNames.MysteriumAPIAddress:       n.MysteriumAPIAddress,
+		FlagNames.DiscoveryAddress:          n.DiscoveryAddress,
 		FlagNames.AccessPolicyOracleAddress: n.AccessPolicyOracleAddress,
 		FlagNames.BrokerAddressesFlag:       n.BrokerAddresses,
 		FlagNames.TransactorAddress:         n.TransactorAddress,
@@ -225,6 +231,7 @@ type ChainDefinitionFlagNames struct {
 var FlagNames = NetworkDefinitionFlagNames{
 	NetworkDefinition: NetworkDefinition{
 		MysteriumAPIAddress:       "api.address",
+		DiscoveryAddress:          "discovery.address",
 		AccessPolicyOracleAddress: "access-policy.address",
 		TransactorAddress:         "transactor.address",
 		AffiliatorAddress:         "affiliator.address",
