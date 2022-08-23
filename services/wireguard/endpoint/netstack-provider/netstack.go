@@ -344,32 +344,36 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 	}
 
 	client := gonet.NewUDPConn(tun.stack, &wq, ep)
+	go func() {
+		defer client.Close()
 
-	clientAddr := &net.UDPAddr{IP: net.IP([]byte(sess.RemoteAddress)), Port: int(sess.RemotePort)}
-	remoteAddr := &net.UDPAddr{IP: net.IP([]byte(sess.LocalAddress)), Port: int(sess.LocalPort)}
-	proxyAddr := &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: int(sess.RemotePort)}
+		clientAddr := &net.UDPAddr{IP: net.IP([]byte(sess.RemoteAddress)), Port: int(sess.RemotePort)}
+		remoteAddr := &net.UDPAddr{IP: net.IP([]byte(sess.LocalAddress)), Port: int(sess.LocalPort)}
+		proxyAddr := &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: int(sess.RemotePort)}
 
-	if remoteAddr.Port == 53 && tun.dnsPort > 0 && tun.isLocal(sess.LocalAddress) {
-		remoteAddr.Port = tun.dnsPort
-		remoteAddr.IP = net.ParseIP("127.0.0.1")
-	}
-
-	proxyConn, err := net.ListenUDP("udp", proxyAddr)
-	if err != nil {
-		log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr.Port)
-		proxyAddr.Port = 0
-
-		proxyConn, err = net.ListenUDP("udp", proxyAddr)
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to bind local random port %v", proxyAddr)
-			return
+		if remoteAddr.Port == 53 && tun.dnsPort > 0 && tun.isLocal(sess.LocalAddress) {
+			remoteAddr.Port = tun.dnsPort
+			remoteAddr.IP = net.ParseIP("127.0.0.1")
 		}
-	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+		proxyConn, err := net.ListenUDP("udp", proxyAddr)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr.Port)
+			proxyAddr.Port = 0
 
-	go tun.proxy(ctx, cancel, client, clientAddr, proxyConn) // loc <- remote
-	go tun.proxy(ctx, cancel, proxyConn, remoteAddr, client) // remote <- loc
+			proxyConn, err = net.ListenUDP("udp", proxyAddr)
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to bind local random port %v", proxyAddr)
+				return
+			}
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		go tun.proxy(ctx, cancel, client, clientAddr, proxyConn) // loc <- remote
+		go tun.proxy(ctx, cancel, proxyConn, remoteAddr, client) // remote <- loc
+		<-ctx.Done()
+	}()
 }
 
 func (tun *netTun) isLocal(remoteAddr tcpip.Address) bool {
