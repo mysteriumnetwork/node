@@ -37,7 +37,7 @@ var (
 	// Deprecated: use FlagDiscoveryAddress
 	FlagAPIAddress = cli.StringFlag{
 		Name:  metadata.FlagNames.MysteriumAPIAddress,
-		Usage: "URL of Mysterium API",
+		Usage: "Deprecated flag. Use `discovery.address` flag instead to specify URL of Discovery API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	}
 	// FlagDiscoveryAddress discovery url
