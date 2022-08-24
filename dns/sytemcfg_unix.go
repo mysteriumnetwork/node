@@ -1,5 +1,7 @@
+//go:build !windows
+
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +17,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package dns
 
 import (
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
+	"github.com/miekg/dns"
+	"github.com/pkg/errors"
 )
 
-// NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
-func NewService() NATService {
-	if config.GetBool(config.FlagUserspace) {
-		return &serviceNoop{}
-	}
+// configuration returns the system DNS configuration.
+func configuration() (*dns.ClientConfig, error) {
+	config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
+	return config, errors.Wrap(err, "error loading DNS config")
+}
 
-	return &serviceICS{
-		setICSAddresses: setICSAddresses,
-		powerShell:      cmdutil.PowerShell,
+// ConfiguredServers returns DNS server IPs from the system DNS configuration.
+func ConfiguredServers() ([]string, error) {
+	config, err := configuration()
+	if err != nil {
+		return nil, err
 	}
+	return config.Servers, nil
 }

@@ -17,10 +17,17 @@
 
 package nat
 
-import "os/exec"
+import (
+	"os/exec"
+
+	"github.com/mysteriumnetwork/node/config"
+)
 
 // NewService returns linux os specific nat service based on ip tables
 func NewService() NATService {
+	if config.GetBool(config.FlagUserspace) {
+		return &serviceNoop{}
+	}
 	return &serviceIPTables{
 		ipForward: serviceIPForward{
 			CommandFactory: func(name string, arg ...string) Command {
