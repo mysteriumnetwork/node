@@ -34,10 +34,17 @@ var (
 		Value: string(Mainnet),
 	}
 	// FlagAPIAddress Mysterium API URL
+	// Deprecated: use FlagDiscoveryAddress
 	FlagAPIAddress = cli.StringFlag{
 		Name:  metadata.FlagNames.MysteriumAPIAddress,
-		Usage: "URL of Mysterium API",
+		Usage: "Deprecated flag. Use `discovery.address` flag instead to specify URL of Discovery API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
+	}
+	// FlagDiscoveryAddress discovery url
+	FlagDiscoveryAddress = cli.StringFlag{
+		Name:  metadata.FlagNames.DiscoveryAddress,
+		Usage: "URL of Discovery API",
+		Value: metadata.DefaultNetwork.DiscoveryAddress,
 	}
 	// FlagChainID chain id to use
 	FlagChainID = cli.Int64Flag{
@@ -140,6 +147,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagPortMapping,
 		&FlagNATHolePunching,
 		&FlagAPIAddress,
+		&FlagDiscoveryAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPCL1,
 		&FlagEtherRPCL2,
@@ -159,6 +167,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
+	Current.ParseStringFlag(ctx, FlagDiscoveryAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL1)
 	Current.ParseStringSliceFlag(ctx, FlagEtherRPCL2)

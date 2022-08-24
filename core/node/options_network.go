@@ -21,11 +21,11 @@ import "github.com/mysteriumnetwork/node/config"
 
 // OptionsNetwork describes possible parameters of network configuration
 type OptionsNetwork struct {
-	Network             config.BlockchainNetwork
-	MysteriumAPIAddress string
-	BrokerAddresses     []string
-	EtherClientRPCL1    []string
-	EtherClientRPCL2    []string
-	ChainID             int64
-	DNSMap              map[string][]string
+	Network          config.BlockchainNetwork
+	DiscoveryAddress string
+	BrokerAddresses  []string
+	EtherClientRPCL1 []string
+	EtherClientRPCL2 []string
+	ChainID          int64
+	DNSMap           map[string][]string
 }
