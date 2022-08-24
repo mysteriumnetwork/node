@@ -18,25 +18,39 @@
 package endpoints
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+
+	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+type nodeMonitoringAgent interface {
+	Statuses() (node.MonitoringAgentStatuses, error)
+	Sessions(rangeTime string) ([]node.SessionItem, error)
+	TransferredData(rangeTime string) (node.TransferredData, error)
+	SessionsCount(rangeTime string) (node.SessionsCount, error)
+}
+
 // NodeEndpoint struct represents endpoints about node status
 type NodeEndpoint struct {
-	nodeStatusProvider nodeStatusProvider
+	nodeStatusProvider  nodeStatusProvider
+	nodeMonitoringAgent nodeMonitoringAgent
 }
 
 // NewNodeEndpoint creates and returns node endpoints
-func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider) *NodeEndpoint {
+func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) *NodeEndpoint {
 	return &NodeEndpoint{
-		nodeStatusProvider: nodeStatusProvider,
+		nodeStatusProvider:  nodeStatusProvider,
+		nodeMonitoringAgent: nodeMonitoringAgent,
 	}
 }
 
 // NodeStatus Status provides Node proposal status
-// swagger:operation GET /node/monitoring-status NODE
+// swagger:operation GET /node/monitoring-status provider NodeStatus
 // ---
 // summary: Provides Node proposal status
 // description: Node Status as seen by monitoring agent
@@ -49,14 +63,164 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.nodeStatusProvider.Status()}, c.Writer)
 }
 
+// MonitoringAgentStatuses Statuses from monitoring agent
+// swagger:operation GET /node/monitoring-agent-statuses provider MonitoringAgentStatuses
+// ---
+// summary: Provides Node connectivity statuses from monitoring agent
+// description: Node connectivity statuses as seen by monitoring agent
+// responses:
+//   200:
+//     description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
+//     schema:
+//       "$ref": "#/definitions/MonitoringAgentResponse"
+func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
+	res, err := ne.nodeMonitoringAgent.Statuses()
+	if err != nil {
+		utils.WriteAsJSON(contract.MonitoringAgentResponse{Error: err.Error()}, c.Writer, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.MonitoringAgentResponse{Statuses: res}, c.Writer)
+}
+
+// GetProviderSessions A list of sessions metrics during a period of time
+// swagger:operation GET /node/provider/sessions provider GetProviderSessions
+// ---
+// summary: Provides Node sessions data during a period of time
+// description: Node sessions metrics during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Provider sessions list
+//     schema:
+//       "$ref": "#/definitions/ProviderSessionsResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
+	rangeTime := c.Query("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSessions))
+		return
+	}
+
+	res, err := ne.nodeMonitoringAgent.Sessions(rangeTime)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider sessions list: "+err.Error(), contract.ErrorCodeProviderSessions))
+		return
+	}
+
+	utils.WriteAsJSON(contract.NewProviderSessionsResponse(res), c.Writer)
+}
+
+// GetProviderTransferredData A number of bytes transferred during a period of time
+// swagger:operation GET /node/provider/transferred-data provider GetProviderTransferredData
+// ---
+// summary: Provides total traffic served by the provider during a period of time
+// description: Node transferred data during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Provider transferred data
+//     schema:
+//       "$ref": "#/definitions/ProviderTransferredDataResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
+	rangeTime := c.Query("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderTransferredData))
+		return
+	}
+
+	res, err := ne.nodeMonitoringAgent.TransferredData(rangeTime)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider transferred data: "+err.Error(), contract.ErrorCodeProviderTransferredData))
+		return
+	}
+
+	utils.WriteAsJSON(contract.ProviderTransferredDataResponse{Bytes: res.Bytes}, c.Writer)
+}
+
+// GetProviderSessionsCount A number of sessions during a period of time
+// swagger:operation GET /node/provider/sessions-count provider GetProviderSessionsCount
+// ---
+// summary: Provides Node sessions number during a period of time
+// description: Node sessions count during a period of time
+// parameters:
+//   - in: query
+//     name: range
+//     description: period of time ("1d", "7d", "30d")
+//     type: string
+// responses:
+//   200:
+//     description: Provider sessions count
+//     schema:
+//       "$ref": "#/definitions/ProviderSessionsCountResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
+	rangeTime := c.Query("range")
+
+	switch rangeTime {
+	case "1d", "7d", "30d":
+	default:
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSessionsCount))
+		return
+	}
+
+	res, err := ne.nodeMonitoringAgent.SessionsCount(rangeTime)
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider sessions count: "+err.Error(), contract.ErrorCodeProviderSessionsCount))
+		return
+	}
+
+	utils.WriteAsJSON(contract.ProviderSessionsCountResponse{Count: res.Count}, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
-func AddRoutesForNode(nodeStatusProvider nodeStatusProvider) func(*gin.Engine) error {
-	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider)
+func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
+	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
 
 	return func(e *gin.Engine) error {
 		nodeGroup := e.Group("/node")
 		{
 			nodeGroup.GET("/monitoring-status", nodeEndpoints.NodeStatus)
+			nodeGroup.GET("/monitoring-agent-statuses", nodeEndpoints.MonitoringAgentStatuses)
+			nodeGroup.GET("/provider/sessions", nodeEndpoints.GetProviderSessions)
+			nodeGroup.GET("/provider/transferred-data", nodeEndpoints.GetProviderTransferredData)
+			nodeGroup.GET("/provider/sessions-count", nodeEndpoints.GetProviderSessionsCount)
 		}
 		return nil
 	}

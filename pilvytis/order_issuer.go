@@ -17,10 +17,6 @@
 
 package pilvytis
 
-import (
-	"github.com/mysteriumnetwork/node/identity"
-)
-
 // OrderIssuer combines the pilvytis API and order tracker.
 // Only the order issuer can issue new payment orders.
 type OrderIssuer struct {
@@ -34,17 +30,6 @@ func NewOrderIssuer(api *API, tracker *StatusTracker) *OrderIssuer {
 		api:     api,
 		tracker: tracker,
 	}
-}
-
-// CreatePaymentOrder will create a new payment order and send a notification to start tracking it.
-func (o *OrderIssuer) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
-	resp, err := o.api.createPaymentOrder(id, mystAmount, payCurrency, lightning)
-	if err != nil {
-		return nil, err
-	}
-	o.tracker.UpdateOrdersFor(id)
-
-	return resp, err
 }
 
 // CreatePaymentGatewayOrder will create a new payment order and send a notification to start tracking it.

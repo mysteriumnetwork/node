@@ -155,7 +155,7 @@ func (m *HermesMigrator) Start(id string) error {
 	providerId := identity.FromAddress(id)
 
 	// check if balance enough for migration
-	if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) > 0 {
+	if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) >= 0 {
 		// If not enough balance we should still check that latest withdrawal succeeded
 		amountToWithdraw, chid, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id), oldHermes)
 		if err != nil {
@@ -167,7 +167,8 @@ func (m *HermesMigrator) Start(id string) error {
 			log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
 			return m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
 		}
-		log.Info().Msgf("Not enough balance for migration (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
+		log.Info().Msgf("Not enough balance for migration or already migrated (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
+		m.st.MarkAsMigrated(chainID, id)
 		return nil
 	}
 
@@ -179,7 +180,6 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
-	m.st.MarkAsMigrated(chainID, id)
 
 	return nil
 }

@@ -24,28 +24,51 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/node"
-
 	"github.com/gin-gonic/gin"
-
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
 
 type mockNodeStatusProvider struct {
 	status node.MonitoringStatus
 }
 
+type mockMonitoringAgent struct {
+	status   node.MonitoringAgentStatuses
+	sessions []node.SessionItem
+	data     node.TransferredData
+	count    node.SessionsCount
+}
+
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
 	return nodeStatusTracker.status
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) Statuses() (node.MonitoringAgentStatuses, error) {
+	return nodeMonitoringAgentTracker.status, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) Sessions(_ string) ([]node.SessionItem, error) {
+	return nodeMonitoringAgentTracker.sessions, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredData(_ string) (node.TransferredData, error) {
+	return nodeMonitoringAgentTracker.data, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsCount(_ string) (node.SessionsCount, error) {
+	return nodeMonitoringAgentTracker.count, nil
 }
 
 func Test_NodeStatus(t *testing.T) {
 	// given:
 	mockStatusTracker := &mockNodeStatusProvider{}
+	mockMonitoringAgentTracker := &mockMonitoringAgent{}
 
 	router := gin.Default()
-	err := AddRoutesForNode(mockStatusTracker)(router)
+	err := AddRoutesForNode(mockStatusTracker, mockMonitoringAgentTracker)(router)
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodGet, "/node/monitoring-status", nil)

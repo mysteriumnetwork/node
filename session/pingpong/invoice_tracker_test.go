@@ -27,9 +27,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -38,6 +35,8 @@ import (
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/observer"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -88,6 +87,10 @@ func (mac *mockHermesCaller) GetProviderData(chainID int64, id string) (HermesUs
 
 func (mac *mockHermesCaller) SyncProviderPromise(promise crypto.Promise, signer identity.Signer) error {
 	return nil
+}
+
+func (mac *mockHermesCaller) RefreshLatestProviderPromise(chainID int64, id string, hashlock, recoveryData []byte, signer identity.Signer) (crypto.Promise, error) {
+	return crypto.Promise{}, nil
 }
 
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {

@@ -55,7 +55,7 @@ You should be able to run a node on any OS that supports docker. We have tested 
 - Debian 10
 - Ubuntu 18.04
 - Ubuntu 20.04
-- Ubuntu 21.10
+- Ubuntu 22.04
 - Yocto Linux (BalenaOS)
 
 Run node:

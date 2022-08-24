@@ -61,7 +61,7 @@ var (
 
 	flagSortType = cli.StringFlag{
 		Name:  "sort",
-		Usage: "Proposal sorting type. One of: quality, bandwidth, latency or price",
+		Usage: "Proposal sorting type. One of: quality, bandwidth, latency, uptime or price",
 		Value: "quality",
 	}
 

@@ -26,10 +26,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
@@ -286,6 +288,99 @@ func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
 		return nil
 	}
 	return responseBody.Connects
+}
+
+// ProviderStatuses fetch provider connectivity statuses from quality oracle.
+func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAgentStatuses, error) {
+	id := identity.FromAddress(providerID)
+
+	request, err := requests.NewSignedGetRequest(m.baseURL, "provider/statuses", m.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		log.Err(err).Msg("Failed to request provider monitoring agent statuses")
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var statuses node.MonitoringAgentStatuses
+
+	if err = parseResponseJSON(response, &statuses); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring agent statuses")
+		return nil, err
+	}
+
+	return statuses, nil
+}
+
+// ProviderSessionsList fetch provider sessions list from quality oracle.
+func (m *MysteriumMORQA) ProviderSessionsList(id identity.Identity, rangeTime string) ([]node.SessionItem, error) {
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/sessions?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to request provider monitoring sessions list")
+	}
+	defer response.Body.Close()
+
+	var sessions []node.SessionItem
+
+	if err = parseResponseJSON(response, &sessions); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring sessions list")
+		return nil, err
+	}
+
+	return sessions, nil
+}
+
+// ProviderTransferredData fetch total traffic served by the provider during a period of time from quality oracle.
+func (m *MysteriumMORQA) ProviderTransferredData(id identity.Identity, rangeTime string) (node.TransferredData, error) {
+	var data node.TransferredData
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/transferred-data?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider transferred data")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider transferred data")
+		return data, err
+	}
+
+	return data, nil
+}
+
+// ProviderSessionsCount fetch provider sessions number from quality oracle.
+func (m *MysteriumMORQA) ProviderSessionsCount(id identity.Identity, rangeTime string) (node.SessionsCount, error) {
+	var count node.SessionsCount
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/sessions-count?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return count, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return count, errors.Wrap(err, "failed to request provider monitoring sessions count")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &count); err != nil {
+		log.Err(err).Msg("Failed to parse provider monitoring sessions count")
+		return count, err
+	}
+
+	return count, nil
 }
 
 // SendMetric submits new metric.

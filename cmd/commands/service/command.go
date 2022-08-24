@@ -111,7 +111,7 @@ type serviceCommand struct {
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	arg := ctx.Args().Get(0)
-	// If no service type specified we are starting wireguard only.
+	// If no service type specified we are starting wireguard.
 	// Other services could be started only explicitly.
 	serviceTypes := []string{wireguard.ServiceType}
 	if arg != "" {

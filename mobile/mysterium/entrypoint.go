@@ -96,10 +96,9 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Mainnet                        bool
-	Localnet                       bool
+	Network                        config.BlockchainNetwork
 	KeepConnectedOnFail            bool
-	MysteriumAPIAddress            string
+	DiscoveryAddress               string
 	BrokerAddresses                []string
 	EtherClientRPCL1               []string
 	EtherClientRPCL2               []string
@@ -131,9 +130,9 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Mainnet:                        true,
+		Network:                        config.Mainnet,
 		KeepConnectedOnFail:            true,
-		MysteriumAPIAddress:            metadata.MainnetDefinition.MysteriumAPIAddress,
+		DiscoveryAddress:               metadata.MainnetDefinition.DiscoveryAddress,
 		BrokerAddresses:                metadata.MainnetDefinition.BrokerAddresses,
 		EtherClientRPCL1:               metadata.MainnetDefinition.Chain1.EtherClientRPC,
 		EtherClientRPCL2:               metadata.MainnetDefinition.Chain2.EtherClientRPC,
@@ -178,13 +177,12 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 
 	network := node.OptionsNetwork{
-		Mainnet:             options.Mainnet,
-		Localnet:            options.Localnet,
-		MysteriumAPIAddress: options.MysteriumAPIAddress,
-		BrokerAddresses:     options.BrokerAddresses,
-		EtherClientRPCL1:    options.EtherClientRPCL1,
-		EtherClientRPCL2:    options.EtherClientRPCL2,
-		ChainID:             options.ActiveChainID,
+		Network:          options.Network,
+		DiscoveryAddress: options.DiscoveryAddress,
+		BrokerAddresses:  options.BrokerAddresses,
+		EtherClientRPCL1: options.EtherClientRPCL1,
+		EtherClientRPCL2: options.EtherClientRPCL2,
+		ChainID:          options.ActiveChainID,
 		DNSMap: map[string][]string{
 			"location.mysterium.network": {"51.158.129.204"},
 			"quality.mysterium.network":  {"51.158.129.204"},
@@ -228,7 +226,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		},
 		Discovery: node.OptionsDiscovery{
 			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI},
-			Address:      network.MysteriumAPIAddress,
+			Address:      network.DiscoveryAddress,
 			FetchEnabled: false,
 			DHT: node.OptionsDHT{
 				Address:        "0.0.0.0",

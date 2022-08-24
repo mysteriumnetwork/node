@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -34,14 +33,6 @@ import (
 )
 
 type api interface {
-	// TODO: Deprecated
-	// ================
-	GetPaymentOrder(id identity.Identity, oid uint64) (*pilvytis.OrderResponse, error)
-	GetPaymentOrders(id identity.Identity) ([]pilvytis.OrderResponse, error)
-	GetPaymentOrderCurrencies() ([]string, error)
-	GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error)
-	// =================
-
 	GetPaymentGatewayOrder(id identity.Identity, oid string) (*pilvytis.GatewayOrderResponse, error)
 	GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([]byte, error)
 	GetPaymentGatewayOrders(id identity.Identity) ([]pilvytis.GatewayOrderResponse, error)
@@ -51,7 +42,6 @@ type api interface {
 }
 
 type paymentsIssuer interface {
-	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
 	CreatePaymentGatewayOrder(cgo pilvytis.GatewayOrderRequest) (*pilvytis.GatewayOrderResponse, error)
 }
 
@@ -72,199 +62,6 @@ func NewPilvytisEndpoint(pil api, pt paymentsIssuer, lf paymentLocationFallback)
 		pt:  pt,
 		lf:  lf,
 	}
-}
-
-// CreatePaymentOrder creates a new payment order.
-//
-// swagger:operation POST /identities/{id}/payment-order Order createOrder
-// ---
-// summary: Create order
-// description: Takes the given data and tries to create a new payment order in the pilvytis service.
-// deprecated: true
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to create an order
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: Required data to create a new order
-//   schema:
-//     $ref: "#/definitions/OrderRequest"
-// responses:
-//   200:
-//     description: Order object
-//     schema:
-//       "$ref": "#/definitions/OrderResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (e *pilvytisEndpoint) CreatePaymentOrder(c *gin.Context) {
-	var req contract.OrderRequest
-	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.Error(apierror.ParseFailed())
-		return
-	}
-
-	rid := identity.FromAddress(c.Param("id"))
-	resp, err := e.pt.CreatePaymentOrder(
-		rid,
-		req.MystAmount,
-		req.PayCurrency,
-		req.LightningNetwork)
-	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to create payment order", contract.ErrCodePaymentCreate))
-		return
-	}
-
-	utils.WriteAsJSON(contract.NewOrderResponse(*resp), c.Writer)
-}
-
-// GetPaymentOrder returns a payment order which maches a given ID and identity.
-//
-// swagger:operation GET /identities/{id}/payment-order/{order_id} Order getOrder
-// ---
-// summary: Get order
-// description: Gets an order for a given identity and order id combo from the pilvytis service
-// deprecated: true
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get an order
-//   type: string
-//   required: true
-// - name: order_id
-//   in: path
-//   description: Order id
-//   type: integer
-//   required: true
-// responses:
-//   200:
-//     description: Order object
-//     schema:
-//       "$ref": "#/definitions/OrderResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (e *pilvytisEndpoint) GetPaymentOrder(c *gin.Context) {
-	id := c.Param("order_id")
-	if id == "" {
-		c.Error(apierror.BadRequestField("'order_id' is required", apierror.ValidateErrRequired, "order_id"))
-		return
-	}
-
-	orderID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		c.Error(apierror.BadRequestField("'order_id' is invalid", apierror.ValidateErrInvalidVal, "order_id"))
-		return
-	}
-
-	resp, err := e.api.GetPaymentOrder(identity.FromAddress(c.Param("id")), orderID)
-	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to get order", contract.ErrCodePaymentGet))
-		return
-	}
-
-	utils.WriteAsJSON(contract.NewOrderResponse(*resp), c.Writer)
-}
-
-// GetPaymentOrders returns a payment order which maches a given ID and identity.
-//
-// swagger:operation GET /identities/{id}/payment-order Order getOrders
-// ---
-// summary: Get all orders for identity
-// description: Gets all orders for a given identity from the pilvytis service
-// deprecated: true
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get orders
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: List of orders
-//     schema:
-//       type: "array"
-//       items:
-//         "$ref": "#/definitions/OrderResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (e *pilvytisEndpoint) GetPaymentOrders(c *gin.Context) {
-	resp, err := e.api.GetPaymentOrders(identity.FromAddress(c.Param("id")))
-	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to get orders", contract.ErrCodePaymentList))
-		return
-	}
-
-	utils.WriteAsJSON(contract.NewOrdersResponse(resp), c.Writer)
-}
-
-// GetPaymentOrderCurrencies returns a slice of possible order currencies
-//
-// swagger:operation GET /payment-order-currencies Order getOrdersCurrencies
-// ---
-// summary: Get all possible currencies for payments
-// description: Gets all possible currencies that can be used for payments
-// deprecated: true
-// responses:
-//   200:
-//     description: Array of order objects
-//     schema:
-//       type: "array"
-//       items:
-//         type: string
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(c *gin.Context) {
-	resp, err := e.api.GetPaymentOrderCurrencies()
-	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to get currencies", contract.ErrCodePaymentListCurrencies))
-		return
-	}
-
-	utils.WriteAsJSON(resp, c.Writer)
-}
-
-// GetPaymentOrderOptions returns recommendation on myst amounts
-//
-// swagger:operation GET /payment-order-options Order GetPaymentOrderOptions
-// ---
-// summary: Get payment order options
-// description: Includes minimum amount of myst required when topping up and suggested amounts
-// deprecated: true
-// responses:
-//   200:
-//     description: Amount options for creating a payment order
-//     schema:
-//       "$ref": "#/definitions/PaymentOrderOptions"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
-func (e *pilvytisEndpoint) GetPaymentOrderOptions(c *gin.Context) {
-	resp, err := e.api.GetPaymentOrderOptions()
-	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to get order options", contract.ErrCodePaymentGetOptions))
-		return
-	}
-
-	utils.WriteAsJSON(contract.ToPaymentOrderOptions(resp), c.Writer)
 }
 
 // GetPaymentGateways returns data about supported payment gateways.
@@ -449,12 +246,6 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 		return
 	}
 
-	// TODO: Remove this once apps update
-	if req.Country == "" {
-		org := e.lf.GetOrigin()
-		req.Country = strings.ToUpper(org.Country)
-	}
-
 	rid := identity.FromAddress(c.Param("id"))
 
 	resp, err := e.pt.CreatePaymentGatewayOrder(req.GatewayOrderRequest(rid, c.Param("gw")))
@@ -501,18 +292,6 @@ func (e *pilvytisEndpoint) GetRegistrationPaymentStatus(c *gin.Context) {
 func AddRoutesForPilvytis(pilvytis api, pt paymentsIssuer, lf paymentLocationFallback) func(*gin.Engine) error {
 	pil := NewPilvytisEndpoint(pilvytis, pt, lf)
 	return func(e *gin.Engine) error {
-		// TODO: Deprecated
-		// =====
-		idGroup := e.Group("/identities")
-		{
-			idGroup.POST("/:id/payment-order", pil.CreatePaymentOrder)
-			idGroup.GET("/:id/payment-order/:order_id", pil.GetPaymentOrder)
-			idGroup.GET("/:id/payment-order", pil.GetPaymentOrders)
-		}
-		e.GET("/payment-order-options", pil.GetPaymentOrderOptions)
-		e.GET("/payment-order-currencies", pil.GetPaymentOrderCurrencies)
-		// =====
-
 		idGroupV2 := e.Group("/v2/identities")
 		{
 			idGroupV2.POST("/:id/:gw/payment-order", pil.CreatePaymentGatewayOrder)

@@ -24,7 +24,7 @@ import (
 
 // FlagPilvytisAddress address of Pilvytis service.
 var FlagPilvytisAddress = cli.StringFlag{
-	Name:  "pilvytis.address",
+	Name:  metadata.FlagNames.PilvytisAddress,
 	Usage: "full address of the pilvytis service",
 	Value: metadata.DefaultNetwork.PilvytisAddress,
 }

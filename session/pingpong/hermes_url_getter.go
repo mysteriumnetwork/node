@@ -96,7 +96,10 @@ func (hug *HermesURLGetter) GetHermesURL(chainID int64, address common.Address) 
 
 	url, err := hug.getHermesURLBC(chainID, address)
 	if err != nil {
-		log.Err(err).Msg("failed to get hermes url from blockchain, using fallback")
+		log.Err(err).Fields(map[string]any{
+			"chain_id":  chainID,
+			"hermes_id": address.Hex(),
+		}).Msg("failed to get hermes url from blockchain, using fallback")
 		url, err = hug.getHermesURLObserver(chainID, address)
 		if err != nil {
 			return "", err

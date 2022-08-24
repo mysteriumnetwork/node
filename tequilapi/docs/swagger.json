@@ -944,136 +944,6 @@
         }
       }
     },
-    "/identities/{id}/payment-order": {
-      "get": {
-        "description": "Gets all orders for a given identity from the pilvytis service",
-        "tags": [
-          "Order"
-        ],
-        "summary": "Get all orders for identity",
-        "operationId": "getOrders",
-        "deprecated": true,
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to get orders",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of orders",
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/OrderResponse"
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "Takes the given data and tries to create a new payment order in the pilvytis service.",
-        "tags": [
-          "Order"
-        ],
-        "summary": "Create order",
-        "operationId": "createOrder",
-        "deprecated": true,
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to create an order",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Required data to create a new order",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/OrderRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Order object",
-            "schema": {
-              "$ref": "#/definitions/OrderResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
-    "/identities/{id}/payment-order/{order_id}": {
-      "get": {
-        "description": "Gets an order for a given identity and order id combo from the pilvytis service",
-        "tags": [
-          "Order"
-        ],
-        "summary": "Get order",
-        "operationId": "getOrder",
-        "deprecated": true,
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to get an order",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "integer",
-            "description": "Order id",
-            "name": "order_id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Order object",
-            "schema": {
-              "$ref": "#/definitions/OrderResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
     "/identities/{id}/register": {
       "post": {
         "description": "Registers identity on Mysterium Network smart contracts using Transactor",
@@ -1386,11 +1256,32 @@
         }
       }
     },
+    "/node/monitoring-agent-statuses": {
+      "get": {
+        "description": "Node connectivity statuses as seen by monitoring agent",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node connectivity statuses from monitoring agent",
+        "operationId": "MonitoringAgentStatuses",
+        "responses": {
+          "200": {
+            "description": "Monitoring agent statuses (\"success\"/\"cancelled\"/\"connect_drop/\"connect_fail/\"internet_fail)",
+            "schema": {
+              "$ref": "#/definitions/MonitoringAgentResponse"
+            }
+          }
+        }
+      }
+    },
     "/node/monitoring-status": {
       "get": {
         "description": "Node Status as seen by monitoring agent",
+        "tags": [
+          "provider"
+        ],
         "summary": "Provides Node proposal status",
-        "operationId": "NODE",
+        "operationId": "NodeStatus",
         "responses": {
           "200": {
             "description": "Node status (\"passed\"/\"failed\"/\"pending)",
@@ -1401,23 +1292,33 @@
         }
       }
     },
-    "/payment-order-currencies": {
+    "/node/provider/sessions": {
       "get": {
-        "description": "Gets all possible currencies that can be used for payments",
+        "description": "Node sessions metrics during a period of time",
         "tags": [
-          "Order"
+          "provider"
         ],
-        "summary": "Get all possible currencies for payments",
-        "operationId": "getOrdersCurrencies",
-        "deprecated": true,
+        "summary": "Provides Node sessions data during a period of time",
+        "operationId": "GetProviderSessions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Array of order objects",
+            "description": "Provider sessions list",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+              "$ref": "#/definitions/ProviderSessionsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
@@ -1429,20 +1330,71 @@
         }
       }
     },
-    "/payment-order-options": {
+    "/node/provider/sessions-count": {
       "get": {
-        "description": "Includes minimum amount of myst required when topping up and suggested amounts",
+        "description": "Node sessions count during a period of time",
         "tags": [
-          "Order"
+          "provider"
         ],
-        "summary": "Get payment order options",
-        "operationId": "GetPaymentOrderOptions",
-        "deprecated": true,
+        "summary": "Provides Node sessions number during a period of time",
+        "operationId": "GetProviderSessionsCount",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Amount options for creating a payment order",
+            "description": "Provider sessions count",
             "schema": {
-              "$ref": "#/definitions/PaymentOrderOptions"
+              "$ref": "#/definitions/ProviderSessionsCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/node/provider/transferred-data": {
+      "get": {
+        "description": "Node transferred data during a period of time",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides total traffic served by the provider during a period of time",
+        "operationId": "GetProviderTransferredData",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider transferred data",
+            "schema": {
+              "$ref": "#/definitions/ProviderTransferredDataResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           },
           "500": {
@@ -3319,6 +3271,10 @@
         },
         "price_per_hour_tokens": {
           "$ref": "#/definitions/Tokens"
+        },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3943,6 +3899,32 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "MonitoringAgentResponse": {
+      "type": "object",
+      "title": "MonitoringAgentResponse reflects amount of connectivity statuses for each service_type.",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "statuses": {
+          "$ref": "#/definitions/MonitoringAgentStatuses"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "MonitoringAgentStatuses": {
+      "type": "object",
+      "title": "MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
+    },
     "MonitoringStatus": {
       "description": "MonitoringStatus enum",
       "type": "string",
@@ -3973,101 +3955,6 @@
       "properties": {
         "status": {
           "$ref": "#/definitions/MonitoringStatus"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "OrderRequest": {
-      "description": "OrderRequest holds order request details",
-      "type": "object",
-      "properties": {
-        "lightning_network": {
-          "type": "boolean",
-          "x-go-name": "LightningNetwork",
-          "example": false
-        },
-        "myst_amount": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "MystAmount",
-          "example": 3.14
-        },
-        "pay_currency": {
-          "type": "string",
-          "x-go-name": "PayCurrency",
-          "example": "EUR"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "OrderResponse": {
-      "description": "OrderResponse holds order request details",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "ID",
-          "example": 1
-        },
-        "identity": {
-          "type": "string",
-          "x-go-name": "Identity",
-          "example": "0x0000000000000000000000000000000000000002"
-        },
-        "myst_amount": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "MystAmount",
-          "example": 1.1
-        },
-        "pay_amount": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "PayAmount",
-          "example": 1.1
-        },
-        "pay_currency": {
-          "type": "string",
-          "x-go-name": "PayCurrency",
-          "example": "BTC"
-        },
-        "payment_address": {
-          "type": "string",
-          "x-go-name": "PaymentAddress",
-          "example": "0x0000000000000000000000000000000000000002"
-        },
-        "payment_url": {
-          "type": "string",
-          "x-go-name": "PaymentURL",
-          "example": "http://coingate.com/invoice/4949cf0a-fccb-4cc2-9342-7af1890cc664"
-        },
-        "price_amount": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "PriceAmount",
-          "example": 1.1
-        },
-        "price_currency": {
-          "type": "string",
-          "x-go-name": "PriceCurrency",
-          "example": "BTC"
-        },
-        "receive_amount": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "ReceiveAmount",
-          "example": 1.1
-        },
-        "receive_currency": {
-          "type": "string",
-          "x-go-name": "ReceiveCurrency",
-          "example": "BTC"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status",
-          "example": "pending"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4190,6 +4077,11 @@
           "type": "string",
           "x-go-name": "ProjectID",
           "example": "mysteriumvpn, mystnodes"
+        },
+        "state": {
+          "type": "string",
+          "x-go-name": "State",
+          "example": "MO"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4250,6 +4142,10 @@
         "receive_myst": {
           "type": "string",
           "x-go-name": "ReceiveMYST"
+        },
+        "state": {
+          "type": "string",
+          "x-go-name": "State"
         },
         "status": {
           "type": "string",
@@ -4351,6 +4247,80 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProviderSession": {
+      "description": "ProviderSession contains provided session ifnromation",
+      "type": "object",
+      "properties": {
+        "consumer_country": {
+          "type": "string",
+          "x-go-name": "ConsumerCountry"
+        },
+        "duration_seconds": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "DurationSeconds"
+        },
+        "earnings": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
+        },
+        "started_at": {
+          "type": "string",
+          "x-go-name": "StartedAt"
+        },
+        "transferred_bytes": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TransferredBytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSessionsCountResponse": {
+      "type": "object",
+      "title": "ProviderSessionsCountResponse reflects a number of sessions during a period of time.",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Count"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSessionsResponse": {
+      "type": "object",
+      "title": "ProviderSessionsResponse reflects a list of sessions metrics during a period of time.",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSession"
+          },
+          "x-go-name": "Sessions"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderTransferredDataResponse": {
+      "type": "object",
+      "title": "ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.",
+      "properties": {
+        "transferred_data_bytes": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Bytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "Quality": {
       "type": "object",
       "title": "Quality holds proposal quality metrics.",
@@ -4369,6 +4339,11 @@
           "type": "number",
           "format": "double",
           "x-go-name": "Quality"
+        },
+        "uptime": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Uptime"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
