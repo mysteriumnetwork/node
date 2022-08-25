@@ -40,7 +40,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 	options := &mysterium.MobileNodeOptions{
 		Network:                        config.Mainnet,
-		MysteriumAPIAddress:            "http://discovery:8080/api/v3",
+		DiscoveryAddress:               "http://discovery:8080/api/v4",
 		BrokerAddresses:                []string{"broker"},
 		EtherClientRPCL1:               []string{"http://ganache:8545"},
 		EtherClientRPCL2:               []string{"ws://ganache2:8545"},

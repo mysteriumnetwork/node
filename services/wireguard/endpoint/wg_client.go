@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
+	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
@@ -44,14 +45,21 @@ func newWGClient() (WgClient, error) {
 	if config.GetBool(config.FlagProxyMode) {
 		return proxyclient.New()
 	}
+
+	if config.GetBool(config.FlagUserspace) {
+		return netstack_provider.New()
+	}
+
 	if config.GetBool(config.FlagUserMode) {
 		return remoteclient.New()
 	}
+
 	if isKernelSpaceSupported() {
 		return kernelspace.NewWireguardClient()
 	}
 
 	log.Info().Msg("Wireguard kernel space is not supported. Switching to user space implementation.")
+
 	return userspace.NewWireguardClient()
 }
 

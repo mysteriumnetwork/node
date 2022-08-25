@@ -33,7 +33,7 @@ type PricedServiceProposalRepository struct {
 
 // PriceInfoProvider allows to fetch the current pricing for services.
 type PriceInfoProvider interface {
-	GetCurrentPrice(nodeType string, country string) (market.Price, error)
+	GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error)
 }
 
 // NewPricedServiceProposalRepository returns a new instance of PricedServiceProposalRepository.
@@ -105,7 +105,7 @@ func (pspr *PricedServiceProposalRepository) toPricedProposals(in []market.Servi
 }
 
 func (pspr *PricedServiceProposalRepository) toPricedProposal(in market.ServiceProposal) (proposal.PricedServiceProposal, error) {
-	price, err := pspr.pip.GetCurrentPrice(in.Location.IPType, in.Location.Country)
+	price, err := pspr.pip.GetCurrentPrice(in.Location.IPType, in.Location.Country, in.ServiceType)
 	if err != nil {
 		return proposal.PricedServiceProposal{}, err
 	}

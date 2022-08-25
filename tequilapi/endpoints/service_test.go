@@ -100,10 +100,13 @@ func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 	}
 	return nil
 }
-func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
-	return map[service.ID]*service.Instance{
-		"11111111-9dad-11d1-80b4-00c04fd430c0": mockServiceStopped,
+func (sm *mockServiceManager) List(includeAll bool) []*service.Instance {
+	return []*service.Instance{
+		mockServiceStopped,
 	}
+}
+func (sm *mockServiceManager) ListAll() []*service.Instance {
+	return []*service.Instance{mockServiceStopped}
 }
 func (sm *mockServiceManager) Kill() error { return nil }
 
@@ -141,44 +144,10 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			"",
 			http.StatusOK,
 			`[{
-				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
+				"options": {"foo": "bar"},
 				"provider_id": "0xproviderid",
 				"type": "testprotocol",
-				"options": {"foo": "bar"},
-				"status": "NotRunning",
-				"proposal": {
-                    "format": "service-proposal/v3",
-                    "compatibility": 2,
-					"provider_id": "0xproviderid",
-					"service_type": "testprotocol",
-					"location": {
-						"asn": 123,
-						"country": "Lithuania",
-						"city": "Vilnius"
-					},
-                    "quality": {
-                      "quality": 2.0,
-                      "latency": 50,
-                      "bandwidth": 10,
-                      "uptime": 20
-                    },
-					"price": {
-					  "currency": "MYST",
-					  "per_gib": 1000000000000000000,
-					  "per_gib_tokens": {
-						"ether": "1",
-						"human": "1",
-						"wei": "1000000000000000000"
-					  },
-					  "per_hour": 500000000000000000,
-					  "per_hour_tokens": {
-						"ether": "0.5",
-						"human": "0.5",
-						"wei": "500000000000000000"
-					  }
-					}
-				},
-				"connection_statistics": {"attempted":0, "successful":0}
+				"status": "NotRunning"
 			}]`,
 		},
 		{
@@ -223,8 +192,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"wei": "500000000000000000"
 					  }
 					}
-				},
-				"connection_statistics": {"attempted":0, "successful":0}
+				}
 			}`,
 		},
 		{
@@ -269,8 +237,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"wei": "500000000000000000"
 					  }
 					}
-				},
-				"connection_statistics": {"attempted":0, "successful":0}
+				}
 			}`,
 		},
 		{
@@ -467,8 +434,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
                     "wei": "500000000000000000"
                   }
                 }
-			},
-			"connection_statistics": {"attempted":0, "successful":0}
+			}
 		}`,
 		resp.Body.String(),
 	)
@@ -589,8 +555,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 						"source": "https://some.domain/api/v1/lists/12312312332132"
 					}
 				]
-			},
-			"connection_statistics": {"attempted":0, "successful":0}
+			}
 		}`,
 		resp.Body.String(),
 	)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,24 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dns
+package nat
 
-import (
-	"github.com/miekg/dns"
-	"github.com/pkg/errors"
-)
+type serviceNoop struct{}
 
-// configuration returns the system DNS configuration.
-func configuration() (*dns.ClientConfig, error) {
-	config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-	return config, errors.Wrap(err, "error loading DNS config")
+// Setup sets NAT/Firewall rules for the given NATOptions.
+func (svc *serviceNoop) Setup(opts Options) (appliedRules []interface{}, err error) {
+	return nil, nil
 }
 
-// ConfiguredServers returns DNS server IPs from the system DNS configuration.
-func ConfiguredServers() ([]string, error) {
-	config, err := configuration()
-	if err != nil {
-		return nil, err
-	}
-	return config.Servers, nil
+// Del removes given NAT/Firewall rules that were previously set up.
+func (svc *serviceNoop) Del(rules []interface{}) error {
+	return nil
+}
+
+// Enable enables NAT service.
+func (svc *serviceNoop) Enable() error {
+	return nil
+}
+
+// Disable disables NAT service and deletes all rules.
+func (svc *serviceNoop) Disable() error {
+	return nil
 }

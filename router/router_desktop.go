@@ -61,7 +61,7 @@ type rule struct {
 func NewManager() *manager {
 	var r router = &network.RoutingTable{}
 
-	if config.GetBool(config.FlagUserMode) {
+	if config.GetBool(config.FlagUserMode) || config.GetBool(config.FlagUserspace) {
 		r = &network.RoutingTableRemote{}
 	}
 
