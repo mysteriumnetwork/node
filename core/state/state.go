@@ -114,12 +114,8 @@ type proposalPricer interface {
 func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
-			Sessions: make([]session.History, 0),
-			Connection: stateEvent.Connection{
-				Session: connectionstate.Status{
-					State: connectionstate.NotConnected,
-				},
-			},
+			Sessions:    make([]session.History, 0),
+			Connections: make(map[string]stateEvent.Connection),
 		},
 		deps: deps,
 	}
@@ -394,10 +390,14 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	}
 
 	if evt.State == connectionstate.NotConnected {
-		k.state.Connection = stateEvent.Connection{}
+		delete(k.state.Connections, string(evt.SessionInfo.SessionID))
+	} else {
+		conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+		conn.Session = evt.SessionInfo
+		k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
+
+		log.Info().Msgf("Session %s", conn.String())
 	}
-	k.state.Connection.Session = evt.SessionInfo
-	log.Info().Msgf("Session %s", k.state.Connection.String())
 
 	go k.announceStateChanges(nil)
 }
@@ -411,7 +411,9 @@ func (k *Keeper) updateConnectionStats(e interface{}) {
 		return
 	}
 
-	k.state.Connection.Statistics = evt.Stats
+	conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+	conn.Statistics = evt.Stats
+	k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
 
 	go k.announceStateChanges(nil)
 }
@@ -425,7 +427,9 @@ func (k *Keeper) updateConnectionThroughput(e interface{}) {
 		return
 	}
 
-	k.state.Connection.Throughput = evt.Throughput
+	conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+	conn.Throughput = evt.Throughput
+	k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
 
 	go k.announceStateChanges(nil)
 }
@@ -439,8 +443,11 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 		return
 	}
 
-	k.state.Connection.Invoice = evt.Invoice
-	log.Info().Msgf("Session %s", k.state.Connection.String())
+	conn := k.state.Connections[string(evt.SessionID)]
+	conn.Invoice = evt.Invoice
+	k.state.Connections[string(evt.SessionID)] = conn
+
+	log.Info().Msgf("Session %s", conn.String())
 
 	go k.announceStateChanges(nil)
 }
