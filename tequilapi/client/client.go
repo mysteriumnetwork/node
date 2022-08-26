@@ -26,12 +26,12 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/payments/exchange"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/payments/exchange"
 )
 
 // NewClient returns a new instance of Client
@@ -291,8 +291,10 @@ func (client *Client) ConnectionDestroy(port int) (err error) {
 }
 
 // ConnectionStatistics returns statistics about current connection
-func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStatisticsDTO, err error) {
-	response, err := client.http.Get("connection/statistics", url.Values{})
+func (client *Client) ConnectionStatistics(sessionID ...string) (statistics contract.ConnectionStatisticsDTO, err error) {
+	response, err := client.http.Get("connection/statistics", url.Values{
+		"id": sessionID,
+	})
 	if err != nil {
 		return statistics, err
 	}
