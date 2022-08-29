@@ -1086,54 +1086,6 @@
         }
       }
     },
-    "/identities/{id}/{gw}/payment-order": {
-      "post": {
-        "description": "Takes the given data and tries to create a new payment order in the pilvytis service.",
-        "tags": [
-          "Order"
-        ],
-        "summary": "Create order",
-        "operationId": "createPaymentGatewayOrder",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Identity for which to create an order",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Gateway for which a payment order is created",
-            "name": "gw",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Required data to create a new order",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/PaymentOrderRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Payment order",
-            "schema": {
-              "$ref": "#/definitions/PaymentOrderResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
-      }
-    },
     "/location": {
       "get": {
         "description": "Returns original locations",
@@ -2752,6 +2704,54 @@
             "description": "Registration order status",
             "schema": {
               "$ref": "#/definitions/RegistrationPaymentResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/v2/identities/{id}/{gw}/payment-order": {
+      "post": {
+        "description": "Takes the given data and tries to create a new payment order in the pilvytis service.",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Create order",
+        "operationId": "createPaymentGatewayOrder",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to create an order",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Gateway for which a payment order is created",
+            "name": "gw",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Required data to create a new order",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment order",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderResponse"
             }
           },
           "500": {
