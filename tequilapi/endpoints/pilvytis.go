@@ -210,7 +210,7 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
 
 // CreatePaymentGatewayOrder creates a new payment order.
 //
-// swagger:operation POST /identities/{id}/{gw}/payment-order Order createPaymentGatewayOrder
+// swagger:operation POST /v2/identities/{id}/{gw}/payment-order Order createPaymentGatewayOrder
 // ---
 // summary: Create order
 // description: Takes the given data and tries to create a new payment order in the pilvytis service.
