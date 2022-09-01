@@ -56,7 +56,6 @@ func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent 
 // summary: Provides Node proposal status
 // description: Node Status as seen by monitoring agent
 // responses:
-//
 //	200:
 //	  description: Node status ("passed"/"failed"/"pending)
 //	  schema:
@@ -71,7 +70,6 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 // summary: Provides Node connectivity statuses from monitoring agent
 // description: Node connectivity statuses as seen by monitoring agent
 // responses:
-//
 //	200:
 //	  description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
 //	  schema:
@@ -96,9 +94,7 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 //     name: range
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
-//
 // responses:
-//
 //	200:
 //	  description: Provider sessions list
 //	  schema:
@@ -140,9 +136,7 @@ func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 //     name: range
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
-//
 // responses:
-//
 //	200:
 //	  description: Provider transferred data
 //	  schema:
@@ -184,9 +178,7 @@ func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
 //     name: range
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
-//
 // responses:
-//
 //	200:
 //	  description: Provider sessions count
 //	  schema:
@@ -228,9 +220,7 @@ func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
 //     name: range
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
-//
 // responses:
-//
 //	200:
 //	  description: Provider consumers count
 //	  schema:
