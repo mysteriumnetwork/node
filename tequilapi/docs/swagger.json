@@ -1215,15 +1215,7 @@
           "provider"
         ],
         "summary": "Provides Node connectivity statuses from monitoring agent",
-        "operationId": "MonitoringAgentStatuses",
-        "responses": {
-          "200": {
-            "description": "Monitoring agent statuses (\"success\"/\"cancelled\"/\"connect_drop/\"connect_fail/\"internet_fail)",
-            "schema": {
-              "$ref": "#/definitions/MonitoringAgentResponse"
-            }
-          }
-        }
+        "operationId": "MonitoringAgentStatuses"
       }
     },
     "/node/monitoring-status": {
@@ -1233,15 +1225,7 @@
           "provider"
         ],
         "summary": "Provides Node proposal status",
-        "operationId": "NodeStatus",
-        "responses": {
-          "200": {
-            "description": "Node status (\"passed\"/\"failed\"/\"pending)",
-            "schema": {
-              "$ref": "#/definitions/NodeStatusResponse"
-            }
-          }
-        }
+        "operationId": "NodeStatus"
       }
     },
     "/node/provider/consumers-count": {
@@ -1259,27 +1243,61 @@
             "name": "range",
             "in": "query"
           }
+        ]
+      }
+    },
+    "/node/provider/series/data": {
+      "get": {
+        "description": "Node unique consumers count served during a period of time.",
+        "tags": [
+          "provider"
         ],
-        "responses": {
-          "200": {
-            "description": "Provider consumers count",
-            "schema": {
-              "$ref": "#/definitions/ProviderConsumersCountResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
+        "summary": "Provides Node consumers number served during a period of time",
+        "operationId": "GetProviderSeriesData",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
           }
-        }
+        ]
+      }
+    },
+    "/node/provider/series/earnings": {
+      "get": {
+        "description": "Node unique consumers count served during a period of time.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node consumers number served during a period of time",
+        "operationId": "GetProviderSeriesEarnings",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "/node/provider/series/sessions": {
+      "get": {
+        "description": "Node unique consumers count served during a period of time.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node consumers number served during a period of time",
+        "operationId": "GetProviderSeriesSessions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ]
       }
     },
     "/node/provider/sessions": {
@@ -1297,27 +1315,7 @@
             "name": "range",
             "in": "query"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Provider sessions list",
-            "schema": {
-              "$ref": "#/definitions/ProviderSessionsResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
+        ]
       }
     },
     "/node/provider/sessions-count": {
@@ -1335,27 +1333,7 @@
             "name": "range",
             "in": "query"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Provider sessions count",
-            "schema": {
-              "$ref": "#/definitions/ProviderSessionsCountResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
+        ]
       }
     },
     "/node/provider/transferred-data": {
@@ -1373,27 +1351,7 @@
             "name": "range",
             "in": "query"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Provider transferred data",
-            "schema": {
-              "$ref": "#/definitions/ProviderTransferredDataResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
+        ]
       }
     },
     "/proposals": {
@@ -4293,6 +4251,109 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Count"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesDataItem": {
+      "description": "ProviderSeriesDataItem reflects a transferred bytes and timestamp",
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Bytes"
+        },
+        "t": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Timestamp"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesDataResponse": {
+      "type": "object",
+      "title": "ProviderSeriesDataResponse reflects a transferred bytes data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesDataItem"
+          },
+          "x-go-name": "Data"
+        },
+        "total_bytes": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalBytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesEarningItem": {
+      "description": "ProviderSeriesEarningItem reflects a MYSTT earnings and timestamp",
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Earning"
+        },
+        "t": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Timestamp"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesEarningsResponse": {
+      "type": "object",
+      "title": "ProviderSeriesEarningsResponse reflects a earnings data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesEarningItem"
+          },
+          "x-go-name": "Data"
+        },
+        "total_earnings": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "TotalEarnings"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesSessionItem": {
+      "description": "ProviderSeriesSessionItem reflects a timestamp when session event is started",
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Timestamp"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesSessionsResponse": {
+      "type": "object",
+      "title": "ProviderSeriesSessionsResponse reflects a sessions data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesSessionItem"
+          },
+          "x-go-name": "Data"
+        },
+        "total_sessions": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalSessions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

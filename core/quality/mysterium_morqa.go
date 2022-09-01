@@ -405,6 +405,72 @@ func (m *MysteriumMORQA) ProviderConsumersCount(id identity.Identity, rangeTime 
 	return count, nil
 }
 
+// ProviderSeriesEarnings fetch earnings data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderSeriesEarnings(id identity.Identity, rangeTime string) (node.SeriesEarnings, error) {
+	var data node.SeriesEarnings
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-earnings?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider series earnings")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider series earnings")
+		return data, err
+	}
+
+	return data, nil
+}
+
+// ProviderSeriesSessions fetch earnings data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderSeriesSessions(id identity.Identity, rangeTime string) (node.SeriesSessions, error) {
+	var data node.SeriesSessions
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-sessions?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider series sessions")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider series sessions")
+		return data, err
+	}
+
+	return data, nil
+}
+
+// ProviderSeriesData fetch transferred bytes data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderSeriesData(id identity.Identity, rangeTime string) (node.SeriesData, error) {
+	var data node.SeriesData
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-data?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider series data")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider series data")
+		return data, err
+	}
+
+	return data, nil
+}
+
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{

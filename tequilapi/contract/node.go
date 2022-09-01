@@ -84,6 +84,44 @@ type ProviderConsumersCountResponse struct {
 	Count int `json:"count"`
 }
 
+// ProviderSeriesEarningsResponse reflects a earnings data series metrics during a period of time.
+// swagger:model ProviderSeriesEarningsResponse
+type ProviderSeriesEarningsResponse struct {
+	TotalEarnings float64                     `json:"total_earnings"`
+	Data          []ProviderSeriesEarningItem `json:"data"`
+}
+
+// ProviderSeriesEarningItem reflects a MYSTT earnings and timestamp
+type ProviderSeriesEarningItem struct {
+	Earning   float64 `json:"m"`
+	Timestamp int64   `json:"t"`
+}
+
+// ProviderSeriesSessionsResponse reflects a sessions data series metrics during a period of time.
+// swagger:model ProviderSeriesSessionsResponse
+type ProviderSeriesSessionsResponse struct {
+	TotalSessions int                         `json:"total_sessions"`
+	Data          []ProviderSeriesSessionItem `json:"data"`
+}
+
+// ProviderSeriesSessionItem reflects a timestamp when session event is started
+type ProviderSeriesSessionItem struct {
+	Timestamp int64 `json:"t"`
+}
+
+// ProviderSeriesDataResponse reflects a transferred bytes data series metrics during a period of time.
+// swagger:model ProviderSeriesDataResponse
+type ProviderSeriesDataResponse struct {
+	TotalBytes int                      `json:"total_bytes"`
+	Data       []ProviderSeriesDataItem `json:"data"`
+}
+
+// ProviderSeriesDataItem reflects a transferred bytes and timestamp
+type ProviderSeriesDataItem struct {
+	Bytes     int   `json:"b"`
+	Timestamp int64 `json:"t"`
+}
+
 // ProviderSession contains provided session ifnromation
 // swagger:model ProviderSession
 type ProviderSession struct {
