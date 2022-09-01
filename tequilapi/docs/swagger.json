@@ -1244,6 +1244,44 @@
         }
       }
     },
+    "/node/provider/consumers-count": {
+      "get": {
+        "description": "Node unique consumers count served during a period of time.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node consumers number served during a period of time",
+        "operationId": "GetProviderConsumersCount",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider consumers count",
+            "schema": {
+              "$ref": "#/definitions/ProviderConsumersCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/provider/sessions": {
       "get": {
         "description": "Node sessions metrics during a period of time",
@@ -4243,6 +4281,18 @@
           "type": "string",
           "x-go-name": "ServiceType",
           "example": "openvpn"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderConsumersCountResponse": {
+      "type": "object",
+      "title": "ProviderConsumersCountResponse reflects a number of unique consumers served during a period of time.",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Count"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
