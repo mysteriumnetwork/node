@@ -1215,7 +1215,15 @@
           "provider"
         ],
         "summary": "Provides Node connectivity statuses from monitoring agent",
-        "operationId": "MonitoringAgentStatuses"
+        "operationId": "MonitoringAgentStatuses",
+        "responses": {
+          "200": {
+            "description": "Monitoring agent statuses (\"success\"/\"cancelled\"/\"connect_drop/\"connect_fail/\"internet_fail)",
+            "schema": {
+              "$ref": "#/definitions/MonitoringAgentResponse"
+            }
+          }
+        }
       }
     },
     "/node/monitoring-status": {
@@ -1225,7 +1233,15 @@
           "provider"
         ],
         "summary": "Provides Node proposal status",
-        "operationId": "NodeStatus"
+        "operationId": "NodeStatus",
+        "responses": {
+          "200": {
+            "description": "Node status (\"passed\"/\"failed\"/\"pending)",
+            "schema": {
+              "$ref": "#/definitions/NodeStatusResponse"
+            }
+          }
+        }
       }
     },
     "/node/provider/consumers-count": {
@@ -1243,7 +1259,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider consumers count",
+            "schema": {
+              "$ref": "#/definitions/ProviderConsumersCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/sessions": {
@@ -1261,7 +1297,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions list",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/sessions-count": {
@@ -1279,7 +1335,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions count",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/transferred-data": {
@@ -1297,7 +1373,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider transferred data",
+            "schema": {
+              "$ref": "#/definitions/ProviderTransferredDataResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/proposals": {

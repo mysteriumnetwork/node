@@ -23,6 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -56,10 +57,10 @@ func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent 
 // summary: Provides Node proposal status
 // description: Node Status as seen by monitoring agent
 // responses:
-//	200:
-//	  description: Node status ("passed"/"failed"/"pending)
-//	  schema:
-//	    "$ref": "#/definitions/NodeStatusResponse"
+//   200:
+//     description: Node status ("passed"/"failed"/"pending)
+//     schema:
+//       "$ref": "#/definitions/NodeStatusResponse"
 func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.nodeStatusProvider.Status()}, c.Writer)
 }
@@ -70,10 +71,10 @@ func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 // summary: Provides Node connectivity statuses from monitoring agent
 // description: Node connectivity statuses as seen by monitoring agent
 // responses:
-//	200:
-//	  description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
-//	  schema:
-//	    "$ref": "#/definitions/MonitoringAgentResponse"
+//   200:
+//     description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
+//     schema:
+//       "$ref": "#/definitions/MonitoringAgentResponse"
 func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.Statuses()
 	if err != nil {
@@ -95,18 +96,18 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
 // responses:
-//	200:
-//	  description: Provider sessions list
-//	  schema:
-//	    "$ref": "#/definitions/ProviderSessionsResponse"
-//	400:
-//	  description: Failed to parse or request validation failed
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   200:
+//     description: Provider sessions list
+//     schema:
+//       "$ref": "#/definitions/ProviderSessionsResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -137,18 +138,18 @@ func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
 // responses:
-//	200:
-//	  description: Provider transferred data
-//	  schema:
-//	    "$ref": "#/definitions/ProviderTransferredDataResponse"
-//	400:
-//	  description: Failed to parse or request validation failed
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   200:
+//     description: Provider transferred data
+//     schema:
+//       "$ref": "#/definitions/ProviderTransferredDataResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -179,18 +180,18 @@ func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
 // responses:
-//	200:
-//	  description: Provider sessions count
-//	  schema:
-//	    "$ref": "#/definitions/ProviderSessionsCountResponse"
-//	400:
-//	  description: Failed to parse or request validation failed
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   200:
+//     description: Provider sessions count
+//     schema:
+//       "$ref": "#/definitions/ProviderSessionsCountResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -221,18 +222,18 @@ func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
 //     description: period of time ("1d", "7d", "30d")
 //     type: string
 // responses:
-//	200:
-//	  description: Provider consumers count
-//	  schema:
-//	    "$ref": "#/definitions/ProviderConsumersCountResponse"
-//	400:
-//	  description: Failed to parse or request validation failed
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   200:
+//    description: Provider consumers count
+//    schema:
+//     "$ref": "#/definitions/ProviderConsumersCountResponse"
+//   400:
+//    description: Failed to parse or request validation failed
+//    schema:
+//     "$ref": "#/definitions/APIError"
+//   500:
+//    description: Internal server error
+//    schema:
+//     "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderConsumersCount(c *gin.Context) {
 	rangeTime := c.Query("range")
 
