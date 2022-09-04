@@ -1215,7 +1215,15 @@
           "provider"
         ],
         "summary": "Provides Node connectivity statuses from monitoring agent",
-        "operationId": "MonitoringAgentStatuses"
+        "operationId": "MonitoringAgentStatuses",
+        "responses": {
+          "200": {
+            "description": "Monitoring agent statuses (\"success\"/\"cancelled\"/\"connect_drop/\"connect_fail/\"internet_fail)",
+            "schema": {
+              "$ref": "#/definitions/MonitoringAgentResponse"
+            }
+          }
+        }
       }
     },
     "/node/monitoring-status": {
@@ -1225,7 +1233,15 @@
           "provider"
         ],
         "summary": "Provides Node proposal status",
-        "operationId": "NodeStatus"
+        "operationId": "NodeStatus",
+        "responses": {
+          "200": {
+            "description": "Node status (\"passed\"/\"failed\"/\"pending)",
+            "schema": {
+              "$ref": "#/definitions/NodeStatusResponse"
+            }
+          }
+        }
       }
     },
     "/node/provider/consumers-count": {
@@ -1243,16 +1259,36 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider consumers count",
+            "schema": {
+              "$ref": "#/definitions/ProviderConsumersCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/series/data": {
       "get": {
-        "description": "Node unique consumers count served during a period of time.",
+        "description": "Node data series metrics of transferred bytes during a period of time.",
         "tags": [
           "provider"
         ],
-        "summary": "Provides Node consumers number served during a period of time",
+        "summary": "Provides Node data series metrics of transferred bytes",
         "operationId": "GetProviderSeriesData",
         "parameters": [
           {
@@ -1261,16 +1297,36 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider time series metrics of transferred bytes",
+            "schema": {
+              "$ref": "#/definitions/ProviderSeriesDataResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/series/earnings": {
       "get": {
-        "description": "Node unique consumers count served during a period of time.",
+        "description": "Node time series metrics of earnings during a period of time.",
         "tags": [
           "provider"
         ],
-        "summary": "Provides Node consumers number served during a period of time",
+        "summary": "Provides Node  time series metrics of earnings during a period of time",
         "operationId": "GetProviderSeriesEarnings",
         "parameters": [
           {
@@ -1279,16 +1335,36 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider time series metrics of MYSTT earnings",
+            "schema": {
+              "$ref": "#/definitions/ProviderSeriesEarningsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/series/sessions": {
       "get": {
-        "description": "Node unique consumers count served during a period of time.",
+        "description": "Node time series metrics of sessions started during a period of time.",
         "tags": [
           "provider"
         ],
-        "summary": "Provides Node consumers number served during a period of time",
+        "summary": "Provides Node data series metrics of sessions started during a period of time",
         "operationId": "GetProviderSeriesSessions",
         "parameters": [
           {
@@ -1297,7 +1373,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider time series metrics of started sessions",
+            "schema": {
+              "$ref": "#/definitions/ProviderSeriesSessionsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/sessions": {
@@ -1315,7 +1411,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions list",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/sessions-count": {
@@ -1333,7 +1449,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider sessions count",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/node/provider/transferred-data": {
@@ -1351,7 +1487,27 @@
             "name": "range",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider transferred data",
+            "schema": {
+              "$ref": "#/definitions/ProviderTransferredDataResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/proposals": {
