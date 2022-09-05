@@ -128,8 +128,7 @@ type ConsumersCount struct {
 
 // SeriesEarnings represents data series metrics about earnings during a time
 type SeriesEarnings struct {
-	TotalEarnings float64             `json:"total_earnings"`
-	Data          []SeriesEarningItem `json:"data"`
+	Data []SeriesEarningItem `json:"data"`
 }
 
 // SeriesEarningItem represents an item with earning in MYSTT and timestamp
@@ -140,19 +139,18 @@ type SeriesEarningItem struct {
 
 // SeriesSessions represents data series metrics about started sessions during a time
 type SeriesSessions struct {
-	TotalSessions int                 `json:"total_sessions"`
-	Data          []SeriesSessionItem `json:"data"`
+	Data []SeriesSessionItem `json:"data"`
 }
 
 // SeriesSessionItem represents an item with timestamp session event start
 type SeriesSessionItem struct {
+	Count     int   `json:"c"`
 	Timestamp int64 `json:"t"`
 }
 
 // SeriesData represents data series metrics about transferred bytes during a time
 type SeriesData struct {
-	TotalBytes int              `json:"total_bytes"`
-	Data       []SeriesDataItem `json:"data"`
+	Data []SeriesDataItem `json:"data"`
 }
 
 // SeriesDataItem represents an item with bytes transferred and timestamp

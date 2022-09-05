@@ -4438,11 +4438,6 @@
             "$ref": "#/definitions/ProviderSeriesDataItem"
           },
           "x-go-name": "Data"
-        },
-        "total_bytes": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "TotalBytes"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4474,11 +4469,6 @@
             "$ref": "#/definitions/ProviderSeriesEarningItem"
           },
           "x-go-name": "Data"
-        },
-        "total_earnings": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "TotalEarnings"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4487,6 +4477,11 @@
       "description": "ProviderSeriesSessionItem reflects a timestamp when session event is started",
       "type": "object",
       "properties": {
+        "c": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Count"
+        },
         "t": {
           "type": "integer",
           "format": "int64",
@@ -4505,11 +4500,6 @@
             "$ref": "#/definitions/ProviderSeriesSessionItem"
           },
           "x-go-name": "Data"
-        },
-        "total_sessions": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "TotalSessions"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
