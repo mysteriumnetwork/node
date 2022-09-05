@@ -139,4 +139,5 @@ const (
 	ErrorCodeProviderSessions        = "err_provider_sessions"
 	ErrorCodeProviderTransferredData = "err_provider_transferred_data"
 	ErrorCodeProviderSessionsCount   = "err_provider_sessions_count"
+	ErrorCodeProviderConsumersCount  = "err_provider_consumers_count"
 )
