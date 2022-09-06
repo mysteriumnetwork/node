@@ -114,12 +114,8 @@ type proposalPricer interface {
 func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
-			Sessions: make([]session.History, 0),
-			Connection: stateEvent.Connection{
-				Session: connectionstate.Status{
-					State: connectionstate.NotConnected,
-				},
-			},
+			Sessions:    make([]session.History, 0),
+			Connections: make(map[string]stateEvent.Connection),
 		},
 		deps: deps,
 	}
@@ -132,7 +128,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeServiceSessionEarningsEvent = debounce(k.updateSessionEarnings, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
+	k.consumeConnectionStatisticsEvent = k.updateConnectionStats
 	k.consumeConnectionThroughputEvent = debounce(k.updateConnectionThroughput, debounceDuration)
 	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionSpending, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
@@ -220,8 +216,8 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 func (k *Keeper) announceState(_ interface{}) {
 	var state stateEvent.State
 	func() {
-		k.lock.Lock()
-		defer k.lock.Unlock()
+		k.lock.RLock()
+		defer k.lock.RUnlock()
 		if err := copier.CopyWithOption(&state, *k.state, copier.Option{DeepCopy: true}); err != nil {
 			panic(err)
 		}
@@ -394,10 +390,14 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	}
 
 	if evt.State == connectionstate.NotConnected {
-		k.state.Connection = stateEvent.Connection{}
+		delete(k.state.Connections, string(evt.SessionInfo.SessionID))
+	} else {
+		conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+		conn.Session = evt.SessionInfo
+		k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
+
+		log.Info().Msgf("Session %s", conn.String())
 	}
-	k.state.Connection.Session = evt.SessionInfo
-	log.Info().Msgf("Session %s", k.state.Connection.String())
 
 	go k.announceStateChanges(nil)
 }
@@ -411,7 +411,9 @@ func (k *Keeper) updateConnectionStats(e interface{}) {
 		return
 	}
 
-	k.state.Connection.Statistics = evt.Stats
+	conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+	conn.Statistics = evt.Stats
+	k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
 
 	go k.announceStateChanges(nil)
 }
@@ -425,7 +427,9 @@ func (k *Keeper) updateConnectionThroughput(e interface{}) {
 		return
 	}
 
-	k.state.Connection.Throughput = evt.Throughput
+	conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+	conn.Throughput = evt.Throughput
+	k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
 
 	go k.announceStateChanges(nil)
 }
@@ -439,8 +443,11 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 		return
 	}
 
-	k.state.Connection.Invoice = evt.Invoice
-	log.Info().Msgf("Session %s", k.state.Connection.String())
+	conn := k.state.Connections[string(evt.SessionID)]
+	conn.Invoice = evt.Invoice
+	k.state.Connections[string(evt.SessionID)] = conn
+
+	log.Info().Msgf("Session %s", conn.String())
 
 	go k.announceStateChanges(nil)
 }
@@ -542,13 +549,32 @@ func (k *Keeper) incrementConnectCount(serviceID string, isSuccess bool) {
 
 // GetState returns the current state
 func (k *Keeper) GetState() (res stateEvent.State) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 
 	if err := copier.CopyWithOption(&res, *k.state, copier.Option{DeepCopy: true}); err != nil {
 		panic(err)
 	}
 	return
+}
+
+// GetConnection returns the connection state.
+func (k *Keeper) GetConnection(id string) (conn stateEvent.Connection) {
+	k.lock.RLock()
+	defer k.lock.RUnlock()
+
+	if len(id) == 0 {
+		for _, state := range k.state.Connections {
+			return state
+		}
+	}
+
+	state, ok := k.state.Connections[id]
+	if !ok {
+		state.Session.State = connectionstate.NotConnected
+	}
+
+	return state
 }
 
 // Debounce takes in the f and makes sure that it only gets called once if multiple calls are executed in the given interval d.

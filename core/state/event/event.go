@@ -42,7 +42,7 @@ const AppTopicState = "State change"
 type State struct {
 	Services         []contract.ServiceInfoDTO
 	Sessions         []session.History
-	Connection       Connection
+	Connections      map[string]Connection
 	Identities       []Identity
 	ProviderChannels []pingpong.HermesChannel
 }
