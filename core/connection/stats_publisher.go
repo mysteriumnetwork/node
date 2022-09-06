@@ -20,13 +20,14 @@ package connection
 import (
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/rs/zerolog/log"
 )
 
 // DefaultStatsReportInterval is interval for consumer connection statistics reporting.
-const DefaultStatsReportInterval = 1 * time.Second
+const DefaultStatsReportInterval = 10 * time.Second
 
 type statsSupplier interface {
 	Statistics() (connectionstate.Statistics, error)
