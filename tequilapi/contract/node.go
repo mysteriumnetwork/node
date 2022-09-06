@@ -92,8 +92,8 @@ type ProviderSeriesEarningsResponse struct {
 
 // ProviderSeriesEarningItem reflects a MYSTT earnings and timestamp
 type ProviderSeriesEarningItem struct {
-	Earning   float64 `json:"m"`
-	Timestamp int64   `json:"t"`
+	Earning   float64 `json:"value"`
+	Timestamp int64   `json:"timestamp"`
 }
 
 // ProviderSeriesSessionsResponse reflects a sessions data series metrics during a period of time.
@@ -104,8 +104,8 @@ type ProviderSeriesSessionsResponse struct {
 
 // ProviderSeriesSessionItem reflects a timestamp when session event is started
 type ProviderSeriesSessionItem struct {
-	Count     int   `json:"c"`
-	Timestamp int64 `json:"t"`
+	Count     int   `json:"value"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 // ProviderSeriesDataResponse reflects a transferred bytes data series metrics during a period of time.
@@ -116,8 +116,8 @@ type ProviderSeriesDataResponse struct {
 
 // ProviderSeriesDataItem reflects a transferred bytes and timestamp
 type ProviderSeriesDataItem struct {
-	Bytes     int   `json:"b"`
-	Timestamp int64 `json:"t"`
+	Bytes     int   `json:"value"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 // ProviderSession contains provided session ifnromation

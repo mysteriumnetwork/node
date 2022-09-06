@@ -133,8 +133,8 @@ type SeriesEarnings struct {
 
 // SeriesEarningItem represents an item with earning in MYSTT and timestamp
 type SeriesEarningItem struct {
-	Earning   float64 `json:"m"`
-	Timestamp int64   `json:"t"`
+	Earning   float64 `json:"value"`
+	Timestamp int64   `json:"timestamp"`
 }
 
 // SeriesSessions represents data series metrics about started sessions during a time
@@ -144,8 +144,8 @@ type SeriesSessions struct {
 
 // SeriesSessionItem represents an item with timestamp session event start
 type SeriesSessionItem struct {
-	Count     int   `json:"c"`
-	Timestamp int64 `json:"t"`
+	Count     int   `json:"value"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 // SeriesData represents data series metrics about transferred bytes during a time
@@ -155,8 +155,8 @@ type SeriesData struct {
 
 // SeriesDataItem represents an item with bytes transferred and timestamp
 type SeriesDataItem struct {
-	Bytes     int   `json:"b"`
-	Timestamp int64 `json:"t"`
+	Bytes     int   `json:"value"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
