@@ -563,6 +563,12 @@ func (k *Keeper) GetConnection(id string) (conn stateEvent.Connection) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 
+	if len(id) == 0 {
+		for _, state := range k.state.Connections {
+			return state
+		}
+	}
+
 	state, ok := k.state.Connections[id]
 	if !ok {
 		state.Session.State = connectionstate.NotConnected

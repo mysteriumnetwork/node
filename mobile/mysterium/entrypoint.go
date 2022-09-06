@@ -28,15 +28,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/rs/zerolog"
-
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -60,6 +57,8 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -417,8 +416,8 @@ type StatisticsChangeCallback interface {
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, func(e connectionstate.AppEventConnectionStatistics) {
 		var tokensSpent float64
-		if mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal != nil {
-			tokensSpent = crypto.BigMystToFloat(mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal)
+		if mb.stateKeeper.GetConnection("").Invoice.AgreementTotal != nil {
+			tokensSpent = crypto.BigMystToFloat(mb.stateKeeper.GetConnection("").Invoice.AgreementTotal)
 		}
 
 		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), tokensSpent)
