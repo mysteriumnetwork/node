@@ -84,15 +84,14 @@ func NewConnectionEndpoint(manager connection.MultiManager, stateProvider stateP
 // summary: Returns connection status
 // description: Returns status of current connection
 // responses:
-//
-//	200:
-//	  description: Status
-//	  schema:
-//	    "$ref": "#/definitions/ConnectionInfoDTO"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   200:
+//     description: Status
+//     schema:
+//       "$ref": "#/definitions/ConnectionInfoDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 	n, _ := strconv.Atoi(c.Query("id"))
 	status := ce.manager.Status(n)
@@ -110,26 +109,24 @@ func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 //     name: body
 //     description: Parameters in body (consumer_id, provider_id, service_type) required for creating new connection
 //     schema:
-//     $ref: "#/definitions/ConnectionCreateRequestDTO"
-//
+//       $ref: "#/definitions/ConnectionCreateRequestDTO"
 // responses:
-//
-//	201:
-//	  description: Connection started
-//	  schema:
-//	    "$ref": "#/definitions/ConnectionInfoDTO"
-//	400:
-//	  description: Failed to parse or request validation failed
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	422:
-//	  description: Unable to process the request at this point
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   201:
+//     description: Connection started
+//     schema:
+//       "$ref": "#/definitions/ConnectionInfoDTO"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   422:
+//     description: Unable to process the request at this point
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
 	if err != nil {
@@ -223,17 +220,16 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 // summary: Stops connection
 // description: Stops current connection
 // responses:
-//
-//	202:
-//	  description: Connection stopped
-//	422:
-//	  description: Unable to process the request at this point (e.g. no active connection exists)
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
-//	500:
-//	  description: Internal server error
-//	  schema:
-//	    "$ref": "#/definitions/APIError"
+//   202:
+//     description: Connection stopped
+//   422:
+//     description: Unable to process the request at this point (e.g. no active connection exists)
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 	n, _ := strconv.Atoi(c.Query("id"))
 	err := ce.manager.Disconnect(n)
@@ -255,11 +251,10 @@ func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 // summary: Returns connection statistics
 // description: Returns statistics about current connection
 // responses:
-//
-//	200:
-//	  description: Connection statistics
-//	  schema:
-//	    "$ref": "#/definitions/ConnectionStatisticsDTO"
+//   200:
+//     description: Connection statistics
+//     schema:
+//       "$ref": "#/definitions/ConnectionStatisticsDTO"
 func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 	id := c.Query("id")
 	conn := ce.stateProvider.GetConnection(id)
