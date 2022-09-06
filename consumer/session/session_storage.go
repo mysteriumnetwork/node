@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/asdine/storm/v3"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -31,7 +33,6 @@ import (
 	session_node "github.com/mysteriumnetwork/node/session"
 	session_event "github.com/mysteriumnetwork/node/session/event"
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/rs/zerolog/log"
 )
 
 const sessionStorageBucketName = "session-history"
@@ -294,8 +295,8 @@ func (repo *Storage) consumeConnectionSpendingEvent(e pingpong_event.AppEventInv
 }
 
 func (repo *Storage) handleEndedEvent(sessionID session_node.ID) {
-	repo.mu.RLock()
-	defer repo.mu.RUnlock()
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
 
 	row, ok := repo.sessionsActive[sessionID]
 	if !ok {
