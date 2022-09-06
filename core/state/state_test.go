@@ -25,6 +25,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -42,7 +44,6 @@ import (
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 type debounceTester struct {
@@ -346,7 +347,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connectionstate.NotConnected, keeper.GetState().Connection.Session.State)
+	assert.Equal(t, connectionstate.NotConnected, keeper.GetConnection("1").Session.State)
 
 	// when
 	eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
@@ -356,9 +357,9 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Connection.Session.State == connectionstate.Connected
+		return keeper.GetConnection("1").Session.State == connectionstate.Connected
 	}, 2*time.Second, 10*time.Millisecond)
-	assert.Equal(t, expected, keeper.GetState().Connection.Session)
+	assert.Equal(t, expected, keeper.GetConnection("1").Session)
 }
 
 func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
@@ -378,7 +379,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
+	assert.True(t, keeper.GetConnection("").Statistics.At.IsZero())
 
 	// when
 	eventBus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
@@ -387,7 +388,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return expected == keeper.GetState().Connection.Statistics
+		return expected == keeper.GetConnection("").Statistics
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -408,7 +409,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
+	assert.True(t, keeper.GetConnection("").Statistics.At.IsZero())
 
 	// when
 	eventBus.Publish(pingpongEvent.AppTopicInvoicePaid, pingpongEvent.AppEventInvoicePaid{
@@ -417,7 +418,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return reflect.DeepEqual(expected, keeper.GetState().Connection.Invoice)
+		return reflect.DeepEqual(expected, keeper.GetConnection("").Invoice)
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -542,7 +543,6 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 }
 
 func Test_getServiceByID(t *testing.T) {
-
 	publisher := &mockPublisher{}
 	sl := &serviceListerMock{
 		servicesToReturn: map[service.ID]*service.Instance{},

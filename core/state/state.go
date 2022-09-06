@@ -563,7 +563,12 @@ func (k *Keeper) GetConnection(id string) (conn stateEvent.Connection) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 
-	return k.state.Connections[id]
+	state, ok := k.state.Connections[id]
+	if !ok {
+		state.Session.State = connectionstate.NotConnected
+	}
+
+	return state
 }
 
 // Debounce takes in the f and makes sure that it only gets called once if multiple calls are executed in the given interval d.
