@@ -128,7 +128,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeServiceSessionEarningsEvent = debounce(k.updateSessionEarnings, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
+	k.consumeConnectionStatisticsEvent = k.updateConnectionStats
 	k.consumeConnectionThroughputEvent = debounce(k.updateConnectionThroughput, debounceDuration)
 	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionSpending, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
@@ -216,8 +216,8 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 func (k *Keeper) announceState(_ interface{}) {
 	var state stateEvent.State
 	func() {
-		k.lock.Lock()
-		defer k.lock.Unlock()
+		k.lock.RLock()
+		defer k.lock.RUnlock()
 		if err := copier.CopyWithOption(&state, *k.state, copier.Option{DeepCopy: true}); err != nil {
 			panic(err)
 		}
@@ -549,13 +549,21 @@ func (k *Keeper) incrementConnectCount(serviceID string, isSuccess bool) {
 
 // GetState returns the current state
 func (k *Keeper) GetState() (res stateEvent.State) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 
 	if err := copier.CopyWithOption(&res, *k.state, copier.Option{DeepCopy: true}); err != nil {
 		panic(err)
 	}
 	return
+}
+
+// GetConnection returns the connection state.
+func (k *Keeper) GetConnection(id string) (conn stateEvent.Connection) {
+	k.lock.RLock()
+	defer k.lock.RUnlock()
+
+	return k.state.Connections[id]
 }
 
 // Debounce takes in the f and makes sure that it only gets called once if multiple calls are executed in the given interval d.

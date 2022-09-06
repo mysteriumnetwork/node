@@ -68,6 +68,7 @@ type Handler struct {
 
 type stateProvider interface {
 	GetState() stateEvent.State
+	GetConnection(string) stateEvent.Connection
 }
 
 // NewSSEHandler returns a new instance of handler

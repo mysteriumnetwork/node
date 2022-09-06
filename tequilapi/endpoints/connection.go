@@ -262,17 +262,7 @@ func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 //	    "$ref": "#/definitions/ConnectionStatisticsDTO"
 func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 	id := c.Query("id")
-	state := ce.stateProvider.GetState()
-
-	conn, ok := state.Connections[id]
-	if !ok {
-		for _, c := range state.Connections {
-			if len(c.Session.SessionID) > 0 {
-				conn = c
-				break
-			}
-		}
-	}
+	conn := ce.stateProvider.GetConnection(id)
 
 	response := contract.NewConnectionStatisticsDTO(conn.Session, conn.Statistics, conn.Throughput, conn.Invoice)
 	utils.WriteAsJSON(response, c.Writer)
