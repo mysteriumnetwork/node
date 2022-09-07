@@ -140,7 +140,7 @@ const (
 	ErrorCodeProviderTransferredData = "err_provider_transferred_data"
 	ErrorCodeProviderSessionsCount   = "err_provider_sessions_count"
 	ErrorCodeProviderConsumersCount  = "err_provider_consumers_count"
-	ErrorCodeProviderSeriesEarnings  = "err_provider_series_earnings"
-	ErrorCodeProviderSeriesSessions  = "err_provider_series_sessions"
-	ErrorCodeProviderSeriesData      = "err_provider_series_data"
+	ErrorCodeProviderEarningsSeries  = "err_provider_earnings_series"
+	ErrorCodeProviderSessionsSeries  = "err_provider_sessions_series"
+	ErrorCodeProviderTrafficSeries   = "err_provider_traffic_series"
 )

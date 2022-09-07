@@ -70,15 +70,15 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) ConsumersCount(_ string) 
 	return nodeMonitoringAgentTracker.consumersCount, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) SeriesEarnings(_ string) (node.SeriesEarnings, error) {
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) EarningsSeries(_ string) (node.SeriesEarnings, error) {
 	return nodeMonitoringAgentTracker.seriesEarnings, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) SeriesSessions(_ string) (node.SeriesSessions, error) {
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsSeries(_ string) (node.SeriesSessions, error) {
 	return nodeMonitoringAgentTracker.seriesSessions, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) SeriesData(_ string) (node.SeriesData, error) {
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredDataSeries(_ string) (node.SeriesData, error) {
 	return nodeMonitoringAgentTracker.seriesData, nil
 }
 

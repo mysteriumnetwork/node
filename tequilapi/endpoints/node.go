@@ -35,9 +35,9 @@ type nodeMonitoringAgent interface {
 	TransferredData(rangeTime string) (node.TransferredData, error)
 	SessionsCount(rangeTime string) (node.SessionsCount, error)
 	ConsumersCount(rangeTime string) (node.ConsumersCount, error)
-	SeriesEarnings(rangeTime string) (node.SeriesEarnings, error)
-	SeriesSessions(rangeTime string) (node.SeriesSessions, error)
-	SeriesData(rangeTime string) (node.SeriesData, error)
+	EarningsSeries(rangeTime string) (node.SeriesEarnings, error)
+	SessionsSeries(rangeTime string) (node.SeriesSessions, error)
+	TransferredDataSeries(rangeTime string) (node.SeriesData, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -256,8 +256,8 @@ func (ne *NodeEndpoint) GetProviderConsumersCount(c *gin.Context) {
 	utils.WriteAsJSON(contract.ProviderConsumersCountResponse{Count: res.Count}, c.Writer)
 }
 
-// GetProviderSeriesEarnings A time series metrics of earnings during a period of time
-// swagger:operation GET /node/provider/series/earnings provider GetProviderSeriesEarnings
+// GetProviderEarningsSeries A time series metrics of earnings during a period of time
+// swagger:operation GET /node/provider/series/earnings provider GetProviderEarningsSeries
 // ---
 // summary: Provides Node  time series metrics of earnings during a period of time
 // description: Node time series metrics of earnings during a period of time.
@@ -270,7 +270,7 @@ func (ne *NodeEndpoint) GetProviderConsumersCount(c *gin.Context) {
 //   200:
 //    description: Provider time series metrics of MYSTT earnings
 //    schema:
-//     "$ref": "#/definitions/ProviderSeriesEarningsResponse"
+//     "$ref": "#/definitions/ProviderEarningsSeriesResponse"
 //   400:
 //    description: Failed to parse or request validation failed
 //    schema:
@@ -279,27 +279,27 @@ func (ne *NodeEndpoint) GetProviderConsumersCount(c *gin.Context) {
 //    description: Internal server error
 //    schema:
 //     "$ref": "#/definitions/APIError"
-func (ne *NodeEndpoint) GetProviderSeriesEarnings(c *gin.Context) {
+func (ne *NodeEndpoint) GetProviderEarningsSeries(c *gin.Context) {
 	rangeTime := c.Query("range")
 
 	switch rangeTime {
 	case "1d", "7d", "30d":
 	default:
-		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSeriesEarnings))
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderEarningsSeries))
 		return
 	}
 
-	res, err := ne.nodeMonitoringAgent.SeriesEarnings(rangeTime)
+	res, err := ne.nodeMonitoringAgent.EarningsSeries(rangeTime)
 	if err != nil {
-		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderSeriesEarnings))
+		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderEarningsSeries))
 		return
 	}
 
 	utils.WriteAsJSON(res, c.Writer)
 }
 
-// GetProviderSeriesSessions A time series metrics of sessions started during a period of time
-// swagger:operation GET /node/provider/series/sessions provider GetProviderSeriesSessions
+// GetProviderSessionsSeries A time series metrics of sessions started during a period of time
+// swagger:operation GET /node/provider/series/sessions provider GetProviderSessionsSeries
 // ---
 // summary: Provides Node data series metrics of sessions started during a period of time
 // description: Node time series metrics of sessions started during a period of time.
@@ -312,7 +312,7 @@ func (ne *NodeEndpoint) GetProviderSeriesEarnings(c *gin.Context) {
 //   200:
 //    description: Provider time series metrics of started sessions
 //    schema:
-//     "$ref": "#/definitions/ProviderSeriesSessionsResponse"
+//     "$ref": "#/definitions/ProviderSessionsSeriesResponse"
 //   400:
 //    description: Failed to parse or request validation failed
 //    schema:
@@ -321,27 +321,27 @@ func (ne *NodeEndpoint) GetProviderSeriesEarnings(c *gin.Context) {
 //    description: Internal server error
 //    schema:
 //     "$ref": "#/definitions/APIError"
-func (ne *NodeEndpoint) GetProviderSeriesSessions(c *gin.Context) {
+func (ne *NodeEndpoint) GetProviderSessionsSeries(c *gin.Context) {
 	rangeTime := c.Query("range")
 
 	switch rangeTime {
 	case "1d", "7d", "30d":
 	default:
-		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSeriesSessions))
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSessionsSeries))
 		return
 	}
 
-	res, err := ne.nodeMonitoringAgent.SeriesSessions(rangeTime)
+	res, err := ne.nodeMonitoringAgent.SessionsSeries(rangeTime)
 	if err != nil {
-		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderSeriesSessions))
+		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderSessionsSeries))
 		return
 	}
 
 	utils.WriteAsJSON(res, c.Writer)
 }
 
-// GetProviderSeriesData A time series metrics of transferred bytes during a period of time
-// swagger:operation GET /node/provider/series/data provider GetProviderSeriesData
+// GetProviderTransferredDataSeries A time series metrics of transferred bytes during a period of time
+// swagger:operation GET /node/provider/series/data provider GetProviderTransferredDataSeries
 // ---
 // summary: Provides Node data series metrics of transferred bytes
 // description: Node data series metrics of transferred bytes during a period of time.
@@ -354,7 +354,7 @@ func (ne *NodeEndpoint) GetProviderSeriesSessions(c *gin.Context) {
 //   200:
 //    description: Provider time series metrics of transferred bytes
 //    schema:
-//     "$ref": "#/definitions/ProviderSeriesDataResponse"
+//     "$ref": "#/definitions/ProviderTransferredDataSeriesResponse"
 //   400:
 //    description: Failed to parse or request validation failed
 //    schema:
@@ -363,19 +363,19 @@ func (ne *NodeEndpoint) GetProviderSeriesSessions(c *gin.Context) {
 //    description: Internal server error
 //    schema:
 //     "$ref": "#/definitions/APIError"
-func (ne *NodeEndpoint) GetProviderSeriesData(c *gin.Context) {
+func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 	rangeTime := c.Query("range")
 
 	switch rangeTime {
 	case "1d", "7d", "30d":
 	default:
-		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderSeriesData))
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderTrafficSeries))
 		return
 	}
 
-	res, err := ne.nodeMonitoringAgent.SeriesData(rangeTime)
+	res, err := ne.nodeMonitoringAgent.TransferredDataSeries(rangeTime)
 	if err != nil {
-		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderSeriesData))
+		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderTrafficSeries))
 		return
 	}
 
@@ -395,9 +395,9 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 			nodeGroup.GET("/provider/transferred-data", nodeEndpoints.GetProviderTransferredData)
 			nodeGroup.GET("/provider/sessions-count", nodeEndpoints.GetProviderSessionsCount)
 			nodeGroup.GET("/provider/consumers-count", nodeEndpoints.GetProviderConsumersCount)
-			nodeGroup.GET("/provider/series/earnings", nodeEndpoints.GetProviderSeriesEarnings)
-			nodeGroup.GET("/provider/series/sessions", nodeEndpoints.GetProviderSeriesSessions)
-			nodeGroup.GET("/provider/series/data", nodeEndpoints.GetProviderSeriesData)
+			nodeGroup.GET("/provider/series/earnings", nodeEndpoints.GetProviderEarningsSeries)
+			nodeGroup.GET("/provider/series/sessions", nodeEndpoints.GetProviderSessionsSeries)
+			nodeGroup.GET("/provider/series/data", nodeEndpoints.GetProviderTransferredDataSeries)
 		}
 		return nil
 	}

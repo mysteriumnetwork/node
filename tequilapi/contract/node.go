@@ -90,21 +90,21 @@ type ProviderSeriesGeneralItem struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
-// ProviderSeriesEarningsResponse reflects a earnings data series metrics during a period of time.
-// swagger:model ProviderSeriesEarningsResponse
-type ProviderSeriesEarningsResponse struct {
+// ProviderEarningsSeriesResponse reflects a earnings series metrics during a period of time.
+// swagger:model ProviderEarningsSeriesResponse
+type ProviderEarningsSeriesResponse struct {
 	Data []ProviderSeriesGeneralItem `json:"data"`
 }
 
-// ProviderSeriesSessionsResponse reflects a sessions data series metrics during a period of time.
-// swagger:model ProviderSeriesSessionsResponse
-type ProviderSeriesSessionsResponse struct {
+// ProviderSessionsSeriesResponse reflects a sessions data series metrics during a period of time.
+// swagger:model ProviderSessionsSeriesResponse
+type ProviderSessionsSeriesResponse struct {
 	Data []ProviderSeriesGeneralItem `json:"data"`
 }
 
-// ProviderSeriesDataResponse reflects a transferred bytes data series metrics during a period of time.
-// swagger:model ProviderSeriesDataResponse
-type ProviderSeriesDataResponse struct {
+// ProviderTransferredDataSeriesResponse reflects a transferred bytes data series metrics during a period of time.
+// swagger:model ProviderTransferredDataSeriesResponse
+type ProviderTransferredDataSeriesResponse struct {
 	Data []ProviderSeriesGeneralItem `json:"data"`
 }
 

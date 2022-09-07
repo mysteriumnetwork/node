@@ -23,6 +23,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
+const identityNotFound = "identity not found"
+
 // MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.
 type MonitoringAgentStatuses map[string]map[string]int
 
@@ -97,7 +99,7 @@ func (m *StatsTracker) Statuses() (MonitoringAgentStatuses, error) {
 		return m.providerStatuses(id.Address)
 	}
 
-	return MonitoringAgentStatuses{}, errors.New("identity not found")
+	return MonitoringAgentStatuses{}, errors.New(identityNotFound)
 }
 
 // SessionItem represents information about session monitoring metrics.
@@ -154,7 +156,7 @@ func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 		return m.providerSessionsList(id, rangeTime)
 	}
 
-	return []SessionItem{}, errors.New("identity not found")
+	return []SessionItem{}, errors.New(identityNotFound)
 }
 
 // TransferredData retrieves and resolved total traffic served by the provider
@@ -164,7 +166,7 @@ func (m *StatsTracker) TransferredData(rangeTime string) (TransferredData, error
 		return m.providerTransferredData(id, rangeTime)
 	}
 
-	return TransferredData{}, errors.New("identity not found")
+	return TransferredData{}, errors.New(identityNotFound)
 }
 
 // SessionsCount retrieves and resolved numbers of sessions
@@ -174,7 +176,7 @@ func (m *StatsTracker) SessionsCount(rangeTime string) (SessionsCount, error) {
 		return m.providerSessionsCount(id, rangeTime)
 	}
 
-	return SessionsCount{}, errors.New("identity not found")
+	return SessionsCount{}, errors.New(identityNotFound)
 }
 
 // ConsumersCount retrieves and resolved numbers of consumers server during period of time
@@ -184,35 +186,35 @@ func (m *StatsTracker) ConsumersCount(rangeTime string) (ConsumersCount, error) 
 		return m.providerConsumersCount(id, rangeTime)
 	}
 
-	return ConsumersCount{}, errors.New("identity not found")
+	return ConsumersCount{}, errors.New(identityNotFound)
 }
 
 // SeriesEarnings retrieves and resolved earnings data series metrics during a time range
-func (m *StatsTracker) SeriesEarnings(rangeTime string) (SeriesEarnings, error) {
+func (m *StatsTracker) EarningsSeries(rangeTime string) (SeriesEarnings, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
 		return m.providerSeriesEarnings(id, rangeTime)
 	}
 
-	return SeriesEarnings{}, errors.New("identity not found")
+	return SeriesEarnings{}, errors.New(identityNotFound)
 }
 
 // SeriesSessions retrieves and resolved sessions data series metrics during a time range
-func (m *StatsTracker) SeriesSessions(rangeTime string) (SeriesSessions, error) {
+func (m *StatsTracker) SessionsSeries(rangeTime string) (SeriesSessions, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
 		return m.providerSeriesSessions(id, rangeTime)
 	}
 
-	return SeriesSessions{}, errors.New("identity not found")
+	return SeriesSessions{}, errors.New(identityNotFound)
 }
 
 // SeriesData retrieves and resolved transferred bytes data series metrics during a time range
-func (m *StatsTracker) SeriesData(rangeTime string) (SeriesData, error) {
+func (m *StatsTracker) TransferredDataSeries(rangeTime string) (SeriesData, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
 		return m.providerSeriesData(id, rangeTime)
 	}
 
-	return SeriesData{}, errors.New("identity not found")
+	return SeriesData{}, errors.New(identityNotFound)
 }

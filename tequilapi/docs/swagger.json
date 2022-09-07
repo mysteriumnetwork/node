@@ -1289,7 +1289,7 @@
           "provider"
         ],
         "summary": "Provides Node data series metrics of transferred bytes",
-        "operationId": "GetProviderSeriesData",
+        "operationId": "GetProviderTransferredDataSeries",
         "parameters": [
           {
             "type": "string",
@@ -1302,7 +1302,7 @@
           "200": {
             "description": "Provider time series metrics of transferred bytes",
             "schema": {
-              "$ref": "#/definitions/ProviderSeriesDataResponse"
+              "$ref": "#/definitions/ProviderTransferredDataSeriesResponse"
             }
           },
           "400": {
@@ -1327,7 +1327,7 @@
           "provider"
         ],
         "summary": "Provides Node  time series metrics of earnings during a period of time",
-        "operationId": "GetProviderSeriesEarnings",
+        "operationId": "GetProviderEarningsSeries",
         "parameters": [
           {
             "type": "string",
@@ -1340,7 +1340,7 @@
           "200": {
             "description": "Provider time series metrics of MYSTT earnings",
             "schema": {
-              "$ref": "#/definitions/ProviderSeriesEarningsResponse"
+              "$ref": "#/definitions/ProviderEarningsSeriesResponse"
             }
           },
           "400": {
@@ -1365,7 +1365,7 @@
           "provider"
         ],
         "summary": "Provides Node data series metrics of sessions started during a period of time",
-        "operationId": "GetProviderSeriesSessions",
+        "operationId": "GetProviderSessionsSeries",
         "parameters": [
           {
             "type": "string",
@@ -1378,7 +1378,7 @@
           "200": {
             "description": "Provider time series metrics of started sessions",
             "schema": {
-              "$ref": "#/definitions/ProviderSeriesSessionsResponse"
+              "$ref": "#/definitions/ProviderSessionsSeriesResponse"
             }
           },
           "400": {
@@ -4411,23 +4411,9 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProviderSeriesDataResponse": {
+    "ProviderEarningsSeriesResponse": {
       "type": "object",
-      "title": "ProviderSeriesDataResponse reflects a transferred bytes data series metrics during a period of time.",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ProviderSeriesGeneralItem"
-          },
-          "x-go-name": "Data"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ProviderSeriesEarningsResponse": {
-      "type": "object",
-      "title": "ProviderSeriesEarningsResponse reflects a earnings data series metrics during a period of time.",
+      "title": "ProviderEarningsSeriesResponse reflects a earnings series metrics during a period of time.",
       "properties": {
         "data": {
           "type": "array",
@@ -4451,20 +4437,6 @@
         "value": {
           "type": "string",
           "x-go-name": "Value"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ProviderSeriesSessionsResponse": {
-      "type": "object",
-      "title": "ProviderSeriesSessionsResponse reflects a sessions data series metrics during a period of time.",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ProviderSeriesGeneralItem"
-          },
-          "x-go-name": "Data"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4531,6 +4503,20 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProviderSessionsSeriesResponse": {
+      "type": "object",
+      "title": "ProviderSessionsSeriesResponse reflects a sessions data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesGeneralItem"
+          },
+          "x-go-name": "Data"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ProviderTransferredDataResponse": {
       "type": "object",
       "title": "ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.",
@@ -4539,6 +4525,20 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Bytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderTransferredDataSeriesResponse": {
+      "type": "object",
+      "title": "ProviderTransferredDataSeriesResponse reflects a transferred bytes data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesGeneralItem"
+          },
+          "x-go-name": "Data"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
