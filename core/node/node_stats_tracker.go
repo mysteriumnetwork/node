@@ -189,7 +189,7 @@ func (m *StatsTracker) ConsumersCount(rangeTime string) (ConsumersCount, error) 
 	return ConsumersCount{}, errors.New(identityNotFound)
 }
 
-// SeriesEarnings retrieves and resolved earnings data series metrics during a time range
+// EarningsSeries retrieves and resolved earnings data series metrics during a time range
 func (m *StatsTracker) EarningsSeries(rangeTime string) (SeriesEarnings, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
@@ -199,7 +199,7 @@ func (m *StatsTracker) EarningsSeries(rangeTime string) (SeriesEarnings, error) 
 	return SeriesEarnings{}, errors.New(identityNotFound)
 }
 
-// SeriesSessions retrieves and resolved sessions data series metrics during a time range
+// SessionsSeries retrieves and resolved sessions data series metrics during a time range
 func (m *StatsTracker) SessionsSeries(rangeTime string) (SeriesSessions, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
@@ -209,7 +209,7 @@ func (m *StatsTracker) SessionsSeries(rangeTime string) (SeriesSessions, error) 
 	return SeriesSessions{}, errors.New(identityNotFound)
 }
 
-// SeriesData retrieves and resolved transferred bytes data series metrics during a time range
+// TransferredDataSeries retrieves and resolved transferred bytes data series metrics during a time range
 func (m *StatsTracker) TransferredDataSeries(rangeTime string) (SeriesData, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
