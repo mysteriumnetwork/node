@@ -126,37 +126,25 @@ type ConsumersCount struct {
 	Count int `json:"count"`
 }
 
-// SeriesEarnings represents data series metrics about earnings during a time
-type SeriesEarnings struct {
-	Data []SeriesEarningItem `json:"data"`
+// SeriesGeneralItem represents a general data series item
+type SeriesGeneralItem struct {
+	Value     string `json:"value"`
+	Timestamp int64  `json:"timestamp"`
 }
 
-// SeriesEarningItem represents an item with earning in MYSTT and timestamp
-type SeriesEarningItem struct {
-	Earning   float64 `json:"value"`
-	Timestamp int64   `json:"timestamp"`
+// SeriesEarnings represents data series metrics about earnings during a time
+type SeriesEarnings struct {
+	Data []SeriesGeneralItem `json:"data"`
 }
 
 // SeriesSessions represents data series metrics about started sessions during a time
 type SeriesSessions struct {
-	Data []SeriesSessionItem `json:"data"`
-}
-
-// SeriesSessionItem represents an item with timestamp session event start
-type SeriesSessionItem struct {
-	Count     int   `json:"value"`
-	Timestamp int64 `json:"timestamp"`
+	Data []SeriesGeneralItem `json:"data"`
 }
 
 // SeriesData represents data series metrics about transferred bytes during a time
 type SeriesData struct {
-	Data []SeriesDataItem `json:"data"`
-}
-
-// SeriesDataItem represents an item with bytes transferred and timestamp
-type SeriesDataItem struct {
-	Bytes     int   `json:"value"`
-	Timestamp int64 `json:"timestamp"`
+	Data []SeriesGeneralItem `json:"data"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle

@@ -4411,23 +4411,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProviderSeriesDataItem": {
-      "description": "ProviderSeriesDataItem reflects a transferred bytes and timestamp",
-      "type": "object",
-      "properties": {
-        "timestamp": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Timestamp"
-        },
-        "value": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Bytes"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "ProviderSeriesDataResponse": {
       "type": "object",
       "title": "ProviderSeriesDataResponse reflects a transferred bytes data series metrics during a period of time.",
@@ -4435,26 +4418,9 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProviderSeriesDataItem"
+            "$ref": "#/definitions/ProviderSeriesGeneralItem"
           },
           "x-go-name": "Data"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ProviderSeriesEarningItem": {
-      "description": "ProviderSeriesEarningItem reflects a MYSTT earnings and timestamp",
-      "type": "object",
-      "properties": {
-        "timestamp": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Timestamp"
-        },
-        "value": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "Earning"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4466,15 +4432,15 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProviderSeriesEarningItem"
+            "$ref": "#/definitions/ProviderSeriesGeneralItem"
           },
           "x-go-name": "Data"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProviderSeriesSessionItem": {
-      "description": "ProviderSeriesSessionItem reflects a timestamp when session event is started",
+    "ProviderSeriesGeneralItem": {
+      "description": "ProviderSeriesGeneralItem represents a general data series item",
       "type": "object",
       "properties": {
         "timestamp": {
@@ -4483,9 +4449,8 @@
           "x-go-name": "Timestamp"
         },
         "value": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Count"
+          "type": "string",
+          "x-go-name": "Value"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4497,7 +4462,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProviderSeriesSessionItem"
+            "$ref": "#/definitions/ProviderSeriesGeneralItem"
           },
           "x-go-name": "Data"
         }
