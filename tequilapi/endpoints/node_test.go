@@ -36,14 +36,14 @@ type mockNodeStatusProvider struct {
 }
 
 type mockMonitoringAgent struct {
-	status         node.MonitoringAgentStatuses
-	sessions       []node.SessionItem
-	data           node.TransferredData
-	sessionsCount  node.SessionsCount
-	consumersCount node.ConsumersCount
-	seriesEarnings node.SeriesEarnings
-	seriesSessions node.SeriesSessions
-	seriesData     node.SeriesData
+	status                node.MonitoringAgentStatuses
+	sessions              []node.SessionItem
+	data                  node.TransferredData
+	sessionsCount         node.SessionsCount
+	consumersCount        node.ConsumersCount
+	earningsSeries        node.EarningsSeries
+	sessionsSeries        node.SessionsSeries
+	transferredDataSeries node.TransferredDataSeries
 }
 
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
@@ -70,16 +70,16 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) ConsumersCount(_ string) 
 	return nodeMonitoringAgentTracker.consumersCount, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) EarningsSeries(_ string) (node.SeriesEarnings, error) {
-	return nodeMonitoringAgentTracker.seriesEarnings, nil
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) EarningsSeries(_ string) (node.EarningsSeries, error) {
+	return nodeMonitoringAgentTracker.earningsSeries, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsSeries(_ string) (node.SeriesSessions, error) {
-	return nodeMonitoringAgentTracker.seriesSessions, nil
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsSeries(_ string) (node.SessionsSeries, error) {
+	return nodeMonitoringAgentTracker.sessionsSeries, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredDataSeries(_ string) (node.SeriesData, error) {
-	return nodeMonitoringAgentTracker.seriesData, nil
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredDataSeries(_ string) (node.TransferredDataSeries, error) {
+	return nodeMonitoringAgentTracker.transferredDataSeries, nil
 }
 
 func Test_NodeStatus(t *testing.T) {

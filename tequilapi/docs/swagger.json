@@ -4418,15 +4418,15 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProviderSeriesGeneralItem"
+            "$ref": "#/definitions/ProviderSeriesItem"
           },
           "x-go-name": "Data"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProviderSeriesGeneralItem": {
-      "description": "ProviderSeriesGeneralItem represents a general data series item",
+    "ProviderSeriesItem": {
+      "description": "ProviderSeriesItem represents a general data series item",
       "type": "object",
       "properties": {
         "timestamp": {
@@ -4510,7 +4510,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProviderSeriesGeneralItem"
+            "$ref": "#/definitions/ProviderSeriesItem"
           },
           "x-go-name": "Data"
         }
@@ -4536,7 +4536,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProviderSeriesGeneralItem"
+            "$ref": "#/definitions/ProviderSeriesItem"
           },
           "x-go-name": "Data"
         }

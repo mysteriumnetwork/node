@@ -35,9 +35,9 @@ type nodeMonitoringAgent interface {
 	TransferredData(rangeTime string) (node.TransferredData, error)
 	SessionsCount(rangeTime string) (node.SessionsCount, error)
 	ConsumersCount(rangeTime string) (node.ConsumersCount, error)
-	EarningsSeries(rangeTime string) (node.SeriesEarnings, error)
-	SessionsSeries(rangeTime string) (node.SeriesSessions, error)
-	TransferredDataSeries(rangeTime string) (node.SeriesData, error)
+	EarningsSeries(rangeTime string) (node.EarningsSeries, error)
+	SessionsSeries(rangeTime string) (node.SessionsSeries, error)
+	TransferredDataSeries(rangeTime string) (node.TransferredDataSeries, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -369,13 +369,13 @@ func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 	switch rangeTime {
 	case "1d", "7d", "30d":
 	default:
-		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderTrafficSeries))
+		c.Error(apierror.BadRequest("Invalid time range", contract.ErrorCodeProviderTransferredDataSeries))
 		return
 	}
 
 	res, err := ne.nodeMonitoringAgent.TransferredDataSeries(rangeTime)
 	if err != nil {
-		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderTrafficSeries))
+		c.Error(apierror.Internal("Could not get provider consumers count: "+err.Error(), contract.ErrorCodeProviderTransferredDataSeries))
 		return
 	}
 

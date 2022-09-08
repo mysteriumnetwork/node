@@ -31,6 +31,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
@@ -405,9 +406,9 @@ func (m *MysteriumMORQA) ProviderConsumersCount(id identity.Identity, rangeTime 
 	return count, nil
 }
 
-// ProviderSeriesEarnings fetch earnings data series metrics from quality oracle.
-func (m *MysteriumMORQA) ProviderSeriesEarnings(id identity.Identity, rangeTime string) (node.SeriesEarnings, error) {
-	var data node.SeriesEarnings
+// ProviderEarningsSeries fetch earnings data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderEarningsSeries(id identity.Identity, rangeTime string) (node.EarningsSeries, error) {
+	var data node.EarningsSeries
 	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-earnings?range=%s", rangeTime), m.signer(id))
 	if err != nil {
 		return data, err
@@ -427,9 +428,9 @@ func (m *MysteriumMORQA) ProviderSeriesEarnings(id identity.Identity, rangeTime 
 	return data, nil
 }
 
-// ProviderSeriesSessions fetch earnings data series metrics from quality oracle.
-func (m *MysteriumMORQA) ProviderSeriesSessions(id identity.Identity, rangeTime string) (node.SeriesSessions, error) {
-	var data node.SeriesSessions
+// ProviderSessionsSeries fetch earnings data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderSessionsSeries(id identity.Identity, rangeTime string) (node.SessionsSeries, error) {
+	var data node.SessionsSeries
 	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-sessions?range=%s", rangeTime), m.signer(id))
 	if err != nil {
 		return data, err
@@ -449,9 +450,9 @@ func (m *MysteriumMORQA) ProviderSeriesSessions(id identity.Identity, rangeTime 
 	return data, nil
 }
 
-// ProviderSeriesData fetch transferred bytes data series metrics from quality oracle.
-func (m *MysteriumMORQA) ProviderSeriesData(id identity.Identity, rangeTime string) (node.SeriesData, error) {
-	var data node.SeriesData
+// ProviderTransferredDataSeries fetch transferred bytes data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderTransferredDataSeries(id identity.Identity, rangeTime string) (node.TransferredDataSeries, error) {
+	var data node.TransferredDataSeries
 	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-data?range=%s", rangeTime), m.signer(id))
 	if err != nil {
 		return data, err
