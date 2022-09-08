@@ -79,7 +79,7 @@ func NewMorqaClient(httpClient *requests.HTTPClient, baseURL string, signer iden
 		signer:  signer,
 
 		batch:   make(map[string]*batchWithTimeout),
-		metrics: make(chan metric, maxBatchMetricsToKeep),
+		metrics: make(chan metric, 1000*maxBatchMetricsToKeep),
 		stop:    make(chan struct{}),
 	}
 

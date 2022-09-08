@@ -25,9 +25,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -256,7 +256,9 @@ func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/ConnectionStatisticsDTO"
 func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
-	conn := ce.stateProvider.GetState().Connection
+	id := c.Query("id")
+	conn := ce.stateProvider.GetConnection(id)
+
 	response := contract.NewConnectionStatisticsDTO(conn.Session, conn.Statistics, conn.Throughput, conn.Invoice)
 	utils.WriteAsJSON(response, c.Writer)
 }

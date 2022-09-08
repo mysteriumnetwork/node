@@ -28,13 +28,24 @@ import (
 	"time"
 )
 
-const copyBuffer = 128 * 1024
+const copyBufferSize = 128 * 1024
 
 func proxyHTTP1(ctx context.Context, left, right net.Conn) {
 	wg := sync.WaitGroup{}
+
+	idleTimeout := 5 * time.Minute
+	timeout := time.AfterFunc(idleTimeout, func() {
+		left.Close()
+		right.Close()
+	})
+	extend := func() {
+		timeout.Reset(idleTimeout)
+	}
+
 	cpy := func(dst, src net.Conn) {
 		defer wg.Done()
-		io.Copy(dst, src)
+
+		copyBuffer(dst, src, extend)
 		dst.Close()
 	}
 	wg.Add(2)
@@ -58,9 +69,19 @@ func proxyHTTP1(ctx context.Context, left, right net.Conn) {
 
 func proxyHTTP2(ctx context.Context, leftreader io.ReadCloser, leftwriter io.Writer, right net.Conn) {
 	wg := sync.WaitGroup{}
+
+	idleTimeout := 5 * time.Minute
+	timeout := time.AfterFunc(idleTimeout, func() {
+		leftreader.Close()
+		right.Close()
+	})
+	extend := func() {
+		timeout.Reset(idleTimeout)
+	}
+
 	ltr := func(dst net.Conn, src io.Reader) {
 		defer wg.Done()
-		io.Copy(dst, src)
+		copyBuffer(dst, src, extend)
 		dst.Close()
 	}
 	rtl := func(dst io.Writer, src io.Reader) {
@@ -142,7 +163,7 @@ func flush(flusher interface{}) bool {
 }
 
 func copyBody(wr io.Writer, body io.Reader) {
-	buf := make([]byte, copyBuffer)
+	buf := make([]byte, copyBufferSize)
 	for {
 		bread, readErr := body.Read(buf)
 		var writeErr error
@@ -154,4 +175,38 @@ func copyBody(wr io.Writer, body io.Reader) {
 			break
 		}
 	}
+}
+
+func copyBuffer(dst io.Writer, src io.Reader, extend func()) (written int64, err error) {
+	buf := make([]byte, copyBufferSize)
+
+	for {
+		extend()
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			if nw < 0 || nr < nw {
+				nw = 0
+				if ew == nil {
+					ew = errors.New("invalid write result")
+				}
+			}
+			written += int64(nw)
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
+			break
+		}
+	}
+	return written, err
 }
