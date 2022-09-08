@@ -36,11 +36,14 @@ type mockNodeStatusProvider struct {
 }
 
 type mockMonitoringAgent struct {
-	status         node.MonitoringAgentStatuses
-	sessions       []node.SessionItem
-	data           node.TransferredData
-	sessionsCount  node.SessionsCount
-	consumersCount node.ConsumersCount
+	status                node.MonitoringAgentStatuses
+	sessions              []node.SessionItem
+	data                  node.TransferredData
+	sessionsCount         node.SessionsCount
+	consumersCount        node.ConsumersCount
+	earningsSeries        node.EarningsSeries
+	sessionsSeries        node.SessionsSeries
+	transferredDataSeries node.TransferredDataSeries
 }
 
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
@@ -65,6 +68,18 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsCount(_ string) (
 
 func (nodeMonitoringAgentTracker *mockMonitoringAgent) ConsumersCount(_ string) (node.ConsumersCount, error) {
 	return nodeMonitoringAgentTracker.consumersCount, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) EarningsSeries(_ string) (node.EarningsSeries, error) {
+	return nodeMonitoringAgentTracker.earningsSeries, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) SessionsSeries(_ string) (node.SessionsSeries, error) {
+	return nodeMonitoringAgentTracker.sessionsSeries, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredDataSeries(_ string) (node.TransferredDataSeries, error) {
+	return nodeMonitoringAgentTracker.transferredDataSeries, nil
 }
 
 func Test_NodeStatus(t *testing.T) {

@@ -1282,6 +1282,120 @@
         }
       }
     },
+    "/node/provider/series/data": {
+      "get": {
+        "description": "Node data series metrics of transferred bytes during a period of time.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node data series metrics of transferred bytes",
+        "operationId": "GetProviderTransferredDataSeries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider time series metrics of transferred bytes",
+            "schema": {
+              "$ref": "#/definitions/ProviderTransferredDataSeriesResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/node/provider/series/earnings": {
+      "get": {
+        "description": "Node time series metrics of earnings during a period of time.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node  time series metrics of earnings during a period of time",
+        "operationId": "GetProviderEarningsSeries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider time series metrics of MYSTT earnings",
+            "schema": {
+              "$ref": "#/definitions/ProviderEarningsSeriesResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/node/provider/series/sessions": {
+      "get": {
+        "description": "Node time series metrics of sessions started during a period of time.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node data series metrics of sessions started during a period of time",
+        "operationId": "GetProviderSessionsSeries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "period of time (\"1d\", \"7d\", \"30d\")",
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider time series metrics of started sessions",
+            "schema": {
+              "$ref": "#/definitions/ProviderSessionsSeriesResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/provider/sessions": {
       "get": {
         "description": "Node sessions metrics during a period of time",
@@ -4297,6 +4411,36 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProviderEarningsSeriesResponse": {
+      "type": "object",
+      "title": "ProviderEarningsSeriesResponse reflects a earnings series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesItem"
+          },
+          "x-go-name": "Data"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderSeriesItem": {
+      "description": "ProviderSeriesItem represents a general data series item",
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Timestamp"
+        },
+        "value": {
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ProviderSession": {
       "description": "ProviderSession contains provided session ifnromation",
       "type": "object",
@@ -4359,6 +4503,20 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProviderSessionsSeriesResponse": {
+      "type": "object",
+      "title": "ProviderSessionsSeriesResponse reflects a sessions data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesItem"
+          },
+          "x-go-name": "Data"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ProviderTransferredDataResponse": {
       "type": "object",
       "title": "ProviderTransferredDataResponse reflects a number of bytes transferred by provider during a period of time.",
@@ -4367,6 +4525,20 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Bytes"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProviderTransferredDataSeriesResponse": {
+      "type": "object",
+      "title": "ProviderTransferredDataSeriesResponse reflects a transferred bytes data series metrics during a period of time.",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProviderSeriesItem"
+          },
+          "x-go-name": "Data"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

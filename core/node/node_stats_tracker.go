@@ -23,6 +23,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
+var errIdentityNotFound = errors.New("identity not found")
+
 // MonitoringAgentStatuses a object represent a [service_type][status]amount of statuses for each service type.
 type MonitoringAgentStatuses map[string]map[string]int
 
@@ -41,14 +43,26 @@ type ProviderSessionsCount func(id identity.Identity, rangeTime string) (Session
 // ProviderConsumersCount should return unique consumers count
 type ProviderConsumersCount func(id identity.Identity, rangeTime string) (ConsumersCount, error)
 
+// ProviderEarningsSeries should return earnings data series metrics
+type ProviderEarningsSeries func(id identity.Identity, rangeTime string) (EarningsSeries, error)
+
+// ProviderSessionsSeries should return sessions data series metrics
+type ProviderSessionsSeries func(id identity.Identity, rangeTime string) (SessionsSeries, error)
+
+// ProviderTransferredDataSeries should return transferred bytes data series metrics
+type ProviderTransferredDataSeries func(id identity.Identity, rangeTime string) (TransferredDataSeries, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
-	providerStatuses        ProviderStatuses
-	providerSessionsList    ProviderSessionsList
-	providerTransferredData ProviderTransferredData
-	providerSessionsCount   ProviderSessionsCount
-	providerConsumersCount  ProviderConsumersCount
-	currentIdentity         currentIdentity
+	providerStatuses              ProviderStatuses
+	providerSessionsList          ProviderSessionsList
+	providerTransferredData       ProviderTransferredData
+	providerSessionsCount         ProviderSessionsCount
+	providerConsumersCount        ProviderConsumersCount
+	providerEarningsSeries        ProviderEarningsSeries
+	providerSessionsSeries        ProviderSessionsSeries
+	providerTransferredDataSeries ProviderTransferredDataSeries
+	currentIdentity               currentIdentity
 }
 
 // NewNodeStatsTracker constructor
@@ -58,15 +72,21 @@ func NewNodeStatsTracker(
 	providerTransferredData ProviderTransferredData,
 	providerSessionsCount ProviderSessionsCount,
 	providerConsumersCount ProviderConsumersCount,
+	providerEarningsSeries ProviderEarningsSeries,
+	providerSessionsSeries ProviderSessionsSeries,
+	providerTransferredDataSeries ProviderTransferredDataSeries,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
-		providerStatuses:        providerStatuses,
-		providerSessionsList:    providerSessions,
-		providerTransferredData: providerTransferredData,
-		providerSessionsCount:   providerSessionsCount,
-		providerConsumersCount:  providerConsumersCount,
-		currentIdentity:         currentIdentity,
+		providerStatuses:              providerStatuses,
+		providerSessionsList:          providerSessions,
+		providerTransferredData:       providerTransferredData,
+		providerSessionsCount:         providerSessionsCount,
+		providerConsumersCount:        providerConsumersCount,
+		providerEarningsSeries:        providerEarningsSeries,
+		providerSessionsSeries:        providerSessionsSeries,
+		providerTransferredDataSeries: providerTransferredDataSeries,
+		currentIdentity:               currentIdentity,
 	}
 
 	return mat
@@ -79,7 +99,7 @@ func (m *StatsTracker) Statuses() (MonitoringAgentStatuses, error) {
 		return m.providerStatuses(id.Address)
 	}
 
-	return MonitoringAgentStatuses{}, errors.New("identity not found")
+	return MonitoringAgentStatuses{}, errIdentityNotFound
 }
 
 // SessionItem represents information about session monitoring metrics.
@@ -108,6 +128,27 @@ type ConsumersCount struct {
 	Count int `json:"count"`
 }
 
+// SeriesItem represents a general data series item
+type SeriesItem struct {
+	Value     string `json:"value"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// EarningsSeries represents data series metrics about earnings during a time
+type EarningsSeries struct {
+	Data []SeriesItem `json:"data"`
+}
+
+// SessionsSeries represents data series metrics about started sessions during a time
+type SessionsSeries struct {
+	Data []SeriesItem `json:"data"`
+}
+
+// TransferredDataSeries represents data series metrics about transferred bytes during a time
+type TransferredDataSeries struct {
+	Data []SeriesItem `json:"data"`
+}
+
 // Sessions retrieves and resolved monitoring status from quality oracle
 func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
@@ -115,7 +156,7 @@ func (m *StatsTracker) Sessions(rangeTime string) ([]SessionItem, error) {
 		return m.providerSessionsList(id, rangeTime)
 	}
 
-	return []SessionItem{}, errors.New("identity not found")
+	return []SessionItem{}, errIdentityNotFound
 }
 
 // TransferredData retrieves and resolved total traffic served by the provider
@@ -125,7 +166,7 @@ func (m *StatsTracker) TransferredData(rangeTime string) (TransferredData, error
 		return m.providerTransferredData(id, rangeTime)
 	}
 
-	return TransferredData{}, errors.New("identity not found")
+	return TransferredData{}, errIdentityNotFound
 }
 
 // SessionsCount retrieves and resolved numbers of sessions
@@ -135,7 +176,7 @@ func (m *StatsTracker) SessionsCount(rangeTime string) (SessionsCount, error) {
 		return m.providerSessionsCount(id, rangeTime)
 	}
 
-	return SessionsCount{}, errors.New("identity not found")
+	return SessionsCount{}, errIdentityNotFound
 }
 
 // ConsumersCount retrieves and resolved numbers of consumers server during period of time
@@ -145,5 +186,35 @@ func (m *StatsTracker) ConsumersCount(rangeTime string) (ConsumersCount, error) 
 		return m.providerConsumersCount(id, rangeTime)
 	}
 
-	return ConsumersCount{}, errors.New("identity not found")
+	return ConsumersCount{}, errIdentityNotFound
+}
+
+// EarningsSeries retrieves and resolved earnings data series metrics during a time range
+func (m *StatsTracker) EarningsSeries(rangeTime string) (EarningsSeries, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerEarningsSeries(id, rangeTime)
+	}
+
+	return EarningsSeries{}, errIdentityNotFound
+}
+
+// SessionsSeries retrieves and resolved sessions data series metrics during a time range
+func (m *StatsTracker) SessionsSeries(rangeTime string) (SessionsSeries, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerSessionsSeries(id, rangeTime)
+	}
+
+	return SessionsSeries{}, errIdentityNotFound
+}
+
+// TransferredDataSeries retrieves and resolved transferred bytes data series metrics during a time range
+func (m *StatsTracker) TransferredDataSeries(rangeTime string) (TransferredDataSeries, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerTransferredDataSeries(id, rangeTime)
+	}
+
+	return TransferredDataSeries{}, errIdentityNotFound
 }

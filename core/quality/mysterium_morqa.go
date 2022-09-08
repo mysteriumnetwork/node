@@ -31,6 +31,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
@@ -403,6 +404,72 @@ func (m *MysteriumMORQA) ProviderConsumersCount(id identity.Identity, rangeTime 
 	}
 
 	return count, nil
+}
+
+// ProviderEarningsSeries fetch earnings data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderEarningsSeries(id identity.Identity, rangeTime string) (node.EarningsSeries, error) {
+	var data node.EarningsSeries
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-earnings?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider series earnings")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider series earnings")
+		return data, err
+	}
+
+	return data, nil
+}
+
+// ProviderSessionsSeries fetch earnings data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderSessionsSeries(id identity.Identity, rangeTime string) (node.SessionsSeries, error) {
+	var data node.SessionsSeries
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-sessions?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider series sessions")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider series sessions")
+		return data, err
+	}
+
+	return data, nil
+}
+
+// ProviderTransferredDataSeries fetch transferred bytes data series metrics from quality oracle.
+func (m *MysteriumMORQA) ProviderTransferredDataSeries(id identity.Identity, rangeTime string) (node.TransferredDataSeries, error) {
+	var data node.TransferredDataSeries
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/series-data?range=%s", rangeTime), m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request provider series data")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse provider series data")
+		return data, err
+	}
+
+	return data, nil
 }
 
 // SendMetric submits new metric.

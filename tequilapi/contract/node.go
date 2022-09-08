@@ -84,6 +84,30 @@ type ProviderConsumersCountResponse struct {
 	Count int `json:"count"`
 }
 
+// ProviderSeriesItem represents a general data series item
+type ProviderSeriesItem struct {
+	Value     string `json:"value"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// ProviderEarningsSeriesResponse reflects a earnings series metrics during a period of time.
+// swagger:model ProviderEarningsSeriesResponse
+type ProviderEarningsSeriesResponse struct {
+	Data []ProviderSeriesItem `json:"data"`
+}
+
+// ProviderSessionsSeriesResponse reflects a sessions data series metrics during a period of time.
+// swagger:model ProviderSessionsSeriesResponse
+type ProviderSessionsSeriesResponse struct {
+	Data []ProviderSeriesItem `json:"data"`
+}
+
+// ProviderTransferredDataSeriesResponse reflects a transferred bytes data series metrics during a period of time.
+// swagger:model ProviderTransferredDataSeriesResponse
+type ProviderTransferredDataSeriesResponse struct {
+	Data []ProviderSeriesItem `json:"data"`
+}
+
 // ProviderSession contains provided session ifnromation
 // swagger:model ProviderSession
 type ProviderSession struct {
