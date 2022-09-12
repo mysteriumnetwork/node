@@ -367,12 +367,15 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 				return
 			}
 		}
+		defer proxyConn.Close()
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, _ := context.WithCancel(context.Background())
 
-		go tun.proxy(ctx, cancel, client, clientAddr, proxyConn) // loc <- remote
-		go tun.proxy(ctx, cancel, proxyConn, remoteAddr, client) // remote <- loc
-		<-ctx.Done()
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+		go tun.proxy(&wg, ctx, client, clientAddr, proxyConn) // loc <- remote
+		go tun.proxy(&wg, ctx, proxyConn, remoteAddr, client) // remote <- loc
+		wg.Wait()
 	}()
 }
 
@@ -390,44 +393,37 @@ const (
 	idleTimeout = 2 * time.Minute
 )
 
-func (tun *netTun) proxy(ctx context.Context, cancel context.CancelFunc, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
-	defer cancel()
-	defer dst.Close()
+func (tun *netTun) proxy(wg *sync.WaitGroup, ctx context.Context, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
+	defer src.Close()
+	defer wg.Done()
 
 	buf := make([]byte, tun.mtu)
 	for {
-		select {
-		case <-ctx.Done():
+		src.SetReadDeadline(time.Now().Add(idleTimeout))
+
+		n, srcAddr, err := src.ReadFrom(buf)
+		if err != nil {
+			log.Trace().Msgf("Failed to read packed from %s", srcAddr)
+
 			return
-		default:
-			src.SetReadDeadline(time.Now().Add(idleTimeout))
-
-			n, srcAddr, err := src.ReadFrom(buf)
-			if err != nil {
-				if ctx.Err() == nil {
-					log.Trace().Msgf("Failed to read packed from %s", srcAddr)
-				}
-				return
-			}
-
-			// delay according to bandwidth limit
-			if n > 0 && tun.limiter != nil {
-				err := tun.limiter.WaitN(ctx, n)
-				if err != nil {
-					log.Trace().Msgf("Shaper error: %v", err)
-					return
-				}
-			}
-
-			_, err = dst.WriteTo(buf[:n], dstAddr)
-			if err != nil {
-				if ctx.Err() == nil {
-					log.Trace().Err(err).Msgf("Failed to write packed to %s", dstAddr)
-				}
-				return
-			}
-
-			dst.SetReadDeadline(time.Now().Add(idleTimeout))
 		}
+
+		// delay according to bandwidth limit
+		if n > 0 && tun.limiter != nil {
+			err := tun.limiter.WaitN(ctx, n)
+			if err != nil {
+				log.Trace().Msgf("Shaper error: %v", err)
+				return
+			}
+		}
+
+		_, err = dst.WriteTo(buf[:n], dstAddr)
+		if err != nil {
+			log.Trace().Err(err).Msgf("Failed to write packed to %s", dstAddr)
+
+			return
+		}
+
+		dst.SetReadDeadline(time.Now().Add(idleTimeout))
 	}
 }
