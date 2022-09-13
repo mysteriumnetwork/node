@@ -304,6 +304,20 @@ func (client *Client) ConnectionStatistics(sessionID ...string) (statistics cont
 	return statistics, err
 }
 
+// ConnectionStatistics returns traffic information about current connection
+func (client *Client) ConnectionTraffic(sessionID ...string) (traffic contract.ConnectionTrafficDTO, err error) {
+	response, err := client.http.Get("connection/traffic", url.Values{
+		"id": sessionID,
+	})
+	if err != nil {
+		return traffic, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &traffic)
+	return traffic, err
+}
+
 // ConnectionStatus returns connection status
 func (client *Client) ConnectionStatus(port int) (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Get("connection", url.Values{"id": []string{strconv.Itoa(port)}})

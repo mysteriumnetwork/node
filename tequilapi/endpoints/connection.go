@@ -263,6 +263,27 @@ func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 	utils.WriteAsJSON(response, c.Writer)
 }
 
+// GetTraffic returns traffic information about requested connection
+// swagger:operation GET /connection/traffic Connection connectionTraffic
+// ---
+// summary: Returns connection traffic information
+// description: Returns traffic information about requested connection
+// responses:
+//   200:
+//     description: Connection traffic
+//     schema:
+//       "$ref": "#/definitions/ConnectionTrafficDTO"
+func (ce *ConnectionEndpoint) GetTraffic(c *gin.Context) {
+	n, _ := strconv.Atoi(c.Query("id"))
+	traffic := ce.manager.Stats(n)
+
+	response := contract.ConnectionTrafficDTO{
+		BytesSent: traffic.BytesSent,
+		BytesReceived: traffic.BytesReceived,
+	}
+	utils.WriteAsJSON(response, c.Writer)
+}
+
 type proposalRepository interface {
 	Proposal(id market.ProposalID) (*proposal.PricedServiceProposal, error)
 	Proposals(filter *proposal.Filter) ([]proposal.PricedServiceProposal, error)
@@ -287,6 +308,7 @@ func AddRoutesForConnection(
 			connGroup.PUT("/connection", connectionEndpoint.Create)
 			connGroup.DELETE("/connection", connectionEndpoint.Kill)
 			connGroup.GET("/connection/statistics", connectionEndpoint.GetStatistics)
+			connGroup.GET("/connection/traffic", connectionEndpoint.GetTraffic)
 		}
 		return nil
 	}

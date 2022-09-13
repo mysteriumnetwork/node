@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -33,21 +34,24 @@ type statsSupplier interface {
 	Statistics() (connectionstate.Statistics, error)
 }
 
-type statsPublisher struct {
+type statsTracker struct {
 	done     chan struct{}
 	bus      eventbus.Publisher
 	interval time.Duration
+
+	mu        sync.RWMutex
+	lastStats connectionstate.Statistics
 }
 
-func newStatsPublisher(bus eventbus.Publisher, interval time.Duration) statsPublisher {
-	return statsPublisher{
+func newStatsTracker(bus eventbus.Publisher, interval time.Duration) statsTracker {
+	return statsTracker{
 		done:     make(chan struct{}),
 		bus:      bus,
 		interval: interval,
 	}
 }
 
-func (s statsPublisher) start(sessionSupplier *connectionManager, statsSupplier statsSupplier) {
+func (s *statsTracker) start(sessionSupplier *connectionManager, statsSupplier statsSupplier) {
 	for {
 		select {
 		case <-time.After(s.interval):
@@ -56,10 +60,16 @@ func (s statsPublisher) start(sessionSupplier *connectionManager, statsSupplier 
 				log.Warn().Err(err).Msg("Could not get connection statistics")
 				continue
 			}
+
 			s.bus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
 				Stats:       stats,
 				SessionInfo: sessionSupplier.Status(),
 			})
+
+			s.mu.Lock()
+			s.lastStats = stats
+			s.mu.Unlock()
+
 		case <-s.done:
 			log.Info().Msg("Stopped publishing connection statistics")
 			return
@@ -67,6 +77,13 @@ func (s statsPublisher) start(sessionSupplier *connectionManager, statsSupplier 
 	}
 }
 
-func (s statsPublisher) stop() {
+func (s *statsTracker) stats() connectionstate.Statistics {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.lastStats
+}
+
+func (s statsTracker) stop() {
 	s.done <- struct{}{}
 }

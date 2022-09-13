@@ -48,6 +48,8 @@ type Manager interface {
 	Connect(consumerID identity.Identity, hermesID common.Address, proposal ProposalLookup, params ConnectParams) error
 	// Status queries current status of connection
 	Status() connectionstate.Status
+	// Stats provides connection statistics information.
+	Stats() connectionstate.Statistics
 	// Disconnect closes established connection, reports error if no connection
 	Disconnect() error
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
@@ -62,6 +64,8 @@ type MultiManager interface {
 	Connect(consumerID identity.Identity, hermesID common.Address, proposal ProposalLookup, params ConnectParams) error
 	// Status queries current status of connection
 	Status(n int) connectionstate.Status
+	// Stats provides connection statistics information.
+	Stats(n int) connectionstate.Statistics
 	// Disconnect closes established connection, reports error if no connection
 	Disconnect(n int) error
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
