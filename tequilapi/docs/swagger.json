@@ -497,6 +497,24 @@
         }
       }
     },
+    "/connection/traffic": {
+      "get": {
+        "description": "Returns traffic information about requested connection",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Returns connection traffic information",
+        "operationId": "connectionTraffic",
+        "responses": {
+          "200": {
+            "description": "Connection traffic",
+            "schema": {
+              "$ref": "#/definitions/ConnectionTrafficDTO"
+            }
+          }
+        }
+      }
+    },
     "/entertainment": {
       "get": {
         "description": "Estimate entertainment durations/data cap for the MYST amount specified.",
@@ -3374,6 +3392,25 @@
         },
         "tokens_spent": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ConnectionTrafficDTO": {
+      "type": "object",
+      "title": "ConnectionTrafficDTO holds consumer connection traffic information.",
+      "properties": {
+        "bytes_received": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "BytesReceived",
+          "example": 1024
+        },
+        "bytes_sent": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "BytesSent",
+          "example": 1024
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
