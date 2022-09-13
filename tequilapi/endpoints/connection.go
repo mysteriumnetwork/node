@@ -278,7 +278,7 @@ func (ce *ConnectionEndpoint) GetTraffic(c *gin.Context) {
 	traffic := ce.manager.Stats(n)
 
 	response := contract.ConnectionTrafficDTO{
-		BytesSent: traffic.BytesSent,
+		BytesSent:     traffic.BytesSent,
 		BytesReceived: traffic.BytesReceived,
 	}
 	utils.WriteAsJSON(response, c.Writer)
