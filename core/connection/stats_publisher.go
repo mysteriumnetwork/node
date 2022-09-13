@@ -84,6 +84,6 @@ func (s *statsTracker) stats() connectionstate.Statistics {
 	return s.lastStats
 }
 
-func (s statsTracker) stop() {
+func (s *statsTracker) stop() {
 	s.done <- struct{}{}
 }
