@@ -374,7 +374,11 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	}
 
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
-	return di.StateKeeper.Subscribe(di.EventBus)
+	if options.UI.UIEnabled {
+		return di.StateKeeper.Subscribe(di.EventBus)
+	}
+
+	return nil
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {

@@ -305,6 +305,12 @@
               "$ref": "#/definitions/ConnectionInfoDTO"
             }
           },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
@@ -367,6 +373,12 @@
         "responses": {
           "202": {
             "description": "Connection stopped"
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           },
           "422": {
             "description": "Unable to process the request at this point (e.g. no active connection exists)",
@@ -492,6 +504,30 @@
             "description": "Connection statistics",
             "schema": {
               "$ref": "#/definitions/ConnectionStatisticsDTO"
+            }
+          }
+        }
+      }
+    },
+    "/connection/traffic": {
+      "get": {
+        "description": "Returns traffic information about requested connection",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Returns connection traffic information",
+        "operationId": "connectionTraffic",
+        "responses": {
+          "200": {
+            "description": "Connection traffic",
+            "schema": {
+              "$ref": "#/definitions/ConnectionTrafficDTO"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           }
         }
@@ -3374,6 +3410,25 @@
         },
         "tokens_spent": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ConnectionTrafficDTO": {
+      "type": "object",
+      "title": "ConnectionTrafficDTO holds consumer connection traffic information.",
+      "properties": {
+        "bytes_received": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "BytesReceived",
+          "example": 1024
+        },
+        "bytes_sent": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "BytesSent",
+          "example": 1024
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

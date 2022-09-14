@@ -21,8 +21,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/go-rest/apierror"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -131,6 +131,16 @@ type ConnectionStatisticsDTO struct {
 	TokensSpent *big.Int `json:"tokens_spent"`
 
 	SpentTokens Tokens `json:"spent_tokens"`
+}
+
+// ConnectionTrafficDTO holds consumer connection traffic information.
+// swagger:model ConnectionTrafficDTO
+type ConnectionTrafficDTO struct {
+	// example: 1024
+	BytesSent uint64 `json:"bytes_sent"`
+
+	// example: 1024
+	BytesReceived uint64 `json:"bytes_received"`
 }
 
 // ConnectionCreateRequest request used to start a connection.

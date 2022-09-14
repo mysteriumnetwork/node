@@ -91,7 +91,7 @@ func (c *repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposa
 	allErrors := utils.ErrorCollection{}
 	allErrors.Add(errors...)
 
-	log.Err(allErrors.Error()).Msgf("Returning %d unique proposals", len(result))
+	log.Debug().Err(allErrors.Error()).Msgf("Returning %d unique proposals", len(result))
 	return result, allErrors.Error()
 }
 
