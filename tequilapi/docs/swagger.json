@@ -305,6 +305,12 @@
               "$ref": "#/definitions/ConnectionInfoDTO"
             }
           },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
           "500": {
             "description": "Internal server error",
             "schema": {
@@ -367,6 +373,12 @@
         "responses": {
           "202": {
             "description": "Connection stopped"
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           },
           "422": {
             "description": "Unable to process the request at this point (e.g. no active connection exists)",
@@ -510,6 +522,12 @@
             "description": "Connection traffic",
             "schema": {
               "$ref": "#/definitions/ConnectionTrafficDTO"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
             }
           }
         }

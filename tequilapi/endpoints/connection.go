@@ -88,12 +88,25 @@ func NewConnectionEndpoint(manager connection.MultiManager, stateProvider stateP
 //     description: Status
 //     schema:
 //       "$ref": "#/definitions/ConnectionInfoDTO"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Status(c *gin.Context) {
-	n, _ := strconv.Atoi(c.Query("id"))
+	n := 0
+	id := c.Query("id")
+	if len(id) > 0 {
+		var err error
+		n, err = strconv.Atoi(id)
+		if err != nil {
+			c.Error(apierror.ParseFailed())
+			return
+		}
+	}
 	status := ce.manager.Status(n)
 	statusResponse := contract.NewConnectionInfoDTO(status)
 	utils.WriteAsJSON(statusResponse, c.Writer)
@@ -222,6 +235,10 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 // responses:
 //   202:
 //     description: Connection stopped
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 //   422:
 //     description: Unable to process the request at this point (e.g. no active connection exists)
 //     schema:
@@ -231,7 +248,17 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
-	n, _ := strconv.Atoi(c.Query("id"))
+	n := 0
+	id := c.Query("id")
+	if len(id) > 0 {
+		var err error
+		n, err = strconv.Atoi(id)
+		if err != nil {
+			c.Error(apierror.ParseFailed())
+			return
+		}
+	}
+
 	err := ce.manager.Disconnect(n)
 	if err != nil {
 		switch err {
@@ -273,8 +300,22 @@ func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 //     description: Connection traffic
 //     schema:
 //       "$ref": "#/definitions/ConnectionTrafficDTO"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) GetTraffic(c *gin.Context) {
-	n, _ := strconv.Atoi(c.Query("id"))
+	n := 0
+	id := c.Query("id")
+	if len(id) > 0 {
+		var err error
+		n, err = strconv.Atoi(id)
+		if err != nil {
+			c.Error(apierror.ParseFailed())
+			return
+		}
+	}
+
 	traffic := ce.manager.Stats(n)
 
 	response := contract.ConnectionTrafficDTO{
