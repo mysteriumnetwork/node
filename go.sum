@@ -818,10 +818,8 @@ github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c/go.mod h1:G
 github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d h1:IejX10D2zdFwidh09Gy7L37BHfvc2ckgLrHXadLvzTA=
 github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d/go.mod h1:FdrIqN3Z27igwo8A4aKZcmds7q894iGcdUIPz0+vOXY=
-github.com/mysteriumnetwork/go-dvpn-web v1.17.2 h1:CMk3UB0FuJnbIqBEV66e7TRaGBucBekHR52i7LYexC8=
-github.com/mysteriumnetwork/go-dvpn-web v1.17.2/go.mod h1:EflugstrqapwAGF/Jgekw70mhyJbkFlQZGflQ+MILcc=
-github.com/mysteriumnetwork/go-dvpn-web/v2 v2.0.2 h1:EE5vQ4c7q/ce0G7ilBtYEIqXTDeV57VayjbZFdTpGeI=
-github.com/mysteriumnetwork/go-dvpn-web/v2 v2.0.2/go.mod h1:rFTH4Hfx0pdZUTrJtzy3Yaz0mHTaur7+TezbvWA/8C8=
+github.com/mysteriumnetwork/go-dvpn-web/v2 v2.0.3 h1:uZZPWmxKMXKYfeU2eNdYBnM/YVdmCzuIpu5KzrEOJtE=
+github.com/mysteriumnetwork/go-dvpn-web/v2 v2.0.3/go.mod h1:rFTH4Hfx0pdZUTrJtzy3Yaz0mHTaur7+TezbvWA/8C8=
 github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/XZPDpElfzFjxM=
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-rest v0.3.1 h1:zWyeW08ZVm9pWfjBrnq6SYZxoqc8kqzkr3eAbgZqr50=
