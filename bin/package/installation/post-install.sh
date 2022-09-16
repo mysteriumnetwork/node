@@ -77,6 +77,9 @@ if [[ ! -f $DAEMON_DEFAULT ]]; then
     cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
 fi
 
+# TODO remove temporary fix for starting all services instead of wireguard.
+sed -i 's/^SERVICE_OPTS="wireguard"$/SERVICE_OPTS=""/g' $DAEMON_DEFAULT
+
 printf "\nInstallation successfully finished.\n" \
     && printf "Usage: service mysterium-node restart\n"
 
