@@ -191,10 +191,18 @@ func (c *Connection) startConn(conf wgcfg.DeviceConfig) (wg.ConnectionEndpoint, 
 }
 
 func (c *Connection) restartConn(conf wgcfg.DeviceConfig) (wg.ConnectionEndpoint, error) {
+	var err error
 	conn := c.connectionEndpoint
-
 	log.Info().Msg("Restarting connection endpoint")
-	if err := conn.ReconfigureConsumerMode(conf); err != nil {
+
+	if conn == nil {
+		conn, err = c.connEndpointFactory()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create new connection endpoint on restart")
+		}
+	}
+
+	if err = conn.ReconfigureConsumerMode(conf); err != nil {
 		return nil, fmt.Errorf("failed to restart connection endpoint: %w", err)
 	}
 
