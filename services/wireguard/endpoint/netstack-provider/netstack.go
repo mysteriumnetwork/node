@@ -369,12 +369,10 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 		}
 		defer proxyConn.Close()
 
-		ctx, _ := context.WithCancel(context.Background())
-
 		wg := sync.WaitGroup{}
 		wg.Add(2)
-		go tun.proxy(&wg, ctx, client, clientAddr, proxyConn) // loc <- remote
-		go tun.proxy(&wg, ctx, proxyConn, remoteAddr, client) // remote <- loc
+		go tun.proxy(&wg, client, clientAddr, proxyConn) // loc <- remote
+		go tun.proxy(&wg, proxyConn, remoteAddr, client) // remote <- loc
 		wg.Wait()
 	}()
 }
@@ -393,7 +391,7 @@ const (
 	idleTimeout = 2 * time.Minute
 )
 
-func (tun *netTun) proxy(wg *sync.WaitGroup, ctx context.Context, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
+func (tun *netTun) proxy(wg *sync.WaitGroup, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
 	defer src.Close()
 	defer wg.Done()
 
@@ -410,6 +408,7 @@ func (tun *netTun) proxy(wg *sync.WaitGroup, ctx context.Context, dst net.Packet
 
 		// delay according to bandwidth limit
 		if n > 0 && tun.limiter != nil {
+			ctx := context.Background()
 			err := tun.limiter.WaitN(ctx, n)
 			if err != nil {
 				log.Trace().Msgf("Shaper error: %v", err)
