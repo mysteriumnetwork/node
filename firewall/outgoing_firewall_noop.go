@@ -58,7 +58,7 @@ func (ofn *outgoingFirewallNoop) AllowURLAccess(rawURLs ...string) (OutgoingRule
 	}
 	return func() {
 		for _, rawURL := range rawURLs {
-			log.Info().Msgf("Rule for URL: %s removed", rawURL)
+			log.Debug().Msgf("Rule for URL: %s removed", rawURL)
 		}
 	}, nil
 }

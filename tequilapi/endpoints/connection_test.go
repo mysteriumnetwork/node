@@ -73,6 +73,10 @@ func (cm *mockConnectionManager) Status(int) connectionstate.Status {
 	return cm.onStatusReturn
 }
 
+func (cm *mockConnectionManager) Stats(int) connectionstate.Statistics {
+	return connectionstate.Statistics{}
+}
+
 func (cm *mockConnectionManager) Disconnect(int) error {
 	cm.disconnectCount++
 	return cm.onDisconnectReturn

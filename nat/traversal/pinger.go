@@ -459,7 +459,7 @@ func (p *Pinger) singlePing(ctx context.Context, localIP, remoteIP string, local
 		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
 	}
 
-	log.Info().Msgf("Local socket: %s", conn.LocalAddr())
+	log.Debug().Msgf("Local socket: %s", conn.LocalAddr())
 
 	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", remoteIP, remotePort))
 	if err != nil {

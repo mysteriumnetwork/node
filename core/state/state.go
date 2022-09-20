@@ -128,7 +128,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeServiceSessionEarningsEvent = debounce(k.updateSessionEarnings, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStatisticsEvent = k.updateConnectionStats
+	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
 	k.consumeConnectionThroughputEvent = debounce(k.updateConnectionThroughput, debounceDuration)
 	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionSpending, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
