@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -31,7 +30,7 @@ import (
 )
 
 func TestConsumerTotalStorage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "consumerTotalsStorageTest")
+	dir, err := os.MkdirTemp("", "consumerTotalsStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -78,4 +77,12 @@ func TestConsumerTotalStorage(t *testing.T) {
 	a, err = consumerTotalsStorage.Get(1, someOtherChannel, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, amount, a)
+
+	var addAmount = big.NewInt(10)
+	err = consumerTotalsStorage.Add(1, someOtherChannel, hermesAddress, addAmount)
+	assert.NoError(t, err)
+
+	a, err = consumerTotalsStorage.Get(1, someOtherChannel, hermesAddress)
+	assert.NoError(t, err)
+	assert.EqualValues(t, new(big.Int).Add(amount, addAmount), a)
 }

@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"sync"
@@ -52,7 +51,7 @@ func (mpems *MockPeerExchangeMessageSender) Send(em crypto.ExchangeMessage) erro
 }
 
 func Test_InvoicePayer_Start_Stop(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -95,7 +94,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 }
 
 func Test_InvoicePayer_SendsMessage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -164,7 +163,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 }
 
 func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -231,7 +230,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 }
 
 func Test_InvoicePayer_BubblesErrors(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -782,6 +781,19 @@ func (mcts *mockConsumerTotalsStorage) Get(chainID int64, id identity.Identity, 
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err
+}
+
+func (mcts *mockConsumerTotalsStorage) Add(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
+	mcts.resLock.Lock()
+	defer mcts.resLock.Unlock()
+	if mcts.err != nil && !errors.Is(ErrNotFound, mcts.err) {
+		return mcts.err
+	}
+	am := mcts.res
+	if am == nil || am.Cmp(big.NewInt(0)) == -1 {
+		am = big.NewInt(0)
+	}
+	return mcts.Store(chainID, id, hermesID, new(big.Int).Add(am, amount))
 }
 
 type mockTimeTracker struct {
