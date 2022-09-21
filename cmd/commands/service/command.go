@@ -35,9 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/services/datatransfer"
-	"github.com/mysteriumnetwork/node/services/scraping"
-	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
@@ -113,10 +110,14 @@ type serviceCommand struct {
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	arg := ctx.Args().Get(0)
-	// If no service type specified we are starting all services.
-	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
+	serviceTypes := make([]string, 0)
 	if arg != "" {
 		serviceTypes = strings.Split(arg, ",")
+	} else {
+		activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+		if len(activeServices) > 0 {
+			serviceTypes = strings.Split(activeServices, ",")
+		}
 	}
 
 	sc.tryRememberTOS(ctx, sc.errorChannel)
@@ -132,10 +133,11 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 			return err
 		}
 		startRequest := contract.ServiceStartRequest{
-			ProviderID:     providerID,
-			Type:           serviceType,
-			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
-			Options:        serviceOpts,
+			ProviderID:       providerID,
+			Type:             serviceType,
+			AccessPolicies:   contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+			Options:          serviceOpts,
+			IgnoreUserConfig: pbool(true),
 		}
 
 		go sc.runService(startRequest)
@@ -209,4 +211,8 @@ func hasAcceptedTOS(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func pbool(b bool) *bool {
+	return &b
 }

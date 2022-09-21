@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -29,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/rs/zerolog/log"
@@ -39,6 +41,7 @@ type ServiceEndpoint struct {
 	serviceManager     ServiceManager
 	optionsParser      map[string]services.ServiceOptionsParser
 	proposalRepository proposalRepository
+	tequilaApiClient   *tequilapi_client.Client
 }
 
 var (
@@ -49,11 +52,12 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository, tequilaApiClient *tequilapi_client.Client) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager:     serviceManager,
 		optionsParser:      optionsParser,
 		proposalRepository: proposalRepository,
+		tequilaApiClient:   tequilaApiClient,
 	}
 }
 
@@ -196,6 +200,10 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		return
 	}
 
+	if sr.IgnoreUserConfig == nil || *sr.IgnoreUserConfig == false {
+		se.updateActiveServicesInUserConfig()
+	}
+
 	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
@@ -228,7 +236,21 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 		return
 	}
 
+	se.updateActiveServicesInUserConfig()
+
 	c.Status(http.StatusAccepted)
+}
+
+func (se *ServiceEndpoint) updateActiveServicesInUserConfig() {
+	runningInstances := se.serviceManager.List(false)
+	activeServices := make([]string, len(runningInstances))
+	for i, service := range runningInstances {
+		activeServices[i] = service.Type
+	}
+	config := map[string]interface{}{
+		"active-services": strings.Join(activeServices, ","),
+	}
+	se.tequilaApiClient.SetConfig(config)
 }
 
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
@@ -245,8 +267,9 @@ func AddRoutesForService(
 	serviceManager ServiceManager,
 	optionsParser map[string]services.ServiceOptionsParser,
 	proposalRepository proposalRepository,
+	tequilaApiClient *tequilapi_client.Client,
 ) func(*gin.Engine) error {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository)
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository, tequilaApiClient)
 
 	return func(e *gin.Engine) error {
 		g := e.Group("/services")
@@ -262,10 +285,11 @@ func AddRoutesForService(
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.ServiceStartRequest, error) {
 	var jsonData struct {
-		ProviderID     string                          `json:"provider_id"`
-		Type           string                          `json:"type"`
-		Options        *json.RawMessage                `json:"options"`
-		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
+		ProviderID       string                          `json:"provider_id"`
+		Type             string                          `json:"type"`
+		Options          *json.RawMessage                `json:"options"`
+		AccessPolicies   *contract.ServiceAccessPolicies `json:"access_policies"`
+		IgnoreUserConfig *bool                           `json:"ignore_user_config,omitempty"`
 	}
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
@@ -281,6 +305,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		AccessPolicies: contract.ServiceAccessPolicies{
 			IDs: serviceOpts.AccessPolicyList,
 		},
+		IgnoreUserConfig: jsonData.IgnoreUserConfig,
 	}
 	if jsonData.AccessPolicies != nil {
 		sr.AccessPolicies = *jsonData.AccessPolicies

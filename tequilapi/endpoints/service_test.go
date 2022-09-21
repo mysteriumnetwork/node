@@ -129,7 +129,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			PricePerHour: big.NewInt(500_000_000_000_000_000),
 			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
-	})(router)
+	}, nil)(router)
 	assert.NoError(t, err)
 	tests := []struct {
 		method         string
@@ -278,7 +278,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -303,7 +303,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -328,7 +328,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -353,7 +353,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -367,7 +367,7 @@ func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -389,6 +389,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 			},
 		},
+		nil,
 	)(g)
 	assert.NoError(t, err)
 
@@ -444,7 +445,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -458,7 +459,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -492,7 +493,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			PricePerHour: big.NewInt(500_000_000_000_000_000),
 			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
-	})(g)
+	}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -576,7 +577,7 @@ func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
