@@ -38,9 +38,6 @@ type ServiceStartRequest struct {
 	// required: false
 	// example: {"port": 1123, "protocol": "udp"}
 	Options interface{} `json:"options"`
-
-	// required: false
-	IgnoreUserConfig *bool `json:"ignore_user_config,omitempty"`
 }
 
 // ServiceAccessPolicies represents the access controls for service start

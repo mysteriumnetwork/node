@@ -113,27 +113,17 @@ type serviceCommand struct {
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	serviceTypes := make([]string, 0)
-	ignoreUserConfig := true
 
 	// TODO: migration. remove later https://github.com/mysteriumnetwork/payments/issues/234
-	userCfg := config.Current.GetUserConfig()
-	if _, ok := userCfg[config.FlagActiveServices.Name]; ok {
-		activeServices := config.Current.GetString(config.FlagActiveServices.Name)
-		if len(activeServices) > 0 {
-			serviceTypes = strings.Split(activeServices, ",")
-		} else {
-			arg := ctx.Args().Get(0)
-			if arg != "" {
-				serviceTypes = strings.Split(arg, ",")
-			}
-		}
+	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+	if len(activeServices) > 0 {
+		serviceTypes = strings.Split(activeServices, ",")
 	} else { // start migration
 		if len(config.Current.GetString(config.FlagWireguardAccessPolicies.Name)) > 0 || len(config.Current.GetString(config.FlagAccessPolicyList.Name)) > 0 {
 			serviceTypes = []string{scraping.ServiceType, datatransfer.ServiceType}
 		} else {
 			serviceTypes = []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
 		}
-		ignoreUserConfig = false
 	}
 
 	sc.tryRememberTOS(ctx, sc.errorChannel)
@@ -149,11 +139,10 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 			return err
 		}
 		startRequest := contract.ServiceStartRequest{
-			ProviderID:       providerID,
-			Type:             serviceType,
-			AccessPolicies:   contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
-			Options:          serviceOpts,
-			IgnoreUserConfig: pbool(ignoreUserConfig),
+			ProviderID:     providerID,
+			Type:           serviceType,
+			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+			Options:        serviceOpts,
 		}
 
 		go sc.runService(startRequest)

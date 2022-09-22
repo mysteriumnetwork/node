@@ -158,8 +158,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		},
 		{
 			http.MethodPost,
-			"/services",
-			`{"provider_id": "node1", "type": "testprotocol", "ignore_user_config": true}`,
+			"/services?ignore_user_config=true",
+			`{"provider_id": "node1", "type": "testprotocol"}`,
 			http.StatusCreated,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
@@ -482,14 +482,13 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 	req := httptest.NewRequest(
 		http.MethodPost,
-		"/services",
+		"/services?ignore_user_config=true",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"access_policies": {
 				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
-			},
-			"ignore_user_config": true
+			}
 		}`),
 	)
 	resp := httptest.NewRecorder()

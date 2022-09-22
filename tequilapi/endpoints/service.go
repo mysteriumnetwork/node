@@ -201,7 +201,7 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		return
 	}
 
-	if sr.IgnoreUserConfig == nil || *sr.IgnoreUserConfig == false {
+	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
 		se.updateActiveServicesInUserConfig()
 	}
 
@@ -288,11 +288,10 @@ func AddRoutesForService(
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.ServiceStartRequest, error) {
 	var jsonData struct {
-		ProviderID       string                          `json:"provider_id"`
-		Type             string                          `json:"type"`
-		Options          *json.RawMessage                `json:"options"`
-		AccessPolicies   *contract.ServiceAccessPolicies `json:"access_policies"`
-		IgnoreUserConfig *bool                           `json:"ignore_user_config,omitempty"`
+		ProviderID     string                          `json:"provider_id"`
+		Type           string                          `json:"type"`
+		Options        *json.RawMessage                `json:"options"`
+		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
 	}
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
@@ -308,7 +307,6 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		AccessPolicies: contract.ServiceAccessPolicies{
 			IDs: serviceOpts.AccessPolicyList,
 		},
-		IgnoreUserConfig: jsonData.IgnoreUserConfig,
 	}
 	if jsonData.AccessPolicies != nil {
 		sr.AccessPolicies = *jsonData.AccessPolicies
