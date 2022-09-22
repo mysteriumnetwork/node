@@ -1304,6 +1304,36 @@
         }
       }
     },
+    "/node/provider/activity-stats": {
+      "get": {
+        "description": "Node activity stats",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node activity stats",
+        "operationId": "GetProviderActivityStats",
+        "responses": {
+          "200": {
+            "description": "Provider activity stats",
+            "schema": {
+              "$ref": "#/definitions/ActivityStatsResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/provider/consumers-count": {
       "get": {
         "description": "Node unique consumers count served during a period of time.",
@@ -1325,6 +1355,44 @@
             "description": "Provider consumers count",
             "schema": {
               "$ref": "#/definitions/ProviderConsumersCountResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/node/provider/quality": {
+      "get": {
+        "description": "Node quality for defined country",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node quality for some customer country",
+        "operationId": "GetProviderQuality",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "two letters country code",
+            "name": "country",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider quality",
+            "schema": {
+              "$ref": "#/definitions/QualityInfoResponse"
             }
           },
           "400": {
@@ -3083,6 +3151,29 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/market"
     },
+    "ActivityStatsResponse": {
+      "type": "object",
+      "title": "ActivityStatsResponse reflects a node activity stats.",
+      "properties": {
+        "active": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          },
+          "x-go-name": "Active"
+        },
+        "online": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          },
+          "x-go-name": "Online"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "Address": {
       "type": "array",
       "title": "Address represents the 20 byte address of an Ethereum account.",
@@ -4532,8 +4623,8 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "ProviderSession": {
-      "description": "ProviderSession contains provided session ifnromation",
       "type": "object",
+      "title": "ProviderSession contains provided session information.",
       "properties": {
         "consumer_country": {
           "type": "string",
@@ -4656,6 +4747,18 @@
           "type": "number",
           "format": "double",
           "x-go-name": "Uptime"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "QualityInfoResponse": {
+      "type": "object",
+      "title": "QualityInfoResponse reflects a node quality.",
+      "properties": {
+        "quality": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Quality"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
