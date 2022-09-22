@@ -111,8 +111,8 @@ type ProviderTransferredDataSeriesResponse struct {
 // ActivityStatsResponse reflects a node activity stats.
 // swagger:model ActivityStatsResponse
 type ActivityStatsResponse struct {
-	Online map[string]float64 `json:"online"`
-	Active map[string]float64 `json:"active"`
+	Online float64 `json:"online"`
+	Active float64 `json:"active"`
 }
 
 // QualityInfoResponse reflects a node quality.

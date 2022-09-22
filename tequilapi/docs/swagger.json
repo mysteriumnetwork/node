@@ -3156,19 +3156,13 @@
       "title": "ActivityStatsResponse reflects a node activity stats.",
       "properties": {
         "active": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number",
-            "format": "double"
-          },
+          "type": "number",
+          "format": "double",
           "x-go-name": "Active"
         },
         "online": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number",
-            "format": "double"
-          },
+          "type": "number",
+          "format": "double",
           "x-go-name": "Online"
         }
       },
