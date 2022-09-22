@@ -122,6 +122,12 @@ var fakeOptionsParser = map[string]services.ServiceOptionsParser{
 	},
 }
 
+type mockTequilaApiClient struct{}
+
+func (c *mockTequilaApiClient) Post(path string, payload interface{}) (*http.Response, error) {
+	return nil, nil
+}
+
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := summonTestGin()
 	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
@@ -153,7 +159,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		{
 			http.MethodPost,
 			"/services",
-			`{"provider_id": "node1", "type": "testprotocol"}`,
+			`{"provider_id": "node1", "type": "testprotocol", "ignore_user_config": true}`,
 			http.StatusCreated,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
@@ -241,7 +247,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			}`,
 		},
 		{
-			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
+			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8?ignore_user_config=true", "",
 			http.StatusAccepted, "",
 		},
 		{
@@ -482,7 +488,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"access_policies": {
 				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
-			}
+			},
+			"ignore_user_config": true
 		}`),
 	)
 	resp := httptest.NewRecorder()

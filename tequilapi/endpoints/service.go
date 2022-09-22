@@ -237,7 +237,9 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 		return
 	}
 
-	se.updateActiveServicesInUserConfig()
+	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
+		se.updateActiveServicesInUserConfig()
+	}
 
 	c.Status(http.StatusAccepted)
 }
