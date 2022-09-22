@@ -54,6 +54,10 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
+// MaxDNSMsgSize defines UDP recv buffer for resolver and announced
+// EDNS0 buffer size
+const MaxDNSResponseMsgSize = 4096
+
 type netTun struct {
 	stack          *stack.Stack
 	dispatcher     stack.NetworkDispatcher
@@ -616,6 +620,17 @@ func newRequest(q dnsmessage.Question) (id uint16, udpReq, tcpReq []byte, err er
 	if err := b.Question(q); err != nil {
 		return 0, nil, nil, err
 	}
+	// Accept packets up to MaxDNSResponseMsgSize.  RFC 6891.
+	if err := b.StartAdditionals(); err != nil {
+		return 0, nil, nil, err
+	}
+	var rh dnsmessage.ResourceHeader
+	if err := rh.SetEDNS0(MaxDNSResponseMsgSize, dnsmessage.RCodeSuccess, false); err != nil {
+		return 0, nil, nil, err
+	}
+	if err := b.OPTResource(rh, dnsmessage.OPTResource{}); err != nil {
+		return 0, nil, nil, err
+	}
 	tcpReq, err = b.Finish()
 	udpReq = tcpReq[2:]
 	l := len(tcpReq) - 2
@@ -661,7 +676,7 @@ func dnsPacketRoundTrip(c net.Conn, id uint16, query dnsmessage.Question, b []by
 	if _, err := c.Write(b); err != nil {
 		return dnsmessage.Parser{}, dnsmessage.Header{}, err
 	}
-	b = make([]byte, 512)
+	b = make([]byte, MaxDNSResponseMsgSize)
 	for {
 		n, err := c.Read(b)
 		if err != nil {
