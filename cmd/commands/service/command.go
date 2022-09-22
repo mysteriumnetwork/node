@@ -217,7 +217,3 @@ func hasAcceptedTOS(ctx *cli.Context) error {
 
 	return nil
 }
-
-func pbool(b bool) *bool {
-	return &b
-}
