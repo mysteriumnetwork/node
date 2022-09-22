@@ -27,6 +27,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
@@ -248,7 +249,7 @@ func (se *ServiceEndpoint) updateActiveServicesInUserConfig() {
 		activeServices[i] = service.Type
 	}
 	config := map[string]interface{}{
-		"active-services": strings.Join(activeServices, ","),
+		config.FlagActiveServices.Name: strings.Join(activeServices, ","),
 	}
 	se.tequilaApiClient.SetConfig(config)
 }

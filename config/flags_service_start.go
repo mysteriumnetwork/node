@@ -18,13 +18,7 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/urfave/cli/v2"
-
-	"github.com/mysteriumnetwork/node/services/datatransfer"
-	"github.com/mysteriumnetwork/node/services/scraping"
-	"github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 var (
@@ -71,7 +65,6 @@ var (
 	FlagActiveServices = cli.StringFlag{
 		Name:  "active-services",
 		Usage: "Comma separated list of active services.",
-		Value: fmt.Sprintf("%s,%s,%s", wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType),
 	}
 )
 
