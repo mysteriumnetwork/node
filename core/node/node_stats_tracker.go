@@ -52,6 +52,12 @@ type ProviderSessionsSeries func(id identity.Identity, rangeTime string) (Sessio
 // ProviderTransferredDataSeries should return transferred bytes data series metrics
 type ProviderTransferredDataSeries func(id identity.Identity, rangeTime string) (TransferredDataSeries, error)
 
+// ProviderActivityStats should return provider activity stats
+type ProviderActivityStats func(id identity.Identity) (ActivityStats, error)
+
+// ProviderQuality should return provider quality for some country
+type ProviderQuality func(id identity.Identity, countryCode string) (QualityInfo, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
 	providerStatuses              ProviderStatuses
@@ -62,6 +68,8 @@ type StatsTracker struct {
 	providerEarningsSeries        ProviderEarningsSeries
 	providerSessionsSeries        ProviderSessionsSeries
 	providerTransferredDataSeries ProviderTransferredDataSeries
+	providerActivityStats         ProviderActivityStats
+	providerQuality               ProviderQuality
 	currentIdentity               currentIdentity
 }
 
@@ -75,6 +83,8 @@ func NewNodeStatsTracker(
 	providerEarningsSeries ProviderEarningsSeries,
 	providerSessionsSeries ProviderSessionsSeries,
 	providerTransferredDataSeries ProviderTransferredDataSeries,
+	providerActivityStats ProviderActivityStats,
+	providerQuality ProviderQuality,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
@@ -86,6 +96,8 @@ func NewNodeStatsTracker(
 		providerEarningsSeries:        providerEarningsSeries,
 		providerSessionsSeries:        providerSessionsSeries,
 		providerTransferredDataSeries: providerTransferredDataSeries,
+		providerActivityStats:         providerActivityStats,
+		providerQuality:               providerQuality,
 		currentIdentity:               currentIdentity,
 	}
 
@@ -147,6 +159,17 @@ type SessionsSeries struct {
 // TransferredDataSeries represents data series metrics about transferred bytes during a time
 type TransferredDataSeries struct {
 	Data []SeriesItem `json:"data"`
+}
+
+// ActivityStats represent a  provider activity stats
+type ActivityStats struct {
+	Online map[string]float64 `json:"online"`
+	Active map[string]float64 `json:"active"`
+}
+
+// QualityInfo represents a provider quality info.
+type QualityInfo struct {
+	Quality float64 `json:"quality"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
@@ -217,4 +240,24 @@ func (m *StatsTracker) TransferredDataSeries(rangeTime string) (TransferredDataS
 	}
 
 	return TransferredDataSeries{}, errIdentityNotFound
+}
+
+// ProviderQuality retrieves and resolved provider quality
+func (m *StatsTracker) ProviderQuality(country string) (QualityInfo, error) {
+
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerQuality(id, country)
+	}
+	return QualityInfo{}, errIdentityNotFound
+}
+
+// ProviderActivityStats retrieves and resolved provider activity stats
+func (m *StatsTracker) ProviderActivityStats() (ActivityStats, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerActivityStats(id)
+	}
+
+	return ActivityStats{}, errIdentityNotFound
 }

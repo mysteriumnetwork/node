@@ -108,7 +108,20 @@ type ProviderTransferredDataSeriesResponse struct {
 	Data []ProviderSeriesItem `json:"data"`
 }
 
-// ProviderSession contains provided session ifnromation
+// ActivityStatsResponse reflects a node activity stats.
+// swagger:model ActivityStatsResponse
+type ActivityStatsResponse struct {
+	Online map[string]float64 `json:"online"`
+	Active map[string]float64 `json:"active"`
+}
+
+// QualityInfoResponse reflects a node quality.
+// swagger:model QualityInfoResponse
+type QualityInfoResponse struct {
+	Quality float64 `json:"quality"`
+}
+
+// ProviderSession contains provided session information.
 // swagger:model ProviderSession
 type ProviderSession struct {
 	ID               string `json:"id"`

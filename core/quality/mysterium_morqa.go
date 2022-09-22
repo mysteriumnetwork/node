@@ -472,6 +472,50 @@ func (m *MysteriumMORQA) ProviderTransferredDataSeries(id identity.Identity, ran
 	return data, nil
 }
 
+// ProviderActivityStats fetch provider activity stats from quality oracle.
+func (m *MysteriumMORQA) ProviderActivityStats(id identity.Identity) (node.ActivityStats, error) {
+	var stats node.ActivityStats
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/activity-stats"), m.signer(id))
+	if err != nil {
+		return stats, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return stats, errors.Wrap(err, "failed to request provider activity stats")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &stats); err != nil {
+		log.Err(err).Msg("Failed to parse provider activity stats")
+		return stats, err
+	}
+
+	return stats, nil
+}
+
+// ProviderQuality fetch provider quality from quality oracle.
+func (m *MysteriumMORQA) ProviderQuality(id identity.Identity, countryCode string) (node.QualityInfo, error) {
+	var res node.QualityInfo
+	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/quality?country=%s", countryCode), m.signer(id))
+	if err != nil {
+		return res, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return res, errors.Wrap(err, "failed to request provider quality")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &res); err != nil {
+		log.Err(err).Msg("Failed to parse provider quality")
+		return res, err
+	}
+
+	return res, nil
+}
+
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{
