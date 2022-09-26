@@ -112,11 +112,18 @@ type serviceCommand struct {
 
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
-	arg := ctx.Args().Get(0)
-	// If no service type specified we are starting all services.
-	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
-	if arg != "" {
-		serviceTypes = strings.Split(arg, ",")
+	serviceTypes := make([]string, 0)
+
+	// TODO: migration. remove later https://github.com/mysteriumnetwork/payments/issues/234
+	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+	if len(activeServices) > 0 {
+		serviceTypes = strings.Split(activeServices, ",")
+	} else { // start migration
+		if len(config.Current.GetString(config.FlagWireguardAccessPolicies.Name)) > 0 || len(config.Current.GetString(config.FlagAccessPolicyList.Name)) > 0 {
+			serviceTypes = []string{scraping.ServiceType, datatransfer.ServiceType}
+		} else {
+			serviceTypes = []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
+		}
 	}
 
 	sc.tryRememberTOS(ctx, sc.errorChannel)

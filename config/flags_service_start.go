@@ -60,6 +60,12 @@ var (
 		Usage: "Sets the price/hour applied to provider service.",
 		Value: 0.00006,
 	}
+
+	// FlagActiveServices a comma-separated list of active services.
+	FlagActiveServices = cli.StringFlag{
+		Name:  "active-services",
+		Usage: "Comma separated list of active services.",
+	}
 )
 
 // RegisterFlagsServiceStart registers CLI flags used to start a service.
@@ -71,6 +77,7 @@ func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 		&FlagPaymentPriceGiB,
 		&FlagPaymentPriceHour,
 		&FlagAccessPolicyList,
+		&FlagActiveServices,
 	)
 }
 
@@ -82,4 +89,5 @@ func ParseFlagsServiceStart(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentPriceGiB)
 	Current.ParseFloat64Flag(ctx, FlagPaymentPriceHour)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
+	Current.ParseStringFlag(ctx, FlagActiveServices)
 }

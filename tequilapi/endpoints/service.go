@@ -22,13 +22,16 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/rs/zerolog/log"
@@ -39,6 +42,7 @@ type ServiceEndpoint struct {
 	serviceManager     ServiceManager
 	optionsParser      map[string]services.ServiceOptionsParser
 	proposalRepository proposalRepository
+	tequilaApiClient   *tequilapi_client.Client
 }
 
 var (
@@ -49,11 +53,12 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository, tequilaApiClient *tequilapi_client.Client) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager:     serviceManager,
 		optionsParser:      optionsParser,
 		proposalRepository: proposalRepository,
+		tequilaApiClient:   tequilaApiClient,
 	}
 }
 
@@ -196,6 +201,10 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		return
 	}
 
+	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
+		se.updateActiveServicesInUserConfig()
+	}
+
 	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
@@ -228,7 +237,23 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 		return
 	}
 
+	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
+		se.updateActiveServicesInUserConfig()
+	}
+
 	c.Status(http.StatusAccepted)
+}
+
+func (se *ServiceEndpoint) updateActiveServicesInUserConfig() {
+	runningInstances := se.serviceManager.List(false)
+	activeServices := make([]string, len(runningInstances))
+	for i, service := range runningInstances {
+		activeServices[i] = service.Type
+	}
+	config := map[string]interface{}{
+		config.FlagActiveServices.Name: strings.Join(activeServices, ","),
+	}
+	se.tequilaApiClient.SetConfig(config)
 }
 
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
@@ -245,8 +270,9 @@ func AddRoutesForService(
 	serviceManager ServiceManager,
 	optionsParser map[string]services.ServiceOptionsParser,
 	proposalRepository proposalRepository,
+	tequilaApiClient *tequilapi_client.Client,
 ) func(*gin.Engine) error {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository)
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository, tequilaApiClient)
 
 	return func(e *gin.Engine) error {
 		g := e.Group("/services")

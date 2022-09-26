@@ -37,14 +37,14 @@ require (
 	github.com/mysteriumnetwork/EventBus v0.0.0-20220415063055-d22cb121672c
 	github.com/mysteriumnetwork/feedback v1.1.2-0.20211228095831-9dfca34c9ab7
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d
-	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.0.5
+	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.0.6
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.3.1
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
 	github.com/mysteriumnetwork/payments v1.0.1-0.20220720083601-11b5dfc314f8
-	github.com/mysteriumnetwork/terms v0.0.40
+	github.com/mysteriumnetwork/terms v0.0.50
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/oschwald/geoip2-golang v1.1.0
