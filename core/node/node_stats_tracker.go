@@ -163,8 +163,8 @@ type TransferredDataSeries struct {
 
 // ActivityStats represent a  provider activity stats
 type ActivityStats struct {
-	Online float64 `json:"online"`
-	Active float64 `json:"active"`
+	Online float64 `json:"online_percent"`
+	Active float64 `json:"active_percent"`
 }
 
 // QualityInfo represents a provider quality info.
