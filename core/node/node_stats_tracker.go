@@ -55,8 +55,8 @@ type ProviderTransferredDataSeries func(id identity.Identity, rangeTime string) 
 // ProviderActivityStats should return provider activity stats
 type ProviderActivityStats func(id identity.Identity) (ActivityStats, error)
 
-// ProviderQuality should return provider quality for some country
-type ProviderQuality func(id identity.Identity, countryCode string) (QualityInfo, error)
+// ProviderQuality should return provider quality
+type ProviderQuality func(id identity.Identity) (QualityInfo, error)
 
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
@@ -243,11 +243,11 @@ func (m *StatsTracker) TransferredDataSeries(rangeTime string) (TransferredDataS
 }
 
 // ProviderQuality retrieves and resolved provider quality
-func (m *StatsTracker) ProviderQuality(country string) (QualityInfo, error) {
+func (m *StatsTracker) ProviderQuality() (QualityInfo, error) {
 
 	id, ok := m.currentIdentity.GetUnlockedIdentity()
 	if ok {
-		return m.providerQuality(id, country)
+		return m.providerQuality(id)
 	}
 	return QualityInfo{}, errIdentityNotFound
 }

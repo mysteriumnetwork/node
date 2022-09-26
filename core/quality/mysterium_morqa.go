@@ -495,9 +495,9 @@ func (m *MysteriumMORQA) ProviderActivityStats(id identity.Identity) (node.Activ
 }
 
 // ProviderQuality fetch provider quality from quality oracle.
-func (m *MysteriumMORQA) ProviderQuality(id identity.Identity, countryCode string) (node.QualityInfo, error) {
+func (m *MysteriumMORQA) ProviderQuality(id identity.Identity) (node.QualityInfo, error) {
 	var res node.QualityInfo
-	request, err := requests.NewSignedGetRequest(m.baseURL, fmt.Sprintf("provider/quality?country=%s", countryCode), m.signer(id))
+	request, err := requests.NewSignedGetRequest(m.baseURL, "provider/quality", m.signer(id))
 	if err != nil {
 		return res, err
 	}

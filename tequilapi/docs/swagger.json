@@ -1374,20 +1374,12 @@
     },
     "/node/provider/quality": {
       "get": {
-        "description": "Node quality for defined country",
+        "description": "Node connectivity quality",
         "tags": [
           "provider"
         ],
-        "summary": "Provides Node quality for some customer country",
+        "summary": "Provides Node quality",
         "operationId": "GetProviderQuality",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "two letters country code",
-            "name": "country",
-            "in": "query"
-          }
-        ],
         "responses": {
           "200": {
             "description": "Provider quality",
@@ -3155,12 +3147,12 @@
       "type": "object",
       "title": "ActivityStatsResponse reflects a node activity stats.",
       "properties": {
-        "active": {
+        "active_percent": {
           "type": "number",
           "format": "double",
           "x-go-name": "Active"
         },
-        "online": {
+        "online_percent": {
           "type": "number",
           "format": "double",
           "x-go-name": "Online"

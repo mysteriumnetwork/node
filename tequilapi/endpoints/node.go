@@ -41,7 +41,7 @@ type nodeMonitoringAgent interface {
 	SessionsSeries(rangeTime string) (node.SessionsSeries, error)
 	TransferredDataSeries(rangeTime string) (node.TransferredDataSeries, error)
 	ProviderActivityStats() (node.ActivityStats, error)
-	ProviderQuality(countryCode string) (node.QualityInfo, error)
+	ProviderQuality() (node.QualityInfo, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -391,13 +391,8 @@ func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 // GetProviderQuality a quality of provider
 // swagger:operation GET /node/provider/quality provider GetProviderQuality
 // ---
-// summary: Provides Node quality for some customer country
-// description: Node quality for defined country
-// parameters:
-//   - in: query
-//     name: country
-//     description: two letters country code
-//     type: string
+// summary: Provides Node quality
+// description: Node connectivity quality
 // responses:
 //   200:
 //     description: Provider quality
@@ -412,18 +407,11 @@ func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderQuality(c *gin.Context) {
-country := c.Query("country")
-
-if len(country) != 2 {
-c.Error(apierror.BadRequest("Invalid country code", contract.ErrorCodeProviderQuality))
-return
-}
-
-res, err := ne.nodeMonitoringAgent.ProviderQuality(country)
-if err != nil {
-c.Error(apierror.Internal("Could not get provider quality: "+err.Error(), contract.ErrorCodeProviderQuality))
-return
-}
+	res, err := ne.nodeMonitoringAgent.ProviderQuality()
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider quality: "+err.Error(), contract.ErrorCodeProviderQuality))
+		return
+	}
 
 utils.WriteAsJSON(res, c.Writer)
 }

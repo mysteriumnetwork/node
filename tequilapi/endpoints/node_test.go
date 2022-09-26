@@ -84,7 +84,7 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) TransferredDataSeries(_ s
 	return nodeMonitoringAgentTracker.transferredDataSeries, nil
 }
 
-func (nodeMonitoringAgentTracker *mockMonitoringAgent) ProviderQuality(_ string) (node.QualityInfo, error) {
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) ProviderQuality() (node.QualityInfo, error) {
 	return nodeMonitoringAgentTracker.providerQuality, nil
 }
 
