@@ -371,8 +371,14 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 		wg := sync.WaitGroup{}
 		wg.Add(2)
-		go tun.proxy(&wg, client, clientAddr, proxyConn) // loc <- remote
-		go tun.proxy(&wg, proxyConn, remoteAddr, client) // remote <- loc
+		go func() {
+			defer wg.Done()
+			tun.proxy(client, clientAddr, proxyConn) // loc <- remote
+		}()
+		go func() {
+			defer wg.Done()
+			tun.proxy(proxyConn, remoteAddr, client) // remote <- loc
+		}()
 		wg.Wait()
 	}()
 }
@@ -391,9 +397,8 @@ const (
 	idleTimeout = 2 * time.Minute
 )
 
-func (tun *netTun) proxy(wg *sync.WaitGroup, dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
+func (tun *netTun) proxy(dst net.PacketConn, dstAddr net.Addr, src net.PacketConn) {
 	defer src.Close()
-	defer wg.Done()
 
 	buf := make([]byte, tun.mtu)
 	for {
