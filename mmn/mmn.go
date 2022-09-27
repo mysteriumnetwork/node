@@ -135,7 +135,7 @@ func getOS() string {
 			log.Error().Err(err).Msg("Failed to get OS information")
 			return "windows (unknown)"
 		}
-		return strings.TrimSpace(strings.TrimPrefix(string(output), "Caption="))
+		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(string(output)), "Caption="))
 	}
 	return runtime.GOOS
 }
