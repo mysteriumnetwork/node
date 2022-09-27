@@ -95,7 +95,7 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Network                        config.BlockchainNetwork
+	Network                        string
 	KeepConnectedOnFail            bool
 	DiscoveryAddress               string
 	BrokerAddresses                []string
@@ -129,7 +129,7 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Network:                        config.Mainnet,
+		Network:                        string(config.Mainnet),
 		KeepConnectedOnFail:            true,
 		DiscoveryAddress:               metadata.MainnetDefinition.DiscoveryAddress,
 		BrokerAddresses:                metadata.MainnetDefinition.BrokerAddresses,
@@ -175,8 +175,13 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 
+	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
+	if err != nil {
+		return nil, fmt.Errorf("invalid bc network: %w", err)
+	}
+
 	network := node.OptionsNetwork{
-		Network:          options.Network,
+		Network:          bcNetwork,
 		DiscoveryAddress: options.DiscoveryAddress,
 		BrokerAddresses:  options.BrokerAddresses,
 		EtherClientRPCL1: options.EtherClientRPCL1,
@@ -277,7 +282,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ObserverAddress: options.ObserverAddress,
 	}
 
-	err := di.Bootstrap(nodeOptions)
+	err = di.Bootstrap(nodeOptions)
 	if err != nil {
 		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
 	}
