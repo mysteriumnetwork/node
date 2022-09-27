@@ -333,7 +333,7 @@ func (cbt *ConsumerBalanceTracker) periodicSync(stop <-chan struct{}, chainID in
 	}
 }
 
-func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Identity) (*big.Int, error) {
+func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Identity) (*big.Int, *big.Int, error) {
 	var boff backoff.BackOff
 	eback := backoff.NewExponentialBackOff()
 	eback.MaxElapsedTime = time.Second * 15
@@ -353,6 +353,7 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 
 	boff = backoff.WithContext(boff, ctx)
 	balance := cbt.GetBalance(chainID, id)
+	promised := new(big.Int)
 	alignBalance := func() error {
 		consumer, err := cbt.consumerInfoGetter.GetConsumerData(chainID, id.Address)
 		if err != nil {
@@ -377,7 +378,6 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 			return errBalanceNotOffchain
 		}
 
-		promised := new(big.Int)
 		if consumer.LatestPromise.Amount != nil {
 			promised = consumer.LatestPromise.Amount
 		}
@@ -397,7 +397,7 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 		return nil
 	}
 
-	return balance, backoff.Retry(alignBalance, boff)
+	return balance, promised, backoff.Retry(alignBalance, boff)
 }
 
 // ForceBalanceUpdateCached forces a balance update for the given identity only if the last call to this func was done no sooner than a minute ago.
@@ -456,7 +456,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 		return new(big.Int)
 	}
 
-	balance, err := cbt.alignWithHermes(chainID, id)
+	balance, lastPromised, err := cbt.alignWithHermes(chainID, id)
 	if err != nil {
 		if !errors.Is(err, errBalanceNotOffchain) {
 			log.Error().Err(err).Msg("align with hermes failed with a critical error, offchain balance out of sync")
@@ -511,7 +511,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	}
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, hermes)
-	if errors.Is(err, ErrNotFound) {
+	if errors.Is(err, ErrNotFound) || (err == nil && lastPromised != nil && grandTotal.Cmp(lastPromised) == -1) {
 		if err := cbt.recoverGrandTotalPromised(chainID, id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
