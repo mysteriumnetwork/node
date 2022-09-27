@@ -472,6 +472,28 @@ func (m *MysteriumMORQA) ProviderTransferredDataSeries(id identity.Identity, ran
 	return data, nil
 }
 
+// ProviderServiceEarnings fetch earnings per service type.
+func (m *MysteriumMORQA) ProviderServiceEarnings(id identity.Identity) (node.EarningsPerService, error) {
+	var data node.EarningsPerService
+	request, err := requests.NewSignedGetRequest(m.baseURL, "provider/service-earnings", m.signer(id))
+	if err != nil {
+		return data, err
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return data, errors.Wrap(err, "failed to request service earnings")
+	}
+	defer response.Body.Close()
+
+	if err = parseResponseJSON(response, &data); err != nil {
+		log.Err(err).Msg("Failed to parse service earnings")
+		return data, err
+	}
+
+	return data, nil
+}
+
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{

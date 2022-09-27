@@ -143,4 +143,5 @@ const (
 	ErrorCodeProviderEarningsSeries        = "err_provider_earnings_series"
 	ErrorCodeProviderSessionsSeries        = "err_provider_sessions_series"
 	ErrorCodeProviderTransferredDataSeries = "err_provider_transferred_data_series"
+	ErrorCodeProviderServiceEarnings       = "err_provider_service_earnings"
 )

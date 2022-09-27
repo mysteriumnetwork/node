@@ -119,3 +119,12 @@ type ProviderSession struct {
 	Earnings         Tokens `json:"earnings"`
 	TransferredBytes int64  `json:"transferred_bytes"`
 }
+
+// EarningsPerService contains information about earnings per service
+// swagger:model EarningsPerService
+type EarningsPerService struct {
+	EarningsPublic    string `json:"public"`
+	EarningsVPN       string `json:"vpn"`
+	EarningsScrapping string `json:"scrapping"`
+	EarningsTotal     string `json:"total"`
+}
