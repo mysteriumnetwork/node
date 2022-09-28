@@ -157,10 +157,10 @@ type TransferredDataSeries struct {
 
 // EarningsPerService represents information about earnings per service
 type EarningsPerService struct {
-	EarningsPublic    string `json:"public"`
-	EarningsVPN       string `json:"vpn"`
-	EarningsScrapping string `json:"scrapping"`
-	EarningsTotal     string `json:"total"`
+	EarningsPublic   string `json:"public"`
+	EarningsVPN      string `json:"vpn"`
+	EarningsScraping string `json:"scraping"`
+	EarningsTotal    string `json:"total"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
