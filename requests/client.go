@@ -92,12 +92,12 @@ type HTTPClient struct {
 	clientFactory func(proxyPort int) *http.Client
 }
 
-// Do sends an HTTP request and returns an HTTP response.
+// Do send an HTTP request and returns an HTTP response.
 func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return c.resolveClient().Do(req)
 }
 
-// DoViaProxy sends an HTTP request via proxy and returns an HTTP response.
+// DoViaProxy send an HTTP request via proxy and returns an HTTP response.
 func (c *HTTPClient) DoViaProxy(req *http.Request, proxyPort int) (*http.Response, error) {
 	return c.clientFactory(proxyPort).Do(req)
 }

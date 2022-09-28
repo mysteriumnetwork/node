@@ -1244,6 +1244,30 @@
         }
       }
     },
+    "/node/latest-release": {
+      "get": {
+        "description": "Checks for latest Node release package and retrieves its information",
+        "tags": [
+          "node"
+        ],
+        "summary": "Latest Node release information",
+        "operationId": "GetLatestRelease",
+        "responses": {
+          "200": {
+            "description": "Latest Node release information",
+            "schema": {
+              "$ref": "#/definitions/LatestReleaseResponse"
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve latest Node release information",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/monitoring-agent-statuses": {
       "get": {
         "description": "Node connectivity statuses as seen by monitoring agent",
@@ -3957,6 +3981,17 @@
       "type": "object",
       "title": "An Int represents a signed multi-precision integer.\nThe zero value for an Int represents the value 0.",
       "x-go-package": "math/big"
+    },
+    "LatestReleaseResponse": {
+      "description": "LatestReleaseResponse latest release info",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "x-go-name": "Version"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "ListIdentitiesResponse": {
       "type": "object",

@@ -119,3 +119,9 @@ type ProviderSession struct {
 	Earnings         Tokens `json:"earnings"`
 	TransferredBytes int64  `json:"transferred_bytes"`
 }
+
+// LatestReleaseResponse latest release info
+// swagger:model LatestReleaseResponse
+type LatestReleaseResponse struct {
+	Version string `json:"version"`
+}
