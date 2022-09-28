@@ -413,7 +413,7 @@ func (ne *NodeEndpoint) GetProviderQuality(c *gin.Context) {
 		return
 	}
 
-utils.WriteAsJSON(res, c.Writer)
+	utils.WriteAsJSON(res, c.Writer)
 }
 
 // GetProviderActivityStats is an activity stats of provider
