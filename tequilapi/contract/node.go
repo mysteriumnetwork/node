@@ -120,6 +120,12 @@ type ProviderSession struct {
 	TransferredBytes int64  `json:"transferred_bytes"`
 }
 
+// LatestReleaseResponse latest release info
+// swagger:model LatestReleaseResponse
+type LatestReleaseResponse struct {
+	Version string `json:"version"`
+}
+
 // EarningsPerService contains information about earnings per service
 // swagger:model EarningsPerService
 type EarningsPerService struct {
