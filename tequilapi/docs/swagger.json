@@ -1456,6 +1456,36 @@
         }
       }
     },
+    "/node/provider/service-earnings": {
+      "get": {
+        "description": "Node earnings per service and total earnings in the all network.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node earnings per service and total earnings in the all network",
+        "operationId": "GetProviderServiceEarnings",
+        "responses": {
+          "200": {
+            "description": "earnings per service and total earnings",
+            "schema": {
+              "$ref": "#/definitions/EarningsPerServiceResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/provider/sessions": {
       "get": {
         "description": "Node sessions metrics during a period of time",
@@ -3573,6 +3603,29 @@
         },
         "earnings_total": {
           "$ref": "#/definitions/Tokens"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "EarningsPerServiceResponse": {
+      "description": "EarningsPerServiceResponse contains information about earnings per service",
+      "type": "object",
+      "properties": {
+        "public": {
+          "type": "string",
+          "x-go-name": "EarningsPublic"
+        },
+        "scraping": {
+          "type": "string",
+          "x-go-name": "EarningsScraping"
+        },
+        "total": {
+          "type": "string",
+          "x-go-name": "EarningsTotal"
+        },
+        "vpn": {
+          "type": "string",
+          "x-go-name": "EarningsVPN"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

@@ -126,9 +126,9 @@ type LatestReleaseResponse struct {
 	Version string `json:"version"`
 }
 
-// EarningsPerService contains information about earnings per service
-// swagger:model EarningsPerService
-type EarningsPerService struct {
+// EarningsPerServiceResponse contains information about earnings per service
+// swagger:model EarningsPerServiceResponse
+type EarningsPerServiceResponse struct {
 	EarningsPublic   string `json:"public"`
 	EarningsVPN      string `json:"vpn"`
 	EarningsScraping string `json:"scraping"`
