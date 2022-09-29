@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
+	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web/v2"
 
 	"github.com/stretchr/testify/assert"
 )

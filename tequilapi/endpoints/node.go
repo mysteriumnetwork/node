@@ -21,6 +21,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/node/tequilapi/launchpad"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
 
@@ -44,6 +46,7 @@ type nodeMonitoringAgent interface {
 type NodeEndpoint struct {
 	nodeStatusProvider  nodeStatusProvider
 	nodeMonitoringAgent nodeMonitoringAgent
+	launchpadAPI        *launchpad.API
 }
 
 // NewNodeEndpoint creates and returns node endpoints
@@ -51,6 +54,7 @@ func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent 
 	return &NodeEndpoint{
 		nodeStatusProvider:  nodeStatusProvider,
 		nodeMonitoringAgent: nodeMonitoringAgent,
+		launchpadAPI:        launchpad.New(),
 	}
 }
 
@@ -382,6 +386,31 @@ func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 	utils.WriteAsJSON(res, c.Writer)
 }
 
+// GetLatestRelease retrieves information about the latest node release
+// swagger:operation GET /node/latest-release node GetLatestRelease
+// ---
+// summary: Latest Node release information
+// description: Checks for latest Node release package and retrieves its information
+// responses:
+//   200:
+//    description: Latest Node release information
+//    schema:
+//     "$ref": "#/definitions/LatestReleaseResponse"
+//   500:
+//    description: Failed to retrieve latest Node release information
+//    schema:
+//     "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetLatestRelease(c *gin.Context) {
+	version, err := ne.launchpadAPI.LatestPublishedReleaseVersion()
+	if err != nil {
+		c.Error(apierror.Internal("Could not fetch latest release information", contract.ErrorCodeLatestReleaseInformation))
+		log.Error().Err(err).Msg("Could not fetch latest release information")
+		return
+	}
+
+	utils.WriteAsJSON(contract.LatestReleaseResponse{Version: version}, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
 func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
 	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
@@ -398,6 +427,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 			nodeGroup.GET("/provider/series/earnings", nodeEndpoints.GetProviderEarningsSeries)
 			nodeGroup.GET("/provider/series/sessions", nodeEndpoints.GetProviderSessionsSeries)
 			nodeGroup.GET("/provider/series/data", nodeEndpoints.GetProviderTransferredDataSeries)
+			nodeGroup.GET("/latest-release", nodeEndpoints.GetLatestRelease)
 		}
 		return nil
 	}

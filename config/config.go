@@ -18,8 +18,8 @@
 package config
 
 import (
-	"io/ioutil"
 	"math/big"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -107,7 +107,7 @@ func (cfg *Config) SaveUserConfig() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to write configuration as toml")
 	}
-	err = ioutil.WriteFile(cfg.userConfigLocation, []byte(out.String()), 0700)
+	err = os.WriteFile(cfg.userConfigLocation, []byte(out.String()), 0700)
 	if err != nil {
 		return errors.Wrap(err, "failed to write configuration to file")
 	}
@@ -390,7 +390,7 @@ func (cfg *Config) ParseBlockchainNetworkFlag(ctx *cli.Context, flag cli.StringF
 			cfg.RemoveCLI(flag.Name)
 			return
 		}
-		cfg.SetCLI(flag.Name, network)
+		cfg.SetCLI(flag.Name, strings.ToLower(string(network)))
 		var flags map[string]any
 		switch network {
 		case Mainnet:

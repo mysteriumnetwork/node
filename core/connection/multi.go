@@ -72,6 +72,18 @@ func (mcm *multiConnectionManager) Status(id int) connectionstate.Status {
 	}
 }
 
+// Stats provides connection statistics information.
+func (mcm *multiConnectionManager) Stats(id int) connectionstate.Statistics {
+	mcm.mu.RLock()
+	defer mcm.mu.RUnlock()
+
+	if m, ok := mcm.cms[id]; ok {
+		return m.Stats()
+	}
+
+	return connectionstate.Statistics{}
+}
+
 // Disconnect closes established connection, reports error if no connection.
 func (mcm *multiConnectionManager) Disconnect(id int) error {
 	mcm.mu.RLock()

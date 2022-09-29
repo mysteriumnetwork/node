@@ -39,7 +39,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &mysterium.MobileNodeOptions{
-		Network:                        config.Mainnet,
+		Network:                        string(config.Mainnet),
 		DiscoveryAddress:               "http://discovery:8080/api/v4",
 		BrokerAddresses:                []string{"broker"},
 		EtherClientRPCL1:               []string{"http://ganache:8545"},

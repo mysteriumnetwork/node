@@ -810,7 +810,7 @@ services:
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
-      openvpn,wireguard,noop
+      --active-services=openvpn,noop,wireguard
     dns: 172.31.0.254
     networks:
       priv0:

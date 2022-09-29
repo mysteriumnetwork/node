@@ -122,6 +122,12 @@ var fakeOptionsParser = map[string]services.ServiceOptionsParser{
 	},
 }
 
+type mockTequilaApiClient struct{}
+
+func (c *mockTequilaApiClient) Post(path string, payload interface{}) (*http.Response, error) {
+	return nil, nil
+}
+
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := summonTestGin()
 	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
@@ -129,7 +135,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			PricePerHour: big.NewInt(500_000_000_000_000_000),
 			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
-	})(router)
+	}, nil)(router)
 	assert.NoError(t, err)
 	tests := []struct {
 		method         string
@@ -152,7 +158,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		},
 		{
 			http.MethodPost,
-			"/services",
+			"/services?ignore_user_config=true",
 			`{"provider_id": "node1", "type": "testprotocol"}`,
 			http.StatusCreated,
 			`{
@@ -241,7 +247,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			}`,
 		},
 		{
-			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
+			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8?ignore_user_config=true", "",
 			http.StatusAccepted, "",
 		},
 		{
@@ -278,7 +284,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -303,7 +309,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -328,7 +334,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -353,7 +359,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -367,7 +373,7 @@ func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -389,6 +395,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 			},
 		},
+		nil,
 	)(g)
 	assert.NoError(t, err)
 
@@ -444,7 +451,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -458,7 +465,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -475,7 +482,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 	req := httptest.NewRequest(
 		http.MethodPost,
-		"/services",
+		"/services?ignore_user_config=true",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -492,7 +499,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			PricePerHour: big.NewInt(500_000_000_000_000_000),
 			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
-	})(g)
+	}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -576,7 +583,7 @@ func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)

@@ -166,6 +166,7 @@ type connectionManager struct {
 	connectOptions ConnectOptions
 
 	activeConnection Connection
+	statsTracker     statsTracker
 }
 
 // NewManager creates connection manager with given dependencies
@@ -282,12 +283,12 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return m.handleStartError(sessionID, err)
 	}
 
-	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
-	go statsPublisher.start(m, m.activeConnection)
+	m.statsTracker = newStatsTracker(m.eventBus, m.statsReportInterval)
+	go m.statsTracker.start(m, m.activeConnection)
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
 		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
-		statsPublisher.stop()
+		m.statsTracker.stop()
 		return nil
 	})
 
@@ -700,6 +701,10 @@ func (m *connectionManager) Status() connectionstate.Status {
 	defer m.statusLock.RUnlock()
 
 	return m.status
+}
+
+func (m *connectionManager) Stats() connectionstate.Statistics {
+	return m.statsTracker.stats()
 }
 
 func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)) {

@@ -33,7 +33,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/migration"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/auth"
@@ -375,7 +374,11 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	}
 
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
-	return di.StateKeeper.Subscribe(di.EventBus)
+	if options.UI.UIEnabled {
+		return di.StateKeeper.Subscribe(di.EventBus)
+	}
+
+	return nil
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -515,12 +518,6 @@ func (di *Dependencies) getHermesURL(nodeOptions node.Options) (string, error) {
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
-	// Consumer current session bandwidth
-	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
-	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		di.BCHelper,
