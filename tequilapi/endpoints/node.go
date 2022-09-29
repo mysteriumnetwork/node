@@ -40,6 +40,8 @@ type nodeMonitoringAgent interface {
 	EarningsSeries(rangeTime string) (node.EarningsSeries, error)
 	SessionsSeries(rangeTime string) (node.SessionsSeries, error)
 	TransferredDataSeries(rangeTime string) (node.TransferredDataSeries, error)
+	ProviderActivityStats() (node.ActivityStats, error)
+	ProviderQuality() (node.QualityInfo, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -386,6 +388,63 @@ func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 	utils.WriteAsJSON(res, c.Writer)
 }
 
+// GetProviderQuality a quality of provider
+// swagger:operation GET /node/provider/quality provider GetProviderQuality
+// ---
+// summary: Provides Node quality
+// description: Node connectivity quality
+// responses:
+//   200:
+//     description: Provider quality
+//     schema:
+//       "$ref": "#/definitions/QualityInfoResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderQuality(c *gin.Context) {
+	res, err := ne.nodeMonitoringAgent.ProviderQuality()
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider quality: "+err.Error(), contract.ErrorCodeProviderQuality))
+		return
+	}
+
+	utils.WriteAsJSON(res, c.Writer)
+}
+
+// GetProviderActivityStats is an activity stats of provider
+// swagger:operation GET /node/provider/activity-stats provider GetProviderActivityStats
+// ---
+// summary: Provides Node activity stats
+// description: Node activity stats
+// responses:
+//   200:
+//     description: Provider activity stats
+//     schema:
+//       "$ref": "#/definitions/ActivityStatsResponse"
+//   400:
+//     description: Failed to parse or request validation failed
+//     schema:
+//       "$ref": "#/definitions/APIError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderActivityStats(c *gin.Context) {
+
+	res, err := ne.nodeMonitoringAgent.ProviderActivityStats()
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider activity stats: "+err.Error(), contract.ErrorCodeProviderActivityStats))
+		return
+	}
+
+	utils.WriteAsJSON(res, c.Writer)
+}
+
 // GetLatestRelease retrieves information about the latest node release
 // swagger:operation GET /node/latest-release node GetLatestRelease
 // ---
@@ -428,6 +487,8 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 			nodeGroup.GET("/provider/series/sessions", nodeEndpoints.GetProviderSessionsSeries)
 			nodeGroup.GET("/provider/series/data", nodeEndpoints.GetProviderTransferredDataSeries)
 			nodeGroup.GET("/latest-release", nodeEndpoints.GetLatestRelease)
+			nodeGroup.GET("/provider/quality", nodeEndpoints.GetProviderQuality)
+			nodeGroup.GET("/provider/activity-stats", nodeEndpoints.GetProviderActivityStats)
 		}
 		return nil
 	}
