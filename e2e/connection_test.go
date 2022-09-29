@@ -475,7 +475,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 	assert.Eventually(t, func() bool {
 		idStatus, _ := tequilapi.Identity(id)
-		return "Registered" == idStatus.RegistrationStatus
+		return idStatus.RegistrationStatus == "Registered"
 	}, time.Second*30, time.Millisecond*500)
 
 	// once we're registered, check some other information
@@ -495,7 +495,6 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 func topUpConsumer(t *testing.T, id string, hermesID common.Address, registrationFee *big.Int) {
 	// TODO: once free registration is a thing of the past, remove this return
-	return
 
 	// chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
 	// assert.NoError(t, err)

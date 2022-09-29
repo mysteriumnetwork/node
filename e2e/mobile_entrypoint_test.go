@@ -19,13 +19,13 @@ package e2e
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -34,7 +34,7 @@ import (
 )
 
 func TestMobileNodeConsumer(t *testing.T) {
-	dir, err := ioutil.TempDir("", "mobileEntryPoint")
+	dir, err := os.MkdirTemp("", "mobileEntryPoint")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -102,9 +102,11 @@ func TestMobileNodeConsumer(t *testing.T) {
 		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 		require.NoError(t, err)
 
-		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
-		require.NoError(t, err)
-		require.Equal(t, crypto.BigMystToFloat(balanceAfterRegistration), balance.Balance)
+		assert.Eventually(t, func() bool {
+			balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
+			require.NoError(t, err)
+			return crypto.BigMystToFloat(balanceAfterRegistration) == balance.Balance
+		}, time.Second*5, 100*time.Millisecond)
 	})
 
 	t.Run("Test identity export", func(t *testing.T) {

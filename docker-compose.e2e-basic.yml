@@ -82,7 +82,7 @@ services:
 
   #private blockchain
   ganache:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.4.3
     expose:
       - 8545
     command: >
@@ -90,7 +90,7 @@ services:
 
   #private blockchain
   ganache2:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.4.3
     expose:
       - 8545
     command: >
@@ -108,44 +108,33 @@ services:
       - 9999:1080
 
   transactordatabase:
-    image: 'mongo:4.2.3'
-    environment:
-      - MONGO_INITDB_ROOT_PASSWORD=root
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_DATABASE=transactor
-      - MONGO_NON_ROOT_USERNAME=transactor
-      - MONGO_NON_ROOT_PASSWORD=transactor
+    image: postgres:13-alpine
     expose:
-      - 27017
-      - 27018
-      - 27019
-    volumes:
-      - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - 5432
+    environment:
+      - POSTGRES_USER=transactor
+      - POSTGRES_DB=transactor
+      - POSTGRES_PASSWORD=transactor
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   transactor-sidecar:
-    image: mysteriumnetwork/transactor-sidecar:2.7.4
+    image: mysteriumnetwork/transactor-sidecar:3.0.10
     depends_on:
       - transactordatabase
       - redis
       - http-mock
     command: >
-      "/usr/bin/sidecar"
-      -redisAddress="redis:6379"
-      -MongoUser=transactor
-      -MongoPass=transactor
-      -MongoHost=transactordatabase:27017
-      -MongoDatabase=transactor
-      -MongoReplSet ""
-      -geckoUrl=http://http-mock:1080/gecko
-      -ethStaticGasPrice=0.001
-      -maticStaticGasPrice=0.001
-      -gasPriceUpdateInterval 2s
-      -gasStationOverrideChainsEth ""
-      -gasStationOverrideChainsMatic ""
-      -feeUpdateInterval 2s
+      /usr/bin/sidecar
+      -configPaths=/transactor/sidecar_config.yaml
+    volumes:
+      - ./e2e/transactor:/transactor
 
   transactor:
-    image: mysteriumnetwork/transactor:2.7.4
+    image: mysteriumnetwork/transactor:3.0.10
     environment:
       PORT: 8888
     expose:
@@ -158,32 +147,10 @@ services:
       - http-mock
       - transactor-sidecar
     command: >
-      -settlementThrottleTime=1ms
-      -stakeAmount 62000000000000000000
-      -topUpAmount 7000000000000000000
-      -chain1MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain1Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -chain1RPCEndpoint http://ganache:8545
-      -chain1ChainID 5
-      -chain2MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain2Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -chain2RPCEndpoint ws://ganache2:8545
-      -chain2ChainID 80001
-      -freeRegistration=true
-      -registrationGasLimit=450000
-      -settlementCheckInterval=50ms
-      -ourIdentity 0x3d2cdbab09d2c8d613556769f37b47c82a5e13bf
-      -balanceCheckInterval 1s
-      -MongoUser transactor
-      -MongoPass transactor
-      -MongoHost transactordatabase:27017
-      -MongoReplSet ""
-      -redisAddress "redis:6379"
-      -observerBaseURI=""
-      -hermesesWithEnabledWithdrawals="0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
-      -fallbackChainHermeses="5=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed;80001=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
+      -configPaths=/transactor/config.yaml
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+      - ./e2e/transactor:/transactor
 
   redis:
     image: bitnami/redis:6.2.6
