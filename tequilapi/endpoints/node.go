@@ -19,16 +19,17 @@ package endpoints
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
-
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/launchpad"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/payments/units"
 )
 
 type nodeMonitoringAgent interface {
@@ -436,8 +437,19 @@ func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 		c.Error(apierror.Internal("Could not get provider service earnings: "+err.Error(), contract.ErrorCodeProviderServiceEarnings))
 		return
 	}
+	public, _ := strconv.ParseFloat(res.EarningsPublic, 64)
+	vpn, _ := strconv.ParseFloat(res.EarningsVPN, 64)
+	scraping, _ := strconv.ParseFloat(res.EarningsScraping, 64)
+	total, _ := strconv.ParseFloat(res.EarningsTotal, 64)
 
-	utils.WriteAsJSON(res, c.Writer)
+	data := contract.EarningsPerServiceResponse{
+		EarningsPublic:   units.FloatEthToBigIntWei(public),
+		EarningsVPN:      units.FloatEthToBigIntWei(vpn),
+		EarningsScraping: units.FloatEthToBigIntWei(scraping),
+		EarningsTotal:    units.FloatEthToBigIntWei(total),
+	}
+
+	utils.WriteAsJSON(data, c.Writer)
 }
 
 // AddRoutesForNode adds nat routes to given router

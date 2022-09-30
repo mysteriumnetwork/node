@@ -3612,20 +3612,16 @@
       "type": "object",
       "properties": {
         "public": {
-          "type": "string",
-          "x-go-name": "EarningsPublic"
+          "$ref": "#/definitions/Int"
         },
         "scraping": {
-          "type": "string",
-          "x-go-name": "EarningsScraping"
+          "$ref": "#/definitions/Int"
         },
         "total": {
-          "type": "string",
-          "x-go-name": "EarningsTotal"
+          "$ref": "#/definitions/Int"
         },
         "vpn": {
-          "type": "string",
-          "x-go-name": "EarningsVPN"
+          "$ref": "#/definitions/Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
