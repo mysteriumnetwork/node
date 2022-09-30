@@ -25,11 +25,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/payments/units"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/launchpad"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/payments/units"
 )
 
 type nodeMonitoringAgent interface {
@@ -478,19 +479,18 @@ func (ne *NodeEndpoint) GetLatestRelease(c *gin.Context) {
 // summary: Provides Node earnings per service and total earnings in the all network
 // description: Node earnings per service and total earnings in the all network.
 // responses:
-//
-//	200:
-//	 description: earnings per service and total earnings
-//	 schema:
-//	  "$ref": "#/definitions/EarningsPerServiceResponse"
-//	400:
-//	 description: Failed to parse or request validation failed
-//	 schema:
-//	  "$ref": "#/definitions/APIError"
-//	500:
-//	 description: Internal server error
-//	 schema:
-//	  "$ref": "#/definitions/APIError"
+//   200:
+//    description: earnings per service and total earnings
+//    schema:
+//     "$ref": "#/definitions/EarningsPerServiceResponse"
+//   400:
+//    description: Failed to parse or request validation failed
+//    schema:
+//     "$ref": "#/definitions/APIError"
+//   500:
+//    description: Internal server error
+//    schema:
+//     "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.EarningsPerService()
 	if err != nil {
