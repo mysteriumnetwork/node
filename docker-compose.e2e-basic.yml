@@ -82,7 +82,7 @@ services:
 
   #private blockchain
   ganache:
-    image: trufflesuite/ganache:v7.4.3
+    image: trufflesuite/ganache:v7.0.3
     expose:
       - 8545
     command: >
@@ -90,7 +90,7 @@ services:
 
   #private blockchain
   ganache2:
-    image: trufflesuite/ganache:v7.4.3
+    image: trufflesuite/ganache:v7.0.3
     expose:
       - 8545
     command: >
@@ -234,7 +234,7 @@ services:
       - ./e2e/pilvytis:/home/wiremock
 
   hermes2:
-    image: mysteriumnetwork/hermes:3.2.10
+    image: mysteriumnetwork/hermes:3.3.15
     environment:
       LOG_LEVEL: trace
     expose:
@@ -243,38 +243,12 @@ services:
       - ganache
       - ganache2
       - redis
-      - mongodb
       - transactor
     command: >
-      -identityPassphrase ""
-      -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
-      -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -Chain1RPCEndpoint http://ganache:8545
-      -Chain1ChainID 5
-      -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      -Chain2Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -Chain2RPCEndpoint ws://ganache2:8545
-      -Chain2ChainID 80001
-      -Chain2Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -Chain2HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain2chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      -keystoreDir /keystore
-      -bcDataRefreshInterval 1ns
-      -MongoUser hermes2
-      -MongoReplSet rs0
-      -MongoPass hermes2
-      -MongoHost "mongodb:27017"
-      -MongoDatabase hermes2
-      -MongoReplSet ""
-      -transactorBaseUri "http://transactor:8888/api/v1/"
-      -redisAddresses "redis:6379"
-      -bindAddr="0.0.0.0:8889"
-      -pilvytisBaseURL http://pilvytis-mock:8080
-      -enablePayAndSettle true
+      -configPaths=/hermes/config.yaml
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+      - ./e2e/hermes:/hermes
 
   myst-provider:
     build:
