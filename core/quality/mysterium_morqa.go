@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 
@@ -326,7 +325,7 @@ func (m *MysteriumMORQA) ProviderSessionsList(id identity.Identity, rangeTime st
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to request provider monitoring sessions list")
+		return nil, fmt.Errorf("failed to request provider monitoring sessions list: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -350,7 +349,7 @@ func (m *MysteriumMORQA) ProviderTransferredData(id identity.Identity, rangeTime
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return data, errors.Wrap(err, "failed to request provider transferred data")
+		return data, fmt.Errorf("failed to request provider transferred data: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -372,7 +371,7 @@ func (m *MysteriumMORQA) ProviderSessionsCount(id identity.Identity, rangeTime s
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return count, errors.Wrap(err, "failed to request provider monitoring sessions count")
+		return count, fmt.Errorf("failed to request provider monitoring sessions count: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -394,7 +393,7 @@ func (m *MysteriumMORQA) ProviderConsumersCount(id identity.Identity, rangeTime 
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return count, errors.Wrap(err, "failed to request provider monitoring consumers count")
+		return count, fmt.Errorf("failed to request provider monitoring consumers count: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -416,7 +415,7 @@ func (m *MysteriumMORQA) ProviderEarningsSeries(id identity.Identity, rangeTime 
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return data, errors.Wrap(err, "failed to request provider series earnings")
+		return data, fmt.Errorf("failed to request provider series earnings: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -438,7 +437,7 @@ func (m *MysteriumMORQA) ProviderSessionsSeries(id identity.Identity, rangeTime 
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return data, errors.Wrap(err, "failed to request provider series sessions")
+		return data, fmt.Errorf("failed to request provider series sessions: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -460,7 +459,7 @@ func (m *MysteriumMORQA) ProviderTransferredDataSeries(id identity.Identity, ran
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return data, errors.Wrap(err, "failed to request provider series data")
+		return data, fmt.Errorf("failed to request provider series data: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -482,7 +481,7 @@ func (m *MysteriumMORQA) ProviderServiceEarnings(id identity.Identity) (node.Ear
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return data, errors.Wrap(err, "failed to request service earnings")
+		return data, fmt.Errorf("failed to request service earnings: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -504,7 +503,7 @@ func (m *MysteriumMORQA) ProviderActivityStats(id identity.Identity) (node.Activ
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return stats, errors.Wrap(err, "failed to request provider activity stats")
+		return stats, fmt.Errorf("failed to request provider activity stats: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -526,7 +525,7 @@ func (m *MysteriumMORQA) ProviderQuality(id identity.Identity) (node.QualityInfo
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		return res, errors.Wrap(err, "failed to request provider quality")
+		return res, fmt.Errorf("failed to request provider quality: %w", err)
 	}
 	defer response.Body.Close()
 

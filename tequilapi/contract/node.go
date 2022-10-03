@@ -144,7 +144,7 @@ type LatestReleaseResponse struct {
 // swagger:model EarningsPerServiceResponse
 type EarningsPerServiceResponse struct {
 	EarningsPublic   *big.Int `json:"public"`
-	EarningsVPN      *big.Int `json:"vpn"`
+	EarningsVPN      *big.Int `json:"data_transfer"`
 	EarningsScraping *big.Int `json:"scraping"`
 	EarningsTotal    *big.Int `json:"total"`
 }

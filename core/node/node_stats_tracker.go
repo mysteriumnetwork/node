@@ -181,7 +181,7 @@ type QualityInfo struct {
 // EarningsPerService represents information about earnings per service
 type EarningsPerService struct {
 	EarningsPublic   string `json:"public"`
-	EarningsVPN      string `json:"vpn"`
+	EarningsVPN      string `json:"data_transfer"`
 	EarningsScraping string `json:"scraping"`
 	EarningsTotal    string `json:"total"`
 }

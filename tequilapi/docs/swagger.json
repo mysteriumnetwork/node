@@ -3688,6 +3688,9 @@
       "description": "EarningsPerServiceResponse contains information about earnings per service",
       "type": "object",
       "properties": {
+        "data_transfer": {
+          "$ref": "#/definitions/Int"
+        },
         "public": {
           "$ref": "#/definitions/Int"
         },
@@ -3695,9 +3698,6 @@
           "$ref": "#/definitions/Int"
         },
         "total": {
-          "$ref": "#/definitions/Int"
-        },
-        "vpn": {
           "$ref": "#/definitions/Int"
         }
       },
