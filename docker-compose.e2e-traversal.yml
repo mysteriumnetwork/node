@@ -225,19 +225,18 @@ services:
 
 
   transactordatabase:
-    image: 'mongo:4.2.3'
-    environment:
-      - MONGO_INITDB_ROOT_PASSWORD=root
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_DATABASE=transactor
-      - MONGO_NON_ROOT_USERNAME=transactor
-      - MONGO_NON_ROOT_PASSWORD=transactor
+    image: postgres:13-alpine
     expose:
-      - 27017
-      - 27018
-      - 27019
-    volumes:
-      - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - 5432
+    environment:
+      - POSTGRES_USER=transactor
+      - POSTGRES_DB=transactor
+      - POSTGRES_PASSWORD=transactor
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     dns: 172.30.0.254
     networks:
       public0:
@@ -246,7 +245,7 @@ services:
         ipv4_address: 172.31.0.210
 
   transactor-sidecar:
-    image: mysteriumnetwork/transactor-sidecar:2.7.4
+    image: mysteriumnetwork/transactor-sidecar:3.0.10
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
@@ -257,20 +256,10 @@ services:
       - redis
       - http-mock
     command: >
-      "/usr/bin/sidecar"
-      -redisAddress="redis:6379"
-      -MongoUser=transactor
-      -MongoPass=transactor
-      -MongoHost=transactordatabase:27017
-      -MongoDatabase=transactor
-      -MongoReplSet ""
-      -geckoUrl=http://http-mock:1080/gecko
-      -ethStaticGasPrice=0.001
-      -maticStaticGasPrice=0.001
-      -gasPriceUpdateInterval 2s
-      -gasStationOverrideChainsEth ""
-      -gasStationOverrideChainsMatic ""
-      -feeUpdateInterval 2s
+      /usr/bin/sidecar
+      -configPaths=/transactor/sidecar_config.yaml
+    volumes:
+      - ./e2e/transactor:/transactor
     dns: 172.30.0.254
     networks:
       public0:
@@ -279,7 +268,7 @@ services:
         ipv4_address: 172.31.0.212
 
   transactor:
-    image: mysteriumnetwork/transactor:2.7.4
+    image: mysteriumnetwork/transactor:3.0.10
     environment:
       PORT: 8888
     expose:
@@ -297,32 +286,10 @@ services:
       - http-mock
       - transactor-sidecar
     command: >
-      -settlementThrottleTime=1ms
-      -chain1RPCEndpoint http://ganache:8545
-      -chain1ChainID 5
-      -stakeAmount 62000000000000000000
-      -topUpAmount 7000000000000000000
-      -chain2MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain2Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -chain2RPCEndpoint ws://ganache2:8545
-      -chain2ChainID 80001
-      -registrationGasLimit=450000
-      -settlementCheckInterval=50ms
-      -chain1MystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -chain1Registries 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -ourIdentity 0x3d2cdbab09d2c8d613556769f37b47c82a5e13bf
-      -balanceCheckInterval 1s
-      -MongoUser transactor
-      -MongoPass transactor
-      -MongoHost transactordatabase:27017
-      -MongoReplSet ""
-      -freeRegistration=true
-      -redisAddress "redis:6379"
-      -observerBaseURI=""
-      -hermesesWithEnabledWithdrawals="0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
-      -fallbackChainHermeses="5=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed;80001=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7,0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
+      -configPaths=/transactor/config.yaml
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+      - ./e2e/transactor:/transactor
     dns: 172.30.0.254
     networks:
       public0:
@@ -500,7 +467,7 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:3.2.10
+    image: mysteriumnetwork/hermes:3.3.15
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
@@ -514,38 +481,12 @@ services:
       - ganache
       - ganache2
       - redis
-      - mongodb
       - transactor
     command: >
-      -identityPassphrase ""
-      -Chain1Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -Chain1RPCEndpoint http://ganache:8545
-      -Chain1ChainID 5
-      -Chain1HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain2Myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -Chain2RPCEndpoint ws://ganache2:8545
-      -Chain2ChainID 80001
-      -Chain2Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -Chain2HermesAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -Chain2chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      -Chain1Registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-      -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
-      -Chain1chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      -keystoreDir /keystore
-      -bcDataRefreshInterval 1ns
-      -MongoUser hermes2
-      -MongoPass hermes2
-      -MongoReplSet rs0
-      -transactorBaseUri "http://transactor:8888/api/v1/"
-      -MongoHost "mongodb:27017"
-      -MongoDatabase hermes2
-      -MongoReplSet ""
-      -redisAddresses "redis:6379"
-      -bindAddr "0.0.0.0:8889"
-      -pilvytisBaseURL http://pilvytis-mock:8080
-      -enablePayAndSettle true
+      -configPaths=/hermes/config.yaml
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+      - ./e2e/hermes:/hermes
     dns: 172.30.0.254
     networks:
       public0:
