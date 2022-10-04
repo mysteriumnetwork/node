@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/rs/zerolog/log"
 )
 
 // ConsumerTotalsStorage allows to store total promised amounts for each channel.
@@ -69,6 +70,16 @@ func (cts *ConsumerTotalsStorage) Store(chainID int64, id identity.Identity, her
 	}
 	element.lock.Lock()
 	defer element.lock.Unlock()
+	if element.amount != nil && element.amount.Cmp(amount) == 1 {
+		log.Warn().Fields(map[string]interface{}{
+			"old_value": element.amount.String(),
+			"new_value": amount.String(),
+			"identity":  id.Address,
+			"chain_id":  chainID,
+			"hermes_id": hermesID.Hex(),
+		}).Msg("tried to save a lower grand total amount")
+		return nil
+	}
 	element.amount = amount
 
 	go cts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{

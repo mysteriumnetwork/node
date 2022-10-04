@@ -55,6 +55,15 @@ func TestConsumerTotalStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
+	var newLowerAmount = big.NewInt(120)
+	// overwrite the amount with lower, check that it is not overwritten
+	err = consumerTotalsStorage.Store(1, channelAddress, hermesAddress, newLowerAmount)
+	assert.NoError(t, err)
+
+	a, err = consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
+	assert.NoError(t, err)
+	assert.EqualValues(t, newAmount, a)
+
 	someOtherChannel := identity.FromAddress("someOtherChannel")
 	// store two amounts, check if both are gotten correctly
 	err = consumerTotalsStorage.Store(1, someOtherChannel, hermesAddress, amount)
