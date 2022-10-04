@@ -18,35 +18,24 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConsumerTotalStorage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "consumerTotalsStorageTest")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	bolt, err := boltdb.NewStorage(dir)
-	assert.NoError(t, err)
-	defer bolt.Close()
-
-	consumerTotalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	consumerTotalsStorage := NewConsumerTotalsStorage(eventbus.New())
 
 	channelAddress := identity.FromAddress("someAddress")
 	hermesAddress := common.HexToAddress("someOtherAddress")
 	var amount = big.NewInt(12)
 
 	// check if errors are wrapped correctly
-	_, err = consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
+	_, err := consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that total is stored correctly
