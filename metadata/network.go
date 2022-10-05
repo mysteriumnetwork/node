@@ -153,7 +153,7 @@ var TestnetDefinition = NetworkDefinition{
 		ChainID:            80001,
 		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
 		EtherClientRPC: []string{
-			"http://mumbai1.mysterium.network:8545",
+			"https://polygon-mumbai1.mysterium.network",
 			"https://matic-mumbai.chainstacklabs.com",
 		},
 		KnownHermeses: []string{

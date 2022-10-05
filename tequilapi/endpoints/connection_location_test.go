@@ -97,6 +97,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"city": "Vilnius",
 				"continent": "EU",
 				"country": "LT",
+				"region": "",
 				"ip": "1.2.3.4",
 				"isp": "Telia Lietuva, AB",
 				"ip_type": "residential"
@@ -110,6 +111,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"city": "Vilnius",
 				"continent": "EU",
 				"country": "LT",
+				"region": "",
 				"ip": "1.2.3.1",
 				"isp": "Telia Lietuva, AB",
 				"ip_type": "residential"

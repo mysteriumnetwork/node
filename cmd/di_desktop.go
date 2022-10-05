@@ -20,6 +20,9 @@ package cmd
 import (
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -40,8 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -296,16 +297,18 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
-	di.registerWireguardConnection(nodeOptions)
-	di.registerScrapingConnection(nodeOptions)
-	di.registerDataTransferConnection(nodeOptions)
+
+	resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+
+	di.registerWireguardConnection(nodeOptions, resourceAllocator)
+	di.registerScrapingConnection(nodeOptions, resourceAllocator)
+	di.registerDataTransferConnection(nodeOptions, resourceAllocator)
 }
 
-func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	wireguard.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -318,11 +321,10 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }
 
-func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	scraping.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -335,11 +337,10 @@ func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(scraping.ServiceType, connFactory)
 }
 
-func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	datatransfer.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {

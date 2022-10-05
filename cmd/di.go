@@ -496,7 +496,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
-	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
+	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.EventBus)
 	di.HermesPromiseStorage = pingpong.NewHermesPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
 	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage)

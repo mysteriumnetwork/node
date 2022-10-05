@@ -4241,6 +4241,12 @@
           "type": "string",
           "x-go-name": "ISP",
           "example": "Telia Lietuva, AB"
+        },
+        "region": {
+          "description": "Node Region",
+          "type": "string",
+          "x-go-name": "Region",
+          "example": "Vilnius region"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
