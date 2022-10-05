@@ -59,14 +59,15 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
-	di.bootstrapServiceWireguard(nodeOptions)
-	di.bootstrapServiceScraping(nodeOptions)
-	di.bootstrapServiceDataTransfer(nodeOptions)
+	resourcesAllocator := resources.NewAllocator(di.PortPool, wireguard_service.GetOptions().Subnet)
+	di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator)
+	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator)
+	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator)
 
 	return nil
 }
 
-func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options, resourcesAllocator *resources.Allocator) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
@@ -75,23 +76,20 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				return nil, err
 			}
 
-			wgOptions := serviceOptions.(wireguard_service.Options)
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
 				di.EventBus,
-				wgOptions,
-				di.PortPool,
 				di.ServiceFirewall,
+				resourcesAllocator,
 			)
 			return svc, nil
 		},
 	)
 }
 
-func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options, resourcesAllocator *resources.Allocator) {
 	di.ServiceRegistry.Register(
 		scraping.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
@@ -100,23 +98,20 @@ func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options) {
 				return nil, err
 			}
 
-			wgOptions := serviceOptions.(wireguard_service.Options)
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
 				di.EventBus,
-				wgOptions,
-				di.PortPool,
 				di.ServiceFirewall,
+				resourcesAllocator,
 			)
 			return svc, nil
 		},
 	)
 }
 
-func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options, resourcesAllocator *resources.Allocator) {
 	di.ServiceRegistry.Register(
 		datatransfer.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
@@ -125,16 +120,13 @@ func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options) {
 				return nil, err
 			}
 
-			wgOptions := serviceOptions.(wireguard_service.Options)
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
 				di.EventBus,
-				wgOptions,
-				di.PortPool,
 				di.ServiceFirewall,
+				resourcesAllocator,
 			)
 			return svc, nil
 		},
