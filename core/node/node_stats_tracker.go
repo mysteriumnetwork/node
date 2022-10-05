@@ -52,6 +52,9 @@ type ProviderSessionsSeries func(id identity.Identity, rangeTime string) (Sessio
 // ProviderTransferredDataSeries should return transferred bytes data series metrics
 type ProviderTransferredDataSeries func(id identity.Identity, rangeTime string) (TransferredDataSeries, error)
 
+// ProviderServiceEarnings should return earnings by service type
+type ProviderServiceEarnings func(id identity.Identity) (EarningsPerService, error)
+
 // ProviderActivityStats should return provider activity stats
 type ProviderActivityStats func(id identity.Identity) (ActivityStats, error)
 
@@ -70,6 +73,7 @@ type StatsTracker struct {
 	providerTransferredDataSeries ProviderTransferredDataSeries
 	providerActivityStats         ProviderActivityStats
 	providerQuality               ProviderQuality
+	providerServiceEarnings       ProviderServiceEarnings
 	currentIdentity               currentIdentity
 }
 
@@ -85,6 +89,7 @@ func NewNodeStatsTracker(
 	providerTransferredDataSeries ProviderTransferredDataSeries,
 	providerActivityStats ProviderActivityStats,
 	providerQuality ProviderQuality,
+	providerServiceEarnings ProviderServiceEarnings,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
@@ -98,6 +103,7 @@ func NewNodeStatsTracker(
 		providerTransferredDataSeries: providerTransferredDataSeries,
 		providerActivityStats:         providerActivityStats,
 		providerQuality:               providerQuality,
+		providerServiceEarnings:       providerServiceEarnings,
 		currentIdentity:               currentIdentity,
 	}
 
@@ -170,6 +176,14 @@ type ActivityStats struct {
 // QualityInfo represents a provider quality info.
 type QualityInfo struct {
 	Quality float64 `json:"quality"`
+}
+
+// EarningsPerService represents information about earnings per service
+type EarningsPerService struct {
+	EarningsPublic   string `json:"public"`
+	EarningsVPN      string `json:"data_transfer"`
+	EarningsScraping string `json:"scraping"`
+	EarningsTotal    string `json:"total"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
@@ -260,4 +274,14 @@ func (m *StatsTracker) ProviderActivityStats() (ActivityStats, error) {
 	}
 
 	return ActivityStats{}, errIdentityNotFound
+}
+
+// EarningsPerService retrieves and resolved earnings per service type
+func (m *StatsTracker) EarningsPerService() (EarningsPerService, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerServiceEarnings(id)
+	}
+
+	return EarningsPerService{}, errIdentityNotFound
 }

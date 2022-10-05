@@ -19,15 +19,17 @@ package endpoints
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/node/tequilapi/launchpad"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/mysteriumnetwork/payments/units"
 
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/node/tequilapi/launchpad"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -42,6 +44,7 @@ type nodeMonitoringAgent interface {
 	TransferredDataSeries(rangeTime string) (node.TransferredDataSeries, error)
 	ProviderActivityStats() (node.ActivityStats, error)
 	ProviderQuality() (node.QualityInfo, error)
+	EarningsPerService() (node.EarningsPerService, error)
 }
 
 // NodeEndpoint struct represents endpoints about node status
@@ -470,6 +473,45 @@ func (ne *NodeEndpoint) GetLatestRelease(c *gin.Context) {
 	utils.WriteAsJSON(contract.LatestReleaseResponse{Version: version}, c.Writer)
 }
 
+// GetProviderServiceEarnings Node earnings per service and total earnings in the all network
+// swagger:operation GET /node/provider/service-earnings provider GetProviderServiceEarnings
+// ---
+// summary: Provides Node earnings per service and total earnings in the all network
+// description: Node earnings per service and total earnings in the all network.
+// responses:
+//   200:
+//    description: earnings per service and total earnings
+//    schema:
+//     "$ref": "#/definitions/EarningsPerServiceResponse"
+//   400:
+//    description: Failed to parse or request validation failed
+//    schema:
+//     "$ref": "#/definitions/APIError"
+//   500:
+//    description: Internal server error
+//    schema:
+//     "$ref": "#/definitions/APIError"
+func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
+	res, err := ne.nodeMonitoringAgent.EarningsPerService()
+	if err != nil {
+		c.Error(apierror.Internal("Could not get provider service earnings: "+err.Error(), contract.ErrorCodeProviderServiceEarnings))
+		return
+	}
+	public, _ := strconv.ParseFloat(res.EarningsPublic, 64)
+	vpn, _ := strconv.ParseFloat(res.EarningsVPN, 64)
+	scraping, _ := strconv.ParseFloat(res.EarningsScraping, 64)
+	total, _ := strconv.ParseFloat(res.EarningsTotal, 64)
+
+	data := contract.EarningsPerServiceResponse{
+		EarningsPublic:   units.FloatEthToBigIntWei(public),
+		EarningsVPN:      units.FloatEthToBigIntWei(vpn),
+		EarningsScraping: units.FloatEthToBigIntWei(scraping),
+		EarningsTotal:    units.FloatEthToBigIntWei(total),
+	}
+
+	utils.WriteAsJSON(data, c.Writer)
+}
+
 // AddRoutesForNode adds nat routes to given router
 func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent nodeMonitoringAgent) func(*gin.Engine) error {
 	nodeEndpoints := NewNodeEndpoint(nodeStatusProvider, nodeMonitoringAgent)
@@ -486,6 +528,7 @@ func AddRoutesForNode(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent
 			nodeGroup.GET("/provider/series/earnings", nodeEndpoints.GetProviderEarningsSeries)
 			nodeGroup.GET("/provider/series/sessions", nodeEndpoints.GetProviderSessionsSeries)
 			nodeGroup.GET("/provider/series/data", nodeEndpoints.GetProviderTransferredDataSeries)
+			nodeGroup.GET("/provider/service-earnings", nodeEndpoints.GetProviderServiceEarnings)
 			nodeGroup.GET("/latest-release", nodeEndpoints.GetLatestRelease)
 			nodeGroup.GET("/provider/quality", nodeEndpoints.GetProviderQuality)
 			nodeGroup.GET("/provider/activity-stats", nodeEndpoints.GetProviderActivityStats)

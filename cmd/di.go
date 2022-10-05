@@ -633,6 +633,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.QualityClient.ProviderTransferredDataSeries,
 		di.QualityClient.ProviderActivityStats,
 		di.QualityClient.ProviderQuality,
+		di.QualityClient.ProviderServiceEarnings,
 		di.IdentityManager,
 	)
 

@@ -146,4 +146,5 @@ const (
 	ErrorCodeProviderQuality               = "err_provider_quality"
 	ErrorCodeProviderActivityStats         = "err_provider_activity_stats"
 	ErrorCodeLatestReleaseInformation      = "err_latest_release_information"
+	ErrorCodeProviderServiceEarnings       = "err_provider_service_earnings"
 )
