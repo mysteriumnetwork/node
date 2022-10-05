@@ -60,6 +60,7 @@ type PeerExchangeMessageSender interface {
 type consumerTotalsStorage interface {
 	Store(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error
 	Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error)
+	Add(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error
 }
 
 type timeTracker interface {
@@ -168,19 +169,7 @@ func (ip *InvoicePayer) Start() error {
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount big.Int) error {
-	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.chainID(), ip.deps.Identity, ip.deps.HermesAddress)
-	if err != nil {
-		if err == ErrNotFound {
-			log.Debug().Msg("No previous invoice grand total, assuming zero")
-			res = big.NewInt(0)
-		} else {
-			return errors.Wrap(err, "could not get previous grand total")
-		}
-	}
-	if res == nil {
-		res = big.NewInt(0)
-	}
-	return ip.deps.ConsumerTotalsStorage.Store(ip.chainID(), ip.deps.Identity, ip.deps.HermesAddress, new(big.Int).Add(res, &amount))
+	return ip.deps.ConsumerTotalsStorage.Add(ip.chainID(), ip.deps.Identity, ip.deps.HermesAddress, &amount)
 }
 
 func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
