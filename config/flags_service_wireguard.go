@@ -35,18 +35,6 @@ var (
 		Usage: "Subnet to be used by the wireguard service",
 		Value: "10.182.0.0/16",
 	}
-	// FlagDataTransferListenSubnet subnet to be used by the data_transfer service.
-	FlagDataTransferListenSubnet = cli.StringFlag{
-		Name:  "datatransfer.allowed.subnet",
-		Usage: "Subnet to be used by the wireguard service",
-		Value: "10.183.0.0/16",
-	}
-	// FlagScrapingListenSubnet subnet to be used by the scraping service.
-	FlagScrapingListenSubnet = cli.StringFlag{
-		Name:  "scraping.allowed.subnet",
-		Usage: "Subnet to be used by the wireguard service",
-		Value: "10.184.0.0/16",
-	}
 	// FlagWireguardAccessPolicies a comma-separated list of access policies that determines allowed identities to use the service.
 	FlagWireguardAccessPolicies = cli.StringFlag{
 		Name:  "wireguard.access-policies",
@@ -59,8 +47,6 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		&FlagWireguardListenPorts,
 		&FlagWireguardListenSubnet,
-		&FlagScrapingListenSubnet,
-		&FlagDataTransferListenSubnet,
 		&FlagWireguardAccessPolicies,
 	)
 }
@@ -69,7 +55,5 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 func ParseFlagsServiceWireguard(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
 	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
-	Current.ParseStringFlag(ctx, FlagScrapingListenSubnet)
-	Current.ParseStringFlag(ctx, FlagDataTransferListenSubnet)
 	Current.ParseStringFlag(ctx, FlagWireguardAccessPolicies)
 }

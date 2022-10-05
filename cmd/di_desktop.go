@@ -33,12 +33,10 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
-	datatransfer_service "github.com/mysteriumnetwork/node/services/datatransfer/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
-	scraping_service "github.com/mysteriumnetwork/node/services/scraping/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
@@ -299,16 +297,18 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
-	di.registerWireguardConnection(nodeOptions)
-	di.registerScrapingConnection(nodeOptions)
-	di.registerDataTransferConnection(nodeOptions)
+
+	resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+
+	di.registerWireguardConnection(nodeOptions, resourceAllocator)
+	di.registerScrapingConnection(nodeOptions, resourceAllocator)
+	di.registerDataTransferConnection(nodeOptions, resourceAllocator)
 }
 
-func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	wireguard.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -321,11 +321,10 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }
 
-func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	scraping.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, scraping_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -338,11 +337,10 @@ func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(scraping.ServiceType, connFactory)
 }
 
-func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	datatransfer.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, datatransfer_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {

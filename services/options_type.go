@@ -24,12 +24,10 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
-	datatransfer_service "github.com/mysteriumnetwork/node/services/datatransfer/service"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
-	scraping_service "github.com/mysteriumnetwork/node/services/scraping/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 )
@@ -61,9 +59,9 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 	case noop.ServiceType:
 		return noop.GetOptions(), nil
 	case scraping.ServiceType:
-		return scraping_service.GetOptions(), nil
+		return wireguard_service.GetOptions(), nil
 	case datatransfer.ServiceType:
-		return datatransfer_service.GetOptions(), nil
+		return wireguard_service.GetOptions(), nil
 	default:
 		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}
