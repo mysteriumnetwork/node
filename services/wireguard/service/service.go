@@ -28,7 +28,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/dns"
@@ -49,12 +48,9 @@ func NewManager(
 	country string,
 	natService nat.NATService,
 	eventBus eventbus.EventBus,
-	options Options,
-	portSupplier port.ServicePortSupplier,
 	trafficFirewall firewall.IncomingTrafficFirewall,
+	resourcesAllocator *resources.Allocator,
 ) *Manager {
-	resourcesAllocator := resources.NewAllocator(portSupplier, options.Subnet)
-
 	return &Manager{
 		done:               make(chan struct{}),
 		resourcesAllocator: resourcesAllocator,
