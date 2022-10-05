@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -268,9 +269,9 @@ func mapState(state stateEvent.State) stateRes {
 		sessionsStats.Add(se)
 	}
 
-	var conn event.Connection
+	conn := event.Connection{Session: connectionstate.Status{State: connectionstate.NotConnected}}
 	for _, c := range state.Connections {
-		if len(c.Session.SessionID) > 0 {
+		if len(c.Session.ConsumerID.Address) > 0 {
 			conn = c
 			break
 		}
