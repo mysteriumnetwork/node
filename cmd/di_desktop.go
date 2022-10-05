@@ -20,6 +20,9 @@ package cmd
 import (
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -30,18 +33,18 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
+	datatransfer_service "github.com/mysteriumnetwork/node/services/datatransfer/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
+	scraping_service "github.com/mysteriumnetwork/node/services/scraping/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -322,7 +325,7 @@ func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
 	scraping.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		resourceAllocator := resources.NewAllocator(nil, scraping_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -339,7 +342,7 @@ func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options)
 	datatransfer.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		resourceAllocator := resources.NewAllocator(nil, datatransfer_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
