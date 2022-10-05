@@ -30,6 +30,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -149,7 +150,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	},
     "consumer": {
       "connection": {
-        "status": ""
+        "status": "NotConnected"
       }
     },
     "identities": [],
@@ -180,7 +181,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	},
     "consumer": {
       "connection": {
-        "status": ""
+        "status": "NotConnected"
       }
     },
     "identities": [],
@@ -191,7 +192,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	msp.stateToReturn.Connections["1"] = stateEvent.Connection{
-		Session:    connectionstate.Status{State: connectionstate.Connecting, SessionID: "1"},
+		Session:    connectionstate.Status{State: connectionstate.Connecting, SessionID: "1", ConsumerID: identity.Identity{Address: "0x123"}},
 		Statistics: connectionstate.Statistics{BytesSent: 1, BytesReceived: 2},
 	}
 	changedState = msp.GetState()
@@ -231,6 +232,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 		},
 		"consumer": {
 			"connection": {
+				"consumer_id":"0x123",
 				"session_id": "1",
 				"status": "Connecting"
 			}
