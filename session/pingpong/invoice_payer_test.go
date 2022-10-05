@@ -52,10 +52,6 @@ func (mpems *MockPeerExchangeMessageSender) Send(em crypto.ExchangeMessage) erro
 }
 
 func Test_InvoicePayer_Start_Stop(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
 	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
@@ -65,12 +61,8 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	}
 
 	invoiceChan := make(chan crypto.Invoice)
-	bolt, err := boltdb.NewStorage(dir)
-	assert.Nil(t, err)
-	defer bolt.Close()
-
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	totalsStorage := NewConsumerTotalsStorage(eventbus.New())
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -116,7 +108,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	totalsStorage := NewConsumerTotalsStorage(eventbus.New())
 	totalsStorage.Store(1, identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(10))
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
@@ -185,7 +177,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	totalsStorage := NewConsumerTotalsStorage(eventbus.New())
 	totalsStorage.Store(1, identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(0))
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
@@ -249,7 +241,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	totalsStorage := NewConsumerTotalsStorage(eventbus.New())
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		EventBus:                  mocks.NewEventBus(),
