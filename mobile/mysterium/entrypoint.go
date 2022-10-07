@@ -28,7 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer/migration"
+	"github.com/mysteriumnetwork/node/core/service"
+
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -66,6 +67,8 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
+const ProposalsManagerCacheTTLSeconds = 5
+
 // MobileNode represents node object tuned for mobile device.
 type MobileNode struct {
 	shutdown                  func() error
@@ -97,8 +100,9 @@ type MobileNode struct {
 	filterPresetStorage       *proposal.FilterPresetStorage
 	hermesMigrator            *migration.HermesMigrator
 
-	isProvider bool
-	tequilapi  *client.Client
+	servicesManager *service.Manager
+	isProvider      bool
+	tequilapi       *client.Client
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -695,205 +699,28 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 }
 
 // NewProviderNode function creates new Node.
-func NewProviderNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
+func NewProviderNode(appPath string) (*MobileNode, error) {
 	var di cmd.Dependencies
+
+	config.Current.SetDefault(config.FlagUserspace.Name, "true")
+	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 
 	if appPath == "" {
 		return nil, errors.New("node app path is required")
 	}
-
 	dataDir := filepath.Join(appPath, ".mysterium")
-	currentDir := appPath
 	if err := loadUserConfig(dataDir); err != nil {
 		return nil, err
 	}
 
-	config.Current.SetDefault(config.FlagChainID.Name, options.ActiveChainID)
-	// config.Current.SetDefault(config.FlagKeepConnectedOnFail.Name, options.KeepConnectedOnFail)
-	// config.Current.SetDefault(config.FlagAutoReconnect.Name, "true")
-	config.Current.SetDefault(config.FlagUserspace.Name, "true")
-
-	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
-	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
-	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
-
-	config.Current.SetDefault(config.FlagTequilapiAddress.Name, "127.0.0.1")
-	config.Current.SetDefault(config.FlagTequilapiAllowedHostnames.Name, "localhost")
-	config.Current.SetDefault(config.FlagTequilapiPort.Name, 4050)
-
-	config.Current.SetDefault(config.FlagWireguardListenSubnet.Name, config.FlagWireguardListenSubnet.Value)
-	config.Current.SetDefault(config.FlagWireguardListenPorts.Name, config.FlagWireguardListenPorts.Value)
-
-	//
-	config.Current.SetDefault(config.FlagPaymentPriceGiB.Name, config.FlagPaymentPriceGiB.Value)
-	config.Current.SetDefault(config.FlagPaymentPriceHour.Name, config.FlagPaymentPriceHour.Value)
-
-	config.Current.SetDefault(config.FlagIPDetectorURL.Name, config.FlagIPDetectorURL.Value)
-	config.Current.SetDefault(config.FlagLocationType.Name, config.FlagLocationType.Value)
-	config.Current.SetDefault(config.FlagLocationAddress.Name, config.FlagLocationAddress.Value)
-
-	config.Current.SetDefault(config.FlagBindAddress.Name, config.FlagBindAddress.Value)
-	config.Current.SetDefault(config.FlagDiscoveryType.Name, config.FlagDiscoveryType.Value)
-	config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, config.FlagDiscoveryPingInterval.Value)
-	config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, config.FlagDiscoveryFetchInterval.Value)
-
-	// payment flags
-	config.Current.SetDefault(config.FlagPaymentsMaxHermesFee.Name, config.FlagPaymentsMaxHermesFee.Value)
-	config.Current.SetDefault(config.FlagPaymentsBCTimeout.Name, config.FlagPaymentsBCTimeout.Value)
-	config.Current.SetDefault(config.FlagPaymentsHermesPromiseSettleThreshold.Name, config.FlagPaymentsHermesPromiseSettleThreshold.Value)
-	config.Current.SetDefault(config.FlagPaymentsPromiseSettleMaxFeeThreshold.Name, config.FlagPaymentsPromiseSettleMaxFeeThreshold.Value)
-	config.Current.SetDefault(config.FlagPaymentsUnsettledMaxAmount.Name, config.FlagPaymentsUnsettledMaxAmount.Value)
-	config.Current.SetDefault(config.FlagPaymentsHermesPromiseSettleTimeout.Name, config.FlagPaymentsHermesPromiseSettleTimeout.Value)
-	config.Current.SetDefault(config.FlagPaymentsHermesPromiseSettleCheckInterval.Name, config.FlagPaymentsHermesPromiseSettleCheckInterval.Value)
-	config.Current.SetDefault(config.FlagPaymentsFastBalancePollInterval.Name, config.FlagPaymentsFastBalancePollInterval.Value)
-	config.Current.SetDefault(config.FlagPaymentsFastBalancePollTimeout.Name, config.FlagPaymentsFastBalancePollTimeout.Value)
-	config.Current.SetDefault(config.FlagPaymentsLongBalancePollInterval.Name, config.FlagPaymentsLongBalancePollInterval.Value)
-	config.Current.SetDefault(config.FlagPaymentsRegistryTransactorPollInterval.Name, config.FlagPaymentsRegistryTransactorPollInterval.Value)
-	config.Current.SetDefault(config.FlagPaymentsRegistryTransactorPollTimeout.Name, config.FlagPaymentsRegistryTransactorPollTimeout.Value)
-	config.Current.SetDefault(config.FlagPaymentsConsumerDataLeewayMegabytes.Name, config.FlagPaymentsConsumerDataLeewayMegabytes.Value)
-	config.Current.SetDefault(config.FlagPaymentsHermesStatusRecheckInterval.Name, config.FlagPaymentsHermesStatusRecheckInterval.Value)
-	config.Current.SetDefault(config.FlagOffchainBalanceExpiration.Name, config.FlagOffchainBalanceExpiration.Value)
-	config.Current.SetDefault(config.FlagPaymentsZeroStakeUnsettledAmount.Name, config.FlagPaymentsZeroStakeUnsettledAmount.Value)
-	config.Current.SetDefault(config.FlagPaymentsDuringSessionDebug.Name, config.FlagPaymentsDuringSessionDebug.Value)
-	config.Current.SetDefault(config.FlagPaymentsAmountDuringSessionDebug.Name, config.FlagPaymentsAmountDuringSessionDebug.Value)
-	config.Current.SetDefault(config.FlagObserverAddress.Name, config.FlagObserverAddress.Value)
-	config.Current.SetDefault(config.FlagPaymentsProviderInvoiceFrequency.Name, config.FlagPaymentsProviderInvoiceFrequency.Value)
-	config.Current.SetDefault(config.FlagPaymentsLimitProviderInvoiceFrequency.Name, config.FlagPaymentsLimitProviderInvoiceFrequency.Value)
-	config.Current.SetDefault(config.FlagPaymentsLimitUnpaidInvoiceValue.Name, config.FlagPaymentsLimitUnpaidInvoiceValue.Value)
-	config.Current.SetDefault(config.FlagPaymentsUnpaidInvoiceValue.Name, config.FlagPaymentsUnpaidInvoiceValue.Value)
-
-	network := node.OptionsNetwork{
-		Mainnet:             options.Mainnet,
-		Localnet:            options.Localnet,
-		MysteriumAPIAddress: options.MysteriumAPIAddress,
-		BrokerAddresses:     options.BrokerAddresses,
-		EtherClientRPCL1:    options.EtherClientRPCL1,
-		EtherClientRPCL2:    options.EtherClientRPCL2,
-		ChainID:             options.ActiveChainID,
-		DNSMap: map[string][]string{
-			"location.mysterium.network": {"51.158.129.204"},
-			"quality.mysterium.network":  {"51.158.129.204"},
-			"feedback.mysterium.network": {"116.203.17.150"},
-			"api.ipify.org": {
-				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
-				"23.21.109.69", "23.21.126.66",
-				"50.19.252.36",
-				"174.129.214.20",
-			},
-		},
-	}
-	logOptions := logconfig.LogOptions{
-		LogLevel: zerolog.DebugLevel,
-		LogHTTP:  false,
-		Filepath: filepath.Join(dataDir, "mysterium-node"),
-	}
-
-	nodeOptions := node.Options{
-		LogOptions: logOptions,
-		Directories: node.OptionsDirectory{
-			Data:     dataDir,
-			Storage:  filepath.Join(dataDir, "mainnet/db"),
-			Keystore: filepath.Join(dataDir, "keystore"),
-			Runtime:  currentDir,
-			NodeUI:   `C:\Users\user\.mysterium\nodeui`,
-		},
-
-		TequilapiEnabled: true,
-		TequilapiAddress: config.Current.GetString(config.FlagTequilapiAddress.Name),
-		TequilapiPort:    config.Current.GetInt(config.FlagTequilapiPort.Name),
-
-		SwarmDialerDNSHeadstart: time.Millisecond * 1500,
-		Keystore: node.OptionsKeystore{
-			UseLightweight: true,
-		},
-		UI: node.OptionsUI{
-			// UIEnabled: false,
-			UIEnabled: true,
-			UIPort:    4449,
-		},
-		FeedbackURL:    options.FeedbackURL,
-		OptionsNetwork: network,
-		Quality: node.OptionsQuality{
-			Type:    node.QualityTypeMORQA,
-			Address: options.QualityOracleURL,
-		},
-		Discovery: node.OptionsDiscovery{
-			Types:   []node.DiscoveryType{node.DiscoveryTypeAPI},
-			Address: network.MysteriumAPIAddress,
-			DHT: node.OptionsDHT{
-				Address:        "0.0.0.0",
-				Port:           0,
-				Protocol:       "tcp",
-				BootstrapPeers: []string{},
-			},
-			PingInterval:  config.GetDuration(config.FlagDiscoveryPingInterval),
-			FetchEnabled:  true,
-			FetchInterval: config.GetDuration(config.FlagDiscoveryFetchInterval),
-		},
-		Location: node.OptionsLocation{
-			IPDetectorURL: options.IPDetectorURL,
-			Type:          node.LocationTypeOracle,
-			Address:       options.LocationDetectorURL,
-		},
-		Transactor: node.OptionsTransactor{
-			TransactorEndpointAddress:       options.TransactorEndpointAddress,
-			ProviderMaxRegistrationAttempts: 10,
-			TransactorFeesValidTime:         time.Second * 30,
-		},
-		Affiliator: node.OptionsAffiliator{AffiliatorEndpointAddress: options.AffiliatorEndpointAddress},
-		Payments: node.OptionsPayments{
-			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),
-			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
-			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
-			MaxFeeSettlingThreshold:        config.GetFloat64(config.FlagPaymentsPromiseSettleMaxFeeThreshold),
-			MaxUnSettledAmount:             config.GetFloat64(config.FlagPaymentsUnsettledMaxAmount),
-			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
-			SettlementRecheckInterval:      config.GetDuration(config.FlagPaymentsHermesPromiseSettleCheckInterval),
-			BalanceLongPollInterval:        config.GetDuration(config.FlagPaymentsLongBalancePollInterval),
-			BalanceFastPollInterval:        config.GetDuration(config.FlagPaymentsFastBalancePollInterval),
-			BalanceFastPollTimeout:         config.GetDuration(config.FlagPaymentsFastBalancePollTimeout),
-			RegistryTransactorPollInterval: config.GetDuration(config.FlagPaymentsRegistryTransactorPollInterval),
-			RegistryTransactorPollTimeout:  config.GetDuration(config.FlagPaymentsRegistryTransactorPollTimeout),
-			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
-			HermesStatusRecheckInterval:    config.GetDuration(config.FlagPaymentsHermesStatusRecheckInterval),
-			MinAutoSettleAmount:            config.GetFloat64(config.FlagPaymentsZeroStakeUnsettledAmount),
-			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
-			ProviderLimitInvoiceFrequency:  config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),
-			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue),
-			LimitUnpaidInvoiceValue:        config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue),
-
-			// MaxAllowedPaymentPercentile:    1500,
-			// BCTimeout:                      time.Second * 30,
-			// SettlementTimeout:              time.Hour * 2,
-			// HermesStatusRecheckInterval:    time.Hour * 2,
-			// BalanceFastPollInterval:        time.Second * 30,
-			// BalanceFastPollTimeout:         time.Minute * 3,
-			// BalanceLongPollInterval:        time.Hour * 1,
-			// RegistryTransactorPollInterval: time.Second * 20,
-			// RegistryTransactorPollTimeout:  time.Minute * 20,
-		},
-		Chains: node.OptionsChains{
-			Chain1: metadata.ChainDefinition{
-				RegistryAddress:    options.RegistrySCAddress,
-				HermesID:           options.HermesSCAddress,
-				ChannelImplAddress: options.ChannelImplementationSCAddress,
-				MystAddress:        options.MystSCAddress,
-				ChainID:            options.Chain1ID,
-			},
-			Chain2: metadata.ChainDefinition{
-				RegistryAddress:    options.RegistrySCAddress,
-				HermesID:           options.HermesSCAddress,
-				ChannelImplAddress: options.ChannelImplementationSCAddress,
-				MystAddress:        options.MystSCAddress,
-				ChainID:            options.Chain2ID,
-			},
-		},
-		Consumer:        false,
-		PilvytisAddress: options.PilvytisAddress,
-		ObserverAddress: options.ObserverAddress,
-	}
-
-	err := di.Bootstrap(nodeOptions)
+	nodeOptions_ := node.GetOptions()
+	nodeOptions_.Discovery.FetchEnabled = false
+	nodeOptions_.Consumer = false
+	nodeOptions_.UI.UIEnabled = false
+	nodeOptions_.TequilapiEnabled = false
+	
+	err := di.Bootstrap(*nodeOptions_)
 	if err != nil {
 		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
 	}
@@ -920,13 +747,12 @@ func NewProviderNode(appPath string, options *MobileNodeOptions) (*MobileNode, e
 			di.ProposalRepository,
 			di.FilterPresetStorage,
 			di.NATProber,
-			time.Duration(options.CacheTTLSeconds)*time.Second,
+			time.Duration(ProposalsManagerCacheTTLSeconds)*time.Second,
 		),
-
 		pilvytis:            di.PilvytisAPI,
 		pilvytisOrderIssuer: di.PilvytisOrderIssuer,
 		startTime:           time.Now(),
-		chainID:             nodeOptions.OptionsNetwork.ChainID,
+		chainID:             nodeOptions_.OptionsNetwork.ChainID,
 		sessionStorage:      di.SessionStorage,
 		identityMover:       di.IdentityMover,
 		entertainmentEstimator: entertainment.NewEstimator(
@@ -936,12 +762,9 @@ func NewProviderNode(appPath string, options *MobileNodeOptions) (*MobileNode, e
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
+		servicesManager:     di.ServicesManager,
+		isProvider:          false,
 	}
-
-	tequilapiAddress := config.GetString(config.FlagTequilapiAddress)
-	tequilapiPort := config.GetInt(config.FlagTequilapiPort)
-	mobileNode.tequilapi = client.NewClient(tequilapiAddress, tequilapiPort)
-	mobileNode.isProvider = true
 
 	return mobileNode, nil
 }
@@ -964,37 +787,45 @@ func (mb *MobileNode) unlockIdentity(id, passphrase string) string {
 	}
 }
 
-func (mb *MobileNode) StartProvider() {
-	// fmt.Println("StartProvider>", (config.FlagIdentity.Value), (config.FlagIdentityPassphrase.Value))
-
-	providerID := mb.unlockIdentity(
-		config.FlagIdentity.Value,
-		config.FlagIdentityPassphrase.Value,
-	)
-	log.Info().Msgf("Unlocked identity: %v", providerID)
-
-	serviceTypes := []string{wireguard.ServiceType}
-	for _, serviceType := range serviceTypes {
-		serviceOpts, err := services.GetStartOptions(serviceType)
-		if err != nil {
-			return
-		}
-		startRequest := contract.ServiceStartRequest{
-			ProviderID:     providerID,
-			Type:           serviceType,
-			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
-			Options:        serviceOpts,
-		}
-
-		mb.runService(startRequest)
-	}
-}
-
 func (mb *MobileNode) runService(request contract.ServiceStartRequest) {
 	// fmt.Println("runService>", request)
 	_, err := mb.tequilapi.ServiceStart(request)
 	if err != nil {
 		// fmt.Println("runService>", err)
+		return
+	}
+}
+
+func (mb *MobileNode) _unlockIdentity(adr, passphrase string) string {
+
+	chainID := config.GetInt64(config.FlagChainID)
+	id, err := mb.identitySelector.UseOrCreate(adr, passphrase, chainID)
+
+	if err != nil {
+		//c.Error(apierror.Internal("Failed to use/create ID: "+err.Error(), contract.ErrCodeIDUseOrCreate))
+		return ""
+	}
+	return id.Address
+}
+
+func (mb *MobileNode) StartProvider() {
+	// fmt.Println("StartProvider>", (config.FlagIdentity.Value), (config.FlagIdentityPassphrase.Value))
+
+	providerID := mb._unlockIdentity(
+		config.FlagIdentity.Value,
+		config.FlagIdentityPassphrase.Value,
+	)
+	log.Info().Msgf("Unlocked identity: %v", providerID)
+
+	serviceType := wireguard.ServiceType
+	serviceOpts, err := services.GetStartOptions(serviceType)
+	if err != nil {
+		return
+	}
+
+	id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
+	_ = id
+	if err != nil {
 		return
 	}
 }

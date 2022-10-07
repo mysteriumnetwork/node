@@ -53,7 +53,7 @@ func RegisterFlagsMMN(flags *[]cli.Flag) {
 }
 
 // ParseFlagsMMN function fills in MMN options from CLI context.
-func ParseFlagsMMN(ctx *cli.Context) {
+func ParseFlagsMMN(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagMMNAddress)
 	Current.ParseStringFlag(ctx, FlagMMNAPIAddress)
 	Current.ParseStringFlag(ctx, FlagMMNAPIKey)

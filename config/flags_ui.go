@@ -58,7 +58,7 @@ func RegisterFlagsUI(flags *[]cli.Flag) {
 }
 
 // ParseFlagsUI parse Node UI flags
-func ParseFlagsUI(ctx *cli.Context) {
+func ParseFlagsUI(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagFeatures)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseStringFlag(ctx, FlagUIAddress)

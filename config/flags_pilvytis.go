@@ -35,6 +35,6 @@ func RegisterFlagsPilvytis(flags *[]cli.Flag) {
 }
 
 // ParseFlagPilvytis func fills the pilvytis options from CLI context.
-func ParseFlagPilvytis(ctx *cli.Context) {
+func ParseFlagPilvytis(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagPilvytisAddress)
 }

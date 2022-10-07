@@ -82,7 +82,7 @@ func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 }
 
 // ParseFlagsServiceStart parses service start CLI flags and registers values to the configuration
-func ParseFlagsServiceStart(ctx *cli.Context) {
+func ParseFlagsServiceStart(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagIdentity)
 	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)

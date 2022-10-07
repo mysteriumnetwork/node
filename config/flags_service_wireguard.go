@@ -52,7 +52,7 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 }
 
 // ParseFlagsServiceWireguard parses CLI flags and registers value to configuration
-func ParseFlagsServiceWireguard(ctx *cli.Context) {
+func ParseFlagsServiceWireguard(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
 	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
 	Current.ParseStringFlag(ctx, FlagWireguardAccessPolicies)

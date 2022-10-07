@@ -65,7 +65,7 @@ func RegisterFlagsServiceOpenvpn(flags *[]cli.Flag) {
 }
 
 // ParseFlagsServiceOpenvpn parses CLI flags and registers value to configuration
-func ParseFlagsServiceOpenvpn(ctx *cli.Context) {
+func ParseFlagsServiceOpenvpn(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagOpenvpnProtocol)
 	Current.ParseIntFlag(ctx, FlagOpenvpnPort)
 	Current.ParseStringFlag(ctx, FlagOpenvpnSubnet)

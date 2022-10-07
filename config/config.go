@@ -18,6 +18,7 @@
 package config
 
 import (
+	"fmt"
 	"math/big"
 	"os"
 	"strings"
@@ -146,6 +147,7 @@ func (cfg *Config) GetConfig() map[string]interface{} {
 
 // SetDefault sets default value for key.
 func (cfg *Config) SetDefault(key string, value interface{}) {
+	fmt.Println("!SetDefault >", key, value)
 	cfg.set(cfg.defaults, key, value)
 }
 
@@ -292,7 +294,7 @@ func (cfg *Config) GetStringSlice(key string) []string {
 
 // ParseBoolFlag parses a cli.BoolFlag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseBoolFlag(ctx *cli.Context, flag cli.BoolFlag) {
+func (cfg *Config) ParseBoolFlag(ctx CliContext, flag cli.BoolFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Bool(flag.Name))
@@ -303,7 +305,7 @@ func (cfg *Config) ParseBoolFlag(ctx *cli.Context, flag cli.BoolFlag) {
 
 // ParseIntFlag parses a cli.IntFlag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseIntFlag(ctx *cli.Context, flag cli.IntFlag) {
+func (cfg *Config) ParseIntFlag(ctx CliContext, flag cli.IntFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Int(flag.Name))
@@ -314,7 +316,7 @@ func (cfg *Config) ParseIntFlag(ctx *cli.Context, flag cli.IntFlag) {
 
 // ParseUInt64Flag parses a cli.Uint64Flag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
+func (cfg *Config) ParseUInt64Flag(ctx CliContext, flag cli.Uint64Flag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Uint64(flag.Name))
@@ -325,7 +327,7 @@ func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
 
 // ParseInt64Flag parses a cli.Int64Flag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseInt64Flag(ctx *cli.Context, flag cli.Int64Flag) {
+func (cfg *Config) ParseInt64Flag(ctx CliContext, flag cli.Int64Flag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Int64(flag.Name))
@@ -336,7 +338,7 @@ func (cfg *Config) ParseInt64Flag(ctx *cli.Context, flag cli.Int64Flag) {
 
 // ParseFloat64Flag parses a cli.Float64Flag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
+func (cfg *Config) ParseFloat64Flag(ctx CliContext, flag cli.Float64Flag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Float64(flag.Name))
@@ -347,7 +349,7 @@ func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
 
 // ParseDurationFlag parses a cli.DurationFlag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseDurationFlag(ctx *cli.Context, flag cli.DurationFlag) {
+func (cfg *Config) ParseDurationFlag(ctx CliContext, flag cli.DurationFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Duration(flag.Name))
@@ -358,7 +360,7 @@ func (cfg *Config) ParseDurationFlag(ctx *cli.Context, flag cli.DurationFlag) {
 
 // ParseStringFlag parses a cli.StringFlag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
+func (cfg *Config) ParseStringFlag(ctx CliContext, flag cli.StringFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.String(flag.Name))
@@ -369,7 +371,7 @@ func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
 
 // ParseStringSliceFlag parses a cli.StringSliceFlag from command's context and
 // sets default and CLI values to the application configuration.
-func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFlag) {
+func (cfg *Config) ParseStringSliceFlag(ctx CliContext, flag cli.StringSliceFlag) {
 	cfg.SetDefault(flag.Name, flag.Value.Value())
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.StringSlice(flag.Name))
@@ -381,7 +383,7 @@ func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFl
 // ParseBlockchainNetworkFlag parses a cli.StringFlag as a blockchain network
 // from command's context and sets default values for network parameters
 // and CLI values for the network to the application configuration.
-func (cfg *Config) ParseBlockchainNetworkFlag(ctx *cli.Context, flag cli.StringFlag) {
+func (cfg *Config) ParseBlockchainNetworkFlag(ctx CliContext, flag cli.StringFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		network, err := ParseBlockchainNetwork(ctx.String(flag.Name))

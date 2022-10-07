@@ -41,6 +41,6 @@ func RegisterFlagsAffiliator(flags *[]cli.Flag) {
 }
 
 // ParseFlagsAffiliator function fills in affiliator options from CLI context
-func ParseFlagsAffiliator(ctx *cli.Context) {
+func ParseFlagsAffiliator(ctx CliContext) {
 	Current.ParseStringFlag(ctx, FlagAffiliatorAddress)
 }
