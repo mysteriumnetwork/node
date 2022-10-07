@@ -44,6 +44,9 @@ type LocationDTO struct {
 	// Node Country
 	// example: LT
 	Country string `json:"country"`
+	// Node Region
+	// example: Vilnius region
+	Region string `json:"region"`
 	// Node City
 	// example: Vilnius
 	City string `json:"city"`

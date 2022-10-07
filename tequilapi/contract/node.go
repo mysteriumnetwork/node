@@ -18,6 +18,7 @@
 package contract
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -137,4 +138,13 @@ type ProviderSession struct {
 // swagger:model LatestReleaseResponse
 type LatestReleaseResponse struct {
 	Version string `json:"version"`
+}
+
+// EarningsPerServiceResponse contains information about earnings per service
+// swagger:model EarningsPerServiceResponse
+type EarningsPerServiceResponse struct {
+	EarningsPublic   *big.Int `json:"public"`
+	EarningsVPN      *big.Int `json:"data_transfer"`
+	EarningsScraping *big.Int `json:"scraping"`
+	EarningsTotal    *big.Int `json:"total"`
 }

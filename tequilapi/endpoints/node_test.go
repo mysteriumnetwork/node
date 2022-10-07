@@ -46,6 +46,7 @@ type mockMonitoringAgent struct {
 	transferredDataSeries node.TransferredDataSeries
 	providerQuality       node.QualityInfo
 	providerActivityStats node.ActivityStats
+	serviceEarnings       node.EarningsPerService
 }
 
 func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
@@ -90,6 +91,10 @@ func (nodeMonitoringAgentTracker *mockMonitoringAgent) ProviderQuality() (node.Q
 
 func (nodeMonitoringAgentTracker *mockMonitoringAgent) ProviderActivityStats() (node.ActivityStats, error) {
 	return nodeMonitoringAgentTracker.providerActivityStats, nil
+}
+
+func (nodeMonitoringAgentTracker *mockMonitoringAgent) EarningsPerService() (node.EarningsPerService, error) {
+	return nodeMonitoringAgentTracker.serviceEarnings, nil
 }
 
 func Test_NodeStatus(t *testing.T) {

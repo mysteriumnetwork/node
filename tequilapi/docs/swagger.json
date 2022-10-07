@@ -1516,6 +1516,36 @@
         }
       }
     },
+    "/node/provider/service-earnings": {
+      "get": {
+        "description": "Node earnings per service and total earnings in the all network.",
+        "tags": [
+          "provider"
+        ],
+        "summary": "Provides Node earnings per service and total earnings in the all network",
+        "operationId": "GetProviderServiceEarnings",
+        "responses": {
+          "200": {
+            "description": "earnings per service and total earnings",
+            "schema": {
+              "$ref": "#/definitions/EarningsPerServiceResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/node/provider/sessions": {
       "get": {
         "description": "Node sessions metrics during a period of time",
@@ -3654,6 +3684,25 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "EarningsPerServiceResponse": {
+      "description": "EarningsPerServiceResponse contains information about earnings per service",
+      "type": "object",
+      "properties": {
+        "data_transfer": {
+          "$ref": "#/definitions/Int"
+        },
+        "public": {
+          "$ref": "#/definitions/Int"
+        },
+        "scraping": {
+          "$ref": "#/definitions/Int"
+        },
+        "total": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "EligibilityResponse": {
       "description": "EligibilityResponse represents the eligibility response",
       "type": "object",
@@ -4192,6 +4241,12 @@
           "type": "string",
           "x-go-name": "ISP",
           "example": "Telia Lietuva, AB"
+        },
+        "region": {
+          "description": "Node Region",
+          "type": "string",
+          "x-go-name": "Region",
+          "example": "Vilnius region"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
