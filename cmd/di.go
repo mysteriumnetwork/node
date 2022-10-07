@@ -28,9 +28,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/migration"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/auth"
@@ -83,8 +85,6 @@ import (
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	psort "github.com/mysteriumnetwork/payments/client/sort"
 	"github.com/mysteriumnetwork/payments/observer"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // UIServer represents our web server
@@ -197,6 +197,7 @@ type Dependencies struct {
 
 	PayoutAddressStorage *payout.AddressStorage
 	NodeStatusTracker    *node.MonitoringStatusTracker
+	NodeStatsTracker     *node.StatsTracker
 	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
 
@@ -373,7 +374,11 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	}
 
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
-	return di.StateKeeper.Subscribe(di.EventBus)
+	if options.UI.UIEnabled {
+		return di.StateKeeper.Subscribe(di.EventBus)
+	}
+
+	return nil
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -513,12 +518,6 @@ func (di *Dependencies) getHermesURL(nodeOptions node.Options) (string, error) {
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
-	// Consumer current session bandwidth
-	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
-	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		di.BCHelper,
@@ -623,6 +622,18 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IdentityManager,
 	)
 
+	di.NodeStatsTracker = node.NewNodeStatsTracker(
+		di.QualityClient.ProviderStatuses,
+		di.QualityClient.ProviderSessionsList,
+		di.QualityClient.ProviderTransferredData,
+		di.QualityClient.ProviderSessionsCount,
+		di.QualityClient.ProviderConsumersCount,
+		di.QualityClient.ProviderEarningsSeries,
+		di.QualityClient.ProviderSessionsSeries,
+		di.QualityClient.ProviderTransferredDataSeries,
+		di.IdentityManager,
+	)
+
 	di.HermesMigrator = di.bootstrapHermesMigrator()
 	if err := di.HermesMigrator.Subscribe(di.EventBus); err != nil {
 		return fmt.Errorf("error during subscribe: %w", err)
@@ -647,15 +658,17 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	network := metadata.DefaultNetwork
 
 	switch {
-	case optionsNetwork.Mainnet:
+	case optionsNetwork.Network.IsMainnet():
 		network = metadata.MainnetDefinition
-	case optionsNetwork.Localnet:
+	case optionsNetwork.Network.IsLocalnet():
 		network = metadata.LocalnetDefinition
+	case optionsNetwork.Network.IsTestnet():
+		network = metadata.TestnetDefinition
 	}
 
 	// override defined values one by one from options
-	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
-		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
+	if optionsNetwork.DiscoveryAddress != metadata.DefaultNetwork.DiscoveryAddress {
+		network.DiscoveryAddress = optionsNetwork.DiscoveryAddress
 	}
 
 	if !reflect.DeepEqual(optionsNetwork.BrokerAddresses, metadata.DefaultNetwork.BrokerAddresses) {
@@ -684,7 +697,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	dialer.ResolveContext = resolver
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
-	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.DiscoveryAddress)
 	di.PricingHelper = pingpong.NewPricer(di.MysteriumAPI)
 	err = di.PricingHelper.Subscribe(di.EventBus)
 	if err != nil {
@@ -802,7 +815,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	allow := []string{
-		network.MysteriumAPIAddress,
+		network.DiscoveryAddress,
 		options.Transactor.TransactorEndpointAddress,
 		options.Affiliator.AffiliatorEndpointAddress,
 		hermesURL,
@@ -1117,7 +1130,7 @@ func getUDPListenPorts() (port.Range, error) {
 }
 
 func (di *Dependencies) allowTrustedDomainBypassTunnel() {
-	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow := []string{di.NetworkDefinition.DiscoveryAddress}
 	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
 
 	if err := router.ExcludeURL(allow...); err != nil {
@@ -1126,7 +1139,7 @@ func (di *Dependencies) allowTrustedDomainBypassTunnel() {
 }
 
 func (di *Dependencies) disallowTrustedDomainBypassTunnel() {
-	allow := []string{di.NetworkDefinition.MysteriumAPIAddress}
+	allow := []string{di.NetworkDefinition.DiscoveryAddress}
 	allow = append(allow, di.NetworkDefinition.BrokerAddresses...)
 
 	if err := router.RemoveExcludedURL(allow...); err != nil {

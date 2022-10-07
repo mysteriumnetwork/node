@@ -113,9 +113,9 @@ var (
 	}
 	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
-		Name:  "payments.consumer.data-leeway-megabytes",
+		Name:  metadata.FlagNames.PaymentsDataLeewayMegabytes,
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
-		Value: metadata.MainnetDefinition.Payments.Consumer.DataLeewayMegabytes,
+		Value: metadata.MainnetDefinition.Payments.DataLeewayMegabytes,
 	}
 	// FlagPaymentsHermesStatusRecheckInterval sets how often we re-check the hermes status on bc. Higher values allow for less bc lookups but increase the risk for provider.
 	FlagPaymentsHermesStatusRecheckInterval = cli.DurationFlag{
@@ -148,7 +148,7 @@ var (
 
 	// FlagObserverAddress address of Observer service.
 	FlagObserverAddress = cli.StringFlag{
-		Name:  "observer.address",
+		Name:  metadata.FlagNames.ObserverAddress,
 		Usage: "full address of the observer service",
 		Value: metadata.DefaultNetwork.ObserverAddress,
 	}

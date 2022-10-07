@@ -86,80 +86,76 @@ func ParseFlagsChains(ctx *cli.Context) {
 	Current.ParseStringSliceFlag(ctx, FlagChain2KnownHermeses)
 }
 
-func getRegistryFlag(chainIndex int64) cli.StringFlag {
-	defaultAddress := metadata.DefaultNetwork.Chain1.RegistryAddress
+func getChainFlagData(chainIndex int64) (metadata.ChainDefinition, metadata.ChainDefinitionFlagNames) {
+	chainDefinition := metadata.DefaultNetwork.Chain1
 	if chainIndex == 2 {
-		defaultAddress = metadata.DefaultNetwork.Chain2.RegistryAddress
+		chainDefinition = metadata.DefaultNetwork.Chain2
 	}
 
+	flagNames := metadata.FlagNames.Chain1Flag
+	if chainIndex == 2 {
+		flagNames = metadata.FlagNames.Chain2Flag
+	}
+
+	return chainDefinition, flagNames
+}
+
+func getRegistryFlag(chainIndex int64) cli.StringFlag {
+	definition, flagNames := getChainFlagData(chainIndex)
+
 	return cli.StringFlag{
-		Name:  fmt.Sprintf("chains.%v.registry", chainIndex),
-		Value: defaultAddress,
+		Name:  flagNames.RegistryAddress,
+		Value: definition.RegistryAddress,
 		Usage: fmt.Sprintf("Sets the registry smart contract address for main chain %v", chainIndex),
 	}
 }
 
 func getHermesIDFlag(chainIndex int64) cli.StringFlag {
-	defaultAddress := metadata.DefaultNetwork.Chain1.HermesID
-	if chainIndex == 2 {
-		defaultAddress = metadata.DefaultNetwork.Chain2.HermesID
-	}
+	definition, flagNames := getChainFlagData(chainIndex)
 
 	return cli.StringFlag{
-		Name:  fmt.Sprintf("chains.%v.hermes", chainIndex),
-		Value: defaultAddress,
+		Name:  flagNames.HermesID,
+		Value: definition.HermesID,
 		Usage: fmt.Sprintf("Sets the hermes smart contract address for chain %v", chainIndex),
 	}
 }
 
 func getChannelImplementationFlag(chainIndex int64) cli.StringFlag {
-	defaultAddress := metadata.DefaultNetwork.Chain1.ChannelImplAddress
-	if chainIndex == 2 {
-		defaultAddress = metadata.DefaultNetwork.Chain2.ChannelImplAddress
-	}
+	definition, flagNames := getChainFlagData(chainIndex)
 
 	return cli.StringFlag{
-		Name:  fmt.Sprintf("chains.%v.channelImplementation", chainIndex),
-		Value: defaultAddress,
+		Name:  flagNames.ChannelImplAddress,
+		Value: definition.ChannelImplAddress,
 		Usage: fmt.Sprintf("Sets the channel implementation smart contract address for chain %v", chainIndex),
 	}
 }
 
 func getMystAddressFlag(chainIndex int64) cli.StringFlag {
-	defaultAddress := metadata.DefaultNetwork.Chain1.MystAddress
-	if chainIndex == 2 {
-		defaultAddress = metadata.DefaultNetwork.Chain2.MystAddress
-	}
+	definition, flagNames := getChainFlagData(chainIndex)
 
 	return cli.StringFlag{
-		Name:  fmt.Sprintf("chains.%v.myst", chainIndex),
-		Value: defaultAddress,
+		Name:  flagNames.MystAddress,
+		Value: definition.MystAddress,
 		Usage: fmt.Sprintf("Sets the myst smart contract address for chain %v", chainIndex),
 	}
 }
 
 func getChainIDFlag(chainIndex int64) cli.Int64Flag {
-	defaultAddress := metadata.DefaultNetwork.Chain1.ChainID
-	if chainIndex == 2 {
-		defaultAddress = metadata.DefaultNetwork.Chain2.ChainID
-	}
+	definition, flagNames := getChainFlagData(chainIndex)
 
 	return cli.Int64Flag{
-		Name:  fmt.Sprintf("chains.%v.chainID", chainIndex),
-		Value: defaultAddress,
+		Name:  flagNames.ChainIDFlag,
+		Value: definition.ChainID,
 		Usage: fmt.Sprintf("Sets the chainID for chain %v", chainIndex),
 	}
 }
 
 func getKnownHermesesFlag(chainIndex int64) cli.StringSliceFlag {
-	defaultAddress := metadata.DefaultNetwork.Chain1.KnownHermeses
-	if chainIndex == 2 {
-		defaultAddress = metadata.DefaultNetwork.Chain2.KnownHermeses
-	}
+	definition, flagNames := getChainFlagData(chainIndex)
 
 	return cli.StringSliceFlag{
-		Name:  fmt.Sprintf("chains.%v.knownHermeses", chainIndex),
-		Value: cli.NewStringSlice(defaultAddress...),
+		Name:  flagNames.KnownHermesesFlag,
+		Value: cli.NewStringSlice(definition.KnownHermeses...),
 		Usage: fmt.Sprintf("Sets the known hermeses list for chain %v", chainIndex),
 	}
 }

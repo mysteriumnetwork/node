@@ -33,6 +33,8 @@ const (
 	Pending SettleState = "pending"
 	// Completed transaction is completed
 	Completed SettleState = "completed"
+	// NotFound transaction state
+	NotFound SettleState = "not_found"
 
 	bucketChangeStatus = "beneficiary-change-status"
 )

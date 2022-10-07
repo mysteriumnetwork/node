@@ -24,6 +24,7 @@ import (
 
 // Supported proposals sorting types.
 const (
+	SortTypeUptime    = "uptime"
 	SortTypeBandwidth = "bandwidth"
 	SortTypeLatency   = "latency"
 	SortTypePrice     = "price"
@@ -37,6 +38,8 @@ var ErrUnsupportedSortType = fmt.Errorf("unsupported proposal sort type")
 // It might return error in case of unsupported sorting type provided.
 func Sort(proposals []PricedServiceProposal, sortType string) ([]PricedServiceProposal, error) {
 	switch sortType {
+	case SortTypeUptime:
+		return SortByUptime(proposals), nil
 	case SortTypeBandwidth:
 		return SortByBandwidth(proposals), nil
 	case SortTypeLatency:
@@ -71,6 +74,18 @@ func SortByLatency(proposals []PricedServiceProposal) []PricedServiceProposal {
 
 	sort.Slice(tmp, func(i, j int) bool {
 		return proposals[i].Quality.Latency < proposals[j].Quality.Latency
+	})
+
+	return tmp
+}
+
+// SortByUptime sorts proposals list based on provider uptime.
+func SortByUptime(proposals []PricedServiceProposal) []PricedServiceProposal {
+	tmp := make([]PricedServiceProposal, len(proposals))
+	copy(tmp, proposals)
+
+	sort.Slice(tmp, func(i, j int) bool {
+		return proposals[i].Quality.Uptime > proposals[j].Quality.Uptime
 	})
 
 	return tmp

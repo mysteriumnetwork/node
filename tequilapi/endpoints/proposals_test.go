@@ -93,7 +93,7 @@ type mockPricer struct {
 	priceToReturn market.Price
 }
 
-func (mpip *mockPricer) GetCurrentPrice(nodeType string, country string) (market.Price, error) {
+func (mpip *mockPricer) GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error) {
 	return mpip.priceToReturn, nil
 }
 
@@ -138,7 +138,8 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
-                      "bandwidth": 10
+                      "bandwidth": 10,
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -209,7 +210,8 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
-                      "bandwidth": 10
+                      "bandwidth": 10,
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -280,6 +282,7 @@ func TestCurrentPrices(t *testing.T) {
 		t,
 		`
 				{
+				  "service_type": "wireguard",
 				  "price_per_hour": 123000000000000000,
 				  "price_per_hour_tokens": {
 					"wei": "123000000000000000",
@@ -343,7 +346,8 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
-                      "bandwidth": 10
+                      "bandwidth": 10,
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",
@@ -374,7 +378,8 @@ func TestProposalsEndpointFilterByPresetID(t *testing.T) {
                     "quality": {
                       "quality": 2.0,
                       "latency": 50,
-                      "bandwidth": 10
+                      "bandwidth": 10,
+                      "uptime": 20
                     },
 					"price": {
 					  "currency": "MYST",

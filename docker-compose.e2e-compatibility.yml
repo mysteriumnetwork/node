@@ -58,7 +58,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:2.2.0
+    image: mysteriumnetwork/discovery:2.8.5
     depends_on:
       - db
       - http-mock
@@ -189,7 +189,7 @@ services:
       --firewall.protected.networks=""
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://discovery:8080/api/v3
+      --discovery.address=http://discovery:8080/api/v4
       --ether.client.rpc=http://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -205,7 +205,7 @@ services:
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
       --openvpn.port=3000
-      openvpn,noop,wireguard
+      --active-services=openvpn,noop,wireguard
 
   myst-consumer:
     image: mysteriumnetwork/myst:0.19.1-alpine
@@ -236,7 +236,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://discovery:8080/api/v3
+      --discovery.address=http://discovery:8080/api/v4
       --ether.client.rpc=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
@@ -273,7 +273,7 @@ services:
       --location.country=e2e-land
       --firewall.protected.networks=""
       --broker-address=broker
-      --api.address=http://discovery:8080/api/v3
+      --discovery.address=http://discovery:8080/api/v4
       --ether.client.rpc=http://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -288,7 +288,7 @@ services:
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
       --openvpn.port=3000
-      openvpn,noop,wireguard
+      --active-services=openvpn,noop,wireguard
 
   myst-consumer-local:
     build:
@@ -320,7 +320,7 @@ services:
       --location.type=manual
       --log-level=debug
       --broker-address=broker
-      --api.address=http://discovery:8080/api/v3
+      --discovery.address=http://discovery:8080/api/v4
       --ether.client.rpc=http://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always

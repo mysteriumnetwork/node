@@ -39,7 +39,7 @@ var (
 	}
 	// FlagLocationAddress URL of location detector.
 	FlagLocationAddress = cli.StringFlag{
-		Name: "location.address",
+		Name: metadata.FlagNames.LocationAddress,
 		Usage: fmt.Sprintf(
 			"Address of specific location adapter given in '--%s'",
 			FlagLocationType.Name,

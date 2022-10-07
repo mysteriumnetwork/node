@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
@@ -42,6 +43,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	if !nodeOptions.TequilapiEnabled {
 		return tequilapi.NewNoopAPIServer(), nil
 	}
+	tequilaApiClient := tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort)
 
 	return tequilapi.NewServer(
 		listener,
@@ -70,11 +72,11 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForSessions(di.SessionStorage),
 			tequilapi_endpoints.AddRoutesForConnectionLocation(di.IPResolver, di.LocationResolver, di.LocationResolver),
 			tequilapi_endpoints.AddRoutesForProposals(di.ProposalRepository, di.PricingHelper, di.LocationResolver, di.FilterPresetStorage, di.NATProber),
-			tequilapi_endpoints.AddRoutesForService(di.ServicesManager, services.JSONParsersByType, di.ProposalRepository),
+			tequilapi_endpoints.AddRoutesForService(di.ServicesManager, services.JSONParsersByType, di.ProposalRepository, tequilaApiClient),
 			tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, config.GetString(config.FlagAccessPolicyAddress)),
 			tequilapi_endpoints.AddRoutesForNAT(di.StateKeeper, di.NATProber),
 			tequilapi_endpoints.AddRoutesForNodeUI(versionmanager.NewVersionManager(di.UIServer, di.HTTPClient, di.uiVersionConfig)),
-			tequilapi_endpoints.AddRoutesForNode(di.NodeStatusTracker),
+			tequilapi_endpoints.AddRoutesForNode(di.NodeStatusTracker, di.NodeStatsTracker),
 			tequilapi_endpoints.AddRoutesForTransactor(di.IdentityRegistry, di.Transactor, di.Affiliator, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiaryProvider, di.BeneficiarySaver, di.PilvytisAPI),
 			tequilapi_endpoints.AddRoutesForAffiliator(di.Affiliator),
 			tequilapi_endpoints.AddRoutesForConfig,

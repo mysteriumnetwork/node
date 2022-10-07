@@ -26,12 +26,12 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/payments/exchange"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/payments/exchange"
 )
 
 // NewClient returns a new instance of Client
@@ -291,8 +291,10 @@ func (client *Client) ConnectionDestroy(port int) (err error) {
 }
 
 // ConnectionStatistics returns statistics about current connection
-func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStatisticsDTO, err error) {
-	response, err := client.http.Get("connection/statistics", url.Values{})
+func (client *Client) ConnectionStatistics(sessionID ...string) (statistics contract.ConnectionStatisticsDTO, err error) {
+	response, err := client.http.Get("connection/statistics", url.Values{
+		"id": sessionID,
+	})
 	if err != nil {
 		return statistics, err
 	}
@@ -300,6 +302,20 @@ func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStat
 
 	err = parseResponseJSON(response, &statistics)
 	return statistics, err
+}
+
+// ConnectionTraffic returns traffic information about current connection
+func (client *Client) ConnectionTraffic(sessionID ...string) (traffic contract.ConnectionTrafficDTO, err error) {
+	response, err := client.http.Get("connection/traffic", url.Values{
+		"id": sessionID,
+	})
+	if err != nil {
+		return traffic, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &traffic)
+	return traffic, err
 }
 
 // ConnectionStatus returns connection status

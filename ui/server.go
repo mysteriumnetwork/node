@@ -28,7 +28,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
+	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web/v2"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/ui/discovery"
 	"github.com/rs/zerolog/log"

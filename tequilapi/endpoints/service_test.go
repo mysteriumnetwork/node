@@ -100,10 +100,13 @@ func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 	}
 	return nil
 }
-func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
-	return map[service.ID]*service.Instance{
-		"11111111-9dad-11d1-80b4-00c04fd430c0": mockServiceStopped,
+func (sm *mockServiceManager) List(includeAll bool) []*service.Instance {
+	return []*service.Instance{
+		mockServiceStopped,
 	}
+}
+func (sm *mockServiceManager) ListAll() []*service.Instance {
+	return []*service.Instance{mockServiceStopped}
 }
 func (sm *mockServiceManager) Kill() error { return nil }
 
@@ -119,6 +122,12 @@ var fakeOptionsParser = map[string]services.ServiceOptionsParser{
 	},
 }
 
+type mockTequilaApiClient struct{}
+
+func (c *mockTequilaApiClient) Post(path string, payload interface{}) (*http.Response, error) {
+	return nil, nil
+}
+
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := summonTestGin()
 	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{
@@ -126,7 +135,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			PricePerHour: big.NewInt(500_000_000_000_000_000),
 			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
-	})(router)
+	}, nil)(router)
 	assert.NoError(t, err)
 	tests := []struct {
 		method         string
@@ -141,48 +150,15 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			"",
 			http.StatusOK,
 			`[{
-				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
+				"options": {"foo": "bar"},
 				"provider_id": "0xproviderid",
 				"type": "testprotocol",
-				"options": {"foo": "bar"},
-				"status": "NotRunning",
-				"proposal": {
-                    "format": "service-proposal/v3",
-                    "compatibility": 2,
-					"provider_id": "0xproviderid",
-					"service_type": "testprotocol",
-					"location": {
-						"asn": 123,
-						"country": "Lithuania",
-						"city": "Vilnius"
-					},
-                    "quality": {
-                      "quality": 2.0,
-                      "latency": 50,
-                      "bandwidth": 10
-                    },
-					"price": {
-					  "currency": "MYST",
-					  "per_gib": 1000000000000000000,
-					  "per_gib_tokens": {
-						"ether": "1",
-						"human": "1",
-						"wei": "1000000000000000000"
-					  },
-					  "per_hour": 500000000000000000,
-					  "per_hour_tokens": {
-						"ether": "0.5",
-						"human": "0.5",
-						"wei": "500000000000000000"
-					  }
-					}
-				},
-				"connection_statistics": {"attempted":0, "successful":0}
+				"status": "NotRunning"
 			}]`,
 		},
 		{
 			http.MethodPost,
-			"/services",
+			"/services?ignore_user_config=true",
 			`{"provider_id": "node1", "type": "testprotocol"}`,
 			http.StatusCreated,
 			`{
@@ -204,7 +180,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		            "quality": {
 		              "quality": 2.0,
 		              "latency": 50,
-		              "bandwidth": 10
+		              "bandwidth": 10,
+		              "uptime": 20
 		            },
 					"price": {
 					  "currency": "MYST",
@@ -221,8 +198,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"wei": "500000000000000000"
 					  }
 					}
-				},
-				"connection_statistics": {"attempted":0, "successful":0}
+				}
 			}`,
 		},
 		{
@@ -249,7 +225,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		            "quality": {
 		              "quality": 2.0,
 		              "latency": 50,
-		              "bandwidth": 10
+		              "bandwidth": 10,
+		              "uptime": 20
 		            },
 					"price": {
 					  "currency": "MYST",
@@ -266,12 +243,11 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 						"wei": "500000000000000000"
 					  }
 					}
-				},
-				"connection_statistics": {"attempted":0, "successful":0}
+				}
 			}`,
 		},
 		{
-			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
+			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8?ignore_user_config=true", "",
 			http.StatusAccepted, "",
 		},
 		{
@@ -308,7 +284,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -333,7 +309,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -358,7 +334,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -383,7 +359,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -397,7 +373,7 @@ func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -419,6 +395,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 			},
 		},
+		nil,
 	)(g)
 	assert.NoError(t, err)
 
@@ -446,7 +423,8 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				"quality": {
 				  "quality": 2.0,
 				  "latency": 50,
-				  "bandwidth": 10
+				  "bandwidth": 10,
+				  "uptime": 20
 				},
 				"price": {
                   "currency": "MYST",
@@ -463,8 +441,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
                     "wei": "500000000000000000"
                   }
                 }
-			},
-			"connection_statistics": {"attempted":0, "successful":0}
+			}
 		}`,
 		resp.Body.String(),
 	)
@@ -474,7 +451,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -488,7 +465,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -505,7 +482,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 	req := httptest.NewRequest(
 		http.MethodPost,
-		"/services",
+		"/services?ignore_user_config=true",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
@@ -522,7 +499,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 			PricePerHour: big.NewInt(500_000_000_000_000_000),
 			PricePerGiB:  big.NewInt(1_000_000_000_000_000_000),
 		},
-	})(g)
+	}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)
@@ -549,7 +526,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				"quality": {
 				  "quality": 2.0,
 				  "latency": 50,
-				  "bandwidth": 10
+				  "bandwidth": 10,
+				  "uptime": 20
 				},
 				"price": {
                   "currency": "MYST",
@@ -584,8 +562,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 						"source": "https://some.domain/api/v1/lists/12312312332132"
 					}
 				]
-			},
-			"connection_statistics": {"attempted":0, "successful":0}
+			}
 		}`,
 		resp.Body.String(),
 	)
@@ -606,7 +583,7 @@ func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	g := summonTestGin()
-	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{})(g)
+	err := AddRoutesForService(&mockServiceManager{}, fakeOptionsParser, &mockProposalRepository{}, nil)(g)
 	assert.NoError(t, err)
 
 	g.ServeHTTP(resp, req)

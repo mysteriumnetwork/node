@@ -35,7 +35,7 @@ const (
 	infSessionID   infoKey = "sessionID"
 	infProposal    infoKey = "proposal"
 	infDuration    infoKey = "duration"
-	infTransferred infoKey = "transfered"
+	infTransferred infoKey = "transferred"
 	infThroughput  infoKey = "throughput"
 	infSpent       infoKey = "spent"
 	infIdentity    infoKey = "identity"
@@ -61,7 +61,7 @@ func (i *connInfo) printAll() {
 	i.printSingle("Session ID:", infSessionID)
 	i.printSingle("Proposal:", infProposal)
 	i.printSingle("Duration:", infDuration)
-	i.printSingle("Transfered:", infTransferred)
+	i.printSingle("Transferred:", infTransferred)
 	i.printSingle("Throughput:", infThroughput)
 	i.printSingle("Spent:", infSpent)
 }

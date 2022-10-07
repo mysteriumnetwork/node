@@ -61,7 +61,7 @@ var (
 
 	flagSortType = cli.StringFlag{
 		Name:  "sort",
-		Usage: "Proposal sorting type. One of: quality, bandwidth, latency or price",
+		Usage: "Proposal sorting type. One of: quality, bandwidth, latency, uptime or price",
 		Value: "quality",
 	}
 
@@ -293,7 +293,7 @@ func (c *command) up(ctx *cli.Context) {
 
 	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, serviceWireguard, filter, connectOptions)
 	if err != nil {
-		clio.Error("Failed to create a new connection", err)
+		clio.Error("Failed to create a new connection: ", err)
 		return
 	}
 
@@ -334,7 +334,7 @@ func (c *command) info(ctx *cli.Context) {
 		return
 	}
 
-	statistics, err := c.tequilapi.ConnectionStatistics()
+	statistics, err := c.tequilapi.ConnectionStatistics(status.SessionID)
 	if err == nil {
 		inf.set(infDuration, fmt.Sprint(time.Duration(statistics.Duration)*time.Second))
 		inf.set(infTransferred, fmt.Sprintf("%s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))

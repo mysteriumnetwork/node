@@ -257,7 +257,7 @@ var (
 
 	// FlagDefaultCurrency sets the default currency used in node
 	FlagDefaultCurrency = cli.StringFlag{
-		Name:   "default-currency",
+		Name:   metadata.FlagNames.DefaultCurrency,
 		Usage:  "Default currency used in node and apps that depend on it",
 		Value:  metadata.DefaultNetwork.DefaultCurrency,
 		Hidden: true, // Users are not meant to touch or see this.
@@ -302,6 +302,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsPilvytis(flags)
 	RegisterFlagsChains(flags)
 	RegisterFlagsUI(flags)
+	RegisterFlagsBlockchainNetwork(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -360,6 +361,8 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagPilvytis(ctx)
 	ParseFlagsChains(ctx)
 	ParseFlagsUI(ctx)
+	//it is important to have this one at the end so it overwrites defaults correctly
+	ParseFlagsBlockchainNetwork(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)

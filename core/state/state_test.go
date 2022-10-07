@@ -25,6 +25,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -42,7 +44,6 @@ import (
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 type debounceTester struct {
@@ -101,11 +102,15 @@ func (slm *serviceListerMock) interactions() int {
 	return slm.numInteractions
 }
 
-func (slm *serviceListerMock) List() map[service.ID]*service.Instance {
+func (slm *serviceListerMock) List(includeAll bool) []*service.Instance {
 	slm.lock.Lock()
 	defer slm.lock.Unlock()
 	slm.numInteractions++
-	return slm.servicesToReturn
+	list := make([]*service.Instance, 0, len(slm.servicesToReturn))
+	for _, instance := range slm.servicesToReturn {
+		list = append(list, instance)
+	}
+	return list
 }
 
 func Test_ConsumesSessionEvents(t *testing.T) {
@@ -184,7 +189,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
 	keeper.state.Services = []contract.ServiceInfoDTO{
-		{ID: myID},
+		{ID: myID, ConnectionStatistics: &contract.ServiceStatisticsDTO{}},
 	}
 	keeper.state.Sessions = []session.History{
 		expected,
@@ -318,7 +323,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.Options, actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
 	expt, _ := mpr.EnrichProposalWithPrice(expected.Proposal)
-	assert.EqualValues(t, contract.NewProposalDTO(expt), actual.Proposal)
+	assert.EqualValues(t, contract.NewProposalDTO(expt), *actual.Proposal)
 }
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
@@ -342,7 +347,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connectionstate.NotConnected, keeper.GetState().Connection.Session.State)
+	assert.Equal(t, connectionstate.NotConnected, keeper.GetConnection("1").Session.State)
 
 	// when
 	eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
@@ -352,9 +357,9 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Connection.Session.State == connectionstate.Connected
+		return keeper.GetConnection("1").Session.State == connectionstate.Connected
 	}, 2*time.Second, 10*time.Millisecond)
-	assert.Equal(t, expected, keeper.GetState().Connection.Session)
+	assert.Equal(t, expected, keeper.GetConnection("1").Session)
 }
 
 func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
@@ -374,7 +379,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
+	assert.True(t, keeper.GetConnection("").Statistics.At.IsZero())
 
 	// when
 	eventBus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
@@ -383,7 +388,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return expected == keeper.GetState().Connection.Statistics
+		return expected == keeper.GetConnection("").Statistics
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -404,7 +409,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
+	assert.True(t, keeper.GetConnection("").Statistics.At.IsZero())
 
 	// when
 	eventBus.Publish(pingpongEvent.AppTopicInvoicePaid, pingpongEvent.AppEventInvoicePaid{
@@ -413,7 +418,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return reflect.DeepEqual(expected, keeper.GetState().Connection.Invoice)
+		return reflect.DeepEqual(expected, keeper.GetConnection("").Invoice)
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -538,7 +543,6 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 }
 
 func Test_getServiceByID(t *testing.T) {
-
 	publisher := &mockPublisher{}
 	sl := &serviceListerMock{
 		servicesToReturn: map[service.ID]*service.Instance{},
@@ -588,8 +592,8 @@ func Test_incrementConnectionCount(t *testing.T) {
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
 	keeper.state.Services = []contract.ServiceInfoDTO{
-		{ID: myID},
-		{ID: "mock"},
+		{ID: myID, ConnectionStatistics: &contract.ServiceStatisticsDTO{}},
+		{ID: "mock", ConnectionStatistics: &contract.ServiceStatisticsDTO{}},
 	}
 
 	keeper.incrementConnectCount(myID, false)

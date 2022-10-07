@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,6 +75,59 @@ func TestTokens(t *testing.T) {
 			assert.Equal(t, tokens.Wei, data.expectedWei)
 			assert.Equal(t, tokens.Ether, data.expectedEther)
 			assert.Equal(t, tokens.Human, data.expectedHuman)
+		})
+	}
+}
+
+func TestTokensFromString(t *testing.T) {
+	for _, data := range []struct {
+		amount        decimal.Decimal
+		expectedWei   string
+		expectedEther string
+		expectedHuman string
+	}{
+		{
+			amount:        decimal.RequireFromString("6.123456789123456789"),
+			expectedWei:   "6123456789123456789",
+			expectedEther: "6.123456789123456789",
+			expectedHuman: "6.123456", // hence no rounding
+		},
+		{
+			amount:        decimal.Zero,
+			expectedWei:   "0",
+			expectedEther: "0",
+			expectedHuman: "0",
+		},
+		{
+			amount:        decimal.NewFromInt32(1),
+			expectedWei:   "1000000000000000000",
+			expectedEther: "1",
+			expectedHuman: "1",
+		},
+		{
+			amount:        decimal.NewFromInt32(-1),
+			expectedWei:   "-1000000000000000000",
+			expectedEther: "-1",
+			expectedHuman: "-1",
+		},
+		{
+			amount:        decimal.RequireFromString("-6.123456789123456789"),
+			expectedWei:   "-6123456789123456789",
+			expectedEther: "-6.123456789123456789",
+			expectedHuman: "-6.123456", // hence no rounding
+		},
+		{
+			amount:        decimal.Decimal{},
+			expectedWei:   "0",
+			expectedEther: "0",
+			expectedHuman: "0",
+		},
+	} {
+		t.Run(fmt.Sprintf("%+v", data), func(t *testing.T) {
+			tokens := NewTokensFromDecimal(data.amount)
+			assert.Equal(t, data.expectedWei, tokens.Wei)
+			assert.Equal(t, data.expectedEther, tokens.Ether)
+			assert.Equal(t, data.expectedHuman, tokens.Human)
 		})
 	}
 }

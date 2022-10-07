@@ -35,12 +35,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	"github.com/mysteriumnetwork/payments/crypto"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
+	"github.com/mysteriumnetwork/node/consumer/migration"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -64,6 +62,8 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -103,10 +103,9 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Mainnet                        bool
-	Localnet                       bool
+	Network                        string
 	KeepConnectedOnFail            bool
-	MysteriumAPIAddress            string
+	DiscoveryAddress               string
 	BrokerAddresses                []string
 	EtherClientRPCL1               []string
 	EtherClientRPCL2               []string
@@ -138,9 +137,9 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Mainnet:                        true,
+		Network:                        string(config.Mainnet),
 		KeepConnectedOnFail:            true,
-		MysteriumAPIAddress:            metadata.MainnetDefinition.MysteriumAPIAddress,
+		DiscoveryAddress:               metadata.MainnetDefinition.DiscoveryAddress,
 		BrokerAddresses:                metadata.MainnetDefinition.BrokerAddresses,
 		EtherClientRPCL1:               metadata.MainnetDefinition.Chain1.EtherClientRPC,
 		EtherClientRPCL2:               metadata.MainnetDefinition.Chain2.EtherClientRPC,
@@ -184,14 +183,18 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 
+	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
+	if err != nil {
+		return nil, fmt.Errorf("invalid bc network: %w", err)
+	}
+
 	network := node.OptionsNetwork{
-		Mainnet:             options.Mainnet,
-		Localnet:            options.Localnet,
-		MysteriumAPIAddress: options.MysteriumAPIAddress,
-		BrokerAddresses:     options.BrokerAddresses,
-		EtherClientRPCL1:    options.EtherClientRPCL1,
-		EtherClientRPCL2:    options.EtherClientRPCL2,
-		ChainID:             options.ActiveChainID,
+		Network:          bcNetwork,
+		DiscoveryAddress: options.DiscoveryAddress,
+		BrokerAddresses:  options.BrokerAddresses,
+		EtherClientRPCL1: options.EtherClientRPCL1,
+		EtherClientRPCL2: options.EtherClientRPCL2,
+		ChainID:          options.ActiveChainID,
 		DNSMap: map[string][]string{
 			"location.mysterium.network": {"51.158.129.204"},
 			"quality.mysterium.network":  {"51.158.129.204"},
@@ -235,7 +238,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		},
 		Discovery: node.OptionsDiscovery{
 			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI},
-			Address:      network.MysteriumAPIAddress,
+			Address:      network.DiscoveryAddress,
 			FetchEnabled: false,
 			DHT: node.OptionsDHT{
 				Address:        "0.0.0.0",
@@ -287,7 +290,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ObserverAddress: options.ObserverAddress,
 	}
 
-	err := di.Bootstrap(nodeOptions)
+	err = di.Bootstrap(nodeOptions)
 	if err != nil {
 		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
 	}
@@ -426,8 +429,8 @@ type StatisticsChangeCallback interface {
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, func(e connectionstate.AppEventConnectionStatistics) {
 		var tokensSpent float64
-		if mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal != nil {
-			tokensSpent = crypto.BigMystToFloat(mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal)
+		if mb.stateKeeper.GetConnection("").Invoice.AgreementTotal != nil {
+			tokensSpent = crypto.BigMystToFloat(mb.stateKeeper.GetConnection("").Invoice.AgreementTotal)
 		}
 
 		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), tokensSpent)

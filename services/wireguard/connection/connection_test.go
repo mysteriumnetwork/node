@@ -54,6 +54,13 @@ func TestConnectionStartStop(t *testing.T) {
 
 	// Stop connection.
 	go func() {
+		// test auto-create connection during Reconnect
+		conn.connectionEndpoint = nil
+		err = conn.Reconnect(context.Background(), connection.ConnectOptions{
+			Params:        connection.ConnectParams{DNS: "1.2.3.4"},
+			SessionConfig: sessionConfig,
+		})
+		assert.NoError(t, err)
 		conn.Stop()
 	}()
 	assert.NoError(t, err)

@@ -28,15 +28,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockStateProvider struct {
@@ -45,6 +45,10 @@ type mockStateProvider struct {
 
 func (msp *mockStateProvider) GetState() stateEvent.State {
 	return msp.stateToReturn
+}
+
+func (msp *mockStateProvider) GetConnection(id string) stateEvent.Connection {
+	return msp.stateToReturn.Connections["1"]
 }
 
 func TestHandler_Stops(t *testing.T) {
@@ -85,7 +89,7 @@ func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
 }
 
 func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
-	msp := &mockStateProvider{}
+	msp := &mockStateProvider{stateToReturn: stateEvent.State{Connections: make(map[string]stateEvent.Connection)}}
 	h := NewSSEHandler(msp)
 	go h.serve()
 	defer h.stop()
@@ -186,8 +190,11 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 }`
 	assert.JSONEq(t, expectJSON, msgJSON)
 
+	msp.stateToReturn.Connections["1"] = stateEvent.Connection{
+		Session:    connectionstate.Status{State: connectionstate.Connecting, SessionID: "1"},
+		Statistics: connectionstate.Statistics{BytesSent: 1, BytesReceived: 2},
+	}
 	changedState = msp.GetState()
-	changedState.Connection.Session.State = connectionstate.Connecting
 	changedState.Identities = []stateEvent.Identity{
 		{
 			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
@@ -224,6 +231,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 		},
 		"consumer": {
 			"connection": {
+				"session_id": "1",
 				"status": "Connecting"
 			}
 		},

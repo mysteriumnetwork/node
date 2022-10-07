@@ -19,14 +19,19 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/rs/zerolog/log"
@@ -37,6 +42,7 @@ type ServiceEndpoint struct {
 	serviceManager     ServiceManager
 	optionsParser      map[string]services.ServiceOptionsParser
 	proposalRepository proposalRepository
+	tequilaApiClient   *tequilapi_client.Client
 }
 
 var (
@@ -47,11 +53,12 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser, proposalRepository proposalRepository, tequilaApiClient *tequilapi_client.Client) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager:     serviceManager,
 		optionsParser:      optionsParser,
 		proposalRepository: proposalRepository,
+		tequilaApiClient:   tequilaApiClient,
 	}
 }
 
@@ -70,7 +77,19 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //     schema:
 //       "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
-	instances := se.serviceManager.List()
+	includeAll := false
+	includeAllStr := c.Request.URL.Query().Get("include_all")
+	if len(includeAllStr) > 0 {
+		var err error
+		includeAll, err = strconv.ParseBool(includeAllStr)
+		if err != nil {
+			c.Error(apierror.BadRequestField(fmt.Sprintf("Failed to parse request: %s", err.Error()), "include_all", contract.ErrCodeServiceList))
+			return
+		}
+	}
+
+	instances := se.serviceManager.List(includeAll)
+
 	statusResponse, err := se.toServiceListResponse(instances)
 	if err != nil {
 		c.Error(apierror.Internal("Cannot list services: "+err.Error(), contract.ErrCodeServiceList))
@@ -182,6 +201,10 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		return
 	}
 
+	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
+		se.updateActiveServicesInUserConfig()
+	}
+
 	utils.WriteAsJSON(statusResponse, c.Writer)
 }
 
@@ -214,11 +237,27 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 		return
 	}
 
+	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
+		se.updateActiveServicesInUserConfig()
+	}
+
 	c.Status(http.StatusAccepted)
 }
 
+func (se *ServiceEndpoint) updateActiveServicesInUserConfig() {
+	runningInstances := se.serviceManager.List(false)
+	activeServices := make([]string, len(runningInstances))
+	for i, service := range runningInstances {
+		activeServices[i] = service.Type
+	}
+	config := map[string]interface{}{
+		config.FlagActiveServices.Name: strings.Join(activeServices, ","),
+	}
+	se.tequilaApiClient.SetConfig(config)
+}
+
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
-	for _, instance := range se.serviceManager.List() {
+	for _, instance := range se.serviceManager.List(false) {
 		if instance.ProviderID.Address == sr.ProviderID && instance.Type == sr.Type {
 			return true
 		}
@@ -231,8 +270,9 @@ func AddRoutesForService(
 	serviceManager ServiceManager,
 	optionsParser map[string]services.ServiceOptionsParser,
 	proposalRepository proposalRepository,
+	tequilaApiClient *tequilapi_client.Client,
 ) func(*gin.Engine) error {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository)
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, proposalRepository, tequilaApiClient)
 
 	return func(e *gin.Engine) error {
 		g := e.Group("/services")
@@ -307,20 +347,26 @@ func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *servic
 		return contract.ServiceInfoDTO{}, err
 	}
 
+	var prop *contract.ProposalDTO
+	if len(id) > 0 {
+		tmp := contract.NewProposalDTO(priced)
+		prop = &tmp
+	}
+
 	return contract.ServiceInfoDTO{
 		ID:         string(id),
 		ProviderID: instance.ProviderID.Address,
 		Type:       instance.Type,
 		Options:    instance.Options,
 		Status:     string(instance.State()),
-		Proposal:   contract.NewProposalDTO(priced),
+		Proposal:   prop,
 	}, nil
 }
 
-func (se *ServiceEndpoint) toServiceListResponse(instances map[service.ID]*service.Instance) (contract.ServiceListResponse, error) {
+func (se *ServiceEndpoint) toServiceListResponse(instances []*service.Instance) (contract.ServiceListResponse, error) {
 	res := make([]contract.ServiceInfoDTO, 0)
-	for id, instance := range instances {
-		mapped, err := se.toServiceInfoResponse(id, instance)
+	for _, instance := range instances {
+		mapped, err := se.toServiceInfoResponse(instance.ID, instance)
 		if err != nil {
 			return nil, err
 		}
@@ -351,5 +397,5 @@ type ServiceManager interface {
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error
-	List() map[service.ID]*service.Instance
+	List(includeAll bool) []*service.Instance
 }

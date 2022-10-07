@@ -105,10 +105,16 @@ func (p *Pool) StopAll() error {
 }
 
 // List returns all running service instances.
-func (p *Pool) List() map[ID]*Instance {
+func (p *Pool) List() []*Instance {
 	p.Lock()
 	defer p.Unlock()
-	return p.instances
+
+	list := make([]*Instance, 0, len(p.instances))
+	for _, instance := range p.instances {
+		list = append(list, instance)
+	}
+
+	return list
 }
 
 // Instance returns service instance by the requested id.

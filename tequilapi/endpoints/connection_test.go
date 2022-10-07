@@ -27,14 +27,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -72,6 +73,10 @@ func (cm *mockConnectionManager) Status(int) connectionstate.Status {
 	return cm.onStatusReturn
 }
 
+func (cm *mockConnectionManager) Stats(int) connectionstate.Statistics {
+	return connectionstate.Statistics{}
+}
+
 func (cm *mockConnectionManager) Disconnect(int) error {
 	cm.disconnectCount++
 	return cm.onDisconnectReturn
@@ -105,9 +110,11 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	fakeManager := &mockConnectionManager{
 		onStatusReturn: state,
 	}
-	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Session = state
-	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState := &mockStateProvider{stateToReturn: event.State{Connections: make(map[string]event.Connection)}}
+	fakeState.stateToReturn.Connections["1"] = event.Connection{
+		Session:    state,
+		Statistics: connectionstate.Statistics{BytesSent: 1, BytesReceived: 2},
+	}
 
 	mockedProposalProvider := mockRepositoryWithProposal("node1", "noop")
 	err := AddRoutesForConnection(fakeManager, fakeState, mockedProposalProvider, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})(router)
@@ -235,8 +242,10 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 		SessionID: "1",
 	}
 	fakeManager := mockConnectionManager{onStatusReturn: state}
-	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Session = state
+	fakeState := &mockStateProvider{stateToReturn: event.State{Connections: make(map[string]event.Connection)}}
+	fakeState.stateToReturn.Connections["1"] = event.Connection{
+		Session: state,
+	}
 
 	proposalProvider := mockRepositoryWithProposal("required-node", "openvpn")
 	req := httptest.NewRequest(
@@ -378,10 +387,12 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
-	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
-	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: big.NewInt(10001)}
+	fakeState := &mockStateProvider{stateToReturn: event.State{Connections: make(map[string]event.Connection)}}
+	fakeState.stateToReturn.Connections["1"] = event.Connection{
+		Statistics: connectionstate.Statistics{BytesSent: 1, BytesReceived: 2},
+		Throughput: bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)},
+		Invoice:    crypto.Invoice{AgreementTotal: big.NewInt(10001)},
+	}
 
 	manager := mockConnectionManager{}
 

@@ -339,7 +339,7 @@ func (c *cliApp) setPayoutAddress(args []string) error {
 	return nil
 }
 
-const usageSetBeneficiary = "beneficiary-set <providerIdentity> <beneficiary>"
+const usageSetBeneficiary = "beneficiary-set <providerIdentity> <beneficiary> [hermesID]"
 
 func (c *cliApp) setBeneficiary(actionArgs []string) error {
 	if len(actionArgs) < 2 || len(actionArgs) > 3 {
@@ -349,12 +349,12 @@ func (c *cliApp) setBeneficiary(actionArgs []string) error {
 
 	address := actionArgs[0]
 	benef := actionArgs[1]
-	hermesID, err := c.config.GetHermesID()
-	if err != nil {
-		return err
+	hermesID := ""
+	if len(actionArgs) == 3 {
+		hermesID = actionArgs[2]
 	}
 
-	err = c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
+	err := c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
 	if err != nil {
 		return err
 	}
@@ -415,6 +415,9 @@ func (c *cliApp) getBeneficiaryStatus(actionArgs []string) error {
 		return fmt.Errorf("could not get beneficiary change status: %w", err)
 	}
 
+	if st.State == beneficiary.NotFound {
+		clio.Info("No last change request information")
+	}
 	clio.Info("Last change request information:")
 	clio.Info(fmt.Sprintf("Change to: %s", st.ChangeTo))
 	clio.Info(fmt.Sprintf("State: %s", st.State))
@@ -568,7 +571,10 @@ func (c *cliApp) exportIdentity(actionsArgs []string) (err error) {
 	}
 
 	clio.Success("Private key exported: ")
-	fmt.Println(string(blob))
+
+	quoted := strconv.Quote(string(blob))
+	fmt.Println(quoted[1 : len(quoted)-1])
+
 	return nil
 }
 
@@ -589,6 +595,7 @@ func (c *cliApp) importIdentity(actionsArgs []string) (err error) {
 		if err != nil {
 			return fmt.Errorf("can't read provided file: %s reason: %w", key, err)
 		}
+		blob = []byte(strings.ReplaceAll(string(blob), `\"`, `"`))
 	}
 
 	id, err := c.tequilapi.ImportIdentity(blob, passphrase, true)
