@@ -33,6 +33,7 @@ type oracleResolver struct {
 type oracleLocation struct {
 	ASN       int    `json:"asn"`
 	City      string `json:"city"`
+	Region    string `json:"region"`
 	Continent string `json:"continent"`
 	Country   string `json:"country"`
 	IP        string `json:"ip"`
@@ -44,6 +45,7 @@ func (l oracleLocation) ToLocation() locationstate.Location {
 	return locationstate.Location{
 		ASN:       l.ASN,
 		City:      l.City,
+		Region:    l.Region,
 		Continent: l.Continent,
 		Country:   l.Country,
 		IP:        l.IP,

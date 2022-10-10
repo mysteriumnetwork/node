@@ -25,6 +25,7 @@ type Location struct {
 
 	Continent string `json:"continent"`
 	Country   string `json:"country"`
+	Region    string `json:"region"`
 	City      string `json:"city"`
 
 	IPType string `json:"ip_type"`
