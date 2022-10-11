@@ -391,23 +391,28 @@ func (cfg *Config) ParseBlockchainNetworkFlag(ctx *cli.Context, flag cli.StringF
 			return
 		}
 		cfg.SetCLI(flag.Name, strings.ToLower(string(network)))
-		var flags map[string]any
-		switch network {
-		case Mainnet:
-			flags = metadata.MainnetDefinition.GetDefaultFlagValues()
-		case Testnet:
-			flags = metadata.TestnetDefinition.GetDefaultFlagValues()
-		case Localnet:
-			flags = metadata.LocalnetDefinition.GetDefaultFlagValues()
-		default:
-			log.Error().Str("network", string(network)).Msg("cannot handle this blockchain network option, ignoring")
-			return
-		}
-		for flagName, flagValue := range flags {
-			cfg.SetDefault(flagName, flagValue)
-		}
+		cfg.SetDefaultsByNetwork(network)
 	} else {
 		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// SetDefaultsByNetwork sets defaults in config according to the given blockchain network.
+func (cfg *Config) SetDefaultsByNetwork(network BlockchainNetwork) {
+	var flags map[string]any
+	switch network {
+	case Mainnet:
+		flags = metadata.MainnetDefinition.GetDefaultFlagValues()
+	case Testnet:
+		flags = metadata.TestnetDefinition.GetDefaultFlagValues()
+	case Localnet:
+		flags = metadata.LocalnetDefinition.GetDefaultFlagValues()
+	default:
+		log.Error().Str("network", string(network)).Msg("cannot handle this blockchain network option, ignoring")
+		return
+	}
+	for flagName, flagValue := range flags {
+		cfg.SetDefault(flagName, flagValue)
 	}
 }
 
