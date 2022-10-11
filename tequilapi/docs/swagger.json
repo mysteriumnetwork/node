@@ -3689,16 +3689,16 @@
       "type": "object",
       "properties": {
         "data_transfer": {
-          "$ref": "#/definitions/Int"
+          "$ref": "#/definitions/Tokens"
         },
         "public": {
-          "$ref": "#/definitions/Int"
+          "$ref": "#/definitions/Tokens"
         },
         "scraping": {
-          "$ref": "#/definitions/Int"
+          "$ref": "#/definitions/Tokens"
         },
         "total": {
-          "$ref": "#/definitions/Int"
+          "$ref": "#/definitions/Tokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

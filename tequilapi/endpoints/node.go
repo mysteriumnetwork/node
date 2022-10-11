@@ -503,10 +503,10 @@ func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	total, _ := strconv.ParseFloat(res.EarningsTotal, 64)
 
 	data := contract.EarningsPerServiceResponse{
-		EarningsPublic:   units.FloatEthToBigIntWei(public),
-		EarningsVPN:      units.FloatEthToBigIntWei(vpn),
-		EarningsScraping: units.FloatEthToBigIntWei(scraping),
-		EarningsTotal:    units.FloatEthToBigIntWei(total),
+		EarningsPublic:   contract.NewTokens(units.FloatEthToBigIntWei(public)),
+		EarningsVPN:      contract.NewTokens(units.FloatEthToBigIntWei(vpn)),
+		EarningsScraping: contract.NewTokens(units.FloatEthToBigIntWei(scraping)),
+		EarningsTotal:    contract.NewTokens(units.FloatEthToBigIntWei(total)),
 	}
 
 	utils.WriteAsJSON(data, c.Writer)

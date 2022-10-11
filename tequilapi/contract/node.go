@@ -18,7 +18,6 @@
 package contract
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -143,8 +142,8 @@ type LatestReleaseResponse struct {
 // EarningsPerServiceResponse contains information about earnings per service
 // swagger:model EarningsPerServiceResponse
 type EarningsPerServiceResponse struct {
-	EarningsPublic   *big.Int `json:"public"`
-	EarningsVPN      *big.Int `json:"data_transfer"`
-	EarningsScraping *big.Int `json:"scraping"`
-	EarningsTotal    *big.Int `json:"total"`
+	EarningsPublic   Tokens `json:"public"`
+	EarningsVPN      Tokens `json:"data_transfer"`
+	EarningsScraping Tokens `json:"scraping"`
+	EarningsTotal    Tokens `json:"total"`
 }
