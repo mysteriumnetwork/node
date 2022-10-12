@@ -303,6 +303,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsChains(flags)
 	RegisterFlagsUI(flags)
 	RegisterFlagsBlockchainNetwork(flags)
+	RegisterFlagsSSE(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -361,6 +362,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagPilvytis(ctx)
 	ParseFlagsChains(ctx)
 	ParseFlagsUI(ctx)
+	ParseFlagsSSE(ctx)
 	//it is important to have this one at the end so it overwrites defaults correctly
 	ParseFlagsBlockchainNetwork(ctx)
 
