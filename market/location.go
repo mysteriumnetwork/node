@@ -23,7 +23,7 @@ import "github.com/mysteriumnetwork/node/core/location/locationstate"
 type Location struct {
 	Continent string `json:"continent,omitempty"`
 	Country   string `json:"country,omitempty"`
-	Region    string `json:"region"`
+	Region    string `json:"region,omitempty"`
 	City      string `json:"city,omitempty"`
 	ASN       int    `json:"asn,omitempty"`
 	ISP       string `json:"isp,omitempty"`
