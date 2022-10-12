@@ -506,9 +506,9 @@ func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	vpnTokens := units.FloatEthToBigIntWei(vpn)
 	scrapingTokens := units.FloatEthToBigIntWei(scraping)
 
-	var totalTokens *big.Int
-
-	totalTokens.Add(new(big.Int).Add(publicTokens, vpnTokens), scrapingTokens)
+	totalTokens := new(big.Int)
+	totalTokens.Add(publicTokens, vpnTokens)
+	totalTokens.Add(totalTokens, scrapingTokens)
 
 	data := contract.EarningsPerServiceResponse{
 		EarningsPublic:   contract.NewTokens(publicTokens),
