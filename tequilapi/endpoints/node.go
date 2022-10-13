@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -500,13 +501,20 @@ func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	public, _ := strconv.ParseFloat(res.EarningsPublic, 64)
 	vpn, _ := strconv.ParseFloat(res.EarningsVPN, 64)
 	scraping, _ := strconv.ParseFloat(res.EarningsScraping, 64)
-	total, _ := strconv.ParseFloat(res.EarningsTotal, 64)
+
+	publicTokens := units.FloatEthToBigIntWei(public)
+	vpnTokens := units.FloatEthToBigIntWei(vpn)
+	scrapingTokens := units.FloatEthToBigIntWei(scraping)
+
+	totalTokens := new(big.Int)
+	totalTokens.Add(publicTokens, vpnTokens)
+	totalTokens.Add(totalTokens, scrapingTokens)
 
 	data := contract.EarningsPerServiceResponse{
-		EarningsPublic:   units.FloatEthToBigIntWei(public),
-		EarningsVPN:      units.FloatEthToBigIntWei(vpn),
-		EarningsScraping: units.FloatEthToBigIntWei(scraping),
-		EarningsTotal:    units.FloatEthToBigIntWei(total),
+		EarningsPublic:   contract.NewTokens(publicTokens),
+		EarningsVPN:      contract.NewTokens(vpnTokens),
+		EarningsScraping: contract.NewTokens(scrapingTokens),
+		EarningsTotal:    contract.NewTokens(totalTokens),
 	}
 
 	utils.WriteAsJSON(data, c.Writer)
