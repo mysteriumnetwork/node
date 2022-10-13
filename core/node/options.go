@@ -85,6 +85,7 @@ type Options struct {
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
 	ObserverAddress         string
+	SSE                     OptionsSSE
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -198,6 +199,9 @@ func GetOptions() *Options {
 		Consumer:        config.GetBool(config.FlagConsumer),
 		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
 		ObserverAddress: config.GetString(config.FlagObserverAddress),
+		SSE: OptionsSSE{
+			Enabled: config.GetBool(config.FlagSSEEnable),
+		},
 	}
 }
 

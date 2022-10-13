@@ -308,6 +308,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		Consumer:        true,
 		PilvytisAddress: options.PilvytisAddress,
 		ObserverAddress: options.ObserverAddress,
+		SSE: node.OptionsSSE{
+			Enabled: true,
+		},
 	}
 
 	err = di.Bootstrap(nodeOptions)
