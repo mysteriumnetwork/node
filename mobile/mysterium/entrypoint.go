@@ -140,30 +140,57 @@ type ConsumerPaymentConfig struct {
 
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
-	return &MobileNodeOptions{
-		Network:                        string(config.Mainnet),
-		KeepConnectedOnFail:            true,
-		DiscoveryAddress:               metadata.MainnetDefinition.DiscoveryAddress,
-		BrokerAddresses:                metadata.MainnetDefinition.BrokerAddresses,
-		EtherClientRPCL1:               metadata.MainnetDefinition.Chain1.EtherClientRPC,
-		EtherClientRPCL2:               metadata.MainnetDefinition.Chain2.EtherClientRPC,
-		FeedbackURL:                    "https://feedback.mysterium.network",
-		QualityOracleURL:               "https://quality.mysterium.network/api/v3",
-		IPDetectorURL:                  "https://location.mysterium.network/api/v1/location",
-		LocationDetectorURL:            "https://location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:      metadata.MainnetDefinition.TransactorAddress,
-		AffiliatorEndpointAddress:      metadata.MainnetDefinition.AffiliatorAddress,
-		ActiveChainID:                  metadata.MainnetDefinition.DefaultChainID,
-		Chain1ID:                       metadata.MainnetDefinition.Chain1.ChainID,
-		Chain2ID:                       metadata.MainnetDefinition.Chain2.ChainID,
-		PilvytisAddress:                metadata.MainnetDefinition.PilvytisAddress,
-		MystSCAddress:                  metadata.MainnetDefinition.Chain2.MystAddress,
-		RegistrySCAddress:              metadata.MainnetDefinition.Chain2.RegistryAddress,
-		HermesSCAddress:                metadata.MainnetDefinition.Chain2.HermesID,
-		ChannelImplementationSCAddress: metadata.MainnetDefinition.Chain2.ChannelImplAddress,
-		ObserverAddress:                metadata.MainnetDefinition.ObserverAddress,
-		CacheTTLSeconds:                5,
+	return DefaultNodeOptionsByNetwork(string(config.Mainnet))
+}
+
+// DefaultNodeOptionsByNetwork returns default options by network.
+func DefaultNodeOptionsByNetwork(network string) *MobileNodeOptions {
+	options := &MobileNodeOptions{
+		KeepConnectedOnFail: true,
+		FeedbackURL:         "https://feedback.mysterium.network",
+		QualityOracleURL:    "https://quality.mysterium.network/api/v3",
+		IPDetectorURL:       "https://location.mysterium.network/api/v1/location",
+		LocationDetectorURL: "https://location.mysterium.network/api/v1/location",
+		CacheTTLSeconds:     5,
 	}
+
+	bcNetwork, err := config.ParseBlockchainNetwork(network)
+	if err != nil {
+		bcNetwork = config.Mainnet
+	}
+
+	switch bcNetwork {
+	case config.Mainnet:
+		options.Network = string(config.Mainnet)
+		options = setDefinitionOptions(options, metadata.MainnetDefinition)
+	case config.Testnet:
+		options.Network = string(config.Testnet)
+		options = setDefinitionOptions(options, metadata.TestnetDefinition)
+	case config.Localnet:
+		options.Network = string(config.Localnet)
+		options = setDefinitionOptions(options, metadata.LocalnetDefinition)
+	}
+
+	return options
+}
+
+func setDefinitionOptions(options *MobileNodeOptions, definition metadata.NetworkDefinition) *MobileNodeOptions {
+	options.DiscoveryAddress = definition.DiscoveryAddress
+	options.BrokerAddresses = definition.BrokerAddresses
+	options.EtherClientRPCL1 = definition.Chain1.EtherClientRPC
+	options.EtherClientRPCL2 = definition.Chain2.EtherClientRPC
+	options.TransactorEndpointAddress = definition.TransactorAddress
+	options.AffiliatorEndpointAddress = definition.AffiliatorAddress
+	options.ActiveChainID = definition.DefaultChainID
+	options.Chain1ID = definition.Chain1.ChainID
+	options.Chain2ID = definition.Chain2.ChainID
+	options.PilvytisAddress = definition.PilvytisAddress
+	options.MystSCAddress = definition.Chain2.MystAddress
+	options.RegistrySCAddress = definition.Chain2.RegistryAddress
+	options.HermesSCAddress = definition.Chain2.HermesID
+	options.ChannelImplementationSCAddress = definition.Chain2.ChannelImplAddress
+	options.ObserverAddress = definition.ObserverAddress
+	return options
 }
 
 // NewNode function creates new Node.
@@ -191,6 +218,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid bc network: %w", err)
 	}
+	config.Current.SetDefaultsByNetwork(bcNetwork)
 
 	network := node.OptionsNetwork{
 		Network:          bcNetwork,
@@ -292,6 +320,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		Consumer:        true,
 		PilvytisAddress: options.PilvytisAddress,
 		ObserverAddress: options.ObserverAddress,
+		SSE: node.OptionsSSE{
+			Enabled: true,
+		},
 	}
 
 	err = di.Bootstrap(nodeOptions)
@@ -704,6 +735,7 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 
 	config.Current.SetDefault(config.FlagUserspace.Name, "true")
 	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
 	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 
 	if appPath == "" {
@@ -717,9 +749,9 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 	nodeOptions_ := node.GetOptions()
 	nodeOptions_.Discovery.FetchEnabled = false
 	nodeOptions_.Consumer = false
-	nodeOptions_.UI.UIEnabled = false
-	nodeOptions_.TequilapiEnabled = false
-	
+	// nodeOptions_.UI.UIEnabled = true
+	// nodeOptions_.TequilapiEnabled = true
+
 	err := di.Bootstrap(*nodeOptions_)
 	if err != nil {
 		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
@@ -763,13 +795,13 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
 		servicesManager:     di.ServicesManager,
-		isProvider:          false,
+		isProvider:          true,
 	}
 
 	return mobileNode, nil
 }
 
-func (mb *MobileNode) IsProverder() bool {
+func (mb *MobileNode) IsProvider() bool {
 	return mb.isProvider
 }
 
@@ -817,15 +849,19 @@ func (mb *MobileNode) StartProvider() {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	serviceType := wireguard.ServiceType
-	serviceOpts, err := services.GetStartOptions(serviceType)
-	if err != nil {
-		return
-	}
+	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+	serviceTypes := strings.Split(activeServices, ",")
 
-	id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
-	_ = id
-	if err != nil {
-		return
+	for _, serviceType := range serviceTypes {
+		serviceOpts, err := services.GetStartOptions(serviceType)
+		if err != nil {
+			return
+		}
+
+		id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
+		if err != nil {
+			return
+		}
+		_ = id
 	}
 }
