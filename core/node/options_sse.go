@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package locationstate
+package node
 
-// Location structure represents location information
-type Location struct {
-	IP  string `json:"ip"`
-	ASN int    `json:"asn"`
-	ISP string `json:"isp"`
-
-	Continent string `json:"continent"`
-	Country   string `json:"country"`
-	Region    string `json:"region"`
-	City      string `json:"city"`
-
-	IPType string `json:"ip_type"`
+// OptionsSSE represent SSE control options
+type OptionsSSE struct {
+	Enabled bool
 }

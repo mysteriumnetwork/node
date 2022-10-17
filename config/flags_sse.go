@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package locationstate
+package config
 
-// Location structure represents location information
-type Location struct {
-	IP  string `json:"ip"`
-	ASN int    `json:"asn"`
-	ISP string `json:"isp"`
+import (
+	"github.com/urfave/cli/v2"
+)
 
-	Continent string `json:"continent"`
-	Country   string `json:"country"`
-	Region    string `json:"region"`
-	City      string `json:"city"`
+var (
+	// FlagSSEEnable enable Server-Sent Events.
+	FlagSSEEnable = cli.BoolFlag{
+		Name:  "sse.enable",
+		Usage: "Enable the Server-Sent Events mode",
+		Value: true,
+	}
+)
 
-	IPType string `json:"ip_type"`
+// RegisterFlagsSSE function register SSE flags to flag list
+func RegisterFlagsSSE(flags *[]cli.Flag) {
+	*flags = append(
+		*flags,
+		&FlagSSEEnable,
+	)
+}
+
+// ParseFlagsSSE function fills in SSE options from CLI context
+func ParseFlagsSSE(ctx *cli.Context) {
+	Current.ParseBoolFlag(ctx, FlagSSEEnable)
 }
