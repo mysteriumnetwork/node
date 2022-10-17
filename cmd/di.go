@@ -31,6 +31,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
+	"github.com/mysteriumnetwork/payments/observer"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/migration"
@@ -82,9 +86,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	psort "github.com/mysteriumnetwork/payments/client/sort"
-	"github.com/mysteriumnetwork/payments/observer"
 )
 
 // UIServer represents our web server
@@ -374,7 +375,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	}
 
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
-	if options.UI.UIEnabled {
+	if options.SSE.Enabled {
 		return di.StateKeeper.Subscribe(di.EventBus)
 	}
 
@@ -496,7 +497,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
-	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
+	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.EventBus)
 	di.HermesPromiseStorage = pingpong.NewHermesPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
 	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage)
@@ -631,6 +632,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.QualityClient.ProviderEarningsSeries,
 		di.QualityClient.ProviderSessionsSeries,
 		di.QualityClient.ProviderTransferredDataSeries,
+		di.QualityClient.ProviderActivityStats,
+		di.QualityClient.ProviderQuality,
+		di.QualityClient.ProviderServiceEarnings,
 		di.IdentityManager,
 	)
 

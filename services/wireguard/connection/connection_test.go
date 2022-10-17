@@ -53,6 +53,7 @@ func TestConnectionStartStop(t *testing.T) {
 	assert.EqualValues(t, 11, stats.BytesReceived)
 
 	// Stop connection.
+	stopCh := make(chan struct{})
 	go func() {
 		// test auto-create connection during Reconnect
 		conn.connectionEndpoint = nil
@@ -62,7 +63,9 @@ func TestConnectionStartStop(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		conn.Stop()
+		stopCh <- struct{}{}
 	}()
+	<-stopCh
 	assert.NoError(t, err)
 }
 

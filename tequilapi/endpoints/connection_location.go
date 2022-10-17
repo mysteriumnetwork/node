@@ -37,6 +37,7 @@ func locationToRes(l locationstate.Location) contract.LocationDTO {
 		ISP:       l.ISP,
 		Continent: l.Continent,
 		Country:   l.Country,
+		Region:    l.Region,
 		City:      l.City,
 		IPType:    l.IPType,
 	}

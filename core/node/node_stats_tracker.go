@@ -52,6 +52,15 @@ type ProviderSessionsSeries func(id identity.Identity, rangeTime string) (Sessio
 // ProviderTransferredDataSeries should return transferred bytes data series metrics
 type ProviderTransferredDataSeries func(id identity.Identity, rangeTime string) (TransferredDataSeries, error)
 
+// ProviderServiceEarnings should return earnings by service type
+type ProviderServiceEarnings func(id identity.Identity) (EarningsPerService, error)
+
+// ProviderActivityStats should return provider activity stats
+type ProviderActivityStats func(id identity.Identity) (ActivityStats, error)
+
+// ProviderQuality should return provider quality
+type ProviderQuality func(id identity.Identity) (QualityInfo, error)
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
 	providerStatuses              ProviderStatuses
@@ -62,6 +71,9 @@ type StatsTracker struct {
 	providerEarningsSeries        ProviderEarningsSeries
 	providerSessionsSeries        ProviderSessionsSeries
 	providerTransferredDataSeries ProviderTransferredDataSeries
+	providerActivityStats         ProviderActivityStats
+	providerQuality               ProviderQuality
+	providerServiceEarnings       ProviderServiceEarnings
 	currentIdentity               currentIdentity
 }
 
@@ -75,6 +87,9 @@ func NewNodeStatsTracker(
 	providerEarningsSeries ProviderEarningsSeries,
 	providerSessionsSeries ProviderSessionsSeries,
 	providerTransferredDataSeries ProviderTransferredDataSeries,
+	providerActivityStats ProviderActivityStats,
+	providerQuality ProviderQuality,
+	providerServiceEarnings ProviderServiceEarnings,
 	currentIdentity currentIdentity,
 ) *StatsTracker {
 	mat := &StatsTracker{
@@ -86,6 +101,9 @@ func NewNodeStatsTracker(
 		providerEarningsSeries:        providerEarningsSeries,
 		providerSessionsSeries:        providerSessionsSeries,
 		providerTransferredDataSeries: providerTransferredDataSeries,
+		providerActivityStats:         providerActivityStats,
+		providerQuality:               providerQuality,
+		providerServiceEarnings:       providerServiceEarnings,
 		currentIdentity:               currentIdentity,
 	}
 
@@ -147,6 +165,25 @@ type SessionsSeries struct {
 // TransferredDataSeries represents data series metrics about transferred bytes during a time
 type TransferredDataSeries struct {
 	Data []SeriesItem `json:"data"`
+}
+
+// ActivityStats represent a  provider activity stats
+type ActivityStats struct {
+	Online float64 `json:"online_percent"`
+	Active float64 `json:"active_percent"`
+}
+
+// QualityInfo represents a provider quality info.
+type QualityInfo struct {
+	Quality float64 `json:"quality"`
+}
+
+// EarningsPerService represents information about earnings per service
+type EarningsPerService struct {
+	EarningsPublic   string `json:"public"`
+	EarningsVPN      string `json:"data_transfer"`
+	EarningsScraping string `json:"scraping"`
+	EarningsTotal    string `json:"total"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
@@ -217,4 +254,34 @@ func (m *StatsTracker) TransferredDataSeries(rangeTime string) (TransferredDataS
 	}
 
 	return TransferredDataSeries{}, errIdentityNotFound
+}
+
+// ProviderQuality retrieves and resolved provider quality
+func (m *StatsTracker) ProviderQuality() (QualityInfo, error) {
+
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerQuality(id)
+	}
+	return QualityInfo{}, errIdentityNotFound
+}
+
+// ProviderActivityStats retrieves and resolved provider activity stats
+func (m *StatsTracker) ProviderActivityStats() (ActivityStats, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerActivityStats(id)
+	}
+
+	return ActivityStats{}, errIdentityNotFound
+}
+
+// EarningsPerService retrieves and resolved earnings per service type
+func (m *StatsTracker) EarningsPerService() (EarningsPerService, error) {
+	id, ok := m.currentIdentity.GetUnlockedIdentity()
+	if ok {
+		return m.providerServiceEarnings(id)
+	}
+
+	return EarningsPerService{}, errIdentityNotFound
 }

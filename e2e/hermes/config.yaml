@@ -1,0 +1,64 @@
+---
+
+blockchain:
+  chain_1_rpc_endpoint: "http://ganache:8545"
+  chain_1_chain_id: 5
+  chain_1_hermes_sc_address: 0x599d43715DF3070f83355D9D90AE62c159E62A75
+  chain_1_channel_implementation: 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+  chain_1_registry: 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+  chain_1_myst_sc_address: 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+  chain_2_rpc_endpoint: "ws://ganache2:8545"
+  chain_2_chain_id: 80001
+  chain_2_hermes_sc_address:  0x599d43715DF3070f83355D9D90AE62c159E62A75
+  chain_2_channel_implementation: 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+  chain_2_registry: 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+  chain_2_myst_sc_address: 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+  bc_timeout: 30s
+  fallback_hermes_fee: 2000
+  min_settlement_duration: 100
+
+keystore:
+  operator: "0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3"
+  keystore_dir: "./keystore"
+  identity_passphrase: ""
+
+storage:
+  redis:
+    redis_addresses:
+      - "redis:6379"
+    redis_data_prefix: "local_hermes2"
+    redis_lock_prefix: "lock_hermes2_lock"
+    redis_lock_max_retry: 5
+    redis_lock_retry_backoff: 75ms
+    redis_pass: ""
+    redis_pool_size: 100
+    redis_pool_timeout: 5s
+    agreement_expiration_time: 1h
+
+cache:
+  bc_data_refresh_interval: 1ns
+  beneficiary_cache_duration: 1ns
+  max_time_without_bc_sync: 1ns
+
+transactor:
+  base_uri: "http://transactor:8888/api/v1/"
+  timeout: 5s
+
+pilvytis:
+  base_uri: "http://pilvytis-mock:8080"
+  timeout: 5s
+
+common:
+  bind_addr: ":8889"
+  log_level: "debug"
+
+permissions:
+  enable_pay_and_settle: true
+  request_promise_disabled: false
+  provider_max_myst_bought_amount: 1000
+  provider_withdrawal_cooldown: 1s
+  provider_lock_timeout: 1s
+  approx_myst_price_usd: 1
+  fallback_eth_settle_threshold_usd: 1
+  fallback_matic_settle_threshold_usd: 1
+  max_promise_value_for_offchain: 0.5

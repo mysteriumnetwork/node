@@ -108,7 +108,20 @@ type ProviderTransferredDataSeriesResponse struct {
 	Data []ProviderSeriesItem `json:"data"`
 }
 
-// ProviderSession contains provided session ifnromation
+// ActivityStatsResponse reflects a node activity stats.
+// swagger:model ActivityStatsResponse
+type ActivityStatsResponse struct {
+	Online float64 `json:"online_percent"`
+	Active float64 `json:"active_percent"`
+}
+
+// QualityInfoResponse reflects a node quality.
+// swagger:model QualityInfoResponse
+type QualityInfoResponse struct {
+	Quality float64 `json:"quality"`
+}
+
+// ProviderSession contains provided session information.
 // swagger:model ProviderSession
 type ProviderSession struct {
 	ID               string `json:"id"`
@@ -124,4 +137,13 @@ type ProviderSession struct {
 // swagger:model LatestReleaseResponse
 type LatestReleaseResponse struct {
 	Version string `json:"version"`
+}
+
+// EarningsPerServiceResponse contains information about earnings per service
+// swagger:model EarningsPerServiceResponse
+type EarningsPerServiceResponse struct {
+	EarningsPublic   Tokens `json:"public"`
+	EarningsVPN      Tokens `json:"data_transfer"`
+	EarningsScraping Tokens `json:"scraping"`
+	EarningsTotal    Tokens `json:"total"`
 }

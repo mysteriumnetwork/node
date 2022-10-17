@@ -20,6 +20,9 @@ package cmd
 import (
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -40,8 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -58,14 +59,15 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
-	di.bootstrapServiceWireguard(nodeOptions)
-	di.bootstrapServiceScraping(nodeOptions)
-	di.bootstrapServiceDataTransfer(nodeOptions)
+	resourcesAllocator := resources.NewAllocator(di.PortPool, wireguard_service.GetOptions().Subnet)
+	di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator)
+	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator)
+	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator)
 
 	return nil
 }
 
-func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options, resourcesAllocator *resources.Allocator) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
@@ -74,23 +76,20 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				return nil, err
 			}
 
-			wgOptions := serviceOptions.(wireguard_service.Options)
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
 				di.EventBus,
-				wgOptions,
-				di.PortPool,
 				di.ServiceFirewall,
+				resourcesAllocator,
 			)
 			return svc, nil
 		},
 	)
 }
 
-func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options, resourcesAllocator *resources.Allocator) {
 	di.ServiceRegistry.Register(
 		scraping.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
@@ -99,23 +98,20 @@ func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options) {
 				return nil, err
 			}
 
-			wgOptions := serviceOptions.(wireguard_service.Options)
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
 				di.EventBus,
-				wgOptions,
-				di.PortPool,
 				di.ServiceFirewall,
+				resourcesAllocator,
 			)
 			return svc, nil
 		},
 	)
 }
 
-func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options, resourcesAllocator *resources.Allocator) {
 	di.ServiceRegistry.Register(
 		datatransfer.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
@@ -124,16 +120,13 @@ func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options) {
 				return nil, err
 			}
 
-			wgOptions := serviceOptions.(wireguard_service.Options)
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
 				di.EventBus,
-				wgOptions,
-				di.PortPool,
 				di.ServiceFirewall,
+				resourcesAllocator,
 			)
 			return svc, nil
 		},
@@ -296,16 +289,18 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
-	di.registerWireguardConnection(nodeOptions)
-	di.registerScrapingConnection(nodeOptions)
-	di.registerDataTransferConnection(nodeOptions)
+
+	resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+
+	di.registerWireguardConnection(nodeOptions, resourceAllocator)
+	di.registerScrapingConnection(nodeOptions, resourceAllocator)
+	di.registerDataTransferConnection(nodeOptions, resourceAllocator)
 }
 
-func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	wireguard.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -318,11 +313,10 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }
 
-func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	scraping.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
@@ -335,11 +329,10 @@ func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(scraping.ServiceType, connFactory)
 }
 
-func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options) {
+func (di *Dependencies) registerDataTransferConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator) {
 	datatransfer.Bootstrap()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
-		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {

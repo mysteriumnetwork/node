@@ -1,0 +1,87 @@
+##############
+# Gas config #
+##############
+gas:
+  chain_options:
+    5:
+      multiplier: 1.5
+      price_limit_gwei: 40
+      increase_interval: 3m
+    80001:
+      multiplier: 2
+      price_limit_gwei: 45
+      increase_interval: 3m
+
+###########
+# Storage #
+###########
+storage:
+  redis:
+    addresses: 
+      - "redis:6379" # Redis address
+    prefix: "transactor"
+    pool_size: 100
+    pool_timeout: 5s
+  db:
+    psql_dsn: "postgres://transactor:transactor@transactordatabase:5432/transactor?sslmode=disable" # PostgreSQL DSN
+    max_idle_conns: 3
+    max_open_conns: 4
+    default_timeout: 15s
+
+###########
+# Runtime #
+###########
+runtime:
+  keystore_dir: "/keystore"
+  our_identity: "0x3d2cdbab09d2c8d613556769f37b47c82a5e13bf" # The transactors identity address
+  identity_passphrase: "" # Identity passphrase
+  hermeses_with_enabled_withdrawals: # Hermeses which allow withdrawals and therefore can earn in their channel
+    - "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
+  hermeses_cache_duration: 24h # Amount of time for the hermes addresses are cache
+  max_requests_per_minute: 20 # The number of maximum write requests per hour per ip allowed before returning 429
+  log_level: "debug"
+
+##############
+# Blockchain #
+##############
+blockchain:
+  default_chain_id: 80001 # The chain id to use by default
+  chains:
+    5:
+      rpc: "http://ganache:8545" # Rpc endpoints for the chain
+      fallback_hermeses: # Fallback list of hermes addresses
+        - "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
+        - "0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
+      registry_addresses: # A list of registry smart contract addresses
+        - "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"
+      myst_sc_address: "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+      transaction_processing_interval: 10ms
+    80001:
+      rpc: "ws://ganache2:8545"
+      fallback_hermeses:
+        - "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
+        - "0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
+      registry_addresses:
+        - "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"
+      myst_sc_address: "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+      transaction_processing_interval: 10ms
+
+############
+# Registry #
+############
+registry:
+  balance_check_interval: 1s # How often we check the balance for those who want to register
+  top_up_requeue_interval: 1m # How soon we retry a failed top up
+  cache_expiration: 1h # How often we let the user top up an identity
+  top_up_amount: 7000000000000000000 # The amount of myst the top up endpoint will transfer to the recipient
+  stake_amount: 62000000000000000000 # The amount of myst that will be transferred to the recipient during provider registration
+  registration_timeout: 1h # Determines how long we wait for balance before timing out the registration
+  registration_check_interval: 100ms # How often to check if registration transaction was mined
+  registration_gas_limit: 450000 # Specifies the gas limit set for registration transactions
+  free_registration: true # If given, registration is paid by transactor itself
+
+###############
+# Settlements #
+###############
+settlements:
+  throttle: 1ms # Specifies how often a settlement can be tried
