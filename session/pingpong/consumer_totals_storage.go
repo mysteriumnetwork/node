@@ -107,6 +107,42 @@ func (cts *ConsumerTotalsStorage) Get(chainID int64, id identity.Identity, herme
 	return res, nil
 }
 
+// Add adds the given amount as promised for the given channel.
+func (cts *ConsumerTotalsStorage) Add(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
+	key := cts.makeKey(chainID, id, hermesID)
+	_, ok := cts.data[key]
+	if !ok {
+		cts.createLock.Lock()
+		_, ok := cts.data[key]
+		if !ok {
+			cts.data[key] = &ConsumerTotalElement{
+				amount: nil,
+			}
+		}
+		cts.createLock.Unlock()
+	}
+	element, ok := cts.data[key]
+	if !ok {
+		return fmt.Errorf("key was not created properly")
+	}
+	element.lock.Lock()
+	defer element.lock.Unlock()
+	oldAmount := element.amount
+	if oldAmount == nil {
+		oldAmount = big.NewInt(0)
+	}
+	newAmount := new(big.Int).Add(oldAmount, amount)
+	element.amount = newAmount
+
+	go cts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+		ChainID:    chainID,
+		Current:    newAmount,
+		HermesID:   hermesID,
+		ConsumerID: id,
+	})
+	return nil
+}
+
 func (cts *ConsumerTotalsStorage) makeKey(chainID int64, id identity.Identity, hermesID common.Address) string {
 	return fmt.Sprintf("%d%s%s", chainID, id.Address, hermesID.Hex())
 }

@@ -73,7 +73,25 @@ func TestConsumerTotalStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
+	addAmount := big.NewInt(10)
+	err = consumerTotalsStorage.Add(1, channelAddress, hermesAddress, addAmount)
+	assert.NoError(t, err)
+
+	a, err = consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
+	assert.NoError(t, err)
+	assert.EqualValues(t, new(big.Int).Add(newAmount, addAmount), a)
+
 	a, err = consumerTotalsStorage.Get(1, someOtherChannel, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, amount, a)
+
+	someUnusedChannel := identity.FromAddress("someUnusedChannel")
+
+	addAmount = big.NewInt(15)
+	err = consumerTotalsStorage.Add(1, someUnusedChannel, hermesAddress, addAmount)
+	assert.NoError(t, err)
+
+	a, err = consumerTotalsStorage.Get(1, someUnusedChannel, hermesAddress)
+	assert.NoError(t, err)
+	assert.EqualValues(t, addAmount, a)
 }
