@@ -39,6 +39,6 @@ func RegisterFlagsSSE(flags *[]cli.Flag) {
 }
 
 // ParseFlagsSSE function fills in SSE options from CLI context
-func ParseFlagsSSE(ctx *cli.Context) {
+func ParseFlagsSSE(ctx CliContext) {
 	Current.ParseBoolFlag(ctx, FlagSSEEnable)
 }
