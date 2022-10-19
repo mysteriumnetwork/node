@@ -504,7 +504,7 @@ func (c *cliApp) proposals(args []string) (err error) {
 			}
 		}
 
-		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","))
+		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v\tprovider type: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","), proposal.Location.IPType)
 
 		if filter == "" ||
 			strings.Contains(proposal.ProviderID, filter) ||
