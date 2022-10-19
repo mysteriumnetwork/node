@@ -296,7 +296,11 @@ func (hcr *HermesChannelRepository) handleIdentityUnlock(payload identity.AppEve
 	}
 
 	if data.LatestPromise.Amount != nil && data.LatestPromise.Amount.Cmp(big.NewInt(0)) != 0 {
-		R := crypto.GenerateR()
+		R, err := crypto.GenerateR()
+		if err != nil {
+			log.Err(err).Msg("failed to generate R")
+			return
+		}
 		hashlock := ethcrypto.Keccak256(R)
 		details := rRecoveryDetails{
 			R:           hex.EncodeToString(R),

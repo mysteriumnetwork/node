@@ -19,7 +19,7 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -237,6 +237,20 @@ func (client *Client) RegisterIdentity(address, beneficiary string, token *strin
 	}
 
 	return nil
+}
+
+// GetRegistrationPaymentStatus returns the registration payment status
+func (client *Client) GetRegistrationPaymentStatus(identity string) (contract.RegistrationPaymentResponse, error) {
+	resp := contract.RegistrationPaymentResponse{}
+
+	res, err := client.http.Get(fmt.Sprintf("v2/identities/%s/registration-payment", identity), nil)
+	if err != nil {
+		return resp, err
+	}
+	defer res.Body.Close()
+
+	err = parseResponseJSON(res, &resp)
+	return resp, err
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
@@ -796,7 +810,7 @@ func (client *Client) MigrateHermes(address string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -910,7 +924,7 @@ func (client *Client) OrderInvoice(address identity.Identity, orderID string) ([
 	}
 	defer resp.Body.Close()
 
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 // PaymentOrderGateways returns all possible gateways and their data.
