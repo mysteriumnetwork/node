@@ -501,10 +501,17 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
-	r := crypto.GenerateR()
-	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r, it.chainID())
+	r, err := crypto.GenerateR()
+	if err != nil {
+		return fmt.Errorf("failed to generate R: %w", err)
+	}
+	invoice, err := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r, it.chainID())
+	if err != nil {
+		return fmt.Errorf("failed to create invoice: %w", err)
+	}
+
 	invoice.Provider = it.deps.ProviderID.Address
-	err := it.deps.PeerInvoiceSender.Send(invoice)
+	err = it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
 		return err
 	}

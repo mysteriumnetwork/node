@@ -43,6 +43,7 @@ import (
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/observer"
+	"github.com/mysteriumnetwork/payments/units"
 	"github.com/rs/zerolog/log"
 )
 
@@ -662,7 +663,7 @@ func (aps *hermesPromiseSettler) Withdraw(
 		amountToWithdraw = data.Balance
 
 		// TODO: Pull this from hermes contract in the future.
-		maxWithdraw := crypto.FloatToBigMyst(500)
+		maxWithdraw := units.FloatEthToBigIntWei(500)
 		if amountToWithdraw.Cmp(maxWithdraw) > 0 {
 			amountToWithdraw = maxWithdraw
 		}
@@ -934,9 +935,15 @@ func (aps *hermesPromiseSettler) settlePayAndSettleWithRetry(
 }
 
 func (aps *hermesPromiseSettler) issueSelfPromise(fromChain, toChain int64, amount, previousPromiseAmount *big.Int, providerID identity.Identity, consumerChannelAddress, hermesAddress common.Address) (*crypto.ExchangeMessage, error) {
-	r := crypto.GenerateR()
+	r, err := crypto.GenerateR()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate R: %w", err)
+	}
 	agreementID := aps.generateAgreementID()
-	invoice := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, toChain)
+	invoice, err := crypto.CreateInvoice(agreementID, amount, big.NewInt(0), r, toChain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create invoice: %w", err)
+	}
 	invoice.Provider = providerID.ToCommonAddress().Hex()
 
 	promise, err := crypto.CreatePromise(consumerChannelAddress.Hex(), fromChain, big.NewInt(0).Add(amount, previousPromiseAmount), big.NewInt(0), invoice.Hashlock, aps.ks, providerID.ToCommonAddress())
@@ -1205,11 +1212,9 @@ func (aps *hermesPromiseSettler) generateSettlementErrorMsg(chainID int64, hash 
 
 func (aps *hermesPromiseSettler) toBytes32(hexValue string) [32]byte {
 	var arr [32]byte
-	copy(arr[:], crypto.HexToBytes(hexValue)[:32])
+	copy(arr[:], common.Hex2Bytes(strings.TrimPrefix(hexValue, "0x"))[:32])
 	return arr
 }
-
-var errNoSettlementFound = errors.New("no settlement found")
 
 func (aps *hermesPromiseSettler) findSettlementInBCLogs(chainID int64, hermesID common.Address, providerAddress, r [32]byte) ([]bindings.HermesImplementationPromiseSettled, error) {
 	latest, err := aps.bc.HeaderByNumber(chainID, nil)
@@ -1342,10 +1347,10 @@ func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThresh
 	if channel.Channel.Stake.Cmp(big.NewInt(0)) == 0 {
 		// no stake mode
 		unsettledAmount := channel.UnsettledBalance()
-		if unsettledAmount.Cmp(crypto.FloatToBigMyst(maxUnSettledAmount)) > 0 {
+		if unsettledAmount.Cmp(units.FloatEthToBigIntWei(maxUnSettledAmount)) > 0 {
 			return true, nil
 		}
-		if unsettledAmount.Cmp(crypto.FloatToBigMyst(minSettleAmount)) >= 0 {
+		if unsettledAmount.Cmp(units.FloatEthToBigIntWei(minSettleAmount)) >= 0 {
 			settleFees, err := aps.transactor.FetchSettleFees(chainID)
 			if err != nil {
 				log.Err(err).Msgf("will not use settlement fees to check if settling is needed")
