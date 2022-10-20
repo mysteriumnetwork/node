@@ -31,10 +31,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	psort "github.com/mysteriumnetwork/payments/client/sort"
-	"github.com/mysteriumnetwork/payments/observer"
-
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/migration"
@@ -86,6 +82,9 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
+	"github.com/mysteriumnetwork/payments/observer"
 )
 
 // UIServer represents our web server
@@ -585,7 +584,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.IPResolver,
 			di.LocationResolver,
 			connection.DefaultConfig(),
-			connection.DefaultStatsReportInterval,
+			config.GetDuration(config.FlagStatsReportInterval),
 			connection.NewValidator(
 				di.ConsumerBalanceTracker,
 				di.IdentityManager,
