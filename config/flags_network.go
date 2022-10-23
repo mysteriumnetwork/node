@@ -20,6 +20,7 @@ package config
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -138,6 +139,14 @@ var (
 		Value:  "echo.mysterium.network:4589",
 		Hidden: true,
 	}
+
+	// FlagStatsReportInterval is interval for consumer connection statistics reporting.
+	FlagStatsReportInterval = cli.DurationFlag{
+		Name:   "stats-report-interval",
+		Usage:  "Duration between syncing stats from the network interface with a node",
+		Value:  1 * time.Second,
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -161,6 +170,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagUDPListenPorts,
 		&FlagTraversal,
 		&FlagPortCheckServers,
+		&FlagStatsReportInterval,
 	)
 }
 
@@ -183,21 +193,22 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagUDPListenPorts)
 	Current.ParseStringFlag(ctx, FlagTraversal)
 	Current.ParseStringFlag(ctx, FlagPortCheckServers)
+	Current.ParseDurationFlag(ctx, FlagStatsReportInterval)
 }
 
-//BlockchainNetwork defines a blockchain network
+// BlockchainNetwork defines a blockchain network
 type BlockchainNetwork string
 
 var (
-	//Mainnet defines the mainnet blockchain network
+	// Mainnet defines the mainnet blockchain network
 	Mainnet BlockchainNetwork = "mainnet"
-	//Testnet defines the testnet blockchain network
+	// Testnet defines the testnet blockchain network
 	Testnet BlockchainNetwork = "testnet"
-	//Localnet defines the localnet blockchain network
+	// Localnet defines the localnet blockchain network
 	Localnet BlockchainNetwork = "localnet"
 )
 
-//ParseBlockchainNetwork parses a string argument into blockchain network
+// ParseBlockchainNetwork parses a string argument into blockchain network
 func ParseBlockchainNetwork(network string) (BlockchainNetwork, error) {
 	if isValidBlockchainNetwork(network) {
 		return BlockchainNetwork(strings.ToLower(network)), nil
@@ -210,17 +221,17 @@ func isValidBlockchainNetwork(network string) bool {
 	return parsedNetwork.IsMainnet() || parsedNetwork.IsTestnet() || parsedNetwork.IsLocalnet()
 }
 
-//IsMainnet returns whether the blockchain network is mainnet or not
+// IsMainnet returns whether the blockchain network is mainnet or not
 func (n BlockchainNetwork) IsMainnet() bool {
 	return n == Mainnet
 }
 
-//IsTestnet returns whether the blockchain network is testnet or not
+// IsTestnet returns whether the blockchain network is testnet or not
 func (n BlockchainNetwork) IsTestnet() bool {
 	return n == Testnet
 }
 
-//IsLocalnet returns whether the blockchain network is localnet or not
+// IsLocalnet returns whether the blockchain network is localnet or not
 func (n BlockchainNetwork) IsLocalnet() bool {
 	return n == Localnet
 }
