@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/terms/terms-go"
-
 	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
@@ -48,6 +46,7 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/terms/terms-go"
 )
 
 // CommandName is the name which is used to call this command
