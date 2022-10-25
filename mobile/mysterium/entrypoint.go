@@ -59,6 +59,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/mysteriumnetwork/payments/units"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -201,6 +202,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
+	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
@@ -452,8 +454,9 @@ type StatisticsChangeCallback interface {
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, func(e connectionstate.AppEventConnectionStatistics) {
 		var tokensSpent float64
-		if mb.stateKeeper.GetConnection("").Invoice.AgreementTotal != nil {
-			tokensSpent = crypto.BigMystToFloat(mb.stateKeeper.GetConnection("").Invoice.AgreementTotal)
+		agreementTotal := mb.stateKeeper.GetConnection("").Invoice.AgreementTotal
+		if agreementTotal != nil {
+			tokensSpent = units.BigIntWeiToFloatEth(agreementTotal)
 		}
 
 		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), tokensSpent)
