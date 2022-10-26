@@ -142,8 +142,11 @@ type LatestReleaseResponse struct {
 // EarningsPerServiceResponse contains information about earnings per service
 // swagger:model EarningsPerServiceResponse
 type EarningsPerServiceResponse struct {
-	EarningsPublic   Tokens `json:"public"`
-	EarningsVPN      Tokens `json:"data_transfer"`
-	EarningsScraping Tokens `json:"scraping"`
-	EarningsTotal    Tokens `json:"total"`
+	EarningsPublic        Tokens `json:"public"`
+	EarningsVPN           Tokens `json:"data_transfer"`
+	EarningsScraping      Tokens `json:"scraping"`
+	EarningsTotal         Tokens `json:"total"`
+	TotalEarningsPublic   Tokens `json:"total_public"`
+	TotalEarningsVPN      Tokens `json:"total_data_transfer"`
+	TotalEarningsScraping Tokens `json:"total_scraping"`
 }
