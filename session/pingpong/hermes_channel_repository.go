@@ -389,14 +389,11 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 		return HermesChannel{}, fmt.Errorf("could not get provider channel for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
-	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
-
 	benef, err := hcr.bprovider.GetBeneficiary(id.ToCommonAddress())
 	if err != nil {
 		return HermesChannel{}, fmt.Errorf("could not get provider beneficiary for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
-
-	hermesChannel.Beneficiary = benef
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise, benef)
 
 	hcr.updateChannel(chainID, hermesChannel)
 
@@ -411,7 +408,7 @@ func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64
 		return err
 	}
 
-	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise)
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise, gotten.Beneficiary)
 	hcr.updateChannel(chainID, hermesChannel)
 	return nil
 }
