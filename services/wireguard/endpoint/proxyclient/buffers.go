@@ -21,10 +21,12 @@ import (
 	"sync"
 )
 
+// BufferPool represent a buffer sync pool
 type BufferPool struct {
 	sp sync.Pool
 }
 
+// NewBufferPool create a new buffer pool of slice with some length and capacity
 func NewBufferPool(size int) (pool *BufferPool) {
 	return &BufferPool{
 		sp: sync.Pool{
@@ -35,10 +37,12 @@ func NewBufferPool(size int) (pool *BufferPool) {
 	}
 }
 
+// Get return some buffer from pool or create new one
 func (pool *BufferPool) Get() (buffer []byte) {
 	return pool.sp.Get().([]byte)
 }
 
+// Put get some buffer and place back it to pool
 func (pool *BufferPool) Put(buffer []byte) {
 	// not necessary to clean buffer
 	pool.sp.Put(buffer)
