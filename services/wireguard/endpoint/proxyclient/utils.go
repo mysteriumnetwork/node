@@ -30,6 +30,8 @@ import (
 
 const copyBufferSize = 128 * 1024
 
+var bufferPool = NewBufferPool(copyBufferSize)
+
 func proxyHTTP1(ctx context.Context, left, right net.Conn) {
 	wg := sync.WaitGroup{}
 
@@ -163,7 +165,9 @@ func flush(flusher interface{}) bool {
 }
 
 func copyBody(wr io.Writer, body io.Reader) {
-	buf := make([]byte, copyBufferSize)
+	buf := bufferPool.Get()
+	defer bufferPool.Put(buf)
+
 	for {
 		bread, readErr := body.Read(buf)
 		var writeErr error
@@ -178,7 +182,8 @@ func copyBody(wr io.Writer, body io.Reader) {
 }
 
 func copyBuffer(dst io.Writer, src io.Reader, extend func()) (written int64, err error) {
-	buf := make([]byte, copyBufferSize)
+	buf := bufferPool.Get()
+	defer bufferPool.Put(buf)
 
 	for {
 		extend()
