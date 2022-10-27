@@ -3699,6 +3699,15 @@
         },
         "total": {
           "$ref": "#/definitions/Tokens"
+        },
+        "total_data_transfer": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "total_public": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "total_scraping": {
+          "$ref": "#/definitions/Tokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

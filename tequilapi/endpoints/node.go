@@ -502,19 +502,30 @@ func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	vpn, _ := strconv.ParseFloat(res.EarningsVPN, 64)
 	scraping, _ := strconv.ParseFloat(res.EarningsScraping, 64)
 
+	totalPublic, _ := strconv.ParseFloat(res.TotalEarningsPublic, 64)
+	totalVPN, _ := strconv.ParseFloat(res.TotalEarningsVPN, 64)
+	totalScraping, _ := strconv.ParseFloat(res.TotalEarningsScraping, 64)
+
 	publicTokens := units.FloatEthToBigIntWei(public)
 	vpnTokens := units.FloatEthToBigIntWei(vpn)
 	scrapingTokens := units.FloatEthToBigIntWei(scraping)
+
+	totalPublicTokens := units.FloatEthToBigIntWei(totalPublic)
+	totalVPNTokens := units.FloatEthToBigIntWei(totalVPN)
+	totalScrapingTokens := units.FloatEthToBigIntWei(totalScraping)
 
 	totalTokens := new(big.Int)
 	totalTokens.Add(publicTokens, vpnTokens)
 	totalTokens.Add(totalTokens, scrapingTokens)
 
 	data := contract.EarningsPerServiceResponse{
-		EarningsPublic:   contract.NewTokens(publicTokens),
-		EarningsVPN:      contract.NewTokens(vpnTokens),
-		EarningsScraping: contract.NewTokens(scrapingTokens),
-		EarningsTotal:    contract.NewTokens(totalTokens),
+		EarningsPublic:        contract.NewTokens(publicTokens),
+		EarningsVPN:           contract.NewTokens(vpnTokens),
+		EarningsScraping:      contract.NewTokens(scrapingTokens),
+		EarningsTotal:         contract.NewTokens(totalTokens),
+		TotalEarningsPublic:   contract.NewTokens(totalPublicTokens),
+		TotalEarningsVPN:      contract.NewTokens(totalVPNTokens),
+		TotalEarningsScraping: contract.NewTokens(totalScrapingTokens),
 	}
 
 	utils.WriteAsJSON(data, c.Writer)
