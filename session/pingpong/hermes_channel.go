@@ -26,13 +26,14 @@ import (
 )
 
 // NewHermesChannel creates HermesChannel model.
-func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise HermesPromise) HermesChannel {
+func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise HermesPromise, beneficiary common.Address) HermesChannel {
 	return HermesChannel{
 		ChannelID:   channelID,
 		Identity:    id,
 		HermesID:    hermesID,
 		Channel:     channel,
 		lastPromise: promise,
+		Beneficiary: beneficiary,
 	}
 }
 
