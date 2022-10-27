@@ -30,7 +30,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/metrics"
-
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
@@ -539,9 +538,10 @@ func (m *MysteriumMORQA) ProviderQuality(id identity.Identity) (node.QualityInfo
 
 // SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
-	m.metrics <- metric{
-		owner: id,
-		event: event,
+	select {
+	case m.metrics <- metric{owner: id, event: event}:
+	case <-time.After(10 * time.Second):
+		log.Warn().Msgf("Timeout waiting for metric store, skipping it %v:%v", id, event)
 	}
 
 	return nil
