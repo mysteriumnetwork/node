@@ -130,7 +130,6 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	// given
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
 	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
-	beneficiary := common.HexToAddress("0x144")
 	expectedPromise1 := HermesPromise{
 		ChannelID: "1",
 		Promise:   crypto.Promise{Amount: big.NewInt(7000000)},
@@ -152,7 +151,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	publisher := mocks.NewEventBus()
 	mockBeneficiaryProvider := &mockBeneficiaryProvider{
-		b: beneficiary,
+		b: beneficiaryID,
 	}
 	mockHermesCaller := &mockHermesCaller{}
 	addrProv := &mockAddressProvider{}
