@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/ks"
 	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
@@ -42,6 +43,8 @@ type WgClient interface {
 }
 
 func newWGClient() (WgClient, error) {
+	return ks.NewWireguardClient()
+
 	if config.GetBool(config.FlagProxyMode) {
 		return proxyclient.New()
 	}

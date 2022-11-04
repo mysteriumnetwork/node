@@ -53,9 +53,9 @@ type connectionEndpoint struct {
 
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.
 func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
-	if err := ce.cleanAbandonedInterfaces(); err != nil {
-		return err
-	}
+	// if err := ce.cleanAbandonedInterfaces(); err != nil {
+	// 	return err
+	// }
 
 	var iface string
 	var err error
