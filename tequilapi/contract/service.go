@@ -32,7 +32,7 @@ type ServiceStartRequest struct {
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
-	AccessPolicies ServiceAccessPolicies `json:"access_policies"`
+	AccessPolicies *ServiceAccessPolicies `json:"access_policies,omitempty"`
 
 	// service options. Every service has a unique list of allowed options.
 	// required: false

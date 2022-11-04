@@ -304,12 +304,12 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		ProviderID: jsonData.ProviderID,
 		Type:       se.toServiceType(jsonData.Type),
 		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
-		AccessPolicies: contract.ServiceAccessPolicies{
+		AccessPolicies: &contract.ServiceAccessPolicies{
 			IDs: serviceOpts.AccessPolicyList,
 		},
 	}
 	if jsonData.AccessPolicies != nil {
-		sr.AccessPolicies = *jsonData.AccessPolicies
+		sr.AccessPolicies = jsonData.AccessPolicies
 	}
 	return sr, nil
 }
