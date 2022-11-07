@@ -71,7 +71,7 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) (e
 	service, err := c.tequilapi.ServiceStart(contract.ServiceStartRequest{
 		ProviderID:     providerID,
 		Type:           serviceType,
-		AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+		AccessPolicies: &contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 		Options:        serviceOpts.TypeOptions,
 	})
 	if err != nil {

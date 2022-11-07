@@ -280,7 +280,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		req := contract.ServiceStartRequest{
 			ProviderID:     providerID,
 			Type:           "noop",
-			AccessPolicies: contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
+			AccessPolicies: &contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
 		}
 
 		_, err := tequilapiProvider.ServiceStart(req)

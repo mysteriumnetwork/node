@@ -141,7 +141,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		startRequest := contract.ServiceStartRequest{
 			ProviderID:     providerID,
 			Type:           serviceType,
-			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+			AccessPolicies: &contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 			Options:        serviceOpts,
 		}
 
