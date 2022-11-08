@@ -76,6 +76,7 @@ import (
 	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
@@ -149,6 +150,8 @@ type Dependencies struct {
 	ServiceRegistry *service.Registry
 	ServiceSessions *service.SessionPool
 	ServiceFirewall firewall.IncomingTrafficFirewall
+
+	WireguardClientFactory *endpoint.WgClientFactory
 
 	PortPool   *port.Pool
 	PortMapper mapping.PortMapper
@@ -830,6 +833,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	if err := di.AllowURLAccess(allow...); err != nil {
 		return err
 	}
+
+	di.WireguardClientFactory = endpoint.NewWGClientFactory()
+
 	return di.IdentityRegistry.Subscribe(di.EventBus)
 }
 
