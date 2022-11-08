@@ -50,6 +50,7 @@ func NewManager(
 	eventBus eventbus.EventBus,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 	resourcesAllocator *resources.Allocator,
+	wgClientFactory *endpoint.WgClientFactory,
 ) *Manager {
 	return &Manager{
 		done:               make(chan struct{}),
@@ -60,7 +61,7 @@ func NewManager(
 		trafficFirewall:    trafficFirewall,
 
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(resourcesAllocator)
+			return endpoint.NewConnectionEndpoint(resourcesAllocator, wgClientFactory)
 		},
 		country:        country,
 		sessionCleanup: map[string]func(){},

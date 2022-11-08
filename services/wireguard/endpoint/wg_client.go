@@ -19,6 +19,7 @@ package endpoint
 
 import (
 	"runtime"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 
@@ -41,7 +42,16 @@ type WgClient interface {
 	Close() error
 }
 
-func newWGClient() (WgClient, error) {
+type WgClientFactory struct {
+	once                         sync.Once
+	isKernelSpaceSupportedResult bool
+}
+
+func NewWGClientFactory() *WgClientFactory {
+	return &WgClientFactory{}
+}
+
+func (wcf *WgClientFactory) NewWGClient() (WgClient, error) {
 	if config.GetBool(config.FlagProxyMode) {
 		return proxyclient.New()
 	}
@@ -54,7 +64,11 @@ func newWGClient() (WgClient, error) {
 		return remoteclient.New()
 	}
 
-	if isKernelSpaceSupported() {
+	wcf.once.Do(func() {
+		wcf.isKernelSpaceSupportedResult = wcf.isKernelSpaceSupported()
+	})
+
+	if wcf.isKernelSpaceSupportedResult {
 		return kernelspace.NewWireguardClient()
 	}
 
@@ -63,7 +77,7 @@ func newWGClient() (WgClient, error) {
 	return userspace.NewWireguardClient()
 }
 
-func isKernelSpaceSupported() bool {
+func (wcf *WgClientFactory) isKernelSpaceSupported() bool {
 	if runtime.GOOS != "linux" {
 		return false
 	}
