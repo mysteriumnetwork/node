@@ -42,15 +42,18 @@ type WgClient interface {
 	Close() error
 }
 
+// WgClientFactory represents WireGuard client factory.
 type WgClientFactory struct {
 	once                         sync.Once
 	isKernelSpaceSupportedResult bool
 }
 
+// NewWGClientFactory returns a new client factory.
 func NewWGClientFactory() *WgClientFactory {
 	return &WgClientFactory{}
 }
 
+// NewWGClient returns a new wireguard client.
 func (wcf *WgClientFactory) NewWGClient() (WgClient, error) {
 	if config.GetBool(config.FlagProxyMode) {
 		return proxyclient.New()
