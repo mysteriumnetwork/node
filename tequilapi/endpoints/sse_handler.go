@@ -271,10 +271,7 @@ func mapState(state stateEvent.State) stateRes {
 
 	conn := event.Connection{Session: connectionstate.Status{State: connectionstate.NotConnected}}
 	for _, c := range state.Connections {
-		if len(c.Session.SessionID) > 0 {
-			if c.Session.State == "" {
-				c.Session.State = connectionstate.NotConnected
-			}
+		if len(c.Session.State) > 0 {
 			conn = c
 			break
 		}
