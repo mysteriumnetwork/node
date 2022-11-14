@@ -752,6 +752,8 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 	nodeOptions_.Consumer = false
 	// nodeOptions_.UI.UIEnabled = true
 	// nodeOptions_.TequilapiEnabled = true
+	nodeOptions_.Directories.Storage = filepath.Join(dataDir, "db")
+
 
 	err := di.Bootstrap(*nodeOptions_)
 	if err != nil {
