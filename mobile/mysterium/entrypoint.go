@@ -737,7 +737,6 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
 	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
 	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
-	config.Current.SetDefault(config.FlagDataDir.Name, appPath)
 
 	if appPath == "" {
 		return nil, errors.New("node app path is required")
@@ -746,6 +745,7 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 	if err := loadUserConfig(dataDir); err != nil {
 		return nil, err
 	}
+	config.Current.SetDefault(config.FlagDataDir.Name, dataDir)
 
 	nodeOptions_ := node.GetOptions()
 	nodeOptions_.Discovery.FetchEnabled = false
