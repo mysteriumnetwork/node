@@ -77,7 +77,7 @@ func (mac *mockHermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *bi
 	return promise, nil
 }
 
-func (mac *mockHermesCaller) GetConsumerData(chainID int64, id string) (HermesUserInfo, error) {
+func (mac *mockHermesCaller) GetConsumerData(chainID int64, id string, cacheTime time.Duration) (HermesUserInfo, error) {
 	return HermesUserInfo{}, nil
 }
 

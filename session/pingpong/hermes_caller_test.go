@@ -106,7 +106,7 @@ func TestHermesGetConsumerData_Error(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	_, err := caller.GetConsumerData(-1, "something")
+	_, err := caller.GetConsumerData(-1, "something", -1)
 	assert.NotNil(t, err)
 }
 
@@ -140,12 +140,43 @@ func TestHermesGetConsumerData_OK(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	data, err := caller.GetConsumerData(defaultChainID, "0x74CbcbBfEd45D7836D270068116440521033EDc7")
+	data, err := caller.GetConsumerData(defaultChainID, "0x74CbcbBfEd45D7836D270068116440521033EDc7", -time.Second)
 	assert.Nil(t, err)
 	res, err := json.Marshal(data)
 	assert.Nil(t, err)
 
 	assert.JSONEq(t, mockConsumerData, string(res))
+}
+
+func TestHermesGetConsumerData_Caches(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		bytes := []byte(mockConsumerDataResponse)
+		w.Write(bytes)
+	}))
+
+	c := requests.NewHTTPClient("0.0.0.0", time.Second)
+	caller := NewHermesCaller(c, server.URL)
+	data, err := caller.GetConsumerData(defaultChainID, "0x74CbcbBfEd45D7836D270068116440521033EDc7", -time.Second)
+	server.Close()
+	assert.Nil(t, err)
+	res, err := json.Marshal(data)
+	assert.Nil(t, err)
+	assert.JSONEq(t, mockConsumerData, string(res))
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	data, err = caller.GetConsumerData(defaultChainID, "0x74CbcbBfEd45D7836D270068116440521033EDc7", time.Minute)
+	assert.Nil(t, err)
+	res, err = json.Marshal(data)
+	assert.Nil(t, err)
+	assert.JSONEq(t, mockConsumerData, string(res))
+
+	_, err = caller.GetConsumerData(defaultChainID, "0x74CbcbBfEd45D7836D270068116440521033EDc7", -time.Second)
+	assert.NotNil(t, err)
 }
 
 const defaultChainID = 1

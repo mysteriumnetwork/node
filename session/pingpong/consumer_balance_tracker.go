@@ -125,7 +125,7 @@ func NewConsumerBalanceTracker(
 }
 
 type consumerInfoGetter interface {
-	GetConsumerData(chainID int64, id string) (HermesUserInfo, error)
+	GetConsumerData(chainID int64, id string, cacheDuration time.Duration) (HermesUserInfo, error)
 }
 
 type consumerBalanceChecker interface {
@@ -355,7 +355,7 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 	balance := cbt.GetBalance(chainID, id)
 	promised := new(big.Int)
 	alignBalance := func() error {
-		consumer, err := cbt.consumerInfoGetter.GetConsumerData(chainID, id.Address)
+		consumer, err := cbt.consumerInfoGetter.GetConsumerData(chainID, id.Address, 5*time.Second)
 		if err != nil {
 			var syntax *json.SyntaxError
 			if errors.As(err, &syntax) {
@@ -512,10 +512,11 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, hermes)
 	if errors.Is(err, ErrNotFound) || (err == nil && lastPromised != nil && grandTotal.Cmp(lastPromised) == -1) {
-		if err := cbt.recoverGrandTotalPromised(chainID, id); err != nil {
+		err := cbt.consumerGrandTotalsStorage.Store(chainID, id, hermes, lastPromised)
+		if err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
-		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(chainID, id, hermes)
+		grandTotal = lastPromised
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
@@ -632,7 +633,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 	var data HermesUserInfo
 	boff = backoff.WithContext(boff, ctx)
 	toRetry := func() error {
-		d, err := cbt.consumerInfoGetter.GetConsumerData(chainID, identity.Address)
+		d, err := cbt.consumerInfoGetter.GetConsumerData(chainID, identity.Address, time.Minute)
 		if err != nil {
 			if !errors.Is(err, ErrHermesNotFound) {
 				return err
