@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
@@ -53,7 +54,7 @@ type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
 	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
-	GetConsumerData(chainID int64, id string) (HermesUserInfo, error)
+	GetConsumerData(chainID int64, id string, cacheTime time.Duration) (HermesUserInfo, error)
 	GetProviderData(chainID int64, id string) (HermesUserInfo, error)
 	SyncProviderPromise(promise crypto.Promise, signer identity.Signer) error
 }
