@@ -84,7 +84,7 @@ func NewHermesMigrator(
 
 // HermesClient responses for receiving info from Hermes
 type HermesClient interface {
-	GetConsumerData(chainID int64, id string) (pingpong.HermesUserInfo, error)
+	GetConsumerData(chainID int64, id string, cacheDuration time.Duration) (pingpong.HermesUserInfo, error)
 }
 
 // Start begins migration from old hermes to new
@@ -336,7 +336,7 @@ func (m *HermesMigrator) getUserData(chainID int64, hermesID, id string) (pingpo
 		return data, err
 	}
 
-	data, err = c.GetConsumerData(chainID, id)
+	data, err = c.GetConsumerData(chainID, id, time.Minute)
 	if err != nil {
 		if errors.Is(err, pingpong.ErrHermesNotFound) {
 			return data, nil

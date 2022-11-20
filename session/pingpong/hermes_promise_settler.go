@@ -976,7 +976,7 @@ func (aps *hermesPromiseSettler) getHermesData(chainID int64, hermesID, id commo
 		return nil, err
 	}
 
-	data, err := caller.GetConsumerData(chainID, id.Hex())
+	data, err := caller.GetConsumerData(chainID, id.Hex(), time.Second)
 	if err != nil {
 		return nil, err
 	}

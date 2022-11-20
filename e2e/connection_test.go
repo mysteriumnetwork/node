@@ -359,7 +359,7 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 	var lastHermes *big.Int
 	assert.Eventually(t, func() bool {
 		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
-		hermesData, err := hermesCaller.GetConsumerData(chainID, consumerID)
+		hermesData, err := hermesCaller.GetConsumerData(chainID, consumerID, -1)
 		assert.NoError(t, err)
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised
