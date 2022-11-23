@@ -37,7 +37,6 @@ var IPFallbackAddresses = []string{
 	"https://icanhazip.com",
 	"https://ipecho.net/plain",
 	"https://ident.me/",
-	"https://bot.whatismyipaddress.com/",
 	"http://whatismyip.akamai.com/",
 }
 
