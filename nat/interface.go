@@ -30,9 +30,7 @@ type NATService interface {
 
 // Options params to setup firewall/NAT rules.
 type Options struct {
-	VPNNetwork        net.IPNet
-	ProviderExtIP     net.IP
-	EnableDNSRedirect bool
-	DNSIP             net.IP
-	DNSPort           int
+	VPNNetwork    net.IPNet
+	ProviderExtIP net.IP
+	DNSIP         net.IP
 }

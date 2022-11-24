@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
@@ -60,6 +61,15 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 	resourcesAllocator := resources.NewAllocator(di.PortPool, wireguard_service.GetOptions().Subnet)
+
+	dnsHandler, err := dns.ResolveViaSystem()
+	if err != nil {
+		log.Error().Err(err).Msg("Provider DNS are not available")
+		return err
+	}
+
+	di.dnsProxy = dns.NewProxy("", config.GetInt(config.FlagDNSListenPort), dnsHandler)
+
 	di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
@@ -84,6 +94,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options, reso
 				di.ServiceFirewall,
 				resourcesAllocator,
 				wgClientFactory,
+				di.dnsProxy,
 			)
 			return svc, nil
 		},
@@ -107,6 +118,7 @@ func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options, resou
 				di.ServiceFirewall,
 				resourcesAllocator,
 				wgClientFactory,
+				di.dnsProxy,
 			)
 			return svc, nil
 		},
@@ -130,6 +142,7 @@ func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options, r
 				di.ServiceFirewall,
 				resourcesAllocator,
 				wgClientFactory,
+				di.dnsProxy,
 			)
 			return svc, nil
 		},

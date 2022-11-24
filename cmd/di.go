@@ -54,6 +54,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrator"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -135,6 +136,8 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
+
+	dnsProxy *dns.Proxy
 
 	PolicyOracle *policy.Oracle
 

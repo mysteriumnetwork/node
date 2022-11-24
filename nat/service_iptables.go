@@ -193,25 +193,23 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 		"--source", vpnNetwork, "--jump", chainMyst, "--table", "nat")
 	rules = append(rules, rule)
 
-	if opts.EnableDNSRedirect {
-		// DNS port redirect rule (udp)
-		rule := iptables.InsertAt(chainMyst, 1).RuleSpec(
-			"--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(53),
-			"--jump", "REDIRECT",
-			"--to-ports", strconv.Itoa(opts.DNSPort),
-			"--table", "nat",
-		)
-		rules = append(rules, rule)
+	// DNS port redirect rule (udp)
+	rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
+		"--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(53),
+		"--jump", "REDIRECT",
+		"--to-ports", strconv.Itoa(config.GetInt(config.FlagDNSListenPort)),
+		"--table", "nat",
+	)
+	rules = append(rules, rule)
 
-		// DNS port redirect rule (tcp)
-		rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
-			"--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(53),
-			"--jump", "REDIRECT",
-			"--to-ports", strconv.Itoa(opts.DNSPort),
-			"--table", "nat",
-		)
-		rules = append(rules, rule)
-	}
+	// DNS port redirect rule (tcp)
+	rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
+		"--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(53),
+		"--jump", "REDIRECT",
+		"--to-ports", strconv.Itoa(config.GetInt(config.FlagDNSListenPort)),
+		"--table", "nat",
+	)
+	rules = append(rules, rule)
 
 	// NAT forwarding rule
 	rule = iptables.AppendTo(chainPostRouting).RuleSpec("--source", vpnNetwork, "!", "--destination", vpnNetwork,

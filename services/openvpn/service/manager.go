@@ -138,11 +138,9 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	}
 
 	if _, err := m.natService.Setup(nat.Options{
-		VPNNetwork:        m.vpnNetwork,
-		ProviderExtIP:     net.ParseIP(m.outboundIP),
-		EnableDNSRedirect: m.dnsOK,
-		DNSIP:             m.dnsIP,
-		DNSPort:           dnsPort,
+		VPNNetwork:    m.vpnNetwork,
+		ProviderExtIP: net.ParseIP(m.outboundIP),
+		DNSIP:         m.dnsIP,
 	}); err != nil {
 		return fmt.Errorf("failed to setup NAT/firewall rules: %w", err)
 	}
