@@ -89,12 +89,7 @@ func (aps *HermesPromiseStorage) shouldOverride(old, new HermesPromise) bool {
 		return true
 	}
 
-	// If amount if less or equal we need to check if the promise is correct.
-	if old.Promise.Amount.Cmp(new.Promise.Amount) >= 0 {
-		// If amounts are equal, but it's just a reveal, then we can allow an override
-		if old.Promise.Amount.Cmp(new.Promise.Amount) == 0 && !old.Revealed && new.Revealed {
-			return true
-		}
+	if old.Promise.Amount.Cmp(new.Promise.Amount) > 0 {
 		return false
 	}
 
