@@ -147,6 +147,13 @@ var (
 		Value:  1 * time.Second,
 		Hidden: true,
 	}
+
+	// FlagDNSListenPort sets the port for listening by DNS service.
+	FlagDNSListenPort = cli.IntFlag{
+		Name:  "dns.listen-port",
+		Usage: "DNS listen port for services",
+		Value: 11253,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -171,6 +178,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagTraversal,
 		&FlagPortCheckServers,
 		&FlagStatsReportInterval,
+		&FlagDNSListenPort,
 	)
 }
 
@@ -194,6 +202,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTraversal)
 	Current.ParseStringFlag(ctx, FlagPortCheckServers)
 	Current.ParseDurationFlag(ctx, FlagStatsReportInterval)
+	Current.ParseIntFlag(ctx, FlagDNSListenPort)
 }
 
 // BlockchainNetwork defines a blockchain network

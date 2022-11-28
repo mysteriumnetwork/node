@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
@@ -101,6 +102,8 @@ func (mce *mockConnectionEndpoint) PeerStats() (wgcfg.Stats, error) {
 }
 
 func newManagerStub(pub, out, country string) *Manager {
+	dnsHandler, _ := dns.ResolveViaSystem()
+
 	return &Manager{
 		done:       make(chan struct{}),
 		ipResolver: ip.NewResolverMock("1.2.3.4"),
@@ -108,6 +111,7 @@ func newManagerStub(pub, out, country string) *Manager {
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return connectionEndpointStub, nil
 		},
+		dnsProxy: dns.NewProxy("", 0, dnsHandler),
 	}
 }
 

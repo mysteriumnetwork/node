@@ -23,9 +23,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
 type servicePFCtl struct {
@@ -89,20 +91,18 @@ func makePfctlRules(opts Options) (rules []string, err error) {
 		return nil, err
 	}
 
-	if opts.EnableDNSRedirect {
-		// DNS port redirect rule
-		tunnelIface, err := ifaceByAddress(opts.DNSIP)
-		if err != nil {
-			return nil, err
-		}
-		rule := fmt.Sprintf("rdr pass on %s inet proto { udp, tcp } from any to %s port 53 -> %s port %d",
-			tunnelIface,
-			opts.VPNNetwork.String(),
-			opts.DNSIP,
-			opts.DNSPort,
-		)
-		rules = append(rules, rule)
+	// DNS port redirect rule
+	tunnelIface, err := ifaceByAddress(opts.DNSIP)
+	if err != nil {
+		return nil, err
 	}
+	rule := fmt.Sprintf("rdr pass on %s inet proto { udp, tcp } from any to %s port 53 -> %s port %d",
+		tunnelIface,
+		opts.VPNNetwork.String(),
+		opts.DNSIP,
+		config.GetInt(config.FlagDNSListenPort),
+	)
+	rules = append(rules, rule)
 
 	// Protect private networks rule
 	networks := protectedNetworks()
@@ -120,7 +120,7 @@ func makePfctlRules(opts Options) (rules []string, err error) {
 	}
 
 	// NAT forwarding rule
-	rule := fmt.Sprintf("nat on %s inet from %s to any -> %s",
+	rule = fmt.Sprintf("nat on %s inet from %s to any -> %s",
 		externalIface,
 		opts.VPNNetwork.String(),
 		opts.ProviderExtIP,
