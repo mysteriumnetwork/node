@@ -60,6 +60,7 @@ func (s *statsTracker) start(sessionSupplier *connectionManager, statsSupplier s
 
 			s.bus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
 				Stats:       stats,
+				UUID:        sessionSupplier.UUID(),
 				SessionInfo: sessionSupplier.Status(),
 			})
 

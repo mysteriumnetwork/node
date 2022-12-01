@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
@@ -84,6 +85,7 @@ type Earnings struct {
 
 // AppEventInvoicePaid is an update on paid invoices during current session
 type AppEventInvoicePaid struct {
+	UUID       string
 	ConsumerID identity.Identity
 	SessionID  string
 	Invoice    crypto.Invoice

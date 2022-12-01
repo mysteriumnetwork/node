@@ -40,6 +40,7 @@ const (
 
 // AppEventConnectionState is the struct we'll emit on a AppEventConnectionState topic event
 type AppEventConnectionState struct {
+	UUID        string
 	State       State
 	SessionInfo Status
 }
@@ -105,6 +106,7 @@ type AppEventConnectionSession struct {
 
 // AppEventConnectionStatistics represents a session statistics event
 type AppEventConnectionStatistics struct {
+	UUID        string
 	Stats       Statistics
 	SessionInfo Status
 }
