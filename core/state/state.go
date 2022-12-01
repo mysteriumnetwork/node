@@ -390,11 +390,11 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	}
 
 	if evt.State == connectionstate.NotConnected {
-		delete(k.state.Connections, string(evt.SessionInfo.SessionID))
+		delete(k.state.Connections, evt.UUID)
 	} else {
-		conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+		conn := k.state.Connections[evt.UUID]
 		conn.Session = evt.SessionInfo
-		k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
+		k.state.Connections[evt.UUID] = conn
 
 		log.Info().Msgf("Session %s", conn.String())
 	}
@@ -411,9 +411,9 @@ func (k *Keeper) updateConnectionStats(e interface{}) {
 		return
 	}
 
-	conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+	conn := k.state.Connections[string(evt.UUID)]
 	conn.Statistics = evt.Stats
-	k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
+	k.state.Connections[evt.UUID] = conn
 
 	go k.announceStateChanges(nil)
 }
@@ -427,9 +427,9 @@ func (k *Keeper) updateConnectionThroughput(e interface{}) {
 		return
 	}
 
-	conn := k.state.Connections[string(evt.SessionInfo.SessionID)]
+	conn := k.state.Connections[evt.UUID]
 	conn.Throughput = evt.Throughput
-	k.state.Connections[string(evt.SessionInfo.SessionID)] = conn
+	k.state.Connections[evt.UUID] = conn
 
 	go k.announceStateChanges(nil)
 }
@@ -443,9 +443,9 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 		return
 	}
 
-	conn := k.state.Connections[string(evt.SessionID)]
+	conn := k.state.Connections[evt.UUID]
 	conn.Invoice = evt.Invoice
-	k.state.Connections[string(evt.SessionID)] = conn
+	k.state.Connections[evt.UUID] = conn
 
 	log.Info().Msgf("Session %s", conn.String())
 
@@ -559,20 +559,17 @@ func (k *Keeper) GetState() (res stateEvent.State) {
 }
 
 // GetConnection returns the connection state.
-func (k *Keeper) GetConnection(id string) (conn stateEvent.Connection) {
+func (k *Keeper) GetConnection(id string) (state stateEvent.Connection) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 
-	if len(id) == 0 {
-		for _, state := range k.state.Connections {
+	for _, state := range k.state.Connections {
+		if len(id) == 0 || id == string(state.Session.SessionID) {
 			return state
 		}
 	}
 
-	state, ok := k.state.Connections[id]
-	if !ok {
-		state.Session.State = connectionstate.NotConnected
-	}
+	state.Session.State = connectionstate.NotConnected
 
 	return state
 }

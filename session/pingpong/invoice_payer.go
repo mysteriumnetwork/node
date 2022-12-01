@@ -100,6 +100,7 @@ type InvoicePayerDeps struct {
 	Ks                        hashSigner
 	Identity, Peer            identity.Identity
 	AgreedPrice               market.Price
+	SenderUUID                string
 	SessionID                 string
 	AddressProvider           addressProvider
 	EventBus                  eventbus.EventBus
@@ -281,6 +282,7 @@ func (ip *InvoicePayer) publishInvoicePayedEvent(invoice crypto.Invoice) {
 	}
 
 	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
+		UUID:       ip.deps.SenderUUID,
 		ConsumerID: ip.deps.Identity,
 		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,

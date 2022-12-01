@@ -142,8 +142,9 @@ func (tc *testContext) SetupTest() {
 	tc.mockTime = time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC)
 
 	tc.connManager = NewManager(
-		func(channel p2p.Channel,
-			consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error) {
+		func(senderUUID string, channel p2p.Channel,
+			consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price,
+		) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				stopChan: make(chan struct{}),
 			}
