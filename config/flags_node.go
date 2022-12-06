@@ -214,6 +214,13 @@ var (
 		Value: false,
 	}
 
+	// FlagProxyMode allows running node in a kernelspace for dVPN via Superproxy.
+	FlagDVPNMode = cli.BoolFlag{
+		Name:  "dvpnmode",
+		Usage: "Run in a kernelspace for dVPN via Superproxy",
+		Value: false,
+	}
+
 	// FlagProxyMode allows running node under current user as a proxy.
 	FlagProxyMode = cli.BoolFlag{
 		Name:  "proxymode",
@@ -333,6 +340,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagTequilapiPassword,
 		&FlagPProfEnable,
 		&FlagUserMode,
+		&FlagDVPNMode,
 		&FlagProxyMode,
 		&FlagUserspace,
 		&FlagVendorID,
@@ -393,6 +401,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTequilapiPassword)
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
+	Current.ParseBoolFlag(ctx, FlagDVPNMode)
 	Current.ParseBoolFlag(ctx, FlagProxyMode)
 	Current.ParseBoolFlag(ctx, FlagUserspace)
 	Current.ParseStringFlag(ctx, FlagVendorID)

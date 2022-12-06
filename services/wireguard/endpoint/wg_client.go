@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/dvpnclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
@@ -55,6 +56,10 @@ func NewWGClientFactory() *WgClientFactory {
 
 // NewWGClient returns a new wireguard client.
 func (wcf *WgClientFactory) NewWGClient() (WgClient, error) {
+	if config.GetBool(config.FlagDVPNMode) {
+		return dvpnclient.New()
+	}
+
 	if config.GetBool(config.FlagProxyMode) {
 		return proxyclient.New()
 	}
