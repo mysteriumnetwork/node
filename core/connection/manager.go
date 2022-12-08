@@ -409,7 +409,7 @@ func (m *connectionManager) handleStartError(sessionID session.ID, err error) er
 }
 
 func (m *connectionManager) clearIPCache() {
-	if config.GetBool(config.FlagProxyMode) {
+	if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
 		return
 	}
 
@@ -420,7 +420,7 @@ func (m *connectionManager) clearIPCache() {
 
 // checkSessionIP checks if IP has changed after connection was established.
 func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
-	if config.GetBool(config.FlagProxyMode) {
+	if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
 		return
 	}
 

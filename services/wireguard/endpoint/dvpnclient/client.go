@@ -63,18 +63,18 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 		_ = c.DestroyDevice(config.IfaceName)
 	})
 
+	err := c.configureDevice(config)
+	if err != nil {
+		rollback.Run()
+		return err
+	}
+
 	if config.Peer.Endpoint != nil {
 		gw := config.Subnet.IP.To4()
 		gw[3]--
 		if err := cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", strings.TrimLeft(config.IfaceName, "myst")); err != nil {
 			return err
 		}
-	}
-
-	err := c.configureDevice(config)
-	if err != nil {
-		rollback.Run()
-		return err
 	}
 
 	return nil
