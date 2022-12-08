@@ -31,7 +31,7 @@ import (
 
 // LoadUserConfig determines config location from the context
 // and makes sure that the config file actually exists, creating it if necessary.
-func LoadUserConfig(ctx *cli.Context) error {
+func LoadUserConfig(ctx config.CliContext) error {
 	configDir, configFilePath := resolveLocation(ctx)
 	err := createDirIfNotExists(configDir)
 	if err != nil {
@@ -56,7 +56,7 @@ func LoadUserConfigQuietly(ctx *cli.Context) error {
 	return nil
 }
 
-func resolveLocation(ctx *cli.Context) (configDir string, configFilePath string) {
+func resolveLocation(ctx config.CliContext) (configDir string, configFilePath string) {
 	configDir = ctx.String("config-dir")
 	configFilePath = path.Join(configDir, "config-mainnet.toml")
 	return configDir, configFilePath

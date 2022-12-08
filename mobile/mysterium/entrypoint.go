@@ -28,14 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/service"
-
-	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
@@ -47,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
@@ -59,12 +52,16 @@ import (
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/router"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const ProposalsManagerCacheTTLSeconds = 5
@@ -101,8 +98,9 @@ type MobileNode struct {
 	hermesMigrator            *migration.HermesMigrator
 
 	servicesManager *service.Manager
+	serviceIDs      []service.ID
 	isProvider      bool
-	tequilapi       *client.Client
+	//tequilapi       *client.Client
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -214,6 +212,12 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 
+	// set provider-related defaults
+	config.Current.SetDefault(config.FlagUserspace.Name, "true")
+	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
+	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
+
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
 		return nil, fmt.Errorf("invalid bc network: %w", err)
@@ -269,9 +273,12 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Address: options.QualityOracleURL,
 		},
 		Discovery: node.OptionsDiscovery{
-			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI},
-			Address:      network.DiscoveryAddress,
-			FetchEnabled: false,
+			Types:         []node.DiscoveryType{node.DiscoveryTypeAPI},
+			Address:       network.DiscoveryAddress,
+			FetchEnabled:  false,
+			PingInterval:  config.GetDuration(config.FlagDiscoveryPingInterval),
+			FetchInterval: config.GetDuration(config.FlagDiscoveryFetchInterval),
+
 			DHT: node.OptionsDHT{
 				Address:        "0.0.0.0",
 				Port:           0,
@@ -317,7 +324,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChainID:            options.Chain2ID,
 			},
 		},
-		Consumer:        true,
+
+		Consumer:        false,
 		PilvytisAddress: options.PilvytisAddress,
 		ObserverAddress: options.ObserverAddress,
 		SSE: node.OptionsSSE{
@@ -367,6 +375,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
+
+		// provider related
+		servicesManager: di.ServicesManager,
 	}
 
 	return mobileNode, nil
@@ -733,19 +744,20 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 func NewProviderNode(appPath string) (*MobileNode, error) {
 	var di cmd.Dependencies
 
-	config.Current.SetDefault(config.FlagUserspace.Name, "true")
-	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
-	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
-	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
-
 	if appPath == "" {
 		return nil, errors.New("node app path is required")
 	}
+
 	dataDir := filepath.Join(appPath, ".mysterium")
 	if err := loadUserConfig(dataDir); err != nil {
 		return nil, err
 	}
 	config.Current.SetDefault(config.FlagDataDir.Name, dataDir)
+
+	config.Current.SetDefault(config.FlagUserspace.Name, "true")
+	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
+	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 
 	nodeOptions_ := node.GetOptions()
 	nodeOptions_.Discovery.FetchEnabled = false
@@ -753,7 +765,6 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 	// nodeOptions_.UI.UIEnabled = true
 	// nodeOptions_.TequilapiEnabled = true
 	nodeOptions_.Directories.Storage = filepath.Join(dataDir, "db")
-
 
 	err := di.Bootstrap(*nodeOptions_)
 	if err != nil {
@@ -797,8 +808,9 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
-		servicesManager:     di.ServicesManager,
-		isProvider:          true,
+
+		servicesManager: di.ServicesManager,
+		isProvider:      true,
 	}
 
 	return mobileNode, nil
@@ -806,29 +818,6 @@ func NewProviderNode(appPath string) (*MobileNode, error) {
 
 func (mb *MobileNode) IsProvider() bool {
 	return mb.isProvider
-}
-
-func (mb *MobileNode) unlockIdentity(id, passphrase string) string {
-	const retryRate = 10 * time.Second
-	for {
-		fmt.Println("unlock", mb.tequilapi)
-		id, err := mb.tequilapi.CurrentIdentity(id, passphrase)
-		if err == nil {
-			return id.Address
-		}
-		log.Warn().Err(err).Msg("Failed to get current identity")
-		log.Warn().Msgf("retrying in %vs...", retryRate.Seconds())
-		time.Sleep(retryRate)
-	}
-}
-
-func (mb *MobileNode) runService(request contract.ServiceStartRequest) {
-	// fmt.Println("runService>", request)
-	_, err := mb.tequilapi.ServiceStart(request)
-	if err != nil {
-		// fmt.Println("runService>", err)
-		return
-	}
 }
 
 func (mb *MobileNode) _unlockIdentity(adr, passphrase string) string {
@@ -865,6 +854,20 @@ func (mb *MobileNode) StartProvider() {
 		if err != nil {
 			return
 		}
-		_ = id
+		mb.serviceIDs = append(mb.serviceIDs, id)
+	}
+}
+
+func (mb *MobileNode) StopProvider() {
+	fmt.Println("StopProvider>")
+
+	ids := mb.serviceIDs
+	mb.serviceIDs = []service.ID{}
+
+	for _, id := range ids {
+		err := mb.servicesManager.Stop(id)
+		if err != nil {
+			return
+		}
 	}
 }
