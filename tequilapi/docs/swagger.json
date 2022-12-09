@@ -3688,25 +3688,25 @@
       "description": "EarningsPerServiceResponse contains information about earnings per service",
       "type": "object",
       "properties": {
-        "data_transfer": {
+        "data_transfer_tokens": {
           "$ref": "#/definitions/Tokens"
         },
-        "public": {
+        "public_tokens": {
           "$ref": "#/definitions/Tokens"
         },
-        "scraping": {
+        "scraping_tokens": {
           "$ref": "#/definitions/Tokens"
         },
-        "total": {
+        "total_data_transfer_tokens": {
           "$ref": "#/definitions/Tokens"
         },
-        "total_data_transfer": {
+        "total_public_tokens": {
           "$ref": "#/definitions/Tokens"
         },
-        "total_public": {
+        "total_scraping_tokens": {
           "$ref": "#/definitions/Tokens"
         },
-        "total_scraping": {
+        "total_tokens": {
           "$ref": "#/definitions/Tokens"
         }
       },
