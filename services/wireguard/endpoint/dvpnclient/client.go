@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2022 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,10 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 
 	if config.Peer.Endpoint != nil {
 		gw := config.Subnet.IP.To4()
+		if gw == nil {
+			return fmt.Errorf("Subnet %s is not an IPv4 address", config.Subnet.String())
+		}
+
 		gw[3]--
 		if err := cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", strings.TrimLeft(config.IfaceName, "myst")); err != nil {
 			return err
@@ -81,12 +85,7 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 }
 
 func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
-	err := c.configureDevice(config)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.configureDevice(config)
 }
 
 func (c *client) configureDevice(config wgcfg.DeviceConfig) error {
