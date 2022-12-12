@@ -217,6 +217,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
 	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
 	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
+	config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
+	config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
