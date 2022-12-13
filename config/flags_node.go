@@ -214,7 +214,7 @@ var (
 		Value: false,
 	}
 
-	// FlagProxyMode allows running node in a kernelspace without establishing system-wite tunnels.
+	// FlagDVPNMode allows running node in a kernelspace without establishing system-wite tunnels.
 	FlagDVPNMode = cli.BoolFlag{
 		Name:  "dvpnmode",
 		Usage: "Run in a kernelspace without establishing system-wite tunnels",
