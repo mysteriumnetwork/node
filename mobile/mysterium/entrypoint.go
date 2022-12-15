@@ -99,8 +99,6 @@ type MobileNode struct {
 
 	servicesManager *service.Manager
 	serviceIDs      []service.ID
-	isProvider      bool
-	//tequilapi       *client.Client
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -216,9 +214,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUserspace.Name, "true")
 	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
 	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
-	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
-	config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
+	config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")	
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
@@ -243,6 +240,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				"50.19.252.36",
 				"174.129.214.20",
 			},
+			"badupnp.benjojo.co.uk": {"104.22.70.70", "104.22.71.70", "172.67.25.154"},
 		},
 	}
 	logOptions := logconfig.LogOptions{
@@ -277,10 +275,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		Discovery: node.OptionsDiscovery{
 			Types:         []node.DiscoveryType{node.DiscoveryTypeAPI},
 			Address:       network.DiscoveryAddress,
-			FetchEnabled:  false,
+			FetchEnabled:  true,
 			PingInterval:  config.GetDuration(config.FlagDiscoveryPingInterval),
 			FetchInterval: config.GetDuration(config.FlagDiscoveryFetchInterval),
-
 			DHT: node.OptionsDHT{
 				Address:        "0.0.0.0",
 				Port:           0,
@@ -309,6 +306,11 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			BalanceLongPollInterval:        time.Hour * 1,
 			RegistryTransactorPollInterval: time.Second * 20,
 			RegistryTransactorPollTimeout:  time.Minute * 20,
+
+			ProviderInvoiceFrequency:      config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			ProviderLimitInvoiceFrequency: config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:         config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue),
+			LimitUnpaidInvoiceValue:       config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue),
 		},
 		Chains: node.OptionsChains{
 			Chain1: metadata.ChainDefinition{
@@ -317,6 +319,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChannelImplAddress: options.ChannelImplementationSCAddress,
 				MystAddress:        options.MystSCAddress,
 				ChainID:            options.Chain1ID,
+				KnownHermeses:      config.GetStringSlice(config.FlagChain1KnownHermeses),
 			},
 			Chain2: metadata.ChainDefinition{
 				RegistryAddress:    options.RegistrySCAddress,
@@ -324,6 +327,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChannelImplAddress: options.ChannelImplementationSCAddress,
 				MystAddress:        options.MystSCAddress,
 				ChainID:            options.Chain2ID,
+				KnownHermeses:      config.GetStringSlice(config.FlagChain2KnownHermeses),
 			},
 		},
 
@@ -742,100 +746,17 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 	}
 }
 
-// NewProviderNode function creates new Node.
-func NewProviderNode(appPath string) (*MobileNode, error) {
-	var di cmd.Dependencies
-
-	if appPath == "" {
-		return nil, errors.New("node app path is required")
-	}
-
-	dataDir := filepath.Join(appPath, ".mysterium")
-	if err := loadUserConfig(dataDir); err != nil {
-		return nil, err
-	}
-	config.Current.SetDefault(config.FlagDataDir.Name, dataDir)
-
-	config.Current.SetDefault(config.FlagUserspace.Name, "true")
-	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
-	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
-	// config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
-
-	nodeOptions_ := node.GetOptions()
-	nodeOptions_.Discovery.FetchEnabled = false
-	nodeOptions_.Consumer = false
-	// nodeOptions_.UI.UIEnabled = true
-	// nodeOptions_.TequilapiEnabled = true
-	nodeOptions_.Directories.Storage = filepath.Join(dataDir, "db")
-
-	err := di.Bootstrap(*nodeOptions_)
-	if err != nil {
-		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
-	}
-
-	mobileNode := &MobileNode{
-		shutdown:                  di.Shutdown,
-		node:                      di.Node,
-		stateKeeper:               di.StateKeeper,
-		connectionManager:         di.MultiConnectionManager,
-		locationResolver:          di.LocationResolver,
-		natProber:                 di.NATProber,
-		identitySelector:          di.IdentitySelector,
-		signerFactory:             di.SignerFactory,
-		ipResolver:                di.IPResolver,
-		eventBus:                  di.EventBus,
-		connectionRegistry:        di.ConnectionRegistry,
-		feedbackReporter:          di.Reporter,
-		affiliator:                di.Affiliator,
-		transactor:                di.Transactor,
-		identityRegistry:          di.IdentityRegistry,
-		consumerBalanceTracker:    di.ConsumerBalanceTracker,
-		identityChannelCalculator: di.AddressProvider,
-		proposalsManager: newProposalsManager(
-			di.ProposalRepository,
-			di.FilterPresetStorage,
-			di.NATProber,
-			time.Duration(ProposalsManagerCacheTTLSeconds)*time.Second,
-		),
-		pilvytis:            di.PilvytisAPI,
-		pilvytisOrderIssuer: di.PilvytisOrderIssuer,
-		startTime:           time.Now(),
-		chainID:             nodeOptions_.OptionsNetwork.ChainID,
-		sessionStorage:      di.SessionStorage,
-		identityMover:       di.IdentityMover,
-		entertainmentEstimator: entertainment.NewEstimator(
-			config.FlagPaymentPriceGiB.Value,
-			config.FlagPaymentPriceHour.Value,
-		),
-		residentCountry:     di.ResidentCountry,
-		filterPresetStorage: di.FilterPresetStorage,
-		hermesMigrator:      di.HermesMigrator,
-
-		servicesManager: di.ServicesManager,
-		isProvider:      true,
-	}
-
-	return mobileNode, nil
-}
-
-func (mb *MobileNode) IsProvider() bool {
-	return mb.isProvider
-}
-
 func (mb *MobileNode) _unlockIdentity(adr, passphrase string) string {
-
 	chainID := config.GetInt64(config.FlagChainID)
 	id, err := mb.identitySelector.UseOrCreate(adr, passphrase, chainID)
-
 	if err != nil {
-		//c.Error(apierror.Internal("Failed to use/create ID: "+err.Error(), contract.ErrCodeIDUseOrCreate))
 		return ""
 	}
 	return id.Address
 }
 
 func (mb *MobileNode) StartProvider() {
-	// fmt.Println("StartProvider>", (config.FlagIdentity.Value), (config.FlagIdentityPassphrase.Value))
+	fmt.Println("StartProvider>")
 
 	providerID := mb._unlockIdentity(
 		config.FlagIdentity.Value,
@@ -872,4 +793,8 @@ func (mb *MobileNode) StopProvider() {
 			return
 		}
 	}
+}
+
+func SetFlagLauncherVersion(val string) {
+	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }
