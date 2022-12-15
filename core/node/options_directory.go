@@ -18,7 +18,6 @@
 package node
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -58,7 +57,6 @@ const (
 // GetOptionsDirectory retrieves directory configuration from app configuration.
 func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
-	fmt.Println("GetOptionsDirectory >", dataDir)
 
 	networkSubdir := NetworkSubDirMainnet // Matches DefaultNetworkDefinition
 	switch {

@@ -18,7 +18,6 @@
 package config
 
 import (
-	"fmt"
 	"math/big"
 	"os"
 	"strings"
@@ -147,7 +146,6 @@ func (cfg *Config) GetConfig() map[string]interface{} {
 
 // SetDefault sets default value for key.
 func (cfg *Config) SetDefault(key string, value interface{}) {
-	fmt.Println("!SetDefault >", key, value)
 	cfg.set(cfg.defaults, key, value)
 }
 

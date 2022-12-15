@@ -65,8 +65,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const ProposalsManagerCacheTTLSeconds = 5
-
 // MobileNode represents node object tuned for mobile device.
 type MobileNode struct {
 	shutdown                  func() error
@@ -749,7 +747,7 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 	}
 }
 
-func (mb *MobileNode) _unlockIdentity(adr, passphrase string) string {
+func (mb *MobileNode) unlockIdentity(adr, passphrase string) string {
 	chainID := config.GetInt64(config.FlagChainID)
 	id, err := mb.identitySelector.UseOrCreate(adr, passphrase, chainID)
 	if err != nil {
@@ -759,9 +757,7 @@ func (mb *MobileNode) _unlockIdentity(adr, passphrase string) string {
 }
 
 func (mb *MobileNode) StartProvider() {
-	fmt.Println("StartProvider>")
-
-	providerID := mb._unlockIdentity(
+	providerID := mb.unlockIdentity(
 		config.FlagIdentity.Value,
 		config.FlagIdentityPassphrase.Value,
 	)
@@ -773,11 +769,13 @@ func (mb *MobileNode) StartProvider() {
 	for _, serviceType := range serviceTypes {
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
+			log.Error().Err(err).Msg("GetStartOptions failed")
 			return
 		}
 
 		id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
 		if err != nil {
+			log.Error().Err(err).Msg("servicesManager.Start failed")
 			return
 		}
 		mb.serviceIDs = append(mb.serviceIDs, id)
@@ -785,14 +783,13 @@ func (mb *MobileNode) StartProvider() {
 }
 
 func (mb *MobileNode) StopProvider() {
-	fmt.Println("StopProvider>")
-
 	ids := mb.serviceIDs
 	mb.serviceIDs = []service.ID{}
 
 	for _, id := range ids {
 		err := mb.servicesManager.Stop(id)
 		if err != nil {
+			log.Error().Err(err).Msg("servicesManager.Stop failed")
 			return
 		}
 	}
