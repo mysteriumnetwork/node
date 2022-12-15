@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/terms/terms-go"
-
 	"github.com/anmitsu/go-shlex"
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
@@ -48,6 +46,7 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/terms/terms-go"
 )
 
 // CommandName is the name which is used to call this command
@@ -504,7 +503,7 @@ func (c *cliApp) proposals(args []string) (err error) {
 			}
 		}
 
-		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","))
+		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v\tprovider type: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","), proposal.Location.IPType)
 
 		if filter == "" ||
 			strings.Contains(proposal.ProviderID, filter) ||

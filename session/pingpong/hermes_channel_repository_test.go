@@ -150,7 +150,9 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	publisher := mocks.NewEventBus()
-	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{
+		b: beneficiaryID,
+	}
 	mockHermesCaller := &mockHermesCaller{}
 	addrProv := &mockAddressProvider{}
 	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, mockBeneficiaryProvider, mockHermesCaller, addrProv, signerFactory, &mockEncryptor{})
@@ -162,7 +164,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	assert.NoError(t, err)
 
 	// then
-	expectedChannel1 := NewHermesChannel("1", id, hermesID, expectedChannelStatus1, expectedPromise1)
+	expectedChannel1 := NewHermesChannel("1", id, hermesID, expectedChannelStatus1, expectedPromise1, beneficiaryID)
 	assert.Equal(t, expectedChannel1, channel)
 	assert.Eventually(t, func() bool {
 		lastEvent, ok := publisher.Pop().(event.AppEventEarningsChanged)
@@ -205,7 +207,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	assert.NoError(t, err)
 
 	// then
-	expectedChannel2 := NewHermesChannel("1", id, hermesID, expectedChannelStatus2, expectedPromise2)
+	expectedChannel2 := NewHermesChannel("1", id, hermesID, expectedChannelStatus2, expectedPromise2, beneficiaryID)
 	assert.Equal(t, expectedChannel2, channel)
 	assert.Eventually(t, func() bool {
 		lastEvent, ok := publisher.Pop().(event.AppEventEarningsChanged)
@@ -245,6 +247,45 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 		)
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestHermesChannelRepository_BeneficiaryReset(t *testing.T) {
+	// given
+	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
+	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+	channelID := common.HexToAddress("0x00000000000000000000000000000000000000003")
+	beneficiary := common.HexToAddress("0x144")
+
+	promiseProvider := &mockHermesPromiseStorage{}
+	channelStatusProvider := &mockProviderChannelStatusProvider{
+		channelToReturn: mockProviderChannel,
+	}
+	publisher := mocks.NewEventBus()
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{
+		b: beneficiary,
+	}
+	mockHermesCaller := &mockHermesCaller{}
+	addrProv := &mockAddressProvider{}
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, mockBeneficiaryProvider, mockHermesCaller, addrProv, signerFactory, &mockEncryptor{})
+
+	// when
+	promise := HermesPromise{ChannelID: channelID.Hex(), Identity: id, HermesID: hermesID}
+	err := repo.updateChannelWithLatestPromise(1, channelID.Hex(), id, hermesID, promise)
+	assert.NoError(t, err)
+	hermesChannel, exists := repo.Get(1, id, hermesID)
+
+	// then
+	assert.True(t, exists)
+	assert.Equal(t, beneficiary, hermesChannel.Beneficiary)
+
+	// when
+	err = repo.updateChannelWithLatestPromise(1, channelID.Hex(), id, hermesID, promise)
+	assert.NoError(t, err)
+	hermesChannel, exists = repo.Get(1, id, hermesID)
+
+	// then
+	assert.True(t, exists)
+	assert.Equal(t, beneficiary, hermesChannel.Beneficiary)
 }
 
 type mockBeneficiaryProvider struct {

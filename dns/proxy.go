@@ -20,6 +20,7 @@ package dns
 import (
 	"net"
 	"strconv"
+	"sync"
 
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
@@ -29,6 +30,9 @@ import (
 // Proxy defines DNS server with all handler attached to it.
 type Proxy struct {
 	server *dns.Server
+
+	mu    sync.Mutex
+	links int
 }
 
 // NewProxy returns new instance of API server.
@@ -47,6 +51,16 @@ func NewProxy(lhost string, lport int, handler dns.Handler) *Proxy {
 
 // Run starts DNS proxy server and waits for the startup to complete.
 func (p *Proxy) Run() (err error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.links++
+
+	if p.links > 1 {
+		// Allow only one instance of the proxy to be running.
+		return nil
+	}
+
 	dnsProxyCh := make(chan error)
 	p.server.NotifyStartedFunc = func() { dnsProxyCh <- nil }
 	go func() {
@@ -61,5 +75,15 @@ func (p *Proxy) Run() (err error) {
 
 // Stop shutdowns DNS proxy server.
 func (p *Proxy) Stop() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.links--
+
+	if p.links > 0 {
+		// Do not stop until we have other instances running.
+		return nil
+	}
+
 	return p.server.Shutdown()
 }

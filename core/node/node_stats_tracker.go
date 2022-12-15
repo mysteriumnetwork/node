@@ -180,10 +180,13 @@ type QualityInfo struct {
 
 // EarningsPerService represents information about earnings per service
 type EarningsPerService struct {
-	EarningsPublic   string `json:"public"`
-	EarningsVPN      string `json:"data_transfer"`
-	EarningsScraping string `json:"scraping"`
-	EarningsTotal    string `json:"total"`
+	EarningsPublic        string `json:"public"`
+	EarningsVPN           string `json:"data_transfer"`
+	EarningsScraping      string `json:"scraping"`
+	EarningsTotal         string `json:"total"`
+	TotalEarningsPublic   string `json:"total_public"`
+	TotalEarningsVPN      string `json:"total_data_transfer"`
+	TotalEarningsScraping string `json:"total_scraping"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle

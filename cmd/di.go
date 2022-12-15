@@ -31,10 +31,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
-	paymentClient "github.com/mysteriumnetwork/payments/client"
-	psort "github.com/mysteriumnetwork/payments/client/sort"
-	"github.com/mysteriumnetwork/payments/observer"
-
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/migration"
@@ -58,6 +54,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrator"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -80,12 +77,16 @@ import (
 	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
+	psort "github.com/mysteriumnetwork/payments/client/sort"
+	"github.com/mysteriumnetwork/payments/observer"
 )
 
 // UIServer represents our web server
@@ -136,6 +137,8 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
 
+	dnsProxy *dns.Proxy
+
 	PolicyOracle *policy.Oracle
 
 	SessionStorage                   *consumer_session.Storage
@@ -150,6 +153,8 @@ type Dependencies struct {
 	ServiceRegistry *service.Registry
 	ServiceSessions *service.SessionPool
 	ServiceFirewall firewall.IncomingTrafficFirewall
+
+	WireguardClientFactory *endpoint.WgClientFactory
 
 	PortPool   *port.Pool
 	PortMapper mapping.PortMapper
@@ -585,7 +590,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.IPResolver,
 			di.LocationResolver,
 			connection.DefaultConfig(),
-			connection.DefaultStatsReportInterval,
+			config.GetDuration(config.FlagStatsReportInterval),
 			connection.NewValidator(
 				di.ConsumerBalanceTracker,
 				di.IdentityManager,
@@ -831,6 +836,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	if err := di.AllowURLAccess(allow...); err != nil {
 		return err
 	}
+
+	di.WireguardClientFactory = endpoint.NewWGClientFactory()
+
 	return di.IdentityRegistry.Subscribe(di.EventBus)
 }
 
@@ -940,7 +948,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 
 	di.LocationResolver = location.NewCache(resolver, di.EventBus, time.Minute*5)
 
-	if !config.GetBool(config.FlagProxyMode) {
+	if !config.GetBool(config.FlagProxyMode) && !config.GetBool(config.FlagDVPNMode) {
 		err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
 		if err != nil {
 			return err
@@ -1042,7 +1050,7 @@ func (di *Dependencies) handleConnStateChange() error {
 
 	latestState := connectionstate.NotConnected
 	return di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
-		if config.GetBool(config.FlagProxyMode) {
+		if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
 			return // Proxy mode doesn't establish system wide tunnels, no reconnect required.
 		}
 

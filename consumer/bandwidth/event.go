@@ -27,6 +27,7 @@ const AppTopicConnectionThroughput = "Throughput"
 
 // AppEventConnectionThroughput represents a session throughput event.
 type AppEventConnectionThroughput struct {
+	UUID        string
 	Throughput  Throughput
 	SessionInfo connectionstate.Status
 }

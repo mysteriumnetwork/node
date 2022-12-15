@@ -19,10 +19,12 @@ package endpoint
 
 import (
 	"runtime"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/dvpnclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
@@ -41,7 +43,23 @@ type WgClient interface {
 	Close() error
 }
 
-func newWGClient() (WgClient, error) {
+// WgClientFactory represents WireGuard client factory.
+type WgClientFactory struct {
+	once                         sync.Once
+	isKernelSpaceSupportedResult bool
+}
+
+// NewWGClientFactory returns a new client factory.
+func NewWGClientFactory() *WgClientFactory {
+	return &WgClientFactory{}
+}
+
+// NewWGClient returns a new wireguard client.
+func (wcf *WgClientFactory) NewWGClient() (WgClient, error) {
+	if config.GetBool(config.FlagDVPNMode) {
+		return dvpnclient.New()
+	}
+
 	if config.GetBool(config.FlagProxyMode) {
 		return proxyclient.New()
 	}
@@ -54,7 +72,11 @@ func newWGClient() (WgClient, error) {
 		return remoteclient.New()
 	}
 
-	if isKernelSpaceSupported() {
+	wcf.once.Do(func() {
+		wcf.isKernelSpaceSupportedResult = wcf.isKernelSpaceSupported()
+	})
+
+	if wcf.isKernelSpaceSupportedResult {
 		return kernelspace.NewWireguardClient()
 	}
 
@@ -63,7 +85,7 @@ func newWGClient() (WgClient, error) {
 	return userspace.NewWireguardClient()
 }
 
-func isKernelSpaceSupported() bool {
+func (wcf *WgClientFactory) isKernelSpaceSupported() bool {
 	if runtime.GOOS != "linux" {
 		return false
 	}

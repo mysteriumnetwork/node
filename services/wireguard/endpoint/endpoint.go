@@ -32,8 +32,8 @@ import (
 )
 
 // NewConnectionEndpoint returns new connection endpoint instance.
-func NewConnectionEndpoint(resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
-	wgClient, err := newWGClient()
+func NewConnectionEndpoint(resourceAllocator *resources.Allocator, wgClientFactory *WgClientFactory) (wg.ConnectionEndpoint, error) {
+	wgClient, err := wgClientFactory.NewWGClient()
 	if err != nil {
 		return nil, err
 	}

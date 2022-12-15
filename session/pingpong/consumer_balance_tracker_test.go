@@ -384,7 +384,7 @@ type mockconsumerInfoGetter struct {
 	amount *big.Int
 }
 
-func (mcig *mockconsumerInfoGetter) GetConsumerData(_ int64, _ string) (HermesUserInfo, error) {
+func (mcig *mockconsumerInfoGetter) GetConsumerData(_ int64, _ string, _ time.Duration) (HermesUserInfo, error) {
 	return HermesUserInfo{
 		LatestPromise: LatestPromise{
 			Amount: mcig.amount,

@@ -135,7 +135,7 @@ var LocalnetDefinition = NetworkDefinition{
 var TestnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://discovery-testnet.mysterium.network/api/v4",
 	DiscoveryAddress:          "https://discovery-testnet.mysterium.network/api/v4",
-	AccessPolicyOracleAddress: "https://trust.mysterium.network/api/v1/access-policies/",
+	AccessPolicyOracleAddress: "https://trust-testnet.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://broker.mysterium.network:4223"},
 	TransactorAddress:         "https://transactor-testnet.mysterium.network/api/v1",
 	AffiliatorAddress:         "https://affiliator.mysterium.network/api/v1",

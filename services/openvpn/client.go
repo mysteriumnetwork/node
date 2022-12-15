@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -71,7 +72,7 @@ func NewClient(openvpnBinary, scriptDir, runtimeDir string,
 
 		stateMiddleware := newStateMiddleware(stateCh)
 		authMiddleware := newAuthMiddleware(options.SessionID, signer)
-		byteCountMiddleware := openvpn_bytescount.NewMiddleware(client.OnStats, connection.DefaultStatsReportInterval)
+		byteCountMiddleware := openvpn_bytescount.NewMiddleware(client.OnStats, config.GetDuration(config.FlagStatsReportInterval))
 		proc := openvpn.CreateNewProcess(openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
 		return proc, vpnClientConfig, nil
 	}

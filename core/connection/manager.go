@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gofrs/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -127,7 +128,7 @@ type validator interface {
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error)
+type PaymentEngineFactory func(senderUUID string, channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (PaymentIssuer, error)
 
 // ProposalLookup returns a service proposal based on predefined conditions.
 type ProposalLookup func() (proposal *proposal.PricedServiceProposal, err error)
@@ -167,6 +168,8 @@ type connectionManager struct {
 
 	activeConnection Connection
 	statsTracker     statsTracker
+
+	uuid string
 }
 
 // NewManager creates connection manager with given dependencies
@@ -182,6 +185,11 @@ func NewManager(
 	p2pDialer p2p.Dialer,
 	preReconnect, postReconnect func(),
 ) *connectionManager {
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		panic(err) // This should never happen.
+	}
+
 	m := &connectionManager{
 		newConnection:        connectionCreator,
 		status:               connectionstate.Status{State: connectionstate.NotConnected},
@@ -198,6 +206,7 @@ func NewManager(
 		timeGetter:           time.Now,
 		preReconnect:         preReconnect,
 		postReconnect:        postReconnect,
+		uuid:                 uuid.String(),
 	}
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
@@ -400,7 +409,7 @@ func (m *connectionManager) handleStartError(sessionID session.ID, err error) er
 }
 
 func (m *connectionManager) clearIPCache() {
-	if config.GetBool(config.FlagProxyMode) {
+	if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
 		return
 	}
 
@@ -411,7 +420,7 @@ func (m *connectionManager) clearIPCache() {
 
 // checkSessionIP checks if IP has changed after connection was established.
 func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
-	if config.GetBool(config.FlagProxyMode) {
+	if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
 		return
 	}
 
@@ -475,7 +484,7 @@ func (m *connectionManager) getPublicIP() string {
 }
 
 func (m *connectionManager) paymentLoop(opts ConnectOptions, price market.Price) (PaymentIssuer, error) {
-	payments, err := m.paymentEngineFactory(m.channel, opts.ConsumerID, identity.FromAddress(opts.Proposal.ProviderID), opts.HermesID, opts.Proposal, price)
+	payments, err := m.paymentEngineFactory(m.uuid, m.channel, opts.ConsumerID, identity.FromAddress(opts.Proposal.ProviderID), opts.HermesID, opts.Proposal, price)
 	if err != nil {
 		return nil, err
 	}
@@ -703,6 +712,13 @@ func (m *connectionManager) Status() connectionstate.Status {
 	return m.status
 }
 
+func (m *connectionManager) UUID() string {
+	m.statusLock.RLock()
+	defer m.statusLock.RUnlock()
+
+	return m.uuid
+}
+
 func (m *connectionManager) Stats() connectionstate.Statistics {
 	return m.statsTracker.stats()
 }
@@ -908,6 +924,7 @@ func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnec
 
 func (m *connectionManager) publishStateEvent(state connectionstate.State) {
 	m.eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
+		UUID:        m.uuid,
 		State:       state,
 		SessionInfo: m.Status(),
 	})

@@ -27,9 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
-// DefaultStatsReportInterval is interval for consumer connection statistics reporting.
-const DefaultStatsReportInterval = 10 * time.Second
-
 type statsSupplier interface {
 	Statistics() (connectionstate.Statistics, error)
 }
@@ -63,6 +60,7 @@ func (s *statsTracker) start(sessionSupplier *connectionManager, statsSupplier s
 
 			s.bus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
 				Stats:       stats,
+				UUID:        sessionSupplier.UUID(),
 				SessionInfo: sessionSupplier.Status(),
 			})
 

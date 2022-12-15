@@ -51,6 +51,7 @@ type channelProvider interface {
 type hermesCaller interface {
 	GetProviderData(chainID int64, id string) (HermesUserInfo, error)
 	RefreshLatestProviderPromise(chainID int64, id string, hashlock, recoveryData []byte, signer identity.Signer) (crypto.Promise, error)
+	RevealR(r string, provider string, agreementID *big.Int) error
 }
 
 type beneficiaryProvider interface {
@@ -288,15 +289,31 @@ func (hcr *HermesChannelRepository) handleIdentityUnlock(payload identity.AppEve
 	if unsettledBalance.Cmp(big.NewInt(0)) != 0 {
 		return
 	}
-	data, err := hcr.hermesCaller.GetProviderData(payload.ChainID, payload.ID.Address)
 
+	data, err := hcr.hermesCaller.GetProviderData(payload.ChainID, payload.ID.Address)
 	if err != nil {
 		log.Err(err).Msg("failed to get provider data")
 		return
 	}
 
+	//skip refresh if promise has been revealed or we know r
+	if data.LatestPromise.Hashlock != "" {
+		hermesPromise, err := hcr.promiseProvider.Get(payload.ChainID, data.ChannelID)
+		if err == nil && strings.EqualFold(data.LatestPromise.Hashlock, fmt.Sprintf("0x%s", common.Bytes2Hex(hermesPromise.Promise.Hashlock))) {
+			err = hcr.revealR(hermesPromise)
+			if err == nil {
+				return
+			}
+			log.Error().Err(err).Msgf("failed to reveal R on identity unlock")
+		}
+	}
+
 	if data.LatestPromise.Amount != nil && data.LatestPromise.Amount.Cmp(big.NewInt(0)) != 0 {
-		R := crypto.GenerateR()
+		R, err := crypto.GenerateR()
+		if err != nil {
+			log.Err(err).Msg("failed to generate R")
+			return
+		}
 		hashlock := ethcrypto.Keccak256(R)
 		details := rRecoveryDetails{
 			R:           hex.EncodeToString(R),
@@ -339,7 +356,32 @@ func (hcr *HermesChannelRepository) handleIdentityUnlock(payload identity.AppEve
 			HermesID:   hermes,
 			ProviderID: identity.FromAddress(data.Identity),
 		})
+
+		err = hcr.revealR(hermesPromise)
+		if err != nil {
+			log.Err(err).Msgf("failed to reveal R after promise refresh")
+		}
+		log.Debug().Bool("saved", err == nil).Msg("refreshed promise")
 	}
+}
+
+func (hcr *HermesChannelRepository) revealR(hermesPromise HermesPromise) error {
+	if hermesPromise.Revealed {
+		return nil
+	}
+
+	err := hcr.hermesCaller.RevealR(hermesPromise.R, hermesPromise.Identity.Address, hermesPromise.AgreementID)
+	if err != nil {
+		return fmt.Errorf("could not reveal R: %w", err)
+	}
+
+	hermesPromise.Revealed = true
+	err = hcr.promiseProvider.Store(hermesPromise)
+	if err != nil && !errors.Is(err, ErrAttemptToOverwrite) {
+		return fmt.Errorf("could not store hermes promise: %w", err)
+	}
+
+	return nil
 }
 
 func (hcr *HermesChannelRepository) fetchKnownChannels(chainID int64) {
@@ -385,14 +427,11 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 		return HermesChannel{}, fmt.Errorf("could not get provider channel for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
-	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
-
 	benef, err := hcr.bprovider.GetBeneficiary(id.ToCommonAddress())
 	if err != nil {
 		return HermesChannel{}, fmt.Errorf("could not get provider beneficiary for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
-
-	hermesChannel.Beneficiary = benef
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise, benef)
 
 	hcr.updateChannel(chainID, hermesChannel)
 
@@ -407,7 +446,7 @@ func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64
 		return err
 	}
 
-	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise)
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise, gotten.Beneficiary)
 	hcr.updateChannel(chainID, hermesChannel)
 	return nil
 }

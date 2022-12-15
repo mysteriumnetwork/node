@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -36,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -103,14 +104,16 @@ func ExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	addressProvider addressProvider,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
-	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
+	dataLeewayMegabytes uint64,
+) func(senderUUID string, channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
+	return func(senderUUID string, channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
 		}
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoicePayerDeps{
+			SenderUUID:                senderUUID,
 			InvoiceChan:               invoices,
 			PeerExchangeMessageSender: NewExchangeSender(channel),
 			ConsumerTotalsStorage:     totalStorage,

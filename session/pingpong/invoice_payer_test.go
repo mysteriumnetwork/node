@@ -367,11 +367,10 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 			want:    new(big.Int),
 		},
 		{
-			name: "adds to zero if not found",
+			name: "adds to zero if no previous value",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					bus: eventbus.New(),
-					err: ErrNotFound,
 				},
 			},
 			args: args{
@@ -768,6 +767,23 @@ func (mcts *mockConsumerTotalsStorage) Store(chainID int64, id identity.Identity
 		})
 	}
 	return nil
+}
+
+func (mcts *mockConsumerTotalsStorage) Add(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
+	prevAmount := big.NewInt(0)
+	if mcts.res != nil {
+		prevAmount = mcts.res
+	}
+	mcts.calledWith = new(big.Int).Add(prevAmount, amount)
+	if mcts.bus != nil {
+		go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+			ChainID:    chainID,
+			Current:    amount,
+			HermesID:   hermesID,
+			ConsumerID: id,
+		})
+	}
+	return mcts.err
 }
 
 func (mcts *mockConsumerTotalsStorage) Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error) {

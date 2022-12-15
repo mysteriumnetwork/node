@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/shaper"
@@ -50,6 +51,8 @@ func NewManager(
 	eventBus eventbus.EventBus,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 	resourcesAllocator *resources.Allocator,
+	wgClientFactory *endpoint.WgClientFactory,
+	dnsProxy *dns.Proxy,
 ) *Manager {
 	return &Manager{
 		done:               make(chan struct{}),
@@ -58,9 +61,10 @@ func NewManager(
 		natService:         natService,
 		eventBus:           eventBus,
 		trafficFirewall:    trafficFirewall,
+		dnsProxy:           dnsProxy,
 
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(resourcesAllocator)
+			return endpoint.NewConnectionEndpoint(resourcesAllocator, wgClientFactory)
 		},
 		country:        country,
 		sessionCleanup: map[string]func(){},
@@ -78,8 +82,6 @@ type Manager struct {
 	eventBus        eventbus.EventBus
 	trafficFirewall firewall.IncomingTrafficFirewall
 
-	dnsOK    bool
-	dnsPort  int
 	dnsProxy *dns.Proxy
 
 	connEndpointFactory func() (wg.ConnectionEndpoint, error)
@@ -127,24 +129,20 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 
 	var dnsIP net.IP
 	var releaseTrafficFirewall firewall.IncomingRuleRemove
-	if m.dnsOK {
-		if m.serviceInstance.Policies().HasDNSRules() {
-			releaseTrafficFirewall, err = m.trafficFirewall.BlockIncomingTraffic(providerConfig.Subnet)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to enable traffic blocking")
-			}
+	if m.serviceInstance.Policies().HasDNSRules() {
+		releaseTrafficFirewall, err = m.trafficFirewall.BlockIncomingTraffic(providerConfig.Subnet)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to enable traffic blocking")
 		}
-
-		dnsIP = netutil.FirstIP(config.Consumer.IPAddress)
-		config.Consumer.DNSIPs = dnsIP.String()
 	}
 
+	dnsIP = netutil.FirstIP(config.Consumer.IPAddress)
+	config.Consumer.DNSIPs = dnsIP.String()
+
 	natRules, err := m.natService.Setup(nat.Options{
-		VPNNetwork:        config.Consumer.IPAddress,
-		DNSIP:             dnsIP,
-		ProviderExtIP:     net.ParseIP(m.outboundIP),
-		EnableDNSRedirect: m.dnsOK,
-		DNSPort:           m.dnsPort,
+		VPNNetwork:    config.Consumer.IPAddress,
+		DNSIP:         dnsIP,
+		ProviderExtIP: net.ParseIP(m.outboundIP),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup NAT/firewall rules")
@@ -219,7 +217,7 @@ func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg
 		Subnet:     network,
 		PrivateKey: privateKey,
 		ListenPort: listenPort,
-		DNSPort:    m.dnsPort,
+		DNSPort:    config.GetInt(config.FlagDNSListenPort),
 		DNS:        nil,
 		Peer: wgcfg.Peer{
 			PublicKey: peerPublicKey,
@@ -256,24 +254,10 @@ func (m *Manager) Serve(instance *service.Instance) error {
 		return errors.Wrap(err, "could not get outbound IP")
 	}
 
-	// Start DNS proxy.
-	m.dnsPort = 11253
-	m.dnsOK = false
-	dnsHandler, err := dns.ResolveViaSystem()
-	if err == nil {
-		if m.serviceInstance.Policies().HasDNSRules() {
-			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficFirewall, instance.Policies())
-		}
+	if err := m.dnsProxy.Run(); err != nil {
+		log.Error().Err(err).Msg("Provider DNS will not be available")
 
-		m.dnsProxy = dns.NewProxy("", m.dnsPort, dnsHandler)
-		if err := m.dnsProxy.Run(); err != nil {
-			log.Warn().Err(err).Msg("Provider DNS will not be available")
-		} else {
-			// m.dnsProxy = dnsProxy
-			m.dnsOK = true
-		}
-	} else {
-		log.Warn().Err(err).Msg("Provider DNS will not be available")
+		return err
 	}
 
 	m.startStopMu.Unlock()
