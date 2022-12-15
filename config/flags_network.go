@@ -165,7 +165,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 }
 
 // ParseFlagsNetwork function fills in directory options from CLI context
-func ParseFlagsNetwork(ctx CliContext) {
+func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringFlag(ctx, FlagDiscoveryAddress)
 	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
@@ -226,7 +226,7 @@ func (n BlockchainNetwork) IsLocalnet() bool {
 }
 
 // ParseFlagsBlockchainNetwork function fills in directory options from CLI context
-func ParseFlagsBlockchainNetwork(ctx CliContext) {
+func ParseFlagsBlockchainNetwork(ctx *cli.Context) {
 	Current.ParseBlockchainNetworkFlag(ctx, FlagBlockchainNetwork)
 }
 

@@ -88,7 +88,7 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 }
 
 // ParseFlagsDirectory function fills in directory options from CLI context
-func ParseFlagsDirectory(ctx CliContext) {
+func ParseFlagsDirectory(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagConfigDir)
 	Current.ParseStringFlag(ctx, FlagDataDir)
 	Current.ParseStringFlag(ctx, FlagLogDir)

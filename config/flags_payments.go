@@ -217,7 +217,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 }
 
 // ParseFlagsPayments function fills in payments options from CLI context.
-func ParseFlagsPayments(ctx CliContext) {
+func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagPaymentsMaxHermesFee)
 	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)

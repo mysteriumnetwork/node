@@ -48,7 +48,7 @@ func RegisterFlagsPolicy(flags *[]cli.Flag) {
 }
 
 // ParseFlagsPolicy function fills in PolicyOracle options from CLI context.
-func ParseFlagsPolicy(ctx CliContext) {
+func ParseFlagsPolicy(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)
 }

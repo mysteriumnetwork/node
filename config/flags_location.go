@@ -76,7 +76,7 @@ func RegisterFlagsLocation(flags *[]cli.Flag) {
 }
 
 // ParseFlagsLocation function fills in location options from CLI context.
-func ParseFlagsLocation(ctx CliContext) {
+func ParseFlagsLocation(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIPDetectorURL)
 	Current.ParseStringFlag(ctx, FlagLocationType)
 	Current.ParseStringFlag(ctx, FlagLocationAddress)

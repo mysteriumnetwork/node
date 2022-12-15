@@ -71,7 +71,7 @@ func RegisterFlagsChains(flags *[]cli.Flag) {
 }
 
 // ParseFlagsChains function fills in chain options from CLI context.
-func ParseFlagsChains(ctx CliContext) {
+func ParseFlagsChains(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagChain1RegistryAddress)
 	Current.ParseStringFlag(ctx, FlagChain2RegistryAddress)
 	Current.ParseStringFlag(ctx, FlagChain1HermesAddress)

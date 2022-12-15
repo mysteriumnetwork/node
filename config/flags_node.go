@@ -349,7 +349,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 }
 
 // ParseFlagsNode function fills in node options from CLI context
-func ParseFlagsNode(ctx CliContext) {
+func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsDirectory(ctx)
 
 	ParseFlagsLocation(ctx)

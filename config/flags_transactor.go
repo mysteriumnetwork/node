@@ -57,7 +57,7 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 }
 
 // ParseFlagsTransactor function fills in transactor options from CLI context
-func ParseFlagsTransactor(ctx CliContext) {
+func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorFeesValidTime)

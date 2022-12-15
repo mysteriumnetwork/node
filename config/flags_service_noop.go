@@ -38,6 +38,6 @@ func RegisterFlagsServiceNoop(flags *[]cli.Flag) {
 }
 
 // ParseFlagsServiceNoop parses CLI flags and registers value to configuration
-func ParseFlagsServiceNoop(ctx CliContext) {
+func ParseFlagsServiceNoop(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagNoopAccessPolicies)
 }
