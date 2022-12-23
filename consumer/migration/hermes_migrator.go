@@ -104,10 +104,15 @@ func (m *HermesMigrator) Start(id string) error {
 	}
 
 	// get old and new hermeses
-	activeHermes, oldHermes, err := m.getHermeses(chainID)
+	activeHermes, oldHermesPointer, err := m.getHermeses(chainID)
 	if err != nil {
 		return err
 	}
+
+	if oldHermesPointer == nil {
+		return nil
+	}
+	oldHermes := *oldHermesPointer
 
 	// get registry address
 	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
@@ -225,10 +230,15 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, nil
 	}
 
-	activeHermes, oldHermes, err := m.getHermeses(chainID)
+	activeHermes, oldHermesPointer, err := m.getHermeses(chainID)
 	if err != nil {
 		return false, err
 	}
+
+	if oldHermesPointer == nil {
+		return false, nil
+	}
+	oldHermes := *oldHermesPointer
 
 	// get data from new hermes
 	newHermesData, err := m.getUserData(chainID, activeHermes.Hex(), id)
@@ -416,22 +426,22 @@ func (m *HermesMigrator) isChannelOpened(chainID int64, identity, hermesID commo
 	return true, nil
 }
 
-func (m *HermesMigrator) getHermeses(chainID int64) (common.Address, common.Address, error) {
+func (m *HermesMigrator) getHermeses(chainID int64) (common.Address, *common.Address, error) {
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
-		return common.Address{}, common.Address{}, fmt.Errorf("could not get hermes address: %w", err)
+		return common.Address{}, nil, fmt.Errorf("could not get hermes address: %w", err)
 	}
 	knownHermeses, err := m.addressProvider.GetKnownHermeses(chainID)
 	if err != nil {
-		return common.Address{}, common.Address{}, fmt.Errorf("could not get hermes address: %w", err)
+		return common.Address{}, nil, fmt.Errorf("could not get hermes address: %w", err)
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
 	if len(oldHermeses) != 1 {
-		log.Info().Msg("Migration interrupted: there are more than 1 Hermes, cannot know which is which.")
-		return common.Address{}, common.Address{}, errors.New("the old Hermes is ambiguous")
+		log.Warn().Msg("Migration skipped: there isn't a single hermes to migrate.")
+		return common.Address{}, nil, nil
 	}
 
-	return activeHermes, oldHermeses[0], nil
+	return activeHermes, &oldHermeses[0], nil
 }
 
 func (m *HermesMigrator) handleRegistrationEvent(ev registry.IdentityRegistrationRequest) {
