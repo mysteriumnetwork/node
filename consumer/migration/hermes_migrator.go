@@ -37,7 +37,10 @@ import (
 
 const oldBalanceMigrationMinimumMyst = 0.1
 
-var openChannelTimeout = time.Hour
+var (
+	openChannelTimeout = time.Hour
+	hermesUnavailable  = fmt.Errorf("hermes seems unavailable")
+)
 
 type blockchain interface {
 	GetConsumerChannel(chainID int64, addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error)
@@ -103,16 +106,16 @@ func (m *HermesMigrator) Start(id string) error {
 		return errors.New("identity is unregistered")
 	}
 
-	// get old and new hermeses
-	activeHermes, oldHermes, err := m.getHermeses(chainID)
-	if err != nil {
-		return err
-	}
-
 	// get registry address
 	registryAddress, err := m.addressProvider.GetRegistryAddress(chainID)
 	if err != nil {
 		return fmt.Errorf("could not get registry address: %w", err)
+	}
+
+	// get old and new hermeses
+	activeHermes, oldHermeses, err := m.getHermeses(chainID)
+	if err != nil {
+		return err
 	}
 
 	// try open channel only if it's not opened yet.
@@ -120,83 +123,88 @@ func (m *HermesMigrator) Start(id string) error {
 		return fmt.Errorf("open channel error: %w", err)
 	}
 
-	// get data from old hermes
-	data, err := m.getUserData(chainID, oldHermes.Hex(), id)
-	if err != nil {
-		newHermesData, err := m.getUserData(chainID, activeHermes.Hex(), id)
+	for _, oldHermes := range oldHermeses {
+		// get data from old hermes
+		data, err := m.getUserData(chainID, oldHermes.Hex(), id)
 		if err != nil {
-			return fmt.Errorf("error during getting balance from hermes: %w", err)
-		}
-		// old hermes unavailable, but user already using new hermes
-		if newHermesData.Balance.Cmp(big.NewInt(0)) > 0 || (newHermesData.LatestPromise.Amount != nil && newHermesData.LatestPromise.Amount.Cmp(big.NewInt(0)) > 0) {
-			m.st.MarkAsMigrated(chainID, id)
-			return nil
-		}
-		return fmt.Errorf("error during getting balance: %w", err)
-	}
-	// skip migration for offchain identities
-	if data.IsOffchain {
-		m.st.MarkAsMigrated(chainID, id)
-		return nil
-	}
-	oldBalance := data.Balance
-
-	// get channel implementation contract address
-	channelImpl, err := m.addressProvider.GetActiveChannelImplementation(chainID)
-	if err != nil {
-		return fmt.Errorf("error during getting channel implementation: %w", err)
-	}
-	// calculate new channel address
-	newChannel, err := crypto.GenerateChannelAddress(id, activeHermes.Hex(), registryAddress.Hex(), channelImpl.Hex())
-	if err != nil {
-		return fmt.Errorf("generate channel address erro: %w", err)
-	}
-
-	providerId := identity.FromAddress(id)
-
-	// check if balance enough for migration
-	if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) >= 0 {
-		// If not enough balance we should still check that latest withdrawal succeeded
-		amountToWithdraw, chid, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id), oldHermes)
-		if err != nil {
-			if !errors.Is(err, pingpong.ErrNotFound) {
-				return fmt.Errorf("failed to check latest withdrawal status: %w", err)
+			newHermesData, err := m.getUserData(chainID, activeHermes.Hex(), id)
+			if err != nil {
+				return fmt.Errorf("error during getting balance from hermes: %w", err)
 			}
-			log.Info().Msg("No promise saved")
-		} else if amountToWithdraw != nil && amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
-			log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
-			return m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
+			// old hermes unavailable, but user already using new hermes
+			if newHermesData.Balance.Cmp(big.NewInt(0)) > 0 || (newHermesData.LatestPromise.Amount != nil && newHermesData.LatestPromise.Amount.Cmp(big.NewInt(0)) > 0) {
+				continue
+			}
+			return fmt.Errorf("error during getting balance: %w", err)
 		}
-		log.Info().Msgf("Not enough balance for migration or already migrated (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
-		m.st.MarkAsMigrated(chainID, id)
-		return nil
+		// skip migration for offchain identities
+		if data.IsOffchain {
+			continue
+		}
+		oldBalance := data.Balance
+
+		// get channel implementation contract address
+		channelImpl, err := m.addressProvider.GetActiveChannelImplementation(chainID)
+		if err != nil {
+			return fmt.Errorf("error during getting channel implementation: %w", err)
+		}
+		// calculate new channel address
+		newChannel, err := crypto.GenerateChannelAddress(id, activeHermes.Hex(), registryAddress.Hex(), channelImpl.Hex())
+		if err != nil {
+			return fmt.Errorf("generate channel address erro: %w", err)
+		}
+
+		providerId := identity.FromAddress(id)
+
+		// check if balance enough for migration
+		if crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldBalance) >= 0 {
+			// If not enough balance we should still check that latest withdrawal succeeded
+			amountToWithdraw, chid, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id), oldHermes)
+			if err != nil {
+				if !errors.Is(err, pingpong.ErrNotFound) {
+					return fmt.Errorf("failed to check latest withdrawal status: %w", err)
+				}
+				log.Info().Msg("No promise saved")
+			} else if amountToWithdraw != nil && amountToWithdraw.Cmp(big.NewInt(0)) == 1 {
+				log.Debug().Msgf("Found withdrawal which is not settled, will retry to withdraw")
+				err = m.hps.RetryWithdrawLatest(chainID, amountToWithdraw, chid, common.HexToAddress(newChannel), providerId)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			log.Info().Msgf("Not enough balance for migration or already migrated (id: %s, old balance: %.2f)", id, crypto.BigMystToFloat(oldBalance))
+			continue
+		}
+
+		log.Debug().Msgf("Send transaction. Old Hermes: %s, new Hermes %s (channel: %s)", oldHermes, activeHermes, newChannel)
+		// send all money from old channel to new
+		err = m.hps.Withdraw(chainID, chainID, providerId, oldHermes, common.HexToAddress(newChannel), nil)
+		if err != nil {
+			return err
+		}
+
+		m.cbt.ForceBalanceUpdateCached(chainID, providerId)
 	}
 
-	log.Debug().Msgf("Send transaction. Old Hermes: %s, new Hermes %s (channel: %s)", oldHermes, activeHermes, newChannel)
-
-	// send all money from old channel to new
-	if err := m.hps.Withdraw(chainID, chainID, providerId, oldHermes, common.HexToAddress(newChannel), nil); err != nil {
-		return err
-	}
-
-	m.cbt.ForceBalanceUpdateCached(chainID, providerId)
-
+	m.st.MarkAsMigrated(chainID, id)
 	return nil
 }
 
 func (m *HermesMigrator) openChannel(id string, err error, chainID int64, activeHermes common.Address, registryAddress common.Address) error {
-	statusResponse, err := m.transactor.ChannelStatus(chainID, id, activeHermes.Hex(), registryAddress.Hex())
+	// check payment channel status
+	status, err := m.getChannelStatus(chainID, common.HexToAddress(id), activeHermes)
 	if err != nil {
 		return fmt.Errorf("channel status error: %w", err)
 	}
 
-	log.Debug().Msgf("Channel status: %s", statusResponse.Status)
-	if statusResponse.Status == registry.ChannelStatusNotFound {
+	log.Debug().Msgf("Channel status: %s", status)
+	if status == registry.ChannelStatusNotFound {
 		if err := m.transactor.OpenChannel(chainID, id, activeHermes.Hex(), registryAddress.Hex()); err != nil {
 			return fmt.Errorf("open new channel error: %w", err)
 		}
 		err = m.waitForChannelOpened(chainID, common.HexToAddress(id), activeHermes, registryAddress, openChannelTimeout)
-	} else if statusResponse.Status == registry.ChannelStatusInProgress {
+	} else if status == registry.ChannelStatusInProgress {
 		err = m.waitForChannelOpened(chainID, common.HexToAddress(id), activeHermes, registryAddress, openChannelTimeout)
 	}
 	if err != nil {
@@ -225,7 +233,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, nil
 	}
 
-	activeHermes, oldHermes, err := m.getHermeses(chainID)
+	activeHermes, oldHermeses, err := m.getHermeses(chainID)
 	if err != nil {
 		return false, err
 	}
@@ -236,32 +244,16 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return false, fmt.Errorf("error during getting balance: %w", err)
 	}
 
-	// get data from old hermes
-	oldHermesData, err := m.getUserData(chainID, oldHermes.Hex(), id)
-	if err != nil {
-		// old hermes unavailable, but user already using new hermes
-		if newHermesData.Balance.Cmp(big.NewInt(0)) > 0 || (newHermesData.LatestPromise.Amount != nil && newHermesData.LatestPromise.Amount.Cmp(big.NewInt(0)) > 0) {
-			m.st.MarkAsMigrated(chainID, id)
-			return false, nil
+	for _, oldHermes := range oldHermeses {
+		required, err := m.hermesRequiresMigration(chainID, common.HexToAddress(id), oldHermes)
+		if err != nil {
+			if !errors.Is(err, hermesUnavailable) || !(newHermesData.Balance.Cmp(big.NewInt(0)) > 0 || (newHermesData.LatestPromise.Amount != nil && newHermesData.LatestPromise.Amount.Cmp(big.NewInt(0)) > 0)) {
+				return false, err
+			}
 		}
-		return false, fmt.Errorf("error during getting balance: %w", err)
-	}
-
-	// if identity is offchain no migration is needed
-	if oldHermesData.IsOffchain {
-		log.Info().Msg("Migration is not required: identity is offchain")
-		m.st.MarkAsMigrated(chainID, id)
-		return false, nil
-	}
-
-	// if channel is not opened in old hermes - skip
-	opened, err := m.isChannelOpened(chainID, common.HexToAddress(id), oldHermes)
-	if err != nil {
-		return false, err
-	} else if !opened {
-		log.Info().Msg("Migration is not required: channel is not opened in old hermes")
-		m.st.MarkAsMigrated(chainID, id)
-		return false, nil
+		if required {
+			return true, nil
+		}
 	}
 
 	// check payment channel status
@@ -273,7 +265,34 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 		return true, nil
 	}
 
-	amountToWithdraw, _, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id), oldHermes)
+	m.st.MarkAsMigrated(chainID, id)
+	return false, nil
+}
+
+func (m *HermesMigrator) hermesRequiresMigration(chainID int64, id, hermesID common.Address) (bool, error) {
+	// if channel is not open in old hermes - skip
+	opened, err := m.isChannelOpened(chainID, id, hermesID)
+	if err != nil {
+		return false, err
+	} else if !opened {
+		log.Info().Msg("Migration is not required: channel is not opened in old hermes")
+		return false, nil
+	}
+
+	// get data from old hermes
+	oldHermesData, err := m.getUserData(chainID, hermesID.Hex(), id.Hex())
+	if err != nil {
+		return false, fmt.Errorf("error during getting balance: %s :%w", err.Error(), hermesUnavailable)
+	}
+
+	// if identity is offchain no migration is needed
+	if oldHermesData.IsOffchain {
+		log.Info().Msg("Migration is not required: identity is offchain")
+		return false, nil
+	}
+
+	//check if there is any unfinished withdrawal
+	amountToWithdraw, _, err := m.hps.CheckLatestWithdrawal(chainID, identity.FromAddress(id.Hex()), hermesID)
 	if err != nil {
 		if !errors.Is(err, pingpong.ErrNotFound) {
 			return false, fmt.Errorf("failed to check latest withdrawal status: %w", err)
@@ -284,13 +303,7 @@ func (m *HermesMigrator) IsMigrationRequired(id string) (bool, error) {
 	}
 
 	// amount to withdraw greater then threshold
-	required := crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0 && newHermesData.Balance.Cmp(new(big.Int)) == 0
-	if !required {
-		log.Info().Msgf("Migration is not required: lack of balance (%s)", oldHermesData.Balance.String())
-		m.st.MarkAsMigrated(chainID, id)
-	}
-
-	return required, nil
+	return crypto.FloatToBigMyst(oldBalanceMigrationMinimumMyst).Cmp(oldHermesData.Balance) < 0, nil
 }
 
 // Subscribe for EventBus events
@@ -416,22 +429,18 @@ func (m *HermesMigrator) isChannelOpened(chainID int64, identity, hermesID commo
 	return true, nil
 }
 
-func (m *HermesMigrator) getHermeses(chainID int64) (common.Address, common.Address, error) {
+func (m *HermesMigrator) getHermeses(chainID int64) (common.Address, []common.Address, error) {
 	activeHermes, err := m.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
-		return common.Address{}, common.Address{}, fmt.Errorf("could not get hermes address: %w", err)
+		return common.Address{}, nil, fmt.Errorf("could not get hermes address: %w", err)
 	}
 	knownHermeses, err := m.addressProvider.GetKnownHermeses(chainID)
 	if err != nil {
-		return common.Address{}, common.Address{}, fmt.Errorf("could not get hermes address: %w", err)
+		return common.Address{}, nil, fmt.Errorf("could not get hermes address: %w", err)
 	}
 	oldHermeses := getOldHermeses(knownHermeses, activeHermes)
-	if len(oldHermeses) != 1 {
-		log.Info().Msg("Migration interrupted: there are more than 1 Hermes, cannot know which is which.")
-		return common.Address{}, common.Address{}, errors.New("the old Hermes is ambiguous")
-	}
 
-	return activeHermes, oldHermeses[0], nil
+	return activeHermes, oldHermeses, nil
 }
 
 func (m *HermesMigrator) handleRegistrationEvent(ev registry.IdentityRegistrationRequest) {
