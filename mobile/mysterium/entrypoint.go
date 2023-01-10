@@ -193,6 +193,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	dataDir := filepath.Join(appPath, ".mysterium")
+	config.Current.SetDefault(config.FlagDataDir.Name, dataDir)
 	currentDir := appPath
 	if err := loadUserConfig(dataDir); err != nil {
 		return nil, err
