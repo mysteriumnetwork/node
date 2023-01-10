@@ -30,6 +30,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	_ "github.com/mysteriumnetwork/go-dvpn-web/v2"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
@@ -57,6 +58,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	_ "github.com/mysteriumnetwork/node/ui"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/units"
@@ -244,13 +246,17 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Runtime:  currentDir,
 		},
 
-		TequilapiEnabled:        false,
+		TequilapiEnabled:        true,
+		TequilapiPort:           4050,
+		TequilapiAddress:        "127.0.0.1",
 		SwarmDialerDNSHeadstart: time.Millisecond * 1500,
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},
 		UI: node.OptionsUI{
-			UIEnabled: false,
+			UIEnabled:     true,
+			UIBindAddress: "127.0.0.1",
+			UIPort:        4449,
 		},
 		FeedbackURL:    options.FeedbackURL,
 		OptionsNetwork: network,
