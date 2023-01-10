@@ -87,7 +87,7 @@ func (c *CredentialsManager) loadOrInitialize() (string, error) {
 		return storedHash, err
 	}
 
-	log.Info().Msg("CredentialsManager not found, initializing to default")
+	log.Info().Err(err).Msg("CredentialsManager not found, initializing to default")
 
 	err = c.SetPassword(config.FlagTequilapiPassword.Value)
 	if err != nil {
