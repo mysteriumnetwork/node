@@ -54,7 +54,7 @@ func ReleaseAndroidSDK() error {
 		return err
 	}
 
-	artifactBaseName := fmt.Sprintf("build/package/mobile-node-%s", env.Str(env.BuildVersion))
+	artifactBaseName := fmt.Sprintf("build/package/provider-node-%s", env.Str(env.BuildVersion))
 
 	// Deploy AAR (android archive)
 	if err := sh.RunWithV(map[string]string{
