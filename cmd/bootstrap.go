@@ -97,7 +97,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 }
 
 func (di *Dependencies) bootstrapNodeUIVersionConfig(nodeOptions node.Options) error {
-	if !nodeOptions.TequilapiEnabled {
+	if !nodeOptions.TequilapiEnabled || nodeOptions.Directories.NodeUI == "" {
 		noopCfg, _ := versionmanager.NewNoOpVersionConfig()
 		di.uiVersionConfig = noopCfg
 		return nil
