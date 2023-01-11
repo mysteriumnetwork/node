@@ -15,7 +15,7 @@ source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
 DIR_BUILD="build/package"
-OUT_BASENAME="mobile-node-${BUILD_VERSION}"
+OUT_BASENAME="provider-node-${BUILD_VERSION}"
 OUT_FILENAME_AAR="${DIR_BUILD}/${OUT_BASENAME}.aar"
 
 docker run --rm \

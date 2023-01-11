@@ -172,7 +172,7 @@ func PackageAndroid() error {
 	buildVersion := env.Str(env.BuildVersion)
 	log.Info().Msgf("Package Android SDK version: %s", buildVersion)
 
-	pomFileOut, err := os.Create(fmt.Sprintf("build/package/mobile-node-%s.pom", buildVersion))
+	pomFileOut, err := os.Create(fmt.Sprintf("build/package/provider-node-%s.pom", buildVersion))
 	if err != nil {
 		return err
 	}

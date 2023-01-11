@@ -6,11 +6,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>network.mysterium</groupId>
-  <artifactId>mobile-node</artifactId>
+  <artifactId>provider-node</artifactId>
   <version>{{.BuildVersion}}</version>
   <packaging>aar</packaging>
 
-  <name>Mysterium Network Android SDK</name>
+  <name>Mysterium Network Android SDK (provider)</name>
   <description>Android port of the Mysterium Node for decentralised VPN Network</description>
   <url>https://github.com/mysteriumnetwork/node</url>
 
