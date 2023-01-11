@@ -57,7 +57,6 @@ const (
 // GetOptionsDirectory retrieves directory configuration from app configuration.
 func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
-
 	networkSubdir := NetworkSubDirMainnet // Matches DefaultNetworkDefinition
 	switch {
 	case network.Network.IsMainnet():

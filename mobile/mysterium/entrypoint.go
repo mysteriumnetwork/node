@@ -125,6 +125,7 @@ type MobileNodeOptions struct {
 	ChannelImplementationSCAddress string
 	CacheTTLSeconds                int
 	ObserverAddress                string
+	IsProvider                     bool
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -136,6 +137,13 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return DefaultNodeOptionsByNetwork(string(config.Mainnet))
+}
+
+// DefaultNodeOptions returns default options.
+func DefaultProviderNodeOptions() *MobileNodeOptions {
+	options := DefaultNodeOptionsByNetwork(string(config.Mainnet))
+	options.IsProvider = true
+	return options
 }
 
 // DefaultNodeOptionsByNetwork returns default options by network.
@@ -210,12 +218,13 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
 
-	// set provider-related defaults
-	config.Current.SetDefault(config.FlagUserspace.Name, "true")
-	config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
-	config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
-	config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
-	config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
+	if options.IsProvider {
+		config.Current.SetDefault(config.FlagUserspace.Name, "true")
+		config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+		config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
+		config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
+		config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
+	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
@@ -240,8 +249,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				"50.19.252.36",
 				"174.129.214.20",
 			},
-			"badupnp.benjojo.co.uk": {"104.22.70.70", "104.22.71.70", "172.67.25.154"},
 		},
+	}
+	if options.IsProvider {
+		network.DNSMap["badupnp.benjojo.co.uk"] = []string{"104.22.70.70", "104.22.71.70", "172.67.25.154"}
 	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,
@@ -273,11 +284,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Address: options.QualityOracleURL,
 		},
 		Discovery: node.OptionsDiscovery{
-			Types:         []node.DiscoveryType{node.DiscoveryTypeAPI},
-			Address:       network.DiscoveryAddress,
-			FetchEnabled:  true,
-			PingInterval:  config.GetDuration(config.FlagDiscoveryPingInterval),
-			FetchInterval: config.GetDuration(config.FlagDiscoveryFetchInterval),
+			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI},
+			Address:      network.DiscoveryAddress,
+			FetchEnabled: false,
 			DHT: node.OptionsDHT{
 				Address:        "0.0.0.0",
 				Port:           0,
@@ -306,11 +315,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			BalanceLongPollInterval:        time.Hour * 1,
 			RegistryTransactorPollInterval: time.Second * 20,
 			RegistryTransactorPollTimeout:  time.Minute * 20,
-
-			ProviderInvoiceFrequency:      config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
-			ProviderLimitInvoiceFrequency: config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),
-			MaxUnpaidInvoiceValue:         config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue),
-			LimitUnpaidInvoiceValue:       config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue),
 		},
 		Chains: node.OptionsChains{
 			Chain1: metadata.ChainDefinition{
@@ -319,7 +323,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChannelImplAddress: options.ChannelImplementationSCAddress,
 				MystAddress:        options.MystSCAddress,
 				ChainID:            options.Chain1ID,
-				KnownHermeses:      config.GetStringSlice(config.FlagChain1KnownHermeses),
 			},
 			Chain2: metadata.ChainDefinition{
 				RegistryAddress:    options.RegistrySCAddress,
@@ -327,16 +330,27 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChannelImplAddress: options.ChannelImplementationSCAddress,
 				MystAddress:        options.MystSCAddress,
 				ChainID:            options.Chain2ID,
-				KnownHermeses:      config.GetStringSlice(config.FlagChain2KnownHermeses),
 			},
 		},
 
-		Consumer:        false,
+		Consumer:        true,
 		PilvytisAddress: options.PilvytisAddress,
 		ObserverAddress: options.ObserverAddress,
 		SSE: node.OptionsSSE{
 			Enabled: true,
 		},
+	}
+	if options.IsProvider {
+		nodeOptions.Discovery.FetchEnabled = true
+		nodeOptions.Discovery.PingInterval = config.GetDuration(config.FlagDiscoveryPingInterval)
+		nodeOptions.Discovery.FetchInterval = config.GetDuration(config.FlagDiscoveryFetchInterval)
+		nodeOptions.Payments.ProviderInvoiceFrequency = config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency)
+		nodeOptions.Payments.ProviderLimitInvoiceFrequency = config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency)
+		nodeOptions.Payments.MaxUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue)
+		nodeOptions.Payments.LimitUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue)
+		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain1KnownHermeses)
+		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain2KnownHermeses)
+		nodeOptions.Consumer = false
 	}
 
 	err = di.Bootstrap(nodeOptions)
@@ -381,9 +395,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
-
-		// provider related
-		servicesManager: di.ServicesManager,
+	}
+	if options.IsProvider {
+		mobileNode.servicesManager = di.ServicesManager
 	}
 
 	return mobileNode, nil

@@ -226,7 +226,6 @@ func GetLogOptions() *logconfig.LogOptions {
 // GetDiscoveryOptions retrieves discovery options from the app configuration.
 func GetDiscoveryOptions() *OptionsDiscovery {
 	typeValues := config.GetStringSlice(config.FlagDiscoveryType)
-
 	types := make([]DiscoveryType, len(typeValues))
 	for i, typeValue := range typeValues {
 		types[i] = DiscoveryType(typeValue)
