@@ -139,7 +139,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 	return DefaultNodeOptionsByNetwork(string(config.Mainnet))
 }
 
-// DefaultNodeOptions returns default options.
+// DefaultProviderNodeOptions returns default options.
 func DefaultProviderNodeOptions() *MobileNodeOptions {
 	options := DefaultNodeOptionsByNetwork(string(config.Mainnet))
 	options.IsProvider = true
@@ -770,7 +770,7 @@ func (mb *MobileNode) unlockIdentity(adr, passphrase string) string {
 	return id.Address
 }
 
-// starts all provider services (provider mode)
+// StartProvider starts all provider services (provider mode)
 func (mb *MobileNode) StartProvider() {
 	providerID := mb.unlockIdentity(
 		config.FlagIdentity.Value,
@@ -797,7 +797,7 @@ func (mb *MobileNode) StartProvider() {
 	}
 }
 
-// stops all provider services, started by StartProvider
+// StopProvider stops all provider services, started by StartProvider
 func (mb *MobileNode) StopProvider() {
 	ids := mb.serviceIDs
 	mb.serviceIDs = []service.ID{}
@@ -811,7 +811,7 @@ func (mb *MobileNode) StopProvider() {
 	}
 }
 
-// sets LauncherVersion flag value, which is reported to Prometheus
+// SetFlagLauncherVersion sets LauncherVersion flag value, which is reported to Prometheus
 func SetFlagLauncherVersion(val string) {
 	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }
