@@ -28,8 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
@@ -41,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
@@ -53,6 +52,7 @@ import (
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/router"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -60,6 +60,9 @@ import (
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/units"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -92,6 +95,9 @@ type MobileNode struct {
 	residentCountry           *identity.ResidentCountry
 	filterPresetStorage       *proposal.FilterPresetStorage
 	hermesMigrator            *migration.HermesMigrator
+
+	servicesManager *service.Manager
+	serviceIDs      []service.ID
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -119,6 +125,7 @@ type MobileNodeOptions struct {
 	ChannelImplementationSCAddress string
 	CacheTTLSeconds                int
 	ObserverAddress                string
+	IsProvider                     bool
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -130,6 +137,13 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return DefaultNodeOptionsByNetwork(string(config.Mainnet))
+}
+
+// DefaultProviderNodeOptions returns default options.
+func DefaultProviderNodeOptions() *MobileNodeOptions {
+	options := DefaultNodeOptionsByNetwork(string(config.Mainnet))
+	options.IsProvider = true
+	return options
 }
 
 // DefaultNodeOptionsByNetwork returns default options by network.
@@ -205,6 +219,14 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
 
+	if options.IsProvider {
+		config.Current.SetDefault(config.FlagUserspace.Name, "true")
+		config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+		config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
+		config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
+		config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
+	}
+
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
 		return nil, fmt.Errorf("invalid bc network: %w", err)
@@ -230,6 +252,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			},
 		},
 	}
+	if options.IsProvider {
+		network.DNSMap["badupnp.benjojo.co.uk"] = []string{"104.22.70.70", "104.22.71.70", "172.67.25.154"}
+	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,
 		LogHTTP:  false,
@@ -245,17 +270,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Runtime:  currentDir,
 		},
 
-		TequilapiEnabled:        true,
-		TequilapiPort:           4050,
-		TequilapiAddress:        "127.0.0.1",
 		SwarmDialerDNSHeadstart: time.Millisecond * 1500,
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
-		},
-		UI: node.OptionsUI{
-			UIEnabled:     true,
-			UIBindAddress: "127.0.0.1",
-			UIPort:        4449,
 		},
 		FeedbackURL:    options.FeedbackURL,
 		OptionsNetwork: network,
@@ -312,12 +329,33 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChainID:            options.Chain2ID,
 			},
 		},
+
 		Consumer:        true,
 		PilvytisAddress: options.PilvytisAddress,
 		ObserverAddress: options.ObserverAddress,
 		SSE: node.OptionsSSE{
 			Enabled: true,
 		},
+	}
+	if options.IsProvider {
+		nodeOptions.Discovery.FetchEnabled = true
+		nodeOptions.Discovery.PingInterval = config.GetDuration(config.FlagDiscoveryPingInterval)
+		nodeOptions.Discovery.FetchInterval = config.GetDuration(config.FlagDiscoveryFetchInterval)
+		nodeOptions.Payments.ProviderInvoiceFrequency = config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency)
+		nodeOptions.Payments.ProviderLimitInvoiceFrequency = config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency)
+		nodeOptions.Payments.MaxUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue)
+		nodeOptions.Payments.LimitUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue)
+		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain1KnownHermeses)
+		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain2KnownHermeses)
+		nodeOptions.Consumer = false
+		nodeOptions.TequilapiEnabled = true
+		nodeOptions.TequilapiPort = 4050
+		nodeOptions.TequilapiAddress = "127.0.0.1"
+		nodeOptions.UI = node.OptionsUI{
+			UIEnabled:     true,
+			UIBindAddress: "127.0.0.1",
+			UIPort:        4449,
+		}
 	}
 
 	err = di.Bootstrap(nodeOptions)
@@ -362,6 +400,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
+	}
+	if options.IsProvider {
+		mobileNode.servicesManager = di.ServicesManager
 	}
 
 	return mobileNode, nil
@@ -723,4 +764,59 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 			BuildNumber: metadata.BuildNumber,
 		},
 	}
+}
+
+func (mb *MobileNode) unlockIdentity(adr, passphrase string) string {
+	chainID := config.GetInt64(config.FlagChainID)
+	id, err := mb.identitySelector.UseOrCreate(adr, passphrase, chainID)
+	if err != nil {
+		return ""
+	}
+	return id.Address
+}
+
+// StartProvider starts all provider services (provider mode)
+func (mb *MobileNode) StartProvider() {
+	providerID := mb.unlockIdentity(
+		config.FlagIdentity.Value,
+		config.FlagIdentityPassphrase.Value,
+	)
+	log.Info().Msgf("Unlocked identity: %v", providerID)
+
+	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+	serviceTypes := strings.Split(activeServices, ",")
+
+	for _, serviceType := range serviceTypes {
+		serviceOpts, err := services.GetStartOptions(serviceType)
+		if err != nil {
+			log.Error().Err(err).Msg("GetStartOptions failed")
+			return
+		}
+
+		id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
+		if err != nil {
+			log.Error().Err(err).Msg("servicesManager.Start failed")
+			return
+		}
+		mb.serviceIDs = append(mb.serviceIDs, id)
+	}
+}
+
+// StopProvider stops all provider services, started by StartProvider
+func (mb *MobileNode) StopProvider() {
+	ids := mb.serviceIDs
+	mb.serviceIDs = []service.ID{}
+
+	for _, id := range ids {
+		err := mb.servicesManager.Stop(id)
+		if err != nil {
+			log.Error().Err(err).Msg("servicesManager.Stop failed")
+			return
+		}
+	}
+}
+
+// SetFlagLauncherVersion sets LauncherVersion flag value, which is reported to Prometheus
+func SetFlagLauncherVersion(val string) {
+	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }
