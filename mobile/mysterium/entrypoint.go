@@ -52,7 +52,6 @@ import (
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/router"
-	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -62,7 +61,6 @@ import (
 	"github.com/mysteriumnetwork/payments/units"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -137,13 +135,6 @@ type ConsumerPaymentConfig struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return DefaultNodeOptionsByNetwork(string(config.Mainnet))
-}
-
-// DefaultProviderNodeOptions returns default options.
-func DefaultProviderNodeOptions() *MobileNodeOptions {
-	options := DefaultNodeOptionsByNetwork(string(config.Mainnet))
-	options.IsProvider = true
-	return options
 }
 
 // DefaultNodeOptionsByNetwork returns default options by network.
@@ -764,59 +755,4 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 			BuildNumber: metadata.BuildNumber,
 		},
 	}
-}
-
-func (mb *MobileNode) unlockIdentity(adr, passphrase string) string {
-	chainID := config.GetInt64(config.FlagChainID)
-	id, err := mb.identitySelector.UseOrCreate(adr, passphrase, chainID)
-	if err != nil {
-		return ""
-	}
-	return id.Address
-}
-
-// StartProvider starts all provider services (provider mode)
-func (mb *MobileNode) StartProvider() {
-	providerID := mb.unlockIdentity(
-		config.FlagIdentity.Value,
-		config.FlagIdentityPassphrase.Value,
-	)
-	log.Info().Msgf("Unlocked identity: %v", providerID)
-
-	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
-	serviceTypes := strings.Split(activeServices, ",")
-
-	for _, serviceType := range serviceTypes {
-		serviceOpts, err := services.GetStartOptions(serviceType)
-		if err != nil {
-			log.Error().Err(err).Msg("GetStartOptions failed")
-			return
-		}
-
-		id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
-		if err != nil {
-			log.Error().Err(err).Msg("servicesManager.Start failed")
-			return
-		}
-		mb.serviceIDs = append(mb.serviceIDs, id)
-	}
-}
-
-// StopProvider stops all provider services, started by StartProvider
-func (mb *MobileNode) StopProvider() {
-	ids := mb.serviceIDs
-	mb.serviceIDs = []service.ID{}
-
-	for _, id := range ids {
-		err := mb.servicesManager.Stop(id)
-		if err != nil {
-			log.Error().Err(err).Msg("servicesManager.Stop failed")
-			return
-		}
-	}
-}
-
-// SetFlagLauncherVersion sets LauncherVersion flag value, which is reported to Prometheus
-func SetFlagLauncherVersion(val string) {
-	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }

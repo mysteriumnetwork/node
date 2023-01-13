@@ -139,6 +139,11 @@ package:android:
   tags: [go]
   script: go run mage.go -v PackageAndroid
 
+package:android-provider:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageAndroidProvider
+
 package:swagger-redoc-docker:
   stage: build
   tags: [go]
@@ -197,6 +202,11 @@ release-tag:android-sdk:
   stage: release-tag
   tags: [go]
   script: go run mage.go -v ReleaseAndroidSDK
+
+release-tag:android-provider-sdk:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseAndroidProviderSDK
 
 remove-bucket:
   stage: post-release

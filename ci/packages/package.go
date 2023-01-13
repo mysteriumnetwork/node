@@ -172,7 +172,59 @@ func PackageAndroid() error {
 	buildVersion := env.Str(env.BuildVersion)
 	log.Info().Msgf("Package Android SDK version: %s", buildVersion)
 
-	pomFileOut, err := os.Create(fmt.Sprintf("build/package/provider-node-%s.pom", buildVersion))
+	pomFileOut, err := os.Create(fmt.Sprintf("build/package/mobile-node-%s.pom", buildVersion))
+	if err != nil {
+		return err
+	}
+	defer pomFileOut.Close()
+
+	err = pomTemplate.Execute(pomFileOut, struct {
+		BuildVersion string
+	}{
+		BuildVersion: buildVersion,
+	})
+	if err != nil {
+		return err
+	}
+
+	return env.IfRelease(storage.UploadArtifacts)
+}
+
+// PackageAndroidProvider builds and stores Android Provider package
+func PackageAndroidProvider() error {
+	job.Precondition(func() bool {
+		pr, _ := env.IsPR()
+		fullBuild, _ := env.IsFullBuild()
+		return !pr || fullBuild
+	})
+	logconfig.Bootstrap()
+
+	if err := sh.RunV("bin/package_android_provider", "amd64"); err != nil {
+		return err
+	}
+
+	// Artifacts created by xgo (docker) on CI environment are owned by root.
+	// Chown package folder so we can create a POM (see below) in it.
+	if _, isCI := os.LookupEnv("CI"); isCI {
+		err := shell.NewCmd("sudo chown -R gitlab-runner:gitlab-runner build/package").Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	err := env.EnsureEnvVars(env.BuildVersion)
+	if err != nil {
+		return err
+	}
+	pomTemplate, err := template.ParseFiles("bin/package/android_provider/mvn.pom")
+	if err != nil {
+		return err
+	}
+
+	buildVersion := env.Str(env.BuildVersion)
+	log.Info().Msgf("Package Android Provider SDK version: %s", buildVersion)
+
+	pomFileOut, err := os.Create(fmt.Sprintf("build/package/provider-mobile-node-%s.pom", buildVersion))
 	if err != nil {
 		return err
 	}

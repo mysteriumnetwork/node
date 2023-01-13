@@ -54,7 +54,7 @@ func ReleaseAndroidSDK() error {
 		return err
 	}
 
-	artifactBaseName := fmt.Sprintf("build/package/provider-node-%s", env.Str(env.BuildVersion))
+	artifactBaseName := fmt.Sprintf("build/package/mobile-node-%s", env.Str(env.BuildVersion))
 
 	// Deploy AAR (android archive)
 	if err := sh.RunWithV(map[string]string{
@@ -79,6 +79,59 @@ func ReleaseAndroidSDK() error {
 	}, "mvn",
 		"gpg:sign-and-deploy-file",
 		"--settings=bin/package/android/mvn.settings",
+		"-DrepositoryId="+REPOSITORY_ID,
+		"-Durl="+REPOSITORY_URL,
+		"-DpomFile="+artifactBaseName+".pom",
+		"-Dfile="+artifactBaseName+"-sources.jar",
+		"-Dpackaging=jar",
+		"-Dclassifier=sources",
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ReleaseAndroidProviderSDK releases tag Android Provider SDK to maven repo.
+func ReleaseAndroidProviderSDK() error {
+	logconfig.Bootstrap()
+
+	if err := env.EnsureEnvVars(env.TagBuild, env.BuildVersion); err != nil {
+		return err
+	}
+	job.Precondition(func() bool {
+		return env.Bool(env.TagBuild)
+	})
+
+	if err := storage.DownloadArtifacts(); err != nil {
+		return err
+	}
+
+	artifactBaseName := fmt.Sprintf("build/package/provider-mobile-node-%s", env.Str(env.BuildVersion))
+
+	// Deploy AAR (android archive)
+	if err := sh.RunWithV(map[string]string{
+		"MAVEN_USER": env.Str(MAVEN_USER),
+		"MAVEN_PASS": env.Str(MAVEN_PASS),
+	}, "mvn",
+		"gpg:sign-and-deploy-file",
+		"--settings=bin/package/android_provider/mvn.settings",
+		"-DrepositoryId="+REPOSITORY_ID,
+		"-Durl="+REPOSITORY_URL,
+		"-DpomFile="+artifactBaseName+".pom",
+		"-Dfile="+artifactBaseName+".aar",
+		"-Dpackaging=aar",
+	); err != nil {
+		return err
+	}
+
+	// Deploy sources JAR
+	if err := sh.RunWithV(map[string]string{
+		"MAVEN_USER": env.Str(MAVEN_USER),
+		"MAVEN_PASS": env.Str(MAVEN_PASS),
+	}, "mvn",
+		"gpg:sign-and-deploy-file",
+		"--settings=bin/package/android_provider/mvn.settings",
 		"-DrepositoryId="+REPOSITORY_ID,
 		"-Durl="+REPOSITORY_URL,
 		"-DpomFile="+artifactBaseName+".pom",
