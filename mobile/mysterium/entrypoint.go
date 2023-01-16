@@ -40,6 +40,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
@@ -505,11 +506,24 @@ type ConnectionStatusChangeCallback interface {
 	OnChange(status string)
 }
 
+// ServiceStatusChangeCallback represents status callback.
+type ServiceStatusChangeCallback interface {
+	OnChange(service string, status string)
+}
+
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
 		cb.OnChange(string(e.State))
+	})
+}
+
+// RegisterConnectionStatusChangeCallback registers callback which is called on active connection
+// status change.
+func (mb *MobileNode) RegisterServiceStatusChangeCallback(cb ServiceStatusChangeCallback) {
+	_ = mb.eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, func(e servicestate.AppEventServiceStatus) {		
+		cb.OnChange(e.Type, e.Status)
 	})
 }
 
