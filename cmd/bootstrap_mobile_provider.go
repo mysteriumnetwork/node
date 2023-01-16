@@ -20,9 +20,12 @@
 package cmd
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/config"
@@ -39,6 +42,8 @@ import (
 )
 
 func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener) (tequilapi.APIServer, error) {
+	log.Debug().Msg("bootstrapTequilapi - I am here!")
+	log.Debug().Msg("nodeOptions.TequilapiEnabled - " + fmt.Sprint(nodeOptions.TequilapiEnabled))
 	if !nodeOptions.TequilapiEnabled {
 		return tequilapi.NewNoopAPIServer(), nil
 	}
@@ -96,6 +101,8 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 }
 
 func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
+	log.Debug().Msg("bootstrapUIServer - I am here!")
+	log.Debug().Msg("options.UI.UIEnabled - " + fmt.Sprint(options.UI.UIEnabled))
 	if !options.UI.UIEnabled {
 		di.UIServer = uinoop.NewServer()
 		return nil
