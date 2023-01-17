@@ -217,6 +217,13 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
 		config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
 		config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
+
+		config.Current.SetDefault(config.FlagPaymentsProviderInvoiceFrequency.Name, config.FlagPaymentsProviderInvoiceFrequency.Value)
+		config.Current.SetDefault(config.FlagPaymentsLimitProviderInvoiceFrequency.Name, config.FlagPaymentsLimitProviderInvoiceFrequency.Value)
+		config.Current.SetDefault(config.FlagPaymentsUnpaidInvoiceValue.Name, config.FlagPaymentsUnpaidInvoiceValue.Value)
+		config.Current.SetDefault(config.FlagPaymentsLimitUnpaidInvoiceValue.Name, config.FlagPaymentsLimitUnpaidInvoiceValue.Value)
+		config.Current.SetDefault(config.FlagChain1KnownHermeses.Name, config.FlagChain1KnownHermeses.Value)
+		config.Current.SetDefault(config.FlagChain2KnownHermeses.Name, config.FlagChain2KnownHermeses.Value)
 	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
@@ -333,9 +340,27 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		nodeOptions.Discovery.FetchEnabled = true
 		nodeOptions.Discovery.PingInterval = config.GetDuration(config.FlagDiscoveryPingInterval)
 		nodeOptions.Discovery.FetchInterval = config.GetDuration(config.FlagDiscoveryFetchInterval)
-		nodeOptions.Payments.ProviderInvoiceFrequency = config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency)
-		nodeOptions.Payments.ProviderLimitInvoiceFrequency = config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency)
-		nodeOptions.Payments.MaxUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue)
+		nodeOptions.Payments = node.OptionsPayments{
+			MaxAllowedPaymentPercentile:    3000,
+			BCTimeout:                      time.Second * 30,
+			SettlementTimeout:              time.Minute * 3,
+			SettlementRecheckInterval:      time.Second * 30,
+			HermesPromiseSettlingThreshold: 0.01,
+			MaxFeeSettlingThreshold:        0.05,
+			ConsumerDataLeewayMegabytes:    0x14,
+			MinAutoSettleAmount:            5,
+			MaxUnSettledAmount:             20,
+			HermesStatusRecheckInterval:    time.Hour * 2,
+			BalanceFastPollInterval:        time.Second * 30 * 2,
+			BalanceFastPollTimeout:         time.Minute * 3 * 3,
+			BalanceLongPollInterval:        time.Hour * 1,
+			RegistryTransactorPollInterval: time.Second * 20,
+			RegistryTransactorPollTimeout:  time.Minute * 20,
+			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			ProviderLimitInvoiceFrequency:  config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue),
+			LimitUnpaidInvoiceValue:        config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue),
+		}
 		nodeOptions.Payments.LimitUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue)
 		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain1KnownHermeses)
 		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain2KnownHermeses)
@@ -522,7 +547,7 @@ func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatus
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterServiceStatusChangeCallback(cb ServiceStatusChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, func(e servicestate.AppEventServiceStatus) {		
+	_ = mb.eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, func(e servicestate.AppEventServiceStatus) {
 		cb.OnChange(e.Type, e.Status)
 	})
 }
