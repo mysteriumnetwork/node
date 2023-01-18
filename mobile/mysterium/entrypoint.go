@@ -125,6 +125,7 @@ type MobileNodeOptions struct {
 	CacheTTLSeconds                int
 	ObserverAddress                string
 	IsProvider                     bool
+	TequilapiSecured               bool
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -368,6 +369,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		nodeOptions.TequilapiEnabled = true
 		nodeOptions.TequilapiPort = 4050
 		nodeOptions.TequilapiAddress = "127.0.0.1"
+		nodeOptions.TequilapiSecured = options.TequilapiSecured
 		nodeOptions.UI = node.OptionsUI{
 			UIEnabled:     true,
 			UIBindAddress: "127.0.0.1",
@@ -544,7 +546,7 @@ func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatus
 	})
 }
 
-// RegisterConnectionStatusChangeCallback registers callback which is called on active connection
+// RegisterServiceStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterServiceStatusChangeCallback(cb ServiceStatusChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, func(e servicestate.AppEventServiceStatus) {

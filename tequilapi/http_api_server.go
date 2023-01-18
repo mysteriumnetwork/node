@@ -57,10 +57,15 @@ type apiServer struct {
 	gin *gin.Engine
 }
 
+type jwtAuthenticator interface {
+	ValidateToken(token string) (bool, error)
+}
+
 // NewServer creates http api server for given address port and http handler
 func NewServer(
 	listener net.Listener,
 	nodeOptions node.Options,
+	authenticator jwtAuthenticator,
 	handlers []func(e *gin.Engine) error,
 ) (APIServer, error) {
 	gin.SetMode(modeFromOptions(nodeOptions))
@@ -70,6 +75,10 @@ func NewServer(
 	g.Use(cors.New(corsConfig))
 	g.Use(middlewares.NewHostFilter())
 	g.Use(apierror.ErrorHandler)
+
+	if nodeOptions.TequilapiSecured {
+		g.Use(middlewares.ApplyMiddlewareTokenAuth(authenticator))
+	}
 
 	for _, h := range handlers {
 		err := h(g)

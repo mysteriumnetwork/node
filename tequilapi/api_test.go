@@ -42,7 +42,7 @@ type tequilapiTestSuite struct {
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.Nil(testSuite.T(), err)
-	testSuite.server, err = NewServer(listener, *node.GetOptions(), []func(e *gin.Engine) error{func(e *gin.Engine) error {
+	testSuite.server, err = NewServer(listener, *node.GetOptions(), nil, []func(e *gin.Engine) error{func(e *gin.Engine) error {
 		e.GET("/healthcheck", endpoints.HealthCheckEndpointFactory(time.Now, os.Getpid).HealthCheck)
 		return nil
 	}})

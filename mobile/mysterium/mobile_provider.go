@@ -33,6 +33,7 @@ import (
 func DefaultProviderNodeOptions() *MobileNodeOptions {
 	options := DefaultNodeOptionsByNetwork(string(config.Mainnet))
 	options.IsProvider = true
+	options.TequilapiSecured = true
 	return options
 }
 
