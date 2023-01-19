@@ -54,7 +54,7 @@ func (mb *MobileNode) StartProvider() {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+	activeServices := "wireguard,scraping,data_transfer"
 	serviceTypes := strings.Split(activeServices, ",")
 
 	for _, serviceType := range serviceTypes {

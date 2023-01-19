@@ -21,7 +21,9 @@ package resources
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,12 +68,10 @@ func (a *Allocator) AbandonedInterfaces() ([]net.Interface, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
 	list := make([]net.Interface, 0)
+    if runtime.GOOS == "android" {
+        return list, nil
+    }
 	for _, iface := range ifaces {
 		if strings.HasPrefix(iface.Name, interfacePrefix) {
 			ifaceID, err := strconv.Atoi(strings.TrimPrefix(iface.Name, interfacePrefix))
@@ -90,6 +90,10 @@ func (a *Allocator) AbandonedInterfaces() ([]net.Interface, error) {
 func (a *Allocator) AllocateInterface() (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	if runtime.GOOS == "android" {
+		return "myst0", nil
+	}
 
 	ifaces, err := net.Interfaces()
 	if err != nil {
