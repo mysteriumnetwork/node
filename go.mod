@@ -71,7 +71,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	golang.zx2c4.com/wireguard/windows v0.5.3
 	google.golang.org/protobuf v1.28.0
-	gvisor.dev/gvisor v0.0.0-20220801230058-850e42eb4444
+	gvisor.dev/gvisor v0.0.0-20220817001344-846276b3dbc5
 )
 
 require (
@@ -222,6 +222,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.mongodb.org/mongo-driver v1.7.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
+	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.8-0.20211105212822-18b340fc7af2 // indirect
@@ -235,3 +236,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	honnef.co/go/tools v0.2.2 // indirect
 )
+
+//tag:patch-v3
+replace golang.zx2c4.com/wireguard => github.com/zensey/wireguard-go v0.0.0-20230119164730-09fb75dcdcaa
