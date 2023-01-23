@@ -225,6 +225,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		config.Current.SetDefault(config.FlagPaymentsLimitUnpaidInvoiceValue.Name, config.FlagPaymentsLimitUnpaidInvoiceValue.Value)
 		config.Current.SetDefault(config.FlagChain1KnownHermeses.Name, config.FlagChain1KnownHermeses.Value)
 		config.Current.SetDefault(config.FlagChain2KnownHermeses.Name, config.FlagChain2KnownHermeses.Value)
+		config.Current.SetDefault(config.FlagDNSListenPort.Name, config.FlagDNSListenPort.Value)
 	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
