@@ -19,10 +19,13 @@ package middlewares
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/core/auth"
 )
+
+var unprotectedRoutes = []string{"/auth/authenticate", "/auth/login", "/healthcheck"}
 
 type jwtAuthenticator interface {
 	ValidateToken(token string) (bool, error)
@@ -31,6 +34,10 @@ type jwtAuthenticator interface {
 // ApplyMiddlewareTokenAuth creates token authenticator
 func ApplyMiddlewareTokenAuth(authenticator jwtAuthenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if isUnprotected(c.Request.URL.Path) {
+			return
+		}
+
 		token, err := auth.TokenFromContext(c)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -42,4 +49,14 @@ func ApplyMiddlewareTokenAuth(authenticator jwtAuthenticator) gin.HandlerFunc {
 			return
 		}
 	}
+}
+
+func isUnprotected(url string) bool {
+	for _, route := range unprotectedRoutes {
+		if strings.Contains(url, route) {
+			return true
+		}
+	}
+
+	return false
 }
