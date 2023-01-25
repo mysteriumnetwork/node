@@ -26,7 +26,11 @@ import (
 // configuration returns the system DNS configuration.
 func configuration() (*dns.ClientConfig, error) {
 	config := dns.ClientConfig{
-		Servers: []string{"8.8.8.8", "8.8.4.4"},
+		Servers:  []string{"8.8.8.8", "8.8.4.4"},
+		Port:     "53",
+		Ndots:    1,
+		Timeout:  5,
+		Attempts: 2,
 	}
 	return &config, nil
 }
