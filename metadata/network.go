@@ -65,19 +65,16 @@ var MainnetDefinition = NetworkDefinition{
 	BrokerAddresses:           []string{"nats://broker.mysterium.network"},
 	TransactorAddress:         "https://transactor.mysterium.network/api/v1",
 	AffiliatorAddress:         "https://affiliator.mysterium.network/api/v1",
-	Chain1: ChainDefinition{ // TODO: Update when mainnet deployed.
+	Chain1: ChainDefinition{
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
 		ChannelImplAddress: "0xbd20839b331a7a8d10e34cdf7219edf334814c4f",
-		HermesID:           "0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
 		ChainID:            1,
 		MystAddress:        "0x4Cf89ca06ad997bC732Dc876ed2A7F26a9E7f361",
 		EtherClientRPC: []string{
 			"https://ethereum1.mysterium.network/",
 			"https://cloudflare-eth.com/",
 		},
-		KnownHermeses: []string{
-			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
-		},
+		KnownHermeses: []string{},
 	},
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x87F0F4b7e0FAb14A565C87BAbbA6c40c92281b51",
@@ -90,7 +87,6 @@ var MainnetDefinition = NetworkDefinition{
 			"https://polygon-rpc.com/",
 		},
 		KnownHermeses: []string{
-			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
 			"0x80ed28d84792d8b153bf2f25f0c4b7a1381de4ab",
 		},
 	},

@@ -82,7 +82,7 @@ services:
 
   #private blockchain
   ganache:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.3.2
     expose:
       - 8545
     command: >
@@ -90,7 +90,7 @@ services:
 
   #private blockchain
   ganache2:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.3.2
     expose:
       - 8545
     command: >

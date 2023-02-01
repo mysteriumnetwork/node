@@ -155,7 +155,7 @@ services:
 
   # private blockchain
   ganache:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.3.2
     expose:
       - 8545
     command: >
@@ -173,7 +173,7 @@ services:
         ipv4_address: 172.31.0.202
 
   ganache2:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.3.2
     expose:
       - 8545
     command: >
