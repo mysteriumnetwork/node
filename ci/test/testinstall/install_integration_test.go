@@ -49,6 +49,7 @@ func TestInstall(t *testing.T) {
 		"ubuntu-focal",
 		"ubuntu-impish",
 		"ubuntu-jammy",
+		"ubuntu-kinetic",
 	}
 	for _, img := range images {
 		t.Run(img, func(t *testing.T) {
