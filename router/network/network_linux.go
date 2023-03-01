@@ -21,10 +21,9 @@ package network
 
 import (
 	"net"
+	"os/exec"
 
 	"github.com/jackpal/gateway"
-
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
 // RoutingTable implements a set of platform specific tool for creating, deleting
@@ -40,11 +39,19 @@ func (t *RoutingTable) DiscoverGateway() (net.IP, error) {
 // Traffic sent to the IP address will be directed to the system default gaitway
 // instead of tunnel.
 func (t *RoutingTable) ExcludeRule(ip, gw net.IP) error {
-	return cmdutil.SudoExec("ip", "route", "add", ip.String(), "via", gw.String())
+	_, err := exec.Command("sudo", "ip", "route", "add", ip.String(), "via", gw.String()).CombinedOutput()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeleteRule removes excluded routing table rule to return it back to routing
 // thought the tunnel.
 func (t *RoutingTable) DeleteRule(ip, gw net.IP) error {
-	return cmdutil.SudoExec("ip", "route", "delete", ip.String(), "via", gw.String())
+	_, err := exec.Command("sudo", "ip", "route", "delete", ip.String(), "via", gw.String()).CombinedOutput()
+	if err != nil {
+		return err
+	}
+	return nil
 }

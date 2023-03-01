@@ -624,7 +624,6 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
 	}
-	log.Info().Msgf("Provider's session config: %s", string(sessionResponse.Config))
 
 	channel := m.channel
 	m.acknowledge = func() {

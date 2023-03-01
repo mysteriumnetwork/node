@@ -224,13 +224,18 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	if err != nil {
 		return nil, fmt.Errorf("could not decrypt peer conn config: %w", err)
 	}
+
+	publicIP := peerConnConfig.PublicIP
+	// avoid printing IP address in logs
+	peerConnConfig.PublicIP = ""
+
 	log.Debug().Msgf("Consumer %s received provider %s with config: %v", consumerID.Address, providerID.Address, peerConnConfig)
 
 	config.publicKey = pubKey
 	config.compatibility = int(peerConnConfig.Compatibility)
 	config.privateKey = privateKey
 	config.peerPubKey = peerPubKey
-	config.peerPublicIP = peerConnConfig.PublicIP
+	config.peerPublicIP = publicIP
 	config.peerPorts = int32ToIntSlice(peerConnConfig.Ports)
 	return config, nil
 }
@@ -325,7 +330,7 @@ func (m *dialer) dialPinger(ctx context.Context, providerID identity.Identity, c
 	}
 
 	ip := defaultInterfaceAddress()
-	log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.peerIP(), config.localPorts, config.peerPorts)
+	log.Debug().Msgf("Pinging provider %s  using ports %v:%v", providerID.Address, config.localPorts, config.peerPorts)
 	conns, err := m.consumerPinger.PingProviderPeer(ctx, ip, config.peerIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not ping peer: %w", err)
