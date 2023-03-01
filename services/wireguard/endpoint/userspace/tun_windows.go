@@ -73,7 +73,7 @@ func (tun *nativeTun) File() *os.File {
 	return nil
 }
 
-func (tun *nativeTun) Events() chan tun.Event {
+func (tun *nativeTun) Events() <-chan tun.Event {
 	return tun.events
 }
 
