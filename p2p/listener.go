@@ -366,12 +366,6 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 		return nil, fmt.Errorf("could not decrypt peer conn config: %w", err)
 	}
 
-	publicIP := config.publicIP
-	// avoid printing actual IP address in logs
-	config.publicIP = ""
-
-	log.Debug().Msgf("Decrypted consumer config: %v", peerConfig)
-
 	return &p2pConnectConfig{
 		peerPublicIP:     peerConfig.PublicIP,
 		peerPorts:        int32ToIntSlice(peerConfig.Ports),
@@ -380,7 +374,7 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 		publicKey:        config.publicKey,
 		privateKey:       config.privateKey,
 		peerPubKey:       config.peerPubKey,
-		publicIP:         publicIP,
+		publicIP:         config.publicIP,
 		tracer:           config.tracer,
 		upnpPortsRelease: config.upnpPortsRelease,
 		start:            config.start,

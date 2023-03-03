@@ -110,6 +110,8 @@ func (r *Runner) checkPublicIPInLogs(containers ...string) error {
 
 		for _, publicIP := range publicIPs {
 			if strings.Contains(output, publicIP) {
+				// it will be easier to locate the place if we print the output
+				log.Warn().Msgf("output from %s container's logs:\n%s", containerName, output)
 				return fmt.Errorf("found public IP address %s in %s container's logs", publicIP, containerName)
 			}
 		}

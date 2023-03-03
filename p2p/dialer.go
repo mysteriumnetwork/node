@@ -225,17 +225,11 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 		return nil, fmt.Errorf("could not decrypt peer conn config: %w", err)
 	}
 
-	publicIP := peerConnConfig.PublicIP
-	// avoid printing IP address in logs
-	peerConnConfig.PublicIP = ""
-
-	log.Debug().Msgf("Consumer %s received provider %s with config: %v", consumerID.Address, providerID.Address, peerConnConfig)
-
 	config.publicKey = pubKey
 	config.compatibility = int(peerConnConfig.Compatibility)
 	config.privateKey = privateKey
 	config.peerPubKey = peerPubKey
-	config.peerPublicIP = publicIP
+	config.peerPublicIP = peerConnConfig.PublicIP
 	config.peerPorts = int32ToIntSlice(peerConnConfig.Ports)
 	return config, nil
 }
