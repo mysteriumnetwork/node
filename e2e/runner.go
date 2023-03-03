@@ -57,15 +57,23 @@ type Runner struct {
 }
 
 // Test starts given provider and consumer nodes and runs e2e tests.
-func (r *Runner) Test(providerHost string) error {
+func (r *Runner) Test(providerHost string) (retErr error) {
 	services := strings.Split(r.services, ",")
 	if err := r.startProviderConsumerNodes(providerHost, services); err != nil {
-		return err
+		retErr = errors.Wrap(err, "tests failed!")
+		return
 	}
 
 	defer func() {
 		if err := r.stopProviderConsumerNodes(providerHost, services); err != nil {
 			log.Err(err).Msg("Could not stop provider consumer nodes")
+		}
+
+		if retErr == nil { // check public IPs in logs only if all the tests succeeded
+			if err := checkPublicIPInLogs("myst-provider", "myst-consumer-wireguard"); err != nil {
+				retErr = errors.Wrap(err, "tests failed!")
+				return
+			}
 		}
 	}()
 
@@ -78,7 +86,34 @@ func (r *Runner) Test(providerHost string) error {
 		"-consumer.tequilapi-port=4050",
 		"-consumer.services", r.services,
 	)
-	return errors.Wrap(err, "tests failed!")
+
+	retErr = errors.Wrap(err, "tests failed!")
+	return
+}
+
+func checkPublicIPInLogs(containers ...string) error {
+	publicIPs := []string{"172.30.0.2", "172.31.0.2"}
+
+	for _, containerName := range containers {
+		logs, err := sh.Output("docker-compose", "logs", containerName)
+		if err != nil {
+			log.Err(err).Msgf("Could not get logs of %s container", containerName)
+			continue
+		}
+
+		if len(logs) == 0 {
+			log.Error().Msgf("Could not get logs of %s container. Empty data", containerName)
+			continue
+		}
+
+		for _, publicIP := range publicIPs {
+			if strings.Contains(logs, publicIP) {
+				return fmt.Errorf("found public IP address %s in %s container's logs", publicIP, containerName)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *Runner) cleanup() {
