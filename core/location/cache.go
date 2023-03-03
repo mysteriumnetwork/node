@@ -64,7 +64,11 @@ func (c *Cache) fetchAndSave() (locationstate.Location, error) {
 
 	// on successful fetch save the values for further use
 	if err == nil {
+		ip := loc.IP
+		// avoid printing IP address in logs
+		loc.IP = ""
 		c.pub.Publish(LocUpdateEvent, loc)
+		loc.IP = ip
 		c.location = loc
 		c.lastFetched = time.Now()
 	}
@@ -103,13 +107,11 @@ func (c *Cache) HandleConnectionEvent(se connectionstate.AppEventConnectionState
 		return
 	}
 
-	loc, err := c.fetchAndSave()
+	_, err := c.fetchAndSave()
 	if err != nil {
 		log.Error().Err(err).Msg("Location update failed")
 		// reset time so a fetch is tried the next time a get is called
 		c.lastFetched = time.Time{}
-	} else {
-		log.Debug().Msgf("Location update succeeded: %v", loc)
 	}
 }
 
