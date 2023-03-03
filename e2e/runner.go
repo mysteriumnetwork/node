@@ -41,9 +41,10 @@ func NewRunner(composeFiles []string, testEnv, services string) (runner *Runner,
 	args = append(args, "-p", testEnv)
 
 	runner = &Runner{
-		compose:  sh.RunCmd("docker-compose", args...),
-		testEnv:  testEnv,
-		services: services,
+		compose:    sh.RunCmd("docker-compose", args...),
+		composeOut: sh.OutCmd("docker-compose", args...),
+		testEnv:    testEnv,
+		services:   services,
 	}
 	return runner, runner.cleanup
 }
@@ -51,6 +52,7 @@ func NewRunner(composeFiles []string, testEnv, services string) (runner *Runner,
 // Runner is e2e tests runner responsible for starting test environment and running e2e tests.
 type Runner struct {
 	compose         func(args ...string) error
+	composeOut      func(args ...string) (string, error)
 	etherPassphrase string
 	testEnv         string
 	services        string
@@ -70,7 +72,7 @@ func (r *Runner) Test(providerHost string) (retErr error) {
 		}
 
 		if retErr == nil { // check public IPs in logs only if all the tests succeeded
-			if err := checkPublicIPInLogs("myst-provider", "myst-consumer-wireguard"); err != nil {
+			if err := r.checkPublicIPInLogs("myst-provider", "myst-consumer-wireguard"); err != nil {
 				retErr = errors.Wrap(err, "tests failed!")
 				return
 			}
@@ -91,23 +93,23 @@ func (r *Runner) Test(providerHost string) (retErr error) {
 	return
 }
 
-func checkPublicIPInLogs(containers ...string) error {
+func (r *Runner) checkPublicIPInLogs(containers ...string) error {
 	publicIPs := []string{"172.30.0.2", "172.31.0.2"}
 
 	for _, containerName := range containers {
-		logs, err := sh.Output("docker-compose", "logs", containerName)
+		output, err := r.composeOut("logs", containerName)
 		if err != nil {
 			log.Err(err).Msgf("Could not get logs of %s container", containerName)
 			continue
 		}
 
-		if len(logs) == 0 {
+		if len(output) == 0 {
 			log.Error().Msgf("Could not get logs of %s container. Empty data", containerName)
 			continue
 		}
 
 		for _, publicIP := range publicIPs {
-			if strings.Contains(logs, publicIP) {
+			if strings.Contains(output, publicIP) {
 				return fmt.Errorf("found public IP address %s in %s container's logs", publicIP, containerName)
 			}
 		}
