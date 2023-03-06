@@ -160,8 +160,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		var conn1, conn2 *net.UDPConn
 		if config.start != nil {
 			traceDial := config.tracer.StartStage("Provider P2P dial (preparation)")
-			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v initial ttl: %v",
-				config.peerIP(), config.localPorts, config.peerPorts, 1)
+			log.Debug().Msgf("Pinging consumer using ports %v:%v initial ttl: %v", config.localPorts, config.peerPorts, 1)
 
 			conns, err := config.start(context.Background(), config.peerIP(), config.peerPorts, config.localPorts)
 			if err != nil {
@@ -366,8 +365,6 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	if err != nil {
 		return nil, fmt.Errorf("could not decrypt peer conn config: %w", err)
 	}
-
-	log.Debug().Msgf("Decrypted consumer config: %v", peerConfig)
 
 	return &p2pConnectConfig{
 		peerPublicIP:     peerConfig.PublicIP,

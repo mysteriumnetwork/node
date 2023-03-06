@@ -103,7 +103,6 @@ func (r *ResolverImpl) GetPublicIP() (string, error) {
 		return r.findPublicIPViaFallbacks()
 	}
 
-	log.Debug().Msg("IP detected: " + ipResponse.IP)
 	return ipResponse.IP, nil
 }
 
@@ -126,7 +125,6 @@ func (r *ResolverImpl) GetProxyIP(proxyPort int) (string, error) {
 		return r.findPublicIPViaFallbacks()
 	}
 
-	log.Debug().Msg("IP detected: " + ipResponse.IP)
 	return ipResponse.IP, nil
 }
 

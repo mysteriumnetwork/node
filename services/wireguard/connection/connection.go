@@ -165,8 +165,6 @@ func (c *Connection) start(ctx context.Context, start startConn, options connect
 	}
 	c.connectionEndpoint = conn
 
-	log.Info().Msgf("Adding connection peer %s", config.Provider.Endpoint.String())
-
 	log.Info().Msg("Waiting for initial handshake")
 	if err = c.handshakeWaiter.Wait(ctx, conn.PeerStats, c.opts.HandshakeTimeout, c.done); err != nil {
 		return errors.Wrap(err, "failed while waiting for a peer handshake")

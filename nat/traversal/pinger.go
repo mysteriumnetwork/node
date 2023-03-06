@@ -329,8 +329,6 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 		case <-ctx.Done():
 			return nil
 		case <-time.After(p.pingConfig.Interval):
-			log.Trace().Msgf("Pinging %s from %s... with ttl %d", remoteAddr, conn.LocalAddr(), ttl)
-
 			_, err := conn.WriteToUDP([]byte(msgPing+remoteAddr.String()), remoteAddr)
 			if ctx.Err() != nil {
 				return nil
@@ -393,7 +391,7 @@ func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPA
 		}
 
 		msg := string(buf[:n])
-		log.Debug().Msgf("Remote peer data received: %s, len: %d, from: %s", msg, n, raddr)
+		log.Debug().Msgf("Remote peer data received, len: %d", n)
 
 		if msg == msgOK || strings.HasPrefix(msg, msgPing) {
 			return raddr, nil
