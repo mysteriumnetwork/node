@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -76,7 +77,10 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 
 		gw[3]--
 		if err := cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", config.IfaceName); err != nil {
-			return err
+			if !strings.Contains(err.Error(), "File exists") {
+				// Ignore error if the route already exist.
+				return err
+			}
 		}
 	}
 
