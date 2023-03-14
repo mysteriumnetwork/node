@@ -219,6 +219,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
 		config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
 		config.Current.SetDefault(config.FlagAccessPolicyFetchInterval.Name, "10m")
+		config.Current.SetDefault(config.FlagPaymentsZeroStakeUnsettledAmount.Name, "5.0")
 
 		config.Current.SetDefault(config.FlagPaymentsProviderInvoiceFrequency.Name, config.FlagPaymentsProviderInvoiceFrequency.Value)
 		config.Current.SetDefault(config.FlagPaymentsLimitProviderInvoiceFrequency.Name, config.FlagPaymentsLimitProviderInvoiceFrequency.Value)
