@@ -94,9 +94,12 @@ type MobileNode struct {
 	residentCountry           *identity.ResidentCountry
 	filterPresetStorage       *proposal.FilterPresetStorage
 	hermesMigrator            *migration.HermesMigrator
+	servicesManager           *service.Manager
+}
 
-	servicesManager *service.Manager
-	serviceIDs      []service.ID
+type serviceState struct {
+	id       service.ID
+	isActive bool
 }
 
 // MobileNodeOptions contains common mobile node options.

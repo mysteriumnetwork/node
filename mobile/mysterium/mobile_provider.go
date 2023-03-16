@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/rs/zerolog/log"
@@ -64,22 +64,22 @@ func (mb *MobileNode) StartProvider() {
 			return
 		}
 
-		id, err := mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
+		_, err = mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
 		if err != nil {
 			log.Error().Err(err).Msg("servicesManager.Start failed")
 			return
 		}
-		mb.serviceIDs = append(mb.serviceIDs, id)
 	}
 }
 
 // StopProvider stops all provider services, started by StartProvider
 func (mb *MobileNode) StopProvider() {
-	ids := mb.serviceIDs
-	mb.serviceIDs = []service.ID{}
+	for _, srv := range mb.servicesManager.List(true) {
+		if srv.State() != servicestate.Running {
+			continue
+		}
 
-	for _, id := range ids {
-		err := mb.servicesManager.Stop(id)
+		err := mb.servicesManager.Stop(srv.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("servicesManager.Stop failed")
 			return
