@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -159,6 +160,12 @@ func (ce *connectionEndpoint) Stop() error {
 }
 
 func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
+	if config.GetBool(config.FlagDVPNMode) {
+		// Do not clean up unknown interfaces in dVPN mode.
+		// There could be several connections at the same time and we should not kill them.
+		return nil
+	}
+
 	ifaces, err := ce.resourceAllocator.AbandonedInterfaces()
 	if err != nil {
 		return err

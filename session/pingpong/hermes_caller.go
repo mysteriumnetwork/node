@@ -235,7 +235,7 @@ func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error 
 
 // IsIdentityOffchain returns true if identity is considered offchain in hermes.
 func (ac *HermesCaller) IsIdentityOffchain(chainID int64, id string) (bool, error) {
-	data, err := ac.GetConsumerData(chainID, id, 30*time.Second)
+	data, err := ac.GetConsumerData(chainID, id, time.Second)
 	if err != nil {
 		if errors.Is(err, ErrHermesNotFound) {
 			return false, nil

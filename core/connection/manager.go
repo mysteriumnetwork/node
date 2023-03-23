@@ -624,7 +624,6 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
 	}
-	log.Info().Msgf("Provider's session config: %s", string(sessionResponse.Config))
 
 	channel := m.channel
 	m.acknowledge = func() {
@@ -664,17 +663,26 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 }
 
 func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
+	sessionInfo := m.Status()
+	// avoid printing IP address in logs
+	sessionInfo.ConsumerLocation.IP = ""
+
 	m.eventBus.Publish(connectionstate.AppTopicConnectionSession, connectionstate.AppEventConnectionSession{
 		Status:      connectionstate.SessionCreatedStatus,
-		SessionInfo: m.Status(),
+		SessionInfo: sessionInfo,
 	})
 
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
+
+		sessionInfo := m.Status()
+		// avoid printing IP address in logs
+		sessionInfo.ConsumerLocation.IP = ""
+
 		m.eventBus.Publish(connectionstate.AppTopicConnectionSession, connectionstate.AppEventConnectionSession{
 			Status:      connectionstate.SessionEndedStatus,
-			SessionInfo: m.Status(),
+			SessionInfo: sessionInfo,
 		})
 		return nil
 	})
@@ -923,10 +931,14 @@ func (m *connectionManager) reconnectOnHold(state connectionstate.AppEventConnec
 }
 
 func (m *connectionManager) publishStateEvent(state connectionstate.State) {
+	sessionInfo := m.Status()
+	// avoid printing IP address in logs
+	sessionInfo.ConsumerLocation.IP = ""
+
 	m.eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
 		UUID:        m.uuid,
 		State:       state,
-		SessionInfo: m.Status(),
+		SessionInfo: sessionInfo,
 	})
 }
 

@@ -45,9 +45,9 @@ func (ofn *outgoingFirewallNoop) BlockOutgoingTraffic(scope Scope, outboundIP st
 
 // AllowIPAccess logs IP for which access was requested.
 func (ofn *outgoingFirewallNoop) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
-	log.Info().Msgf("Allow IP %s access", ip)
+	log.Info().Msg("Allow IP access")
 	return func() {
-		log.Info().Msgf("Rule for IP: %s removed", ip)
+		log.Info().Msg("Rule for IP removed")
 	}, nil
 }
 

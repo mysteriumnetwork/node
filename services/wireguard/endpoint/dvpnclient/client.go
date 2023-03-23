@@ -76,8 +76,11 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 		}
 
 		gw[3]--
-		if err := cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", strings.TrimLeft(config.IfaceName, "myst")); err != nil {
-			return err
+		if err := cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", config.IfaceName); err != nil {
+			if !strings.Contains(err.Error(), "File exists") {
+				// Ignore error if the route already exist.
+				return err
+			}
 		}
 	}
 

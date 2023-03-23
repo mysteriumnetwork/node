@@ -133,7 +133,7 @@ func (m *MysteriumMORQA) signBatch(owner string, batch *metrics.Batch) (string, 
 
 	signature, err := m.signer(identity.FromAddress(owner)).Sign(bin)
 	if err != nil {
-		return "", fmt.Errorf("failed to sing metrics event: %w", err)
+		return "", fmt.Errorf("failed to sign metrics event: %w", err)
 	}
 
 	return signature.Base64(), nil

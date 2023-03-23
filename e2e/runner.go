@@ -41,9 +41,10 @@ func NewRunner(composeFiles []string, testEnv, services string) (runner *Runner,
 	args = append(args, "-p", testEnv)
 
 	runner = &Runner{
-		compose:  sh.RunCmd("docker-compose", args...),
-		testEnv:  testEnv,
-		services: services,
+		compose:    sh.RunCmd("docker-compose", args...),
+		composeOut: sh.OutCmd("docker-compose", args...),
+		testEnv:    testEnv,
+		services:   services,
 	}
 	return runner, runner.cleanup
 }
@@ -51,21 +52,30 @@ func NewRunner(composeFiles []string, testEnv, services string) (runner *Runner,
 // Runner is e2e tests runner responsible for starting test environment and running e2e tests.
 type Runner struct {
 	compose         func(args ...string) error
+	composeOut      func(args ...string) (string, error)
 	etherPassphrase string
 	testEnv         string
 	services        string
 }
 
 // Test starts given provider and consumer nodes and runs e2e tests.
-func (r *Runner) Test(providerHost string) error {
+func (r *Runner) Test(providerHost string) (retErr error) {
 	services := strings.Split(r.services, ",")
 	if err := r.startProviderConsumerNodes(providerHost, services); err != nil {
-		return err
+		retErr = errors.Wrap(err, "tests failed!")
+		return
 	}
 
 	defer func() {
 		if err := r.stopProviderConsumerNodes(providerHost, services); err != nil {
 			log.Err(err).Msg("Could not stop provider consumer nodes")
+		}
+
+		if retErr == nil { // check public IPs in logs only if all the tests succeeded
+			if err := r.checkPublicIPInLogs("myst-provider", "myst-consumer-wireguard"); err != nil {
+				retErr = errors.Wrap(err, "tests failed!")
+				return
+			}
 		}
 	}()
 
@@ -78,7 +88,36 @@ func (r *Runner) Test(providerHost string) error {
 		"-consumer.tequilapi-port=4050",
 		"-consumer.services", r.services,
 	)
-	return errors.Wrap(err, "tests failed!")
+
+	retErr = errors.Wrap(err, "tests failed!")
+	return
+}
+
+func (r *Runner) checkPublicIPInLogs(containers ...string) error {
+	publicIPs := []string{"172.30.0.2", "172.31.0.2"}
+
+	for _, containerName := range containers {
+		output, err := r.composeOut("logs", containerName)
+		if err != nil {
+			log.Err(err).Msgf("Could not get logs of %s container", containerName)
+			continue
+		}
+
+		if len(output) == 0 {
+			log.Error().Msgf("Could not get logs of %s container. Empty data", containerName)
+			continue
+		}
+
+		for _, publicIP := range publicIPs {
+			if strings.Contains(output, publicIP) {
+				// it will be easier to locate the place if we print the output
+				log.Warn().Msgf("output from %s container's logs:\n%s", containerName, output)
+				return fmt.Errorf("found public IP address %s in %s container's logs", publicIP, containerName)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *Runner) cleanup() {

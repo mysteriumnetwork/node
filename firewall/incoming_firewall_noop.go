@@ -62,9 +62,9 @@ func (ifn *incomingFirewallNoop) AllowURLAccess(rawURLs ...string) (IncomingRule
 
 // AllowIPAccess logs IP for which access was requested.
 func (ifn *incomingFirewallNoop) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
-	log.Info().Msgf("Allow IP %s access", ip)
+	log.Info().Msg("Allow IP access")
 	return func() error {
-		log.Info().Msgf("Rule for IP: %s removed", ip)
+		log.Info().Msg("Rule for IP removed")
 		return nil
 	}, nil
 }
