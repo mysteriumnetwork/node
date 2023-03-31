@@ -84,7 +84,7 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 		HandleLocal:        true,
 	}
 	dev := &netTun{
-        ep:                channel.New(1024, uint32(mtu), ""),
+		ep:             channel.New(1024, uint32(mtu), ""),
 		stack:          stack.New(opts),
 		events:         make(chan tun.Event, 10),
 		incomingPacket: make(chan *bufferv2.View),
