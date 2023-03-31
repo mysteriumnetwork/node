@@ -68,7 +68,7 @@ func (a *Allocator) AbandonedInterfaces() ([]net.Interface, error) {
 	defer a.mu.Unlock()
 
 	if runtime.GOOS == "android" {
-    	list := make([]net.Interface, 0)
+		list := make([]net.Interface, 0)
 		return list, nil
 	}
 
