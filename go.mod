@@ -238,4 +238,4 @@ require (
 )
 
 //tag:patch-v6
-replace golang.zx2c4.com/wireguard => github.com/zensey/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1
+replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1

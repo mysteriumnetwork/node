@@ -933,6 +933,8 @@ github.com/mysteriumnetwork/payments v1.0.1-0.20220919130729-aec4a4ae5b06 h1:z5l
 github.com/mysteriumnetwork/payments v1.0.1-0.20220919130729-aec4a4ae5b06/go.mod h1:EW2blUdVLPdyHgvqoK3zo1e8eyZbXF/r3/fgDRkmmEs=
 github.com/mysteriumnetwork/terms v0.0.50 h1:gZrItqzO2YzUVb7tGCGE4hjK2mvBbtzxuC4fJ9KeycE=
 github.com/mysteriumnetwork/terms v0.0.50/go.mod h1:xWwHA/G22cDBqaCT95KyZUTDzgScDIF7waiufaadD2o=
+github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1 h1:gaDgsEaxLejOKPPyd/A4v+o05eCuzLKXu6zmwcca5fk=
+github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1/go.mod h1:whfbyDBt09xhCYQWtO2+3UVjlaq6/9hDZrjg2ZE6SyA=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
 github.com/nats-io/jwt v1.2.2 h1:w3GMTO969dFg+UOKTmmyuu7IGdusK+7Ytlt//OYH/uU=
@@ -1197,8 +1199,6 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.0/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.1/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
-github.com/zensey/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1 h1:lz3zafiGzMlTN/fkLKV4FTwaKgF1e5NdRQs2ZFk2pM0=
-github.com/zensey/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1/go.mod h1:whfbyDBt09xhCYQWtO2+3UVjlaq6/9hDZrjg2ZE6SyA=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.4/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.etcd.io/bbolt v1.3.5 h1:XAzx9gjCb0Rxj7EoqcClPD1d5ZBxZJk0jbuoPHenBt0=
