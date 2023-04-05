@@ -45,6 +45,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -59,6 +60,7 @@ import (
 const MaxDNSResponseMsgSize = 4096
 
 type netTun struct {
+	ep             *channel.Endpoint
 	stack          *stack.Stack
 	dispatcher     stack.NetworkDispatcher
 	events         chan tun.Event
@@ -73,64 +75,6 @@ type (
 	Net      netTun
 )
 
-func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
-	e.dispatcher = dispatcher
-}
-
-func (e *endpoint) IsAttached() bool {
-	return e.dispatcher != nil
-}
-
-func (e *endpoint) MTU() uint32 {
-	mtu, err := (*netTun)(e).MTU()
-	if err != nil {
-		panic(err)
-	}
-	return uint32(mtu)
-}
-
-func (*endpoint) Capabilities() stack.LinkEndpointCapabilities {
-	return stack.CapabilityNone
-}
-
-func (*endpoint) MaxHeaderLength() uint16 {
-	return 0
-}
-
-func (*endpoint) LinkAddress() tcpip.LinkAddress {
-	return ""
-}
-
-func (*endpoint) Wait() {}
-
-func (e *endpoint) WritePacket(pkt *stack.PacketBuffer) tcpip.Error {
-	e.incomingPacket <- pkt.ToView()
-	return nil
-}
-
-func (e *endpoint) WritePackets(pl stack.PacketBufferList) (size int, err tcpip.Error) {
-	for _, pkt := range pl.AsSlice() {
-		size += pkt.Size()
-		err = e.WritePacket(pkt)
-		if err != nil {
-			return size, err
-		}
-	}
-
-	return size, nil
-}
-
-func (e *endpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error {
-	panic("not implemented")
-}
-
-func (*endpoint) ARPHardwareType() header.ARPHardwareType {
-	return header.ARPHardwareNone
-}
-
-func (e *endpoint) AddHeader(p *stack.PacketBuffer) {
-}
-
 func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device, *Net, error) {
 	refs.SetLeakMode(refs.NoLeakChecking)
 
@@ -140,6 +84,7 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 		HandleLocal:        true,
 	}
 	dev := &netTun{
+		ep:             channel.New(1024, uint32(mtu), ""),
 		stack:          stack.New(opts),
 		events:         make(chan tun.Event, 10),
 		incomingPacket: make(chan *bufferv2.View),
@@ -157,7 +102,8 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 		return nil, nil, fmt.Errorf("failed to set TCP moderate receive buffer option: %v", err)
 	}
 
-	tcpipErr := dev.stack.CreateNIC(1, (*endpoint)(dev))
+	dev.ep.AddNotify(dev)
+	tcpipErr := dev.stack.CreateNIC(1, dev.ep)
 	if tcpipErr != nil {
 		return nil, nil, fmt.Errorf("CreateNIC: %v", tcpipErr)
 	}
@@ -201,7 +147,7 @@ func (tun *netTun) File() *os.File {
 	return nil
 }
 
-func (tun *netTun) Events() chan tun.Event {
+func (tun *netTun) Events() <-chan tun.Event {
 	return tun.events
 }
 
@@ -221,18 +167,27 @@ func (tun *netTun) Write(buf []byte, offset int) (int, error) {
 		return 0, nil
 	}
 
-	pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{
-		Payload: bufferv2.MakeWithData(append([]byte(nil), packet...)),
-	})
-
+	pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: bufferv2.MakeWithData(packet)})
 	switch packet[0] >> 4 {
 	case 4:
-		tun.dispatcher.DeliverNetworkPacket(ipv4.ProtocolNumber, pkb)
+		tun.ep.InjectInbound(header.IPv4ProtocolNumber, pkb)
 	case 6:
-		tun.dispatcher.DeliverNetworkPacket(ipv6.ProtocolNumber, pkb)
+		tun.ep.InjectInbound(header.IPv6ProtocolNumber, pkb)
 	}
 
 	return len(buf), nil
+}
+
+func (tun *netTun) WriteNotify() {
+	pkt := tun.ep.Read()
+	if pkt.IsNil() {
+		return
+	}
+
+	view := pkt.ToView()
+	pkt.DecRef()
+
+	tun.incomingPacket <- view
 }
 
 func (tun *netTun) Flush() error {
@@ -246,6 +201,8 @@ func (tun *netTun) Close() error {
 	if tun.events != nil {
 		close(tun.events)
 	}
+
+	tun.ep.Close()
 	if tun.incomingPacket != nil {
 		close(tun.incomingPacket)
 	}
