@@ -33,7 +33,7 @@ docker run --rm \
     -e EXT_GOPATH=/ext-go/1 \
     -e GO111MODULE=on \
     -e GOFLAGS=-mod=mod \
-    mysteriumnetwork/xgomobile:1.18.0 ./mobile/mysterium
+    mysteriumnetwork/xgomobile:1.20.2 ./mobile/mysterium
 
 if [[ -f $OUT_FILENAME_AAR ]]; then
     print_success "Android package ${OUT_FILENAME_AAR} build complete!"

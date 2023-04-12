@@ -1,4 +1,4 @@
-FROM golang:1.18 AS builder
+FROM golang:1.20 AS builder
 
 # Install FPM
 RUN apt-get update \
