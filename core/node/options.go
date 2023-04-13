@@ -60,6 +60,7 @@ type Options struct {
 	TequilapiPort          int
 	FlagTequilapiDebugMode bool
 	TequilapiEnabled       bool
+	TequilapiSecured       bool
 	BindAddress            string
 	UI                     OptionsUI
 	FeedbackURL            string

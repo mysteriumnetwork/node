@@ -15,7 +15,7 @@ source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
 DIR_BUILD="build/package"
-OUT_BASENAME="mobile-node-${BUILD_VERSION}"
+OUT_BASENAME="provider-mobile-node-${BUILD_VERSION}"
 OUT_FILENAME_AAR="${DIR_BUILD}/${OUT_BASENAME}.aar"
 
 docker run --rm \
@@ -28,8 +28,8 @@ docker run --rm \
     -e FLAG_RACE=false \
     -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
     -e FLAG_BUILDMODE=default \
-    -e FLAG_TAGS="android" \
-    -e TARGETS=android/. \
+    -e FLAG_TAGS="android mobile_provider" \
+    -e TARGETS=android_provider/. \
     -e EXT_GOPATH=/ext-go/1 \
     -e GO111MODULE=on \
     -e GOFLAGS=-mod=mod \

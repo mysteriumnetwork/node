@@ -28,7 +28,7 @@ func NewNoOpVersionConfig() (*NoOpVersionConfig, error) {
 
 // Version returns version to be used
 func (vm *NoOpVersionConfig) Version() (string, error) {
-	return "", nil
+	return BundledVersionName, nil
 }
 
 func (vm *NoOpVersionConfig) exists() (bool, error) {

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>network.mysterium</groupId>
+  <artifactId>provider-mobile-node</artifactId>
+  <version>{{.BuildVersion}}</version>
+  <packaging>aar</packaging>
+
+  <name>Mysterium Network Android SDK (provider)</name>
+  <description>Android port of the Mysterium Node for decentralised VPN Network</description>
+  <url>https://github.com/mysteriumnetwork/node</url>
+
+  <licenses>
+    <license>
+      <name>GNU General Public License v3.0</name>
+      <url>https://github.com/mysteriumnetwork/node/blob/master/LICENSE</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Mysterium Network</name>
+    <url>https://mysterium.network</url>
+  </organization>
+
+  <developers>
+    <developer>
+      <id>MysteriumTeam</id>
+      <name>Mysterium Team</name>
+      <email>core-services@mysterium.network</email>
+      <url>https://mysterium.network/team</url>
+      <organization>Mysterium Network</organization>
+      <organizationUrl>https://mysterium.network</organizationUrl>
+      <roles>
+        <role>Core team</role>
+      </roles>
+      <timezone>Europe/Vilnius</timezone>
+    </developer>
+  </developers>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/mysteriumnetwork/node/issues</url>
+  </issueManagement>
+
+  <distributionManagement>
+    <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
+  <scm>
+    <connection>https://github.com/mysteriumnetwork/node.git</connection>
+    <developerConnection>https://github.com/mysteriumnetwork/node.git</developerConnection>
+    <url>https://github.com/mysteriumnetwork/node</url>
+  </scm>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.simpligility.maven.plugins</groupId>
+        <artifactId>android-maven-plugin</artifactId>
+        <version>4.1.0</version>
+
+        <extensions>true</extensions>
+        <configuration>
+          <sign>
+            <debug>false</debug>
+          </sign>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

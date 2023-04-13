@@ -1,4 +1,4 @@
-//go:build !windows && !android
+//go:build android
 
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
@@ -21,13 +21,18 @@ package dns
 
 import (
 	"github.com/miekg/dns"
-	"github.com/pkg/errors"
 )
 
 // configuration returns the system DNS configuration.
 func configuration() (*dns.ClientConfig, error) {
-	config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-	return config, errors.Wrap(err, "error loading DNS config")
+	config := dns.ClientConfig{
+		Servers:  []string{"8.8.8.8", "8.8.4.4"},
+		Port:     "53",
+		Ndots:    1,
+		Timeout:  5,
+		Attempts: 2,
+	}
+	return &config, nil
 }
 
 // ConfiguredServers returns DNS server IPs from the system DNS configuration.

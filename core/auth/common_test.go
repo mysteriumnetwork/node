@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2023 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,43 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package tequilapi
+package auth
 
 import (
-	"net"
-	"strings"
+	"net/http"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/node"
-
 	"github.com/gin-gonic/gin"
-
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	listener, err := net.Listen("tcp", "localhost:31337")
-	assert.Nil(t, err)
-
-	server, err := NewServer(listener, *node.GetOptions(), nil, []func(e *gin.Engine) error{})
+func TestTokenParsing(t *testing.T) {
+	token, err := TokenFromContext(&gin.Context{Request: &http.Request{}})
 	assert.NoError(t, err)
+	assert.Empty(t, token)
 
-	server.StartServing()
-
-	address, err := server.Address()
+	token, err = TokenFromContext(&gin.Context{Request: &http.Request{Header: map[string][]string{"Authorization": {"Bearer 123"}}}})
 	assert.NoError(t, err)
+	assert.Equal(t, "123", token)
 
-	port := strings.Split(address, ":")[1]
-	assert.Equal(t, "31337", port)
-
-	server.Stop()
-	server.Wait()
-}
-
-func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	listener, err := net.Listen("tcp", "localhost:31337")
-	assert.Nil(t, err)
-	server, err := NewServer(listener, *node.GetOptions(), nil, []func(e *gin.Engine) error{})
+	token, err = TokenFromContext(&gin.Context{Request: &http.Request{Header: map[string][]string{"Cookie": {"token=321"}}}})
 	assert.NoError(t, err)
-	server.Stop()
+	assert.Equal(t, "321", token)
 }

@@ -1,4 +1,4 @@
-//go:build ios || android
+//go:build (ios || android) && !mobile_provider
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.

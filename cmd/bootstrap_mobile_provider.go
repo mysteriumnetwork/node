@@ -1,4 +1,4 @@
-//go:build !ios && !android
+//go:build (ios || android) && mobile_provider
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
@@ -20,12 +20,14 @@
 package cmd
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 
+	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -40,6 +42,8 @@ import (
 )
 
 func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener) (tequilapi.APIServer, error) {
+	log.Debug().Msg("bootstrapTequilapi - I am here!")
+	log.Debug().Msg("nodeOptions.TequilapiEnabled - " + fmt.Sprint(nodeOptions.TequilapiEnabled))
 	if !nodeOptions.TequilapiEnabled {
 		return tequilapi.NewNoopAPIServer(), nil
 	}
@@ -97,22 +101,9 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	)
 }
 
-func (di *Dependencies) bootstrapNodeUIVersionConfig(nodeOptions node.Options) error {
-	if !nodeOptions.TequilapiEnabled || nodeOptions.Directories.NodeUI == "" {
-		noopCfg, _ := versionmanager.NewNoOpVersionConfig()
-		di.uiVersionConfig = noopCfg
-		return nil
-	}
-
-	versionConfig, err := versionmanager.NewVersionConfig(nodeOptions.Directories.NodeUI)
-	if err != nil {
-		return err
-	}
-	di.uiVersionConfig = versionConfig
-	return nil
-}
-
 func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
+	log.Debug().Msg("bootstrapUIServer - I am here!")
+	log.Debug().Msg("options.UI.UIEnabled - " + fmt.Sprint(options.UI.UIEnabled))
 	if !options.UI.UIEnabled {
 		di.UIServer = uinoop.NewServer()
 		return nil
@@ -127,5 +118,11 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 		bindAddress = bindAddress + ",127.0.0.1"
 	}
 	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient, di.uiVersionConfig)
+	return nil
+}
+
+func (di *Dependencies) bootstrapNodeUIVersionConfig(_ node.Options) error {
+	noopCfg, _ := versionmanager.NewNoOpVersionConfig()
+	di.uiVersionConfig = noopCfg
 	return nil
 }

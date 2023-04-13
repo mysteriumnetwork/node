@@ -28,8 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
@@ -41,6 +39,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
@@ -60,6 +60,8 @@ import (
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/units"
+
+	"github.com/rs/zerolog"
 )
 
 // MobileNode represents node object tuned for mobile device.
@@ -92,6 +94,12 @@ type MobileNode struct {
 	residentCountry           *identity.ResidentCountry
 	filterPresetStorage       *proposal.FilterPresetStorage
 	hermesMigrator            *migration.HermesMigrator
+	servicesManager           *service.Manager
+}
+
+type serviceState struct {
+	id       service.ID
+	isActive bool
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -119,6 +127,8 @@ type MobileNodeOptions struct {
 	ChannelImplementationSCAddress string
 	CacheTTLSeconds                int
 	ObserverAddress                string
+	IsProvider                     bool
+	TequilapiSecured               bool
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -191,6 +201,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	dataDir := filepath.Join(appPath, ".mysterium")
+	config.Current.SetDefault(config.FlagDataDir.Name, dataDir)
 	currentDir := appPath
 	if err := loadUserConfig(dataDir); err != nil {
 		return nil, err
@@ -203,6 +214,25 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
+
+	if options.IsProvider {
+		config.Current.SetDefault(config.FlagUserspace.Name, "true")
+		config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
+		config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
+		config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
+		config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
+		config.Current.SetDefault(config.FlagAccessPolicyFetchInterval.Name, "10m")
+		config.Current.SetDefault(config.FlagPaymentsZeroStakeUnsettledAmount.Name, "5.0")
+		config.Current.SetDefault(config.FlagShaperBandwidth.Name, "6250")
+
+		config.Current.SetDefault(config.FlagPaymentsProviderInvoiceFrequency.Name, config.FlagPaymentsProviderInvoiceFrequency.Value)
+		config.Current.SetDefault(config.FlagPaymentsLimitProviderInvoiceFrequency.Name, config.FlagPaymentsLimitProviderInvoiceFrequency.Value)
+		config.Current.SetDefault(config.FlagPaymentsUnpaidInvoiceValue.Name, config.FlagPaymentsUnpaidInvoiceValue.Value)
+		config.Current.SetDefault(config.FlagPaymentsLimitUnpaidInvoiceValue.Name, config.FlagPaymentsLimitUnpaidInvoiceValue.Value)
+		config.Current.SetDefault(config.FlagChain1KnownHermeses.Name, config.FlagChain1KnownHermeses.Value)
+		config.Current.SetDefault(config.FlagChain2KnownHermeses.Name, config.FlagChain2KnownHermeses.Value)
+		config.Current.SetDefault(config.FlagDNSListenPort.Name, config.FlagDNSListenPort.Value)
+	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
 	if err != nil {
@@ -229,6 +259,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			},
 		},
 	}
+	if options.IsProvider {
+		network.DNSMap["badupnp.benjojo.co.uk"] = []string{"104.22.70.70", "104.22.71.70", "172.67.25.154"}
+	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,
 		LogHTTP:  false,
@@ -244,13 +277,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Runtime:  currentDir,
 		},
 
-		TequilapiEnabled:        false,
 		SwarmDialerDNSHeadstart: time.Millisecond * 1500,
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
-		},
-		UI: node.OptionsUI{
-			UIEnabled: false,
 		},
 		FeedbackURL:    options.FeedbackURL,
 		OptionsNetwork: network,
@@ -307,12 +336,52 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ChainID:            options.Chain2ID,
 			},
 		},
+
 		Consumer:        true,
 		PilvytisAddress: options.PilvytisAddress,
 		ObserverAddress: options.ObserverAddress,
 		SSE: node.OptionsSSE{
 			Enabled: true,
 		},
+	}
+	if options.IsProvider {
+		nodeOptions.Discovery.FetchEnabled = true
+		nodeOptions.Discovery.PingInterval = config.GetDuration(config.FlagDiscoveryPingInterval)
+		nodeOptions.Discovery.FetchInterval = config.GetDuration(config.FlagDiscoveryFetchInterval)
+		nodeOptions.Payments = node.OptionsPayments{
+			MaxAllowedPaymentPercentile:    3000,
+			BCTimeout:                      time.Second * 30,
+			SettlementTimeout:              time.Minute * 3,
+			SettlementRecheckInterval:      time.Second * 30,
+			HermesPromiseSettlingThreshold: 0.01,
+			MaxFeeSettlingThreshold:        0.05,
+			ConsumerDataLeewayMegabytes:    0x14,
+			MinAutoSettleAmount:            5,
+			MaxUnSettledAmount:             20,
+			HermesStatusRecheckInterval:    time.Hour * 2,
+			BalanceFastPollInterval:        time.Second * 30 * 2,
+			BalanceFastPollTimeout:         time.Minute * 3 * 3,
+			BalanceLongPollInterval:        time.Hour * 1,
+			RegistryTransactorPollInterval: time.Second * 20,
+			RegistryTransactorPollTimeout:  time.Minute * 20,
+			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			ProviderLimitInvoiceFrequency:  config.GetDuration(config.FlagPaymentsLimitProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsUnpaidInvoiceValue),
+			LimitUnpaidInvoiceValue:        config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue),
+		}
+		nodeOptions.Payments.LimitUnpaidInvoiceValue = config.GetBigInt(config.FlagPaymentsLimitUnpaidInvoiceValue)
+		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain1KnownHermeses)
+		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain2KnownHermeses)
+		nodeOptions.Consumer = false
+		nodeOptions.TequilapiEnabled = true
+		nodeOptions.TequilapiPort = 4050
+		nodeOptions.TequilapiAddress = "127.0.0.1"
+		nodeOptions.TequilapiSecured = options.TequilapiSecured
+		nodeOptions.UI = node.OptionsUI{
+			UIEnabled:     true,
+			UIBindAddress: "127.0.0.1",
+			UIPort:        4449,
+		}
 	}
 
 	err = di.Bootstrap(nodeOptions)
@@ -357,6 +426,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
+	}
+	if options.IsProvider {
+		mobileNode.servicesManager = di.ServicesManager
 	}
 
 	return mobileNode, nil
@@ -468,11 +540,24 @@ type ConnectionStatusChangeCallback interface {
 	OnChange(status string)
 }
 
+// ServiceStatusChangeCallback represents status callback.
+type ServiceStatusChangeCallback interface {
+	OnChange(service string, status string)
+}
+
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
 		cb.OnChange(string(e.State))
+	})
+}
+
+// RegisterServiceStatusChangeCallback registers callback which is called on active connection
+// status change.
+func (mb *MobileNode) RegisterServiceStatusChangeCallback(cb ServiceStatusChangeCallback) {
+	_ = mb.eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, func(e servicestate.AppEventServiceStatus) {
+		cb.OnChange(e.Type, e.Status)
 	})
 }
 

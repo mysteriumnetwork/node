@@ -20,6 +20,7 @@ package e2e
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -37,6 +38,9 @@ func TestMobileNodeConsumer(t *testing.T) {
 	dir, err := os.MkdirTemp("", "mobileEntryPoint")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
+
+	err = os.Mkdir(filepath.Join(dir, ".mysterium"), 0777)
+	require.NoError(t, err)
 
 	options := &mysterium.MobileNodeOptions{
 		Network:                        string(config.Mainnet),
