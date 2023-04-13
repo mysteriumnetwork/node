@@ -45,7 +45,7 @@ require (
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
 	github.com/mysteriumnetwork/payments v1.0.1-0.20220919130729-aec4a4ae5b06
-	github.com/mysteriumnetwork/terms v0.0.50
+	github.com/mysteriumnetwork/terms v0.0.53
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/oschwald/geoip2-golang v1.1.0
