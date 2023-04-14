@@ -933,8 +933,8 @@ github.com/mysteriumnetwork/payments v1.0.1-0.20220919130729-aec4a4ae5b06 h1:z5l
 github.com/mysteriumnetwork/payments v1.0.1-0.20220919130729-aec4a4ae5b06/go.mod h1:EW2blUdVLPdyHgvqoK3zo1e8eyZbXF/r3/fgDRkmmEs=
 github.com/mysteriumnetwork/terms v0.0.50 h1:gZrItqzO2YzUVb7tGCGE4hjK2mvBbtzxuC4fJ9KeycE=
 github.com/mysteriumnetwork/terms v0.0.50/go.mod h1:xWwHA/G22cDBqaCT95KyZUTDzgScDIF7waiufaadD2o=
-github.com/mysteriumnetwork/wireguard-go v0.0.0-20230306180439-cb22cfa8340e h1:qTVzIVNTD8wOsDeG8Y/DDi99/sxLEwk4hEyq7nZZ9mw=
-github.com/mysteriumnetwork/wireguard-go v0.0.0-20230306180439-cb22cfa8340e/go.mod h1:whfbyDBt09xhCYQWtO2+3UVjlaq6/9hDZrjg2ZE6SyA=
+github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1 h1:gaDgsEaxLejOKPPyd/A4v+o05eCuzLKXu6zmwcca5fk=
+github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1/go.mod h1:whfbyDBt09xhCYQWtO2+3UVjlaq6/9hDZrjg2ZE6SyA=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
 github.com/nats-io/jwt v1.2.2 h1:w3GMTO969dFg+UOKTmmyuu7IGdusK+7Ytlt//OYH/uU=

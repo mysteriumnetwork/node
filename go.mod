@@ -236,4 +236,4 @@ require (
 	honnef.co/go/tools v0.2.2 // indirect
 )
 
-replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20230306180439-cb22cfa8340e
+replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1
