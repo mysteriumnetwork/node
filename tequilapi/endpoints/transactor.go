@@ -942,10 +942,12 @@ func (te *transactorEndpoint) canRegisterForFree(req *contract.IdentityRegisterR
 	if req.ReferralToken != nil {
 		return true
 	}
-	resp, err := te.pilvytis.GetRegistrationPaymentStatus(id)
+	eligible, err := te.transactor.GetFreeRegistrationEligibility(id)
+
 	if err != nil {
 		log.Warn().AnErr("err", err).Msg("Failed to get registration payment status from pilvytis")
 		return false
 	}
-	return resp.Paid
+
+	return eligible
 }
