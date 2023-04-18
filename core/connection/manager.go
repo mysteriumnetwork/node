@@ -247,7 +247,6 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	err = m.validator.Validate(m.chainID(), consumerID, prc)
 	if err != nil {
-		log.Warn().Msg("FAILED UNLOCK")
 		return err
 	}
 
