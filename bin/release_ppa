@@ -34,11 +34,7 @@ if [ -z "$DISTR" ]; then
     exit 1
 fi
 
-if ! [ -x "$(command -v vend)" ]; then
-    go install github.com/mysteriumnetwork/vend@latest
-fi
-
-vend
+go mod vendor
 
 DATE=`date -R`
 
