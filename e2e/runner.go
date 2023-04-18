@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -94,7 +95,10 @@ func (r *Runner) Test(providerHost string) (retErr error) {
 }
 
 func (r *Runner) checkPublicIPInLogs(containers ...string) error {
-	publicIPs := []string{"172.30.0.2", "172.31.0.2"}
+	regExps := []*regexp.Regexp{
+		regexp.MustCompile(`(^|[^0-9])(172\.30\.0\.2)($|[^0-9])`),
+		regexp.MustCompile(`(^|[^0-9])(172\.31\.0\.2)($|[^0-9])`),
+	}
 
 	for _, containerName := range containers {
 		output, err := r.composeOut("logs", containerName)
@@ -108,11 +112,11 @@ func (r *Runner) checkPublicIPInLogs(containers ...string) error {
 			continue
 		}
 
-		for _, publicIP := range publicIPs {
-			if strings.Contains(output, publicIP) {
+		for _, reg := range regExps {
+			if reg.MatchString(output) {
 				// it will be easier to locate the place if we print the output
 				log.Warn().Msgf("output from %s container's logs:\n%s", containerName, output)
-				return fmt.Errorf("found public IP address %s in %s container's logs", publicIP, containerName)
+				return fmt.Errorf("found public IP address by regular expression %s in %s container's logs", reg.String(), containerName)
 			}
 		}
 	}
