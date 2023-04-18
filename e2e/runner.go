@@ -22,9 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/magefile/mage/sh"
 	"github.com/pkg/errors"
@@ -95,7 +95,10 @@ func (r *Runner) Test(providerHost string) (retErr error) {
 }
 
 func (r *Runner) checkPublicIPInLogs(containers ...string) error {
-	publicIPs := []string{"172.30.0.2", "172.31.0.2"}
+	regExps := []*regexp.Regexp{
+		regexp.MustCompile(`(^|[^0-9])(172\.30\.0\.2)($|[^0-9])`),
+		regexp.MustCompile(`(^|[^0-9])(172\.31\.0\.2)($|[^0-9])`),
+	}
 
 	for _, containerName := range containers {
 		output, err := r.composeOut("logs", containerName)
@@ -109,20 +112,11 @@ func (r *Runner) checkPublicIPInLogs(containers ...string) error {
 			continue
 		}
 
-		for _, publicIP := range publicIPs {
-			idx := strings.Index(output, publicIP)
-			if idx < 0 {
-				continue
-			}
-
-			// locate the next index after found public IP address
-			idx += len(publicIP)
-
-			// make sure that we've found what we intended to, e.g 172.30.0.2 and NOT 172.30.0.201
-			if idx < len(output) && !unicode.IsDigit(rune(output[idx])) {
+		for _, reg := range regExps {
+			if reg.MatchString(output) {
 				// it will be easier to locate the place if we print the output
 				log.Warn().Msgf("output from %s container's logs:\n%s", containerName, output)
-				return fmt.Errorf("found public IP address %s in %s container's logs", publicIP, containerName)
+				return fmt.Errorf("found public IP address by regular expression %s in %s container's logs", reg.String(), containerName)
 			}
 		}
 	}
