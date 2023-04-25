@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/tequilapi/tequil"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/node/core/auth"
@@ -47,7 +49,7 @@ func buildReverseProxy(tequilapiAddress string, tequilapiPort int) *httputil.Rev
 		Director: func(req *http.Request) {
 			req.URL.Scheme = "http"
 			req.URL.Host = tequilapiAddress + ":" + strconv.Itoa(tequilapiPort)
-			req.URL.Path = strings.Replace(req.URL.Path, tequilapiUrlPrefix, "", 1)
+			req.URL.Path = strings.Replace(req.URL.Path, tequil.TequilapiURLPrefix, "", 1)
 			req.URL.Path = strings.TrimRight(req.URL.Path, "/")
 			req.Header.Del("Origin")
 			req.Host = "127.0.0.1" + ":" + strconv.Itoa(tequilapiPort)
@@ -73,13 +75,13 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 	proxy := buildReverseProxy(tequilapiAddress, tequilapiPort)
 
 	return func(c *gin.Context) {
-		// skip non Tequilapi routes
-		if !isTequilapiURL(c.Request.URL.Path) {
+		// skip non reverse proxy routes
+		if !tequil.IsReverseProxyRoute(c.Request.URL.Path) {
 			return
 		}
 
 		// authenticate all but the authentication routes
-		if isTequilapiProtectedUrl(c.Request.URL.Path) {
+		if tequil.IsProtectedRoute(c.Request.URL.Path) {
 			authToken, err := auth.TokenFromContext(c)
 			if err != nil {
 				c.AbortWithStatus(http.StatusBadRequest)
@@ -105,21 +107,4 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
-}
-
-func isTequilapiURL(url string, endpoints ...string) bool {
-	return strings.Contains(url, tequilapiUrlPrefix+strings.Join(endpoints, ""))
-}
-
-func isTequilapiProtectedUrl(url string) bool {
-	if isTequilapiURL(url, "/auth/authenticate") {
-		return false
-	}
-	if isTequilapiURL(url, "/auth/login") {
-		return false
-	}
-	if isTequilapiURL(url, "/healthcheck") {
-		return false
-	}
-	return true
 }
