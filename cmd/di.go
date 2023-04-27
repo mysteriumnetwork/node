@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
 	"net"
 	"net/http"
 	"net/url"
@@ -170,6 +171,7 @@ type Dependencies struct {
 	Transactor       *registry.Transactor
 	Affiliator       *registry.Affiliator
 	BCHelper         *paymentClient.MultichainBlockchainClient
+	SSOMystnodes     *sso.Mystnodes
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -803,6 +805,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
 	}
+
+	if err := di.bootstrapSSOMystnodes(); err != nil {
+		return err
+	}
+
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
 		options.Transactor.TransactorEndpointAddress,
@@ -1041,6 +1048,12 @@ func (di *Dependencies) bootstrapHermesMigrator() *migration.HermesMigrator {
 		migration.NewStorage(di.Storage, di.AddressProvider),
 		di.BCHelper,
 	)
+}
+
+func (di *Dependencies) bootstrapSSOMystnodes() error {
+	s := sso.NewMystnodes(di.SignerFactory, di.HTTPClient)
+	di.SSOMystnodes = s
+	return s.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) handleConnStateChange() error {

@@ -19,6 +19,8 @@ package endpoints
 
 import (
 	"encoding/json"
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"time"
 
@@ -34,6 +36,7 @@ import (
 type authenticationAPI struct {
 	jwtAuthenticator jwtAuthenticator
 	authenticator    authenticator
+	ssoMystnodes     *sso.Mystnodes
 }
 
 type jwtAuthenticator interface {
@@ -144,6 +147,73 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 	utils.WriteAsJSON(response, c.Writer)
 }
 
+// swagger:operation GET /auth/login-mystnodes SSO LoginMystnodesInit
+// ---
+// summary: LoginMystnodesInit
+// description: SSO init endpoint to auth via mystnodes
+//
+// responses:
+//
+//	200:
+//	  description: link response
+//	  schema:
+//	    "$ref": "#/definitions/MystnodesSSOLinkResponse"
+func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
+	link, err := api.ssoMystnodes.SSOLink(c.Request.Header.Get("X-Forwarded-Host"))
+	if err != nil {
+		log.Err(err).Msg("failed to generate mystnodes SSO link")
+		c.Error(apierror.Unauthorized())
+		return
+	}
+	c.JSON(http.StatusOK, contract.MystnodesSSOLinkResponse{Link: link.String()})
+}
+
+// swagger:operation POST /auth/login-mystnodes SSO LoginMystnodesWithGrant
+// ---
+// summary: LoginMystnodesWithGrant
+// description: SSO login using grant provided by mystnodes.com
+//
+// responses:
+//
+//	200:
+//	  description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
+//	401:
+//	  description: grant failed to be verified
+func (api *authenticationAPI) LoginMystnodesWithGrant(c *gin.Context) {
+	var request contract.MystnodesSSOGrantLoginRequest
+	err := json.NewDecoder(c.Request.Body).Decode(&request)
+	if err != nil {
+		log.Err(err).Msg("failed decoding request")
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	err = api.ssoMystnodes.VerifyAuthorizationGrant(request.AuthorizationGrant)
+	if err != nil {
+		log.Err(err).Msg("failed to verify mystnodes Authorization Grant")
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	jwtToken, err := api.jwtAuthenticator.CreateToken("myst")
+	if err != nil {
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	response := contract.NewAuthResponse(jwtToken)
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     auth.JWTCookieName,
+		Value:    jwtToken.Token,
+		Expires:  jwtToken.ExpirationTime,
+		HttpOnly: true,
+		Secure:   false,
+		Path:     "/",
+	})
+	utils.WriteAsJSON(response, c.Writer)
+}
+
 // swagger:operation DELETE /auth/logout Authentication Logout
 //
 //	---
@@ -215,13 +285,11 @@ func toChangePasswordRequest(req *http.Request) (*contract.ChangePasswordRequest
 }
 
 // AddRoutesForAuthentication registers /auth endpoints in Tequilapi
-func AddRoutesForAuthentication(
-	auth authenticator,
-	jwtAuth jwtAuthenticator,
-) func(*gin.Engine) error {
+func AddRoutesForAuthentication(auth authenticator, jwtAuth jwtAuthenticator, ssoMystnodes *sso.Mystnodes) func(*gin.Engine) error {
 	api := &authenticationAPI{
 		authenticator:    auth,
 		jwtAuthenticator: jwtAuth,
+		ssoMystnodes:     ssoMystnodes,
 	}
 	return func(e *gin.Engine) error {
 		g := e.Group("/auth")
@@ -229,6 +297,8 @@ func AddRoutesForAuthentication(
 			g.PUT("/password", api.ChangePassword)
 			g.POST("/authenticate", api.Authenticate)
 			g.POST("/login", api.Login)
+			g.GET("/login-mystnodes", api.LoginMystnodesInit)
+			g.POST("/login-mystnodes", api.LoginMystnodesWithGrant)
 			g.DELETE("/logout", api.Logout)
 		}
 		return nil

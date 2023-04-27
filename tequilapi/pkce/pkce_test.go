@@ -1,6 +1,7 @@
 package pkce
 
 import (
+	"encoding/base64"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -16,12 +17,16 @@ func TestPKCEInfo(t *testing.T) {
 		info, err := New(uint(i))
 		assert.NoError(t, err)
 
-		assert.NotEmpty(t, info.codeVerifier)
-		assert.NotEmpty(t, info.codeChallenge)
+		assert.NotEmpty(t, info.CodeVerifier)
+		assert.NotEmpty(t, info.CodeChallenge)
 
-		assert.Equal(t, i, len(info.codeVerifier))
+		assert.Equal(t, i, len(info.CodeVerifier))
 
-		assert.Equal(t, info.codeChallenge, ChallengeSHA256(info.codeVerifier))
+		assert.Equal(t, info.CodeChallenge, ChallengeSHA256(info.CodeVerifier))
+
+		decoded, err := base64.RawURLEncoding.DecodeString(info.Base64URLCodeVerifier())
+		assert.NoError(t, err)
+		assert.Equal(t, info.CodeVerifier, string(decoded))
 	}
 
 }

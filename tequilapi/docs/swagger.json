@@ -79,33 +79,11 @@
         "operationId": "Authenticate",
         "parameters": [
           {
+            "$ref": "#/definitions/AuthRequest",
             "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/AuthRequest"
-            }
+            "in": "body"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Authentication succeeded",
-            "schema": {
-              "$ref": "#/definitions/AuthResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "401": {
-            "description": "Authentication failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
+        ]
       }
     },
     "/auth/login": {
@@ -118,33 +96,29 @@
         "operationId": "Login",
         "parameters": [
           {
+            "$ref": "#/definitions/AuthRequest",
             "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/AuthRequest"
-            }
+            "in": "body"
           }
+        ]
+      }
+    },
+    "/auth/login-mystnodes": {
+      "get": {
+        "description": "SSO init endpoint to auth via mystnodes",
+        "tags": [
+          "SSO"
         ],
-        "responses": {
-          "200": {
-            "description": "Authentication succeeded",
-            "schema": {
-              "$ref": "#/definitions/AuthResponse"
-            }
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "401": {
-            "description": "Authentication failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
+        "summary": "LoginMystnodesInit",
+        "operationId": "LoginMystnodesInit"
+      },
+      "post": {
+        "description": "SSO login using grant provided by mystnodes.com",
+        "tags": [
+          "SSO"
+        ],
+        "summary": "LoginMystnodesWithGrant",
+        "operationId": "LoginMystnodesWithGrant"
       }
     },
     "/auth/logout": {
@@ -154,12 +128,7 @@
           "Authentication"
         ],
         "summary": "Logout",
-        "operationId": "Logout",
-        "responses": {
-          "200": {
-            "description": "Logged out successfully"
-          }
-        }
+        "operationId": "Logout"
       }
     },
     "/auth/password": {
@@ -172,30 +141,11 @@
         "operationId": "changePassword",
         "parameters": [
           {
+            "$ref": "#/definitions/ChangePasswordRequest",
             "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/ChangePasswordRequest"
-            }
+            "in": "body"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Password changed successfully"
-          },
-          "400": {
-            "description": "Failed to parse or request validation failed",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/APIError"
-            }
-          }
-        }
+        ]
       }
     },
     "/config": {
@@ -4315,6 +4265,17 @@
       "description": "MonitoringStatus enum",
       "type": "string",
       "x-go-package": "github.com/mysteriumnetwork/node/core/node"
+    },
+    "MystnodesSSOLinkResponse": {
+      "description": "MystnodesSSOLinkResponse contains a link to initiate auth via mystnodes",
+      "type": "object",
+      "properties": {
+        "link": {
+          "type": "string",
+          "x-go-name": "Link"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "NATType": {
       "description": "NATType represents nat type",

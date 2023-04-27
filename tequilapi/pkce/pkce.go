@@ -11,8 +11,13 @@ import (
 
 // Info contains codeVerifier and codeChallenge
 type Info struct {
-	codeVerifier  string
-	codeChallenge string
+	CodeVerifier  string
+	CodeChallenge string
+}
+
+// Base64URLCodeVerifier encode to base64url for transport
+func (info Info) Base64URLCodeVerifier() string {
+	return base64.RawURLEncoding.EncodeToString([]byte(info.CodeVerifier))
 }
 
 // New returns a new set of codeVerifier and codeChallenge
@@ -26,8 +31,8 @@ func New(l uint) (Info, error) {
 	challenge := ChallengeSHA256(verifier)
 
 	return Info{
-		codeVerifier:  verifier,
-		codeChallenge: challenge,
+		CodeVerifier:  verifier,
+		CodeChallenge: challenge,
 	}, nil
 }
 
