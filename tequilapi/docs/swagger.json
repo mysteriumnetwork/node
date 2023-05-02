@@ -79,11 +79,33 @@
         "operationId": "Authenticate",
         "parameters": [
           {
-            "$ref": "#/definitions/AuthRequest",
             "name": "body",
-            "in": "body"
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AuthRequest"
+            }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Authentication succeeded",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/auth/login": {
@@ -96,11 +118,33 @@
         "operationId": "Login",
         "parameters": [
           {
-            "$ref": "#/definitions/AuthRequest",
             "name": "body",
-            "in": "body"
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AuthRequest"
+            }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Authentication succeeded",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/auth/login-mystnodes": {
@@ -110,7 +154,15 @@
           "SSO"
         ],
         "summary": "LoginMystnodesInit",
-        "operationId": "LoginMystnodesInit"
+        "operationId": "LoginMystnodesInit",
+        "responses": {
+          "200": {
+            "description": "link response",
+            "schema": {
+              "$ref": "#/definitions/MystnodesSSOLinkResponse"
+            }
+          }
+        }
       },
       "post": {
         "description": "SSO login using grant provided by mystnodes.com",
@@ -118,7 +170,15 @@
           "SSO"
         ],
         "summary": "LoginMystnodesWithGrant",
-        "operationId": "LoginMystnodesWithGrant"
+        "operationId": "LoginMystnodesWithGrant",
+        "responses": {
+          "200": {
+            "description": "grant was verified against mystnodes using PKCE workflow. This will set access token cookie."
+          },
+          "401": {
+            "description": "grant failed to be verified"
+          }
+        }
       }
     },
     "/auth/logout": {
@@ -128,7 +188,12 @@
           "Authentication"
         ],
         "summary": "Logout",
-        "operationId": "Logout"
+        "operationId": "Logout",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully"
+          }
+        }
       }
     },
     "/auth/password": {
@@ -141,11 +206,30 @@
         "operationId": "changePassword",
         "parameters": [
           {
-            "$ref": "#/definitions/ChangePasswordRequest",
             "name": "body",
-            "in": "body"
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/ChangePasswordRequest"
+            }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Password changed successfully"
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
       }
     },
     "/config": {

@@ -19,8 +19,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/mysteriumnetwork/node/tequilapi/sso"
 	"net"
+
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -83,6 +83,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
 	"github.com/mysteriumnetwork/node/ui/versionmanager"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	paymentClient "github.com/mysteriumnetwork/payments/client"

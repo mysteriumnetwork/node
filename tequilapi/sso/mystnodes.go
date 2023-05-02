@@ -1,8 +1,30 @@
+/*
+ * Copyright (C) 2023 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package sso
 
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -10,16 +32,21 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/pkce"
 	"github.com/pkg/errors"
-	"net/http"
-	"net/url"
-	"strings"
-	"sync"
 )
 
+// ErrHostMissing host can't be blank
 var ErrHostMissing = errors.New("host must not be empty")
+
+// ErrNoUnlockedIdentity no unlocked identity
 var ErrNoUnlockedIdentity = errors.New("lastUnlockedIdentity must not be empty")
+
+// ErrCodeVerifierMissing code verifier is missing
 var ErrCodeVerifierMissing = errors.New("no code verifier generated")
+
+// ErrAuthorizationGrantTokenMissing blank authorization token
 var ErrAuthorizationGrantTokenMissing = errors.New("token must be set")
+
+// ErrMystnodesAuthorizationFail authorization failed against mystnodes
 var ErrMystnodesAuthorizationFail = errors.New("mystnodes SSO grant authorization verification failed")
 
 type httpClient interface {

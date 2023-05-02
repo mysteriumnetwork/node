@@ -19,17 +19,16 @@ package endpoints
 
 import (
 	"encoding/json"
-	"github.com/mysteriumnetwork/node/tequilapi/sso"
-	"github.com/rs/zerolog/log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-rest/apierror"
-
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
-
 	"github.com/mysteriumnetwork/node/core/auth"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -154,10 +153,10 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 //
 // responses:
 //
-//	200:
-//	  description: link response
-//	  schema:
-//	    "$ref": "#/definitions/MystnodesSSOLinkResponse"
+//  200:
+//    description: link response
+//    schema:
+//      "$ref": "#/definitions/MystnodesSSOLinkResponse"
 func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
 	link, err := api.ssoMystnodes.SSOLink(c.Request.Header.Get("X-Forwarded-Host"))
 	if err != nil {
@@ -175,10 +174,10 @@ func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
 //
 // responses:
 //
-//	200:
-//	  description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
-//	401:
-//	  description: grant failed to be verified
+//  200:
+//    description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
+//  401:
+//    description: grant failed to be verified
 func (api *authenticationAPI) LoginMystnodesWithGrant(c *gin.Context) {
 	var request contract.MystnodesSSOGrantLoginRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&request)
