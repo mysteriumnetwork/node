@@ -57,6 +57,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/units"
@@ -95,6 +96,11 @@ type MobileNode struct {
 	filterPresetStorage       *proposal.FilterPresetStorage
 	hermesMigrator            *migration.HermesMigrator
 	servicesManager           *service.Manager
+	earningsProvider          earningsProvider
+}
+
+type earningsProvider interface {
+	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpongEvent.EarningsDetailed
 }
 
 type serviceState struct {
@@ -426,7 +432,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		residentCountry:     di.ResidentCountry,
 		filterPresetStorage: di.FilterPresetStorage,
 		hermesMigrator:      di.HermesMigrator,
+		earningsProvider:    di.HermesChannelRepository,
 	}
+
 	if options.IsProvider {
 		mobileNode.servicesManager = di.ServicesManager
 	}
@@ -712,6 +720,14 @@ func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, e
 	b := crypto.BigMystToFloat(balance)
 
 	return &GetBalanceResponse{Balance: b}, nil
+}
+
+// GetUnsettledEarnings returns unsettled earnings.
+func (mb *MobileNode) GetUnsettledEarnings(req *GetBalanceRequest) (*GetBalanceResponse, error) {
+	earnings := mb.earningsProvider.GetEarningsDetailed(mb.chainID, identity.FromAddress(req.IdentityAddress))
+	u := crypto.BigMystToFloat(earnings.Total.UnsettledBalance)
+
+	return &GetBalanceResponse{Balance: u}, nil
 }
 
 // ForceBalanceUpdate force updates balance and returns the updated balance.
