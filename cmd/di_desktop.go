@@ -41,6 +41,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -58,6 +59,9 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 		return errors.Wrap(err, "service bootstrap failed")
 	}
 
+	if config.GetBool(config.FlagUserspace) {
+		netstack_provider.InitUserspaceShaper(di.EventBus)
+	}
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 	resourcesAllocator := resources.NewAllocator(di.PortPool, wireguard_service.GetOptions().Subnet)
