@@ -40,14 +40,14 @@ func newTermsAPI(config configProvider) *termsAPI {
 // GetTerms returns current terms config
 //
 // swagger:operation GET /terms Terms getTerms
-// ---
-// summary: Get terms
-// description: Return an object with the current terms config
-// responses:
-//   200:
-//     description: Terms object
-//     schema:
-//       "$ref": "#/definitions/TermsResponse"
+//	---
+//	summary: Get terms
+//	description: Return an object with the current terms config
+//	responses:
+//	  200:
+//	    description: Terms object
+//	    schema:
+//	      "$ref": "#/definitions/TermsResponse"
 func (api *termsAPI) GetTerms(c *gin.Context) {
 	c.JSON(http.StatusOK, contract.NewTermsResp())
 }
@@ -55,26 +55,26 @@ func (api *termsAPI) GetTerms(c *gin.Context) {
 // UpdateTerms accepts new terms and updates user config
 //
 // swagger:operation POST /terms Terms updateTerms
-// ---
-// summary: Update terms agreement
-// description: Takes the given data and tries to update terms agreement config.
-// parameters:
-// - in: body
-//   name: body
-//   description: Required data to update terms
-//   schema:
-//     $ref: "#/definitions/TermsRequest"
-// responses:
-//   200:
-//     description: Terms agreement updated
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Update terms agreement
+//	description: Takes the given data and tries to update terms agreement config.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: Required data to update terms
+//	  schema:
+//	    $ref: "#/definitions/TermsRequest"
+//	responses:
+//	  200:
+//	    description: Terms agreement updated
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *termsAPI) UpdateTerms(c *gin.Context) {
 	var req contract.TermsRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)

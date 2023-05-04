@@ -44,14 +44,14 @@ type sessionConnectivityEndpoint struct {
 }
 
 // swagger:operation GET /sessions-connectivity-status ConnectivityStatus
-// ---
-// summary: Returns session connectivity status
-// description: Returns list of session connectivity status
-// responses:
-//   200:
-//     description: List of connectivity statuses
-//     schema:
-//       "$ref": "#/definitions/ConnectivityStatus"
+//	---
+//	summary: Returns session connectivity status
+//	description: Returns list of session connectivity status
+//	responses:
+//	  200:
+//	    description: List of connectivity statuses
+//	    schema:
+//	      "$ref": "#/definitions/ConnectivityStatus"
 func (e *sessionConnectivityEndpoint) List(c *gin.Context) {
 	r := sessionConnectivityStatusCollection{
 		Entries: []*sessionConnectivityStatus{},

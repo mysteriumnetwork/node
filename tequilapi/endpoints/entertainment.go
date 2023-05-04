@@ -34,24 +34,24 @@ type estimator interface {
 }
 
 // swagger:operation GET /entertainment Entertainment Estimate
-// ---
-// summary: Estimate entertainment durations/data cap for the MYST amount specified.
-// description: Estimate entertainment durations/data cap for the MYST amount specified.
-// parameters:
-// - name: amount
-//   in: query
-//   description: Amount of MYST to give entertainment estimates for.
-//   type: integer
-//   required: true
-// responses:
-//   200:
-//     description: Entertainment estimates
-//     schema:
-//       "$ref": "#/definitions/EntertainmentEstimateResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Estimate entertainment durations/data cap for the MYST amount specified.
+//	description: Estimate entertainment durations/data cap for the MYST amount specified.
+//	parameters:
+//	- name: amount
+//	  in: query
+//	  description: Amount of MYST to give entertainment estimates for.
+//	  type: integer
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Entertainment estimates
+//	    schema:
+//	      "$ref": "#/definitions/EntertainmentEstimateResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *entertainmentEndpoint) Estimate(c *gin.Context) {
 	req := contract.EntertainmentEstimateRequest{}
 	if err := req.Bind(c.Request); err != nil {

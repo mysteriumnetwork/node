@@ -55,14 +55,14 @@ func newConfigAPI(config configProvider) *configAPI {
 
 // GetConfig returns current configuration
 // swagger:operation GET /config Configuration getConfig
-// ---
-// summary: Returns current configuration values
-// description: Returns default configuration
-// responses:
-//   200:
-//     description: Currently active configuration
-//     schema:
-//       "$ref": "#/definitions/configPayload"
+//	---
+//	summary: Returns current configuration values
+//	description: Returns default configuration
+//	responses:
+//	  200:
+//	    description: Currently active configuration
+//	    schema:
+//	      "$ref": "#/definitions/configPayload"
 func (api *configAPI) GetConfig(c *gin.Context) {
 	res := configPayload{Data: api.config.GetConfig()}
 	utils.WriteAsJSON(res, c.Writer)
@@ -70,14 +70,14 @@ func (api *configAPI) GetConfig(c *gin.Context) {
 
 // GetDefaultConfig returns default configuration
 // swagger:operation GET /config/default Configuration getDefaultConfig
-// ---
-// summary: Returns default configuration
-// description: Returns default configuration
-// responses:
-//   200:
-//     description: Default configuration values
-//     schema:
-//       "$ref": "#/definitions/configPayload"
+//	---
+//	summary: Returns default configuration
+//	description: Returns default configuration
+//	responses:
+//	  200:
+//	    description: Default configuration values
+//	    schema:
+//	      "$ref": "#/definitions/configPayload"
 func (api *configAPI) GetDefaultConfig(c *gin.Context) {
 	res := configPayload{Data: api.config.GetDefaultConfig()}
 	utils.WriteAsJSON(res, c.Writer)
@@ -85,14 +85,14 @@ func (api *configAPI) GetDefaultConfig(c *gin.Context) {
 
 // GetUserConfig returns current user configuration
 // swagger:operation GET /config/user Configuration getUserConfig
-// ---
-// summary: Returns current user configuration
-// description: Returns current user configuration
-// responses:
-//   200:
-//     description: User set configuration values
-//     schema:
-//       "$ref": "#/definitions/configPayload"
+//	---
+//	summary: Returns current user configuration
+//	description: Returns current user configuration
+//	responses:
+//	  200:
+//	    description: User set configuration values
+//	    schema:
+//	      "$ref": "#/definitions/configPayload"
 func (api *configAPI) GetUserConfig(c *gin.Context) {
 	res := configPayload{Data: api.config.GetUserConfig()}
 	utils.WriteAsJSON(res, c.Writer)
@@ -100,28 +100,28 @@ func (api *configAPI) GetUserConfig(c *gin.Context) {
 
 // SetUserConfig sets and returns current configuration
 // swagger:operation POST /config/user Configuration serUserConfig
-// ---
-// summary: Sets and returns user configuration
-// description: For keys present in the payload, it will set or remove the user config values (if the key is null). Changes are persisted to the config file.
-// parameters:
-//   - in: body
-//     name: body
-//     description: configuration keys/values
-//     schema:
-//       $ref: "#/definitions/configPayload"
-// responses:
-//   200:
-//     description: User configuration
-//     schema:
-//       "$ref": "#/definitions/configPayload"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Sets and returns user configuration
+//	description: For keys present in the payload, it will set or remove the user config values (if the key is null). Changes are persisted to the config file.
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: configuration keys/values
+//	    schema:
+//	      $ref: "#/definitions/configPayload"
+//	responses:
+//	  200:
+//	    description: User configuration
+//	    schema:
+//	      "$ref": "#/definitions/configPayload"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *configAPI) SetUserConfig(c *gin.Context) {
 	var req configPayload
 	err := json.NewDecoder(c.Request.Body).Decode(&req)

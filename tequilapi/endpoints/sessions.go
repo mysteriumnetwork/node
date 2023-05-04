@@ -48,22 +48,22 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 }
 
 // swagger:operation GET /sessions Session sessionList
-// ---
-// summary: Returns sessions history
-// description: Returns list of sessions history filtered by given query
-// responses:
-//   200:
-//     description: List of sessions
-//     schema:
-//       "$ref": "#/definitions/SessionListResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns sessions history
+//	description: Returns list of sessions history filtered by given query
+//	responses:
+//	  200:
+//	    description: List of sessions
+//	    schema:
+//	      "$ref": "#/definitions/SessionListResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (endpoint *sessionsEndpoint) List(c *gin.Context) {
 	query := contract.NewSessionListQuery()
 	if err := query.Bind(c.Request); err != nil {
@@ -89,22 +89,22 @@ func (endpoint *sessionsEndpoint) List(c *gin.Context) {
 }
 
 // swagger:operation GET /sessions/stats-aggregated Session sessionStatsAggregated
-// ---
-// summary: Returns sessions stats
-// description: Returns aggregated statistics of sessions filtered by given query
-// responses:
-//   200:
-//     description: Session statistics
-//     schema:
-//       "$ref": "#/definitions/SessionStatsAggregatedResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns sessions stats
+//	description: Returns aggregated statistics of sessions filtered by given query
+//	responses:
+//	  200:
+//	    description: Session statistics
+//	    schema:
+//	      "$ref": "#/definitions/SessionStatsAggregatedResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (endpoint *sessionsEndpoint) StatsAggregated(c *gin.Context) {
 	query := contract.NewSessionQuery()
 	if err := query.Bind(c.Request); err != nil {
@@ -123,22 +123,22 @@ func (endpoint *sessionsEndpoint) StatsAggregated(c *gin.Context) {
 }
 
 // swagger:operation GET /sessions/stats-daily Session sessionStatsDaily
-// ---
-// summary: Returns sessions stats
-// description: Returns aggregated daily statistics of sessions filtered by given query (date_from=<now -30d> and date_to=<now> by default)
-// responses:
-//   200:
-//     description: Daily session statistics
-//     schema:
-//       "$ref": "#/definitions/SessionStatsDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns sessions stats
+//	description: Returns aggregated daily statistics of sessions filtered by given query (date_from=<now -30d> and date_to=<now> by default)
+//	responses:
+//	  200:
+//	    description: Daily session statistics
+//	    schema:
+//	      "$ref": "#/definitions/SessionStatsDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (endpoint *sessionsEndpoint) StatsDaily(c *gin.Context) {
 	query := contract.SessionQuery{
 		DateFrom: conv.Date(strfmt.Date(time.Now().UTC().AddDate(0, 0, -30))),

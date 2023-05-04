@@ -86,14 +86,14 @@ type AddressProvider interface {
 }
 
 // swagger:operation GET /identities Identity listIdentities
-// ---
-// summary: Returns identities
-// description: Returns list of identities
-// responses:
-//   200:
-//     description: List of identities
-//     schema:
-//       "$ref": "#/definitions/ListIdentitiesResponse"
+//	---
+//	summary: Returns identities
+//	description: Returns list of identities
+//	responses:
+//	  200:
+//	    description: List of identities
+//	    schema:
+//	      "$ref": "#/definitions/ListIdentitiesResponse"
 func (ia *identitiesAPI) List(c *gin.Context) {
 	ids := ia.idm.GetIdentities()
 	idsDTO := contract.NewIdentityListResponse(ids)
@@ -101,28 +101,28 @@ func (ia *identitiesAPI) List(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/current Identity currentIdentity
-// ---
-// summary: Returns my current identity
-// description: Tries to retrieve the last used identity, the first identity, or creates and returns a new identity
-// parameters:
-//   - in: body
-//     name: body
-//     description: Parameter in body (passphrase) required for creating new identity
-//     schema:
-//       $ref: "#/definitions/IdentityCurrentRequestDTO"
-// responses:
-//   200:
-//     description: Unlocked identity returned
-//     schema:
-//       "$ref": "#/definitions/IdentityRefDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns my current identity
+//	description: Tries to retrieve the last used identity, the first identity, or creates and returns a new identity
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Parameter in body (passphrase) required for creating new identity
+//	    schema:
+//	      $ref: "#/definitions/IdentityCurrentRequestDTO"
+//	responses:
+//	  200:
+//	    description: Unlocked identity returned
+//	    schema:
+//	      "$ref": "#/definitions/IdentityRefDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Current(c *gin.Context) {
 	var req contract.IdentityCurrentRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -154,28 +154,28 @@ func (ia *identitiesAPI) Current(c *gin.Context) {
 }
 
 // swagger:operation POST /identities Identity createIdentity
-// ---
-// summary: Creates new identity
-// description: Creates identity and stores in keystore encrypted with passphrase
-// parameters:
-//   - in: body
-//     name: body
-//     description: Parameter in body (passphrase) required for creating new identity
-//     schema:
-//       $ref: "#/definitions/IdentityCreateRequestDTO"
-// responses:
-//   200:
-//     description: Identity created
-//     schema:
-//       "$ref": "#/definitions/IdentityRefDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Creates new identity
+//	description: Creates identity and stores in keystore encrypted with passphrase
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Parameter in body (passphrase) required for creating new identity
+//	    schema:
+//	      $ref: "#/definitions/IdentityCreateRequestDTO"
+//	responses:
+//	  200:
+//	    description: Identity created
+//	    schema:
+//	      "$ref": "#/definitions/IdentityRefDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Create(c *gin.Context) {
 	var req contract.IdentityCreateRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -200,35 +200,35 @@ func (ia *identitiesAPI) Create(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
-// ---
-// summary: Unlocks identity
-// description: Uses passphrase to decrypt identity stored in keystore
-// parameters:
-// - in: path
-//   name: id
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: Parameter in body (passphrase) required for unlocking identity
-//   schema:
-//     $ref: "#/definitions/IdentityUnlockRequestDTO"
-// responses:
-//   202:
-//     description: Identity unlocked
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   403:
-//     description: Unlock failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   404:
-//     description: ID not found
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Unlocks identity
+//	description: Uses passphrase to decrypt identity stored in keystore
+//	parameters:
+//	- in: path
+//	  name: id
+//	  description: Identity stored in keystore
+//	  type: string
+//	  required: true
+//	- in: body
+//	  name: body
+//	  description: Parameter in body (passphrase) required for unlocking identity
+//	  schema:
+//	    $ref: "#/definitions/IdentityUnlockRequestDTO"
+//	responses:
+//	  202:
+//	    description: Identity unlocked
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  403:
+//	    description: Unlock failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  404:
+//	    description: ID not found
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Unlock(c *gin.Context) {
 	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
@@ -259,24 +259,24 @@ func (ia *identitiesAPI) Unlock(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/{id}/balance/refresh Identity balance
-// ---
-// summary: Refresh balance of given identity
-// description: Refresh balance of given identity
-// parameters:
-//   - in: path
-//     name: id
-//     description: hex address of identity
-//     type: string
-//     required: true
-// responses:
-//   200:
-//     description: Updated balance
-//     schema:
-//       "$ref": "#/definitions/BalanceDTO"
-//   404:
-//     description: ID not found
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Refresh balance of given identity
+//	description: Refresh balance of given identity
+//	parameters:
+//	  - in: path
+//	    name: id
+//	    description: hex address of identity
+//	    type: string
+//	    required: true
+//	responses:
+//	  200:
+//	    description: Updated balance
+//	    schema:
+//	      "$ref": "#/definitions/BalanceDTO"
+//	  404:
+//	    description: ID not found
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
 	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
@@ -294,28 +294,28 @@ func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/{id} Identity getIdentity
-// ---
-// summary: Get identity
-// description: Provide identity details
-// parameters:
-//   - in: path
-//     name: id
-//     description: hex address of identity
-//     type: string
-//     required: true
-// responses:
-//   200:
-//     description: Identity retrieved
-//     schema:
-//       "$ref": "#/definitions/IdentityRefDTO"
-//   404:
-//     description: ID not found
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Get identity
+//	description: Provide identity details
+//	parameters:
+//	  - in: path
+//	    name: id
+//	    description: hex address of identity
+//	    type: string
+//	    required: true
+//	responses:
+//	  200:
+//	    description: Identity retrieved
+//	    schema:
+//	      "$ref": "#/definitions/IdentityRefDTO"
+//	  404:
+//	    description: ID not found
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Get(c *gin.Context) {
 	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
@@ -382,28 +382,28 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/{id}/registration Identity identityRegistration
-// ---
-// summary: Provide identity registration status
-// description: Provides registration status for given identity, if identity is not registered - provides additional data required for identity registration
-// parameters:
-//   - in: path
-//     name: id
-//     description: hex address of identity
-//     type: string
-//     required: true
-// responses:
-//   200:
-//     description: Status retrieved
-//     schema:
-//       "$ref": "#/definitions/IdentityRegistrationResponseDTO"
-//   404:
-//     description: ID not found
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Provide identity registration status
+//	description: Provides registration status for given identity, if identity is not registered - provides additional data required for identity registration
+//	parameters:
+//	  - in: path
+//	    name: id
+//	    description: hex address of identity
+//	    type: string
+//	    required: true
+//	responses:
+//	  200:
+//	    description: Status retrieved
+//	    schema:
+//	      "$ref": "#/definitions/IdentityRegistrationResponseDTO"
+//	  404:
+//	    description: ID not found
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
 	address := c.Param("id")
 	id, err := ia.idm.GetIdentity(address)
@@ -426,24 +426,24 @@ func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/{id}/beneficiary Identity beneficiary address
-// ---
-// summary: Provide identity beneficiary address
-// description: Provides beneficiary address for given identity
-// parameters:
-//   - in: path
-//     name: id
-//     description: hex address of identity
-//     type: string
-//     required: true
-// responses:
-//   200:
-//     description: Beneficiary retrieved
-//     schema:
-//       "$ref": "#/definitions/IdentityBeneficiaryResponseDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Provide identity beneficiary address
+//	description: Provides beneficiary address for given identity
+//	parameters:
+//	  - in: path
+//	    name: id
+//	    description: hex address of identity
+//	    type: string
+//	    required: true
+//	responses:
+//	  200:
+//	    description: Beneficiary retrieved
+//	    schema:
+//	      "$ref": "#/definitions/IdentityBeneficiaryResponseDTO"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 	address := c.Param("id")
 	identity := common.HexToAddress(address)
@@ -467,32 +467,32 @@ func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 }
 
 // swagger:operation POST /identities-import Identities importIdentity
-// ---
-// summary: Imports a given identity.
-// description: Imports a given identity returning it is a blob of text which can later be used to import it back.
-// parameters:
-// - in: body
-//   name: body
-//   description: Parameter in body used to import an identity.
-//   schema:
-//     $ref: "#/definitions/IdentityImportRequest"
-// responses:
-//   200:
-//     description: Unlocked identity returned
-//     schema:
-//       "$ref": "#/definitions/IdentityRefDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   422:
-//     description: Unable to process the request at this point
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Imports a given identity.
+//	description: Imports a given identity returning it is a blob of text which can later be used to import it back.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: Parameter in body used to import an identity.
+//	  schema:
+//	    $ref: "#/definitions/IdentityImportRequest"
+//	responses:
+//	  200:
+//	    description: Unlocked identity returned
+//	    schema:
+//	      "$ref": "#/definitions/IdentityRefDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  422:
+//	    description: Unable to process the request at this point
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) Import(c *gin.Context) {
 	var req contract.IdentityImportRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
@@ -523,28 +523,28 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/:id/payout-address
-// ---
-// summary: Get payout address
-// description: Get payout address stored locally
-// parameters:
-// - in: path
-//   name: id
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Unlocked identity returned
-//     schema:
-//       "$ref": "#/definitions/PayoutAddressRequest"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Get payout address
+//	description: Get payout address stored locally
+//	parameters:
+//	- in: path
+//	  name: id
+//	  description: Identity stored in keystore
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Unlocked identity returned
+//	    schema:
+//	      "$ref": "#/definitions/PayoutAddressRequest"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
 	id := c.Param("id")
 	addr, err := ia.addressStorage.Address(id)
@@ -561,29 +561,29 @@ func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/:id/payout-address
-// ---
-// summary: Save payout address
-// description: Stores payout address locally
-// parameters:
-// - in: path
-//   name: id
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: Payout address request.
-//   schema:
-//     $ref: "#/definitions/PayoutAddressRequest"
-// responses:
-//   200:
-//     description: Unlocked identity returned
-//     schema:
-//       "$ref": "#/definitions/PayoutAddressRequest"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Save payout address
+//	description: Stores payout address locally
+//	parameters:
+//	- in: path
+//	  name: id
+//	  description: Identity stored in keystore
+//	  type: string
+//	  required: true
+//	- in: body
+//	  name: body
+//	  description: Payout address request.
+//	  schema:
+//	    $ref: "#/definitions/PayoutAddressRequest"
+//	responses:
+//	  200:
+//	    description: Unlocked identity returned
+//	    schema:
+//	      "$ref": "#/definitions/PayoutAddressRequest"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
 	var par contract.PayoutAddressRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&par); err != nil {
@@ -602,25 +602,25 @@ func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
 }
 
 // swagger:operation POST /identities/:id/migrate-hermes
-// ---
-// summary: Migrate Hermes
-// description: Migrate from old to new Hermes
-// parameters:
-// - in: path
-//   name: id
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Successfully migrated
-//   403:
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Migrate Hermes
+//	description: Migrate from old to new Hermes
+//	parameters:
+//	- in: path
+//	  name: id
+//	  description: Identity stored in keystore
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Successfully migrated
+//	  403:
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) MigrateHermes(c *gin.Context) {
 	id := c.Param("id")
 	if !ia.idm.IsUnlocked(id) {
@@ -638,24 +638,24 @@ func (ia *identitiesAPI) MigrateHermes(c *gin.Context) {
 }
 
 // swagger:operation GEY /identities/:id/migrate-hermes/status
-// ---
-// summary: Migration Hermes status
-// description: Migrate from old to new Hermes
-// parameters:
-// - in: path
-//   name: id
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Successfully migrated
-//     schema:
-//       "$ref": "#/definitions/MigrationStatusResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Migration Hermes status
+//	description: Migrate from old to new Hermes
+//	parameters:
+//	- in: path
+//	  name: id
+//	  description: Identity stored in keystore
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Successfully migrated
+//	    schema:
+//	      "$ref": "#/definitions/MigrationStatusResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) MigrationHermesStatus(c *gin.Context) {
 	id := c.Param("id")
 	r, err := ia.hermesMigrator.IsMigrationRequired(id)

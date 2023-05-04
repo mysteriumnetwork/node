@@ -64,59 +64,59 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 }
 
 // swagger:operation GET /proposals Proposal listProposals
-// ---
-// summary: Returns proposals
-// description: Returns list of proposals filtered by provider id
-// parameters:
-//   - in: query
-//     name: provider_id
-//     description: id of provider proposals
-//     type: string
-//   - in: query
-//     name: service_type
-//     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
-//     type: string
-//   - in: query
-//     name: access_policy
-//     description: the access policy id to filter the proposals by
-//     type: string
-//   - in: query
-//     name: access_policy_source
-//     description: the access policy source to filter the proposals by
-//     type: string
-//   - in: query
-//     name: country
-//     description: If given will filter proposals by node location country.
-//     type: string
-//   - in: query
-//     name: ip_type
-//     description: IP Type (residential, datacenter, etc.).
-//     type: string
-//   - in: query
-//     name: compatibility_min
-//     description: Minimum compatibility level of the proposal.
-//     type: integer
-//   - in: query
-//     name: compatibility_max
-//     description: Maximum compatibility level of the proposal.
-//     type: integer
-//   - in: query
-//     name: quality_min
-//     description: Minimum quality of the provider.
-//     type: number
-//   - in: query
-//     name: nat_compatibility
-//     description: Pick nodes compatible with NAT of specified type. Specify "auto" to probe NAT.
-//     type: string
-// responses:
-//   200:
-//     description: List of proposals
-//     schema:
-//       "$ref": "#/definitions/ListProposalsResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns proposals
+//	description: Returns list of proposals filtered by provider id
+//	parameters:
+//	  - in: query
+//	    name: provider_id
+//	    description: id of provider proposals
+//	    type: string
+//	  - in: query
+//	    name: service_type
+//	    description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
+//	    type: string
+//	  - in: query
+//	    name: access_policy
+//	    description: the access policy id to filter the proposals by
+//	    type: string
+//	  - in: query
+//	    name: access_policy_source
+//	    description: the access policy source to filter the proposals by
+//	    type: string
+//	  - in: query
+//	    name: country
+//	    description: If given will filter proposals by node location country.
+//	    type: string
+//	  - in: query
+//	    name: ip_type
+//	    description: IP Type (residential, datacenter, etc.).
+//	    type: string
+//	  - in: query
+//	    name: compatibility_min
+//	    description: Minimum compatibility level of the proposal.
+//	    type: integer
+//	  - in: query
+//	    name: compatibility_max
+//	    description: Maximum compatibility level of the proposal.
+//	    type: integer
+//	  - in: query
+//	    name: quality_min
+//	    description: Minimum quality of the provider.
+//	    type: number
+//	  - in: query
+//	    name: nat_compatibility
+//	    description: Pick nodes compatible with NAT of specified type. Specify "auto" to probe NAT.
+//	    type: string
+//	responses:
+//	  200:
+//	    description: List of proposals
+//	    schema:
+//	      "$ref": "#/definitions/ListProposalsResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) List(c *gin.Context) {
 	req := c.Request
 	presetID, _ := strconv.Atoi(req.URL.Query().Get("preset_id"))
@@ -174,59 +174,59 @@ func (pe *proposalsEndpoint) List(c *gin.Context) {
 }
 
 // swagger:operation GET /proposals/countries Countries listCountries
-// ---
-// summary: Returns number of proposals per country
-// description: Returns a list of countries with a number of proposals
-// parameters:
-//   - in: query
-//     name: provider_id
-//     description: id of provider proposals
-//     type: string
-//   - in: query
-//     name: service_type
-//     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
-//     type: string
-//   - in: query
-//     name: access_policy
-//     description: the access policy id to filter the proposals by
-//     type: string
-//   - in: query
-//     name: access_policy_source
-//     description: the access policy source to filter the proposals by
-//     type: string
-//   - in: query
-//     name: country
-//     description: If given will filter proposals by node location country.
-//     type: string
-//   - in: query
-//     name: ip_type
-//     description: IP Type (residential, datacenter, etc.).
-//     type: string
-//   - in: query
-//     name: compatibility_min
-//     description: Minimum compatibility level of the proposal.
-//     type: integer
-//   - in: query
-//     name: compatibility_max
-//     description: Maximum compatibility level of the proposal.
-//     type: integer
-//   - in: query
-//     name: quality_min
-//     description: Minimum quality of the provider.
-//     type: number
-//   - in: query
-//     name: nat_compatibility
-//     description: Pick nodes compatible with NAT of specified type. Specify "auto" to probe NAT.
-//     type: string
-// responses:
-//   200:
-//     description: List of countries
-//     schema:
-//       "$ref": "#/definitions/ListProposalsCountiesResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns number of proposals per country
+//	description: Returns a list of countries with a number of proposals
+//	parameters:
+//	  - in: query
+//	    name: provider_id
+//	    description: id of provider proposals
+//	    type: string
+//	  - in: query
+//	    name: service_type
+//	    description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
+//	    type: string
+//	  - in: query
+//	    name: access_policy
+//	    description: the access policy id to filter the proposals by
+//	    type: string
+//	  - in: query
+//	    name: access_policy_source
+//	    description: the access policy source to filter the proposals by
+//	    type: string
+//	  - in: query
+//	    name: country
+//	    description: If given will filter proposals by node location country.
+//	    type: string
+//	  - in: query
+//	    name: ip_type
+//	    description: IP Type (residential, datacenter, etc.).
+//	    type: string
+//	  - in: query
+//	    name: compatibility_min
+//	    description: Minimum compatibility level of the proposal.
+//	    type: integer
+//	  - in: query
+//	    name: compatibility_max
+//	    description: Maximum compatibility level of the proposal.
+//	    type: integer
+//	  - in: query
+//	    name: quality_min
+//	    description: Minimum quality of the provider.
+//	    type: number
+//	  - in: query
+//	    name: nat_compatibility
+//	    description: Pick nodes compatible with NAT of specified type. Specify "auto" to probe NAT.
+//	    type: string
+//	responses:
+//	  200:
+//	    description: List of countries
+//	    schema:
+//	      "$ref": "#/definitions/ListProposalsCountiesResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 	req := c.Request
 
@@ -280,18 +280,18 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 }
 
 // swagger:operation GET /prices/current
-// ---
-// summary: Returns proposals
-// description: Returns list of proposals filtered by provider id
-// responses:
-//   200:
-//     description: Current proposal price
-//     schema:
-//       "$ref": "#/definitions/CurrentPriceResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns proposals
+//	description: Returns list of proposals filtered by provider id
+//	responses:
+//	  200:
+//	    description: Current proposal price
+//	    schema:
+//	      "$ref": "#/definitions/CurrentPriceResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 	serviceType := c.Request.URL.Query().Get("service_type")
 	if len(serviceType) == 0 {
@@ -325,18 +325,18 @@ func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 }
 
 // swagger:operation GET /v2/prices/current
-// ---
-// summary: Returns prices
-// description: Returns prices for all service types
-// responses:
-//   200:
-//     description: Current price for service type
-//     schema:
-//       "$ref": "#/definitions/CurrentPriceResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns prices
+//	description: Returns prices for all service types
+//	responses:
+//	  200:
+//	    description: Current price for service type
+//	    schema:
+//	      "$ref": "#/definitions/CurrentPriceResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) CurrentPrices(c *gin.Context) {
 	loc, err := pe.locationResolver.DetectLocation()
 	if err != nil {
@@ -368,18 +368,18 @@ func (pe *proposalsEndpoint) CurrentPrices(c *gin.Context) {
 }
 
 // swagger:operation GET /proposals/filter-presets Proposal proposalFilterPresets
-// ---
-// summary: Returns proposal filter presets
-// description: Returns proposal filter presets
-// responses:
-//   200:
-//     description: List of proposal filter presets
-//     schema:
-//       "$ref": "#/definitions/ListProposalFilterPresetsResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Returns proposal filter presets
+//	description: Returns proposal filter presets
+//	responses:
+//	  200:
+//	    description: List of proposal filter presets
+//	    schema:
+//	      "$ref": "#/definitions/ListProposalFilterPresetsResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) FilterPresets(c *gin.Context) {
 	presets, err := pe.filterPresets.List()
 	if err != nil {

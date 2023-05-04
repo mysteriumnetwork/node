@@ -37,16 +37,16 @@ type validationEndpoints struct {
 
 // ValidateRPCChain2URLS validates list of RPC Chain2 urls
 // swagger:operation GET /validation/validate-rpc-chain2-urls
-// ---
-// summary: validates list of RPC Chain2 urls
-// description: validates list of RPC Chain2 urls
-// responses:
-//	 200:
-//     description: Validation success
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: validates list of RPC Chain2 urls
+//	description: validates list of RPC Chain2 urls
+//	responses:
+//	  200:
+//	    description: Validation success
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e validationEndpoints) ValidateRPCChain2URLS(c *gin.Context) {
 	var rpcURLS []string
 	err := json.NewDecoder(c.Request.Body).Decode(&rpcURLS)

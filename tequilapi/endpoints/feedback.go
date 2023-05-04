@@ -60,32 +60,32 @@ type ReportIssueError struct {
 
 // ReportIssueGithub reports user issue to github
 // swagger:operation POST /feedback/issue Feedback reportIssueGithub
-// ---
-// summary: Reports user issue to github
-// description: Reports user issue to github
-// parameters:
-//   - in: body
-//     name: body
-//     description: Report issue request
-//     schema:
-//       $ref: "#/definitions/ReportIssueRequest"
-// responses:
-//   200:
-//     description: Issue reported
-//     schema:
-//       "$ref": "#/definitions/ReportIssueSuccess"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   429:
-//     description: Too many requests (max. 1/minute)
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Reports user issue to github
+//	description: Reports user issue to github
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Report issue request
+//	    schema:
+//	      $ref: "#/definitions/ReportIssueRequest"
+//	responses:
+//	  200:
+//	    description: Issue reported
+//	    schema:
+//	      "$ref": "#/definitions/ReportIssueSuccess"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  429:
+//	    description: Too many requests (max. 1/minute)
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) ReportIssueGithub(c *gin.Context) {
 	req := feedback.UserReport{}
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -122,30 +122,30 @@ type ReportIntercomIssueRequest struct {
 
 // ReportIssueIntercom reports user issue to intercom
 // swagger:operation POST /feedback/issue/intercom Feedback reportIssueIntercom
-// ---
-// summary: Reports user issue to intercom
-// description: Reports user user to intercom
-// parameters:
-//   - in: body
-//     name: body
-//     description: Report issue request
-//     schema:
-//       $ref: "#/definitions/ReportIntercomIssueRequest"
-// responses:
-//   201:
-//     description: Issue reported
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   429:
-//     description: Too many requests (max. 1/minute)
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//	---
+//	summary: Reports user issue to intercom
+//	description: Reports user user to intercom
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Report issue request
+//	    schema:
+//	      $ref: "#/definitions/ReportIntercomIssueRequest"
+//	responses:
+//	  201:
+//	    description: Issue reported
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  429:
+//	    description: Too many requests (max. 1/minute)
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) ReportIssueIntercom(c *gin.Context) {
 	req := feedback.UserReport{}
 	err := json.NewDecoder(c.Request.Body).Decode(&req)

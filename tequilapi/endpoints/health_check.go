@@ -47,14 +47,14 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 }
 
 // swagger:operation GET /healthcheck Client healthCheck
-// ---
-// summary: Returns information about client
-// description: Returns health check information about client
-// responses:
-//   200:
-//     description: Health check information
-//     schema:
-//       "$ref": "#/definitions/HealthCheckDTO"
+//	---
+//	summary: Returns information about client
+//	description: Returns health check information about client
+//	responses:
+//	  200:
+//	    description: Health check information
+//	    schema:
+//	      "$ref": "#/definitions/HealthCheckDTO"
 func (hce *healthCheckEndpoint) HealthCheck(c *gin.Context) {
 	status := contract.HealthCheckDTO{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
