@@ -182,7 +182,7 @@ type IdentityBeneficiaryResponse struct {
 }
 
 // IdentityImportRequest is received in identity import endpoint.
-//swagger:model IdentityImportRequest
+// swagger:model IdentityImportRequest
 type IdentityImportRequest struct {
 	Data              []byte `json:"data"`
 	CurrentPassphrase string `json:"current_passphrase,omitempty"`
