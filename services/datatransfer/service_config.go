@@ -17,5 +17,5 @@
 
 package datatransfer
 
-//ServiceType indicates "data_transfer" service type
+// ServiceType indicates "data_transfer" service type
 const ServiceType = "data_transfer"

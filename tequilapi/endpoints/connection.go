@@ -80,6 +80,7 @@ func NewConnectionEndpoint(manager connection.MultiManager, stateProvider stateP
 
 // Status returns status of connection
 // swagger:operation GET /connection Connection connectionStatus
+//
 //	---
 //	summary: Returns connection status
 //	description: Returns status of current connection
@@ -114,6 +115,7 @@ func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 
 // Create starts new connection
 // swagger:operation PUT /connection Connection connectionCreate
+//
 //	---
 //	summary: Starts new connection
 //	description: Consumer opens connection to provider
@@ -229,6 +231,7 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 
 // Kill stops connection
 // swagger:operation DELETE /connection Connection connectionCancel
+//
 //	---
 //	summary: Stops connection
 //	description: Stops current connection
@@ -274,6 +277,7 @@ func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 
 // GetStatistics returns statistics about current connection
 // swagger:operation GET /connection/statistics Connection connectionStatistics
+//
 //	---
 //	summary: Returns connection statistics
 //	description: Returns statistics about current connection
@@ -292,6 +296,7 @@ func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 
 // GetTraffic returns traffic information about requested connection
 // swagger:operation GET /connection/traffic Connection connectionTraffic
+//
 //	---
 //	summary: Returns connection traffic information
 //	description: Returns traffic information about requested connection

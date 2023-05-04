@@ -34,6 +34,7 @@ type estimator interface {
 }
 
 // swagger:operation GET /entertainment Entertainment Estimate
+//
 //	---
 //	summary: Estimate entertainment durations/data cap for the MYST amount specified.
 //	description: Estimate entertainment durations/data cap for the MYST amount specified.

@@ -37,6 +37,7 @@ type validationEndpoints struct {
 
 // ValidateRPCChain2URLS validates list of RPC Chain2 urls
 // swagger:operation GET /validation/validate-rpc-chain2-urls
+//
 //	---
 //	summary: validates list of RPC Chain2 urls
 //	description: validates list of RPC Chain2 urls

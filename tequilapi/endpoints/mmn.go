@@ -50,6 +50,7 @@ func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
 
 // GetApiKey returns MMN's API key
 // swagger:operation GET /mmn/report MMN getApiKey
+//
 //	---
 //	summary: returns MMN's API key
 //	description: returns MMN's API key
@@ -65,6 +66,7 @@ func (api *mmnAPI) GetApiKey(c *gin.Context) {
 
 // SetApiKey sets MMN's API key
 // swagger:operation POST /mmn/api-key MMN setApiKey
+//
 //	---
 //	summary: sets MMN's API key
 //	description: sets MMN's API key
@@ -129,6 +131,7 @@ func (api *mmnAPI) SetApiKey(c *gin.Context) {
 
 // ClearApiKey clears MMN's API key from config
 // swagger:operation DELETE /mmn/api-key MMN clearApiKey
+//
 //	---
 //	summary: Clears MMN's API key from config
 //	description: Clears MMN's API key from config

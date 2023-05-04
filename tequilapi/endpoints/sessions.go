@@ -48,6 +48,7 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 }
 
 // swagger:operation GET /sessions Session sessionList
+//
 //	---
 //	summary: Returns sessions history
 //	description: Returns list of sessions history filtered by given query
@@ -89,6 +90,7 @@ func (endpoint *sessionsEndpoint) List(c *gin.Context) {
 }
 
 // swagger:operation GET /sessions/stats-aggregated Session sessionStatsAggregated
+//
 //	---
 //	summary: Returns sessions stats
 //	description: Returns aggregated statistics of sessions filtered by given query
@@ -123,6 +125,7 @@ func (endpoint *sessionsEndpoint) StatsAggregated(c *gin.Context) {
 }
 
 // swagger:operation GET /sessions/stats-daily Session sessionStatsDaily
+//
 //	---
 //	summary: Returns sessions stats
 //	description: Returns aggregated daily statistics of sessions filtered by given query (date_from=<now -30d> and date_to=<now> by default)

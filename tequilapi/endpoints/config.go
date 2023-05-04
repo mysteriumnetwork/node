@@ -55,6 +55,7 @@ func newConfigAPI(config configProvider) *configAPI {
 
 // GetConfig returns current configuration
 // swagger:operation GET /config Configuration getConfig
+//
 //	---
 //	summary: Returns current configuration values
 //	description: Returns default configuration
@@ -70,6 +71,7 @@ func (api *configAPI) GetConfig(c *gin.Context) {
 
 // GetDefaultConfig returns default configuration
 // swagger:operation GET /config/default Configuration getDefaultConfig
+//
 //	---
 //	summary: Returns default configuration
 //	description: Returns default configuration
@@ -85,6 +87,7 @@ func (api *configAPI) GetDefaultConfig(c *gin.Context) {
 
 // GetUserConfig returns current user configuration
 // swagger:operation GET /config/user Configuration getUserConfig
+//
 //	---
 //	summary: Returns current user configuration
 //	description: Returns current user configuration
@@ -100,6 +103,7 @@ func (api *configAPI) GetUserConfig(c *gin.Context) {
 
 // SetUserConfig sets and returns current configuration
 // swagger:operation POST /config/user Configuration serUserConfig
+//
 //	---
 //	summary: Sets and returns user configuration
 //	description: For keys present in the payload, it will set or remove the user config values (if the key is null). Changes are persisted to the config file.

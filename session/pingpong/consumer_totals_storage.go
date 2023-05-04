@@ -36,7 +36,7 @@ type ConsumerTotalsStorage struct {
 	data       map[string]*ConsumerTotalElement
 }
 
-//ConsumerTotalElement stores a grand total promised amount for a single identity, hermes and chain id
+// ConsumerTotalElement stores a grand total promised amount for a single identity, hermes and chain id
 type ConsumerTotalElement struct {
 	lock   sync.RWMutex
 	amount *big.Int

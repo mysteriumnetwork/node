@@ -64,6 +64,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 
 // ServiceList provides a list of running services on the node.
 // swagger:operation GET /services Service ServiceListResponse
+//
 //	---
 //	summary: List of services
 //	description: ServiceList provides a list of running services on the node.
@@ -100,6 +101,7 @@ func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
 
 // ServiceGet provides info for requested service on the node.
 // swagger:operation GET /services/:id Service serviceGet
+//
 //	---
 //	summary: Information about service
 //	description: ServiceGet provides info for requested service on the node.
@@ -134,6 +136,7 @@ func (se *ServiceEndpoint) ServiceGet(c *gin.Context) {
 
 // ServiceStart starts requested service on the node.
 // swagger:operation POST /services Service serviceStart
+//
 //	---
 //	summary: Starts service
 //	description: Provider starts serving new service to consumers
@@ -210,6 +213,7 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 
 // ServiceStop stops service on the node.
 // swagger:operation DELETE /services/:id Service serviceStop
+//
 //	---
 //	summary: Stops service
 //	description: Initiates service stop

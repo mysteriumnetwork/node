@@ -44,6 +44,7 @@ type sessionConnectivityEndpoint struct {
 }
 
 // swagger:operation GET /sessions-connectivity-status ConnectivityStatus
+//
 //	---
 //	summary: Returns session connectivity status
 //	description: Returns list of session connectivity status

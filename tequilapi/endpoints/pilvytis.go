@@ -67,6 +67,7 @@ func NewPilvytisEndpoint(pil api, pt paymentsIssuer, lf paymentLocationFallback)
 // GetPaymentGateways returns data about supported payment gateways.
 //
 // swagger:operation GET /v2/payment-order-gateways Order getPaymentGateways
+//
 //	---
 //	summary: Get payment gateway configuration.
 //	description: Returns gateway configuration including supported currencies, minimum amounts, etc.
@@ -102,6 +103,7 @@ func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
 // GetPaymentGatewayOrders returns a list of payment orders.
 //
 // swagger:operation GET /v2/identities/{id}/payment-order Order getPaymentGatewayOrders
+//
 //	---
 //	summary: Get all orders for identity
 //	description: Gets all orders for a given identity from the pilvytis service
@@ -135,6 +137,7 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrders(c *gin.Context) {
 // GetPaymentGatewayOrder returns a payment order which maches a given ID and identity.
 //
 // swagger:operation GET /v2/identities/{id}/payment-order/{order_id} Order getPaymentGatewayOrder
+//
 //	---
 //	summary: Get order
 //	description: Gets an order for a given identity and order id combo from the pilvytis service
@@ -174,6 +177,7 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
 // GetPaymentGatewayOrderInvoice returns an invoice for payment order matching the given ID and identity.
 //
 // swagger:operation GET /v2/identities/{id}/payment-order/{order_id}/invoice Order getPaymentGatewayOrderInvoice
+//
 //	---
 //	summary: Get invoice
 //	description: Gets an invoice for payment order matching the given ID and identity
@@ -211,6 +215,7 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
 // CreatePaymentGatewayOrder creates a new payment order.
 //
 // swagger:operation POST /v2/identities/{id}/{gw}/payment-order Order createPaymentGatewayOrder
+//
 //	---
 //	summary: Create order
 //	description: Takes the given data and tries to create a new payment order in the pilvytis service.
@@ -260,6 +265,7 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 // GetRegistrationPaymentStatus returns a whether a registration order has been paid.
 //
 // swagger:operation GET /v2/identities/{id}/registration-payment Order getRegistrationPaymentStatus
+//
 //	---
 //	summary: Check for registration payment
 //	description: Checks if a registration payment order for an identity has been paid in pilvytis.

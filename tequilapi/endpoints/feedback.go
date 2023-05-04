@@ -60,6 +60,7 @@ type ReportIssueError struct {
 
 // ReportIssueGithub reports user issue to github
 // swagger:operation POST /feedback/issue Feedback reportIssueGithub
+//
 //	---
 //	summary: Reports user issue to github
 //	description: Reports user issue to github
@@ -122,6 +123,7 @@ type ReportIntercomIssueRequest struct {
 
 // ReportIssueIntercom reports user issue to intercom
 // swagger:operation POST /feedback/issue/intercom Feedback reportIssueIntercom
+//
 //	---
 //	summary: Reports user issue to intercom
 //	description: Reports user user to intercom

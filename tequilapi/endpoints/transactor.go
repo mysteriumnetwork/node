@@ -125,6 +125,7 @@ func NewTransactorEndpoint(
 }
 
 // swagger:operation GET /v2/transactor/fees CombinedFeesResponse
+//
 //	---
 //	summary: Returns fees
 //	description: Returns fees applied by Transactor
@@ -174,6 +175,7 @@ func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
 }
 
 // swagger:operation GET /transactor/fees FeesDTO
+//
 //	---
 //	summary: Returns fees
 //	deprecated: true
@@ -237,6 +239,7 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/settle/sync SettleSync
+//
 //	---
 //	summary: Forces the settlement of promises for the given provider and hermes
 //	description: Forces a settlement for the hermes promises and blocks until the settlement is complete.
@@ -264,6 +267,7 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/settle/async SettleAsync
+//
 //	---
 //	summary: forces the settlement of promises for the given provider and hermes
 //	description: Forces a settlement for the hermes promises. Does not wait for completion.
@@ -336,6 +340,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
+//
 //	---
 //	summary: Registers identity
 //	description: Registers identity on Mysterium Network smart contracts using Transactor
@@ -421,6 +426,7 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 }
 
 // swagger:operation GET /settle/history settlementList
+//
 //	---
 //	summary: Returns settlement history
 //	description: Returns settlement history
@@ -469,6 +475,7 @@ func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/stake/decrease Decrease Stake
+//
 //	---
 //	summary: Decreases stake
 //	description: Decreases stake on eth blockchain via the mysterium transactor.
@@ -515,6 +522,7 @@ func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/settle/withdraw Withdraw
+//
 //	---
 //	summary: Asks to perform withdrawal to l1.
 //	description: Asks to perform withdrawal to l1.
@@ -605,6 +613,7 @@ func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, er
 }
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
+//
 //	---
 //	summary: Forces the settlement with stake increase of promises for the given provider and hermes.
 //	description: Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.
@@ -633,6 +642,7 @@ func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/stake/increase/async StakeIncreaseAsync
+//
 //	---
 //	summary: forces the settlement with stake increase of promises for the given provider and hermes.
 //	description: Forces a settlement with stake increase for the hermes promises and does not block.
@@ -668,6 +678,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/token/{token}/reward Reward
+//
 //	---
 //	summary: Returns the amount of reward for a token
 //	deprecated: true
@@ -704,6 +715,7 @@ func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 }
 
 // swagger:operation GET /transactor/chains-summary Chains
+//
 //	---
 //	summary: Returns available chain map
 //	responses:
@@ -737,6 +749,7 @@ type EligibilityResponse struct {
 }
 
 // swagger:operation GET /transactor/identities/{id}/eligibility Eligibility
+//
 //	---
 //	summary: Checks if given id is eligible for free registration
 //	parameters:
@@ -767,6 +780,7 @@ func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/provider/eligibility ProviderEligibility
+//
 //	---
 //	summary: Checks if provider is eligible for free registration
 //	responses:
@@ -789,6 +803,7 @@ func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context
 }
 
 // swagger:operation GET /identities/{id}/beneficiary-status
+//
 //	---
 //	summary: Returns beneficiary transaction status
 //	description: Returns the last beneficiary transaction status for given identity
@@ -844,6 +859,7 @@ func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
 }
 
 // swagger:operation POST /identities/{id}/beneficiary
+//
 //	---
 //	summary: Settle with Beneficiary
 //	description: Change beneficiary and settle earnings to it. This is async method.

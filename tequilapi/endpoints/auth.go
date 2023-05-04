@@ -46,6 +46,7 @@ type authenticator interface {
 }
 
 // swagger:operation POST /auth/authenticate Authentication Authenticate
+//
 //	---
 //	summary: Authenticate
 //	description: Authenticates user and issues auth token
@@ -90,6 +91,7 @@ func (api *authenticationAPI) Authenticate(c *gin.Context) {
 }
 
 // swagger:operation POST /auth/login Authentication Login
+//
 //	---
 //	summary: Login
 //	description: Authenticates user and sets cookie with issued auth token
@@ -143,6 +145,7 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 }
 
 // swagger:operation DELETE /auth/logout Authentication Logout
+//
 //	---
 //	summary: Logout
 //	description: Clears authentication cookie
@@ -162,6 +165,7 @@ func (api *authenticationAPI) Logout(c *gin.Context) {
 }
 
 // swagger:operation PUT /auth/password Authentication changePassword
+//
 //	---
 //	summary: Change password
 //	description: Changes user password

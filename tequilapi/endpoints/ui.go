@@ -42,6 +42,7 @@ func NewNodeUIEndpoints(versionManager *versionmanager.VersionManager) *NodeUIEn
 
 // RemoteVersions list node UI releases from repo
 // swagger:operation GET /ui/remote-versions UI uiRemoteVersions
+//
 //	---
 //	summary: List local
 //	description: provides a list of node UI releases from github repository
@@ -81,6 +82,7 @@ func (n *NodeUIEndpoints) RemoteVersions(c *gin.Context) {
 
 // LocalVersions locally available node UI versions
 // swagger:operation GET /ui/local-versions UI uiLocalVersions
+//
 //	---
 //	summary: List remote
 //	description: provides a list of node UI releases that have been downloaded or bundled with node
@@ -104,6 +106,7 @@ func (n *NodeUIEndpoints) LocalVersions(c *gin.Context) {
 
 // SwitchVersion switches node UI version to locally available one
 // swagger:operation POST /ui/switch-version UI uiSwitchVersion
+//
 //	---
 //	summary: Switch Version
 //	description: switch node UI version to locally available one
@@ -144,6 +147,7 @@ func (n *NodeUIEndpoints) SwitchVersion(c *gin.Context) {
 
 // Download download a remote node UI release
 // swagger:operation POST /ui/download-version UI uiDownload
+//
 //	---
 //	summary: Download
 //	description: download a remote node UI release
@@ -180,6 +184,7 @@ func (n *NodeUIEndpoints) Download(c *gin.Context) {
 
 // DownloadStatus returns download status
 // swagger:operation GET /ui/download-status UI uiDownloadStatus
+//
 //	---
 //	summary: Download status
 //	description: DownloadStatus can download one remote release at a time. This endpoint provides status of the download.
@@ -198,6 +203,7 @@ func (n *NodeUIEndpoints) DownloadStatus(c *gin.Context) {
 
 // UI returns download status
 // swagger:operation GET /ui/info UI ui
+//
 //	---
 //	summary: Node UI information
 //	description: Node UI information

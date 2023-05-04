@@ -42,6 +42,7 @@ func NewAffiliatorEndpoint(affiliator Affiliator) *affiliatorEndpoint {
 }
 
 // swagger:operation POST /affiliator/token/{token}/reward AffiliatorTokenReward
+//
 //	---
 //	summary: Returns the amount of reward for a token (affiliator)
 //	parameters:

@@ -64,6 +64,7 @@ func NewProposalsEndpoint(proposalRepository proposalRepository, pricer priceAPI
 }
 
 // swagger:operation GET /proposals Proposal listProposals
+//
 //	---
 //	summary: Returns proposals
 //	description: Returns list of proposals filtered by provider id
@@ -174,6 +175,7 @@ func (pe *proposalsEndpoint) List(c *gin.Context) {
 }
 
 // swagger:operation GET /proposals/countries Countries listCountries
+//
 //	---
 //	summary: Returns number of proposals per country
 //	description: Returns a list of countries with a number of proposals
@@ -280,6 +282,7 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 }
 
 // swagger:operation GET /prices/current
+//
 //	---
 //	summary: Returns proposals
 //	description: Returns list of proposals filtered by provider id
@@ -325,6 +328,7 @@ func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 }
 
 // swagger:operation GET /v2/prices/current
+//
 //	---
 //	summary: Returns prices
 //	description: Returns prices for all service types
@@ -368,6 +372,7 @@ func (pe *proposalsEndpoint) CurrentPrices(c *gin.Context) {
 }
 
 // swagger:operation GET /proposals/filter-presets Proposal proposalFilterPresets
+//
 //	---
 //	summary: Returns proposal filter presets
 //	description: Returns proposal filter presets

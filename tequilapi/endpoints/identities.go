@@ -86,6 +86,7 @@ type AddressProvider interface {
 }
 
 // swagger:operation GET /identities Identity listIdentities
+//
 //	---
 //	summary: Returns identities
 //	description: Returns list of identities
@@ -101,6 +102,7 @@ func (ia *identitiesAPI) List(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/current Identity currentIdentity
+//
 //	---
 //	summary: Returns my current identity
 //	description: Tries to retrieve the last used identity, the first identity, or creates and returns a new identity
@@ -154,6 +156,7 @@ func (ia *identitiesAPI) Current(c *gin.Context) {
 }
 
 // swagger:operation POST /identities Identity createIdentity
+//
 //	---
 //	summary: Creates new identity
 //	description: Creates identity and stores in keystore encrypted with passphrase
@@ -200,6 +203,7 @@ func (ia *identitiesAPI) Create(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
+//
 //	---
 //	summary: Unlocks identity
 //	description: Uses passphrase to decrypt identity stored in keystore
@@ -259,6 +263,7 @@ func (ia *identitiesAPI) Unlock(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/{id}/balance/refresh Identity balance
+//
 //	---
 //	summary: Refresh balance of given identity
 //	description: Refresh balance of given identity
@@ -294,6 +299,7 @@ func (ia *identitiesAPI) BalanceRefresh(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/{id} Identity getIdentity
+//
 //	---
 //	summary: Get identity
 //	description: Provide identity details
@@ -382,6 +388,7 @@ func (ia *identitiesAPI) Get(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/{id}/registration Identity identityRegistration
+//
 //	---
 //	summary: Provide identity registration status
 //	description: Provides registration status for given identity, if identity is not registered - provides additional data required for identity registration
@@ -426,6 +433,7 @@ func (ia *identitiesAPI) RegistrationStatus(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/{id}/beneficiary Identity beneficiary address
+//
 //	---
 //	summary: Provide identity beneficiary address
 //	description: Provides beneficiary address for given identity
@@ -467,6 +475,7 @@ func (ia *identitiesAPI) Beneficiary(c *gin.Context) {
 }
 
 // swagger:operation POST /identities-import Identities importIdentity
+//
 //	---
 //	summary: Imports a given identity.
 //	description: Imports a given identity returning it is a blob of text which can later be used to import it back.
@@ -523,6 +532,7 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/:id/payout-address
+//
 //	---
 //	summary: Get payout address
 //	description: Get payout address stored locally
@@ -561,6 +571,7 @@ func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
 }
 
 // swagger:operation PUT /identities/:id/payout-address
+//
 //	---
 //	summary: Save payout address
 //	description: Stores payout address locally
@@ -602,6 +613,7 @@ func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
 }
 
 // swagger:operation POST /identities/:id/migrate-hermes
+//
 //	---
 //	summary: Migrate Hermes
 //	description: Migrate from old to new Hermes
@@ -638,6 +650,7 @@ func (ia *identitiesAPI) MigrateHermes(c *gin.Context) {
 }
 
 // swagger:operation GEY /identities/:id/migrate-hermes/status
+//
 //	---
 //	summary: Migration Hermes status
 //	description: Migrate from old to new Hermes

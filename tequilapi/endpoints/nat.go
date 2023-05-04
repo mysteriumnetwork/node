@@ -54,6 +54,7 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 
 // NATType provides NAT type in terms of traversal capabilities
 // swagger:operation GET /nat/type NAT NATTypeDTO
+//
 //	---
 //	summary: Shows NAT type in terms of traversal capabilities.
 //	description: Returns NAT type. May produce invalid result while VPN connection is established

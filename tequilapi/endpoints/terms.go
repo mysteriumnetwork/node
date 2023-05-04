@@ -40,6 +40,7 @@ func newTermsAPI(config configProvider) *termsAPI {
 // GetTerms returns current terms config
 //
 // swagger:operation GET /terms Terms getTerms
+//
 //	---
 //	summary: Get terms
 //	description: Return an object with the current terms config
@@ -55,6 +56,7 @@ func (api *termsAPI) GetTerms(c *gin.Context) {
 // UpdateTerms accepts new terms and updates user config
 //
 // swagger:operation POST /terms Terms updateTerms
+//
 //	---
 //	summary: Update terms agreement
 //	description: Takes the given data and tries to update terms agreement config.

@@ -43,6 +43,7 @@ func NewExchangeEndpoint(mystex mystexchange) *exchangeEndpoint {
 }
 
 // swagger:operation GET /exchange/myst/{currency} Exchange ExchangeMyst
+//
 //	---
 //	summary: Returns the myst price in the given currency
 //	description: Returns the myst price in the given currency (dai is deprecated)

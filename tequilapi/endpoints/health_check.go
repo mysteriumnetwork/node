@@ -47,6 +47,7 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 }
 
 // swagger:operation GET /healthcheck Client healthCheck
+//
 //	---
 //	summary: Returns information about client
 //	description: Returns health check information about client

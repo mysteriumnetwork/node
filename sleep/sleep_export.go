@@ -21,13 +21,15 @@ package sleep
 
 import "C"
 
-//NotifySleep sends EventSleep to event channel
+// NotifySleep sends EventSleep to event channel
+//
 //export NotifySleep
 func NotifySleep() {
 	eventChannel <- EventSleep
 }
 
-//NotifyWake sends EventWakeup to event channel
+// NotifyWake sends EventWakeup to event channel
+//
 //export NotifyWake
 func NotifyWake() {
 	eventChannel <- EventWakeup

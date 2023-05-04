@@ -55,6 +55,7 @@ func NewAccessPoliciesEndpoint(httpClient *requests.HTTPClient, accessPolicyEndp
 }
 
 // swagger:operation GET /access-policies AccessPolicies
+//
 //	---
 //	summary: Returns access policies
 //	description: Returns list of access policies
