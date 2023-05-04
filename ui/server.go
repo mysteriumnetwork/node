@@ -34,8 +34,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const tequilapiUrlPrefix = "/tequilapi"
-
 // Server represents our web UI server
 type Server struct {
 	servers         []*http.Server

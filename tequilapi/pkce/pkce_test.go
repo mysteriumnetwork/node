@@ -15,37 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package middlewares
+package pkce
 
 import (
-	"net/http"
+	"encoding/base64"
+	"testing"
 
-	"github.com/mysteriumnetwork/node/tequilapi/tequil"
-
-	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/node/core/auth"
+	"github.com/stretchr/testify/assert"
 )
 
-type jwtAuthenticator interface {
-	ValidateToken(token string) (bool, error)
-}
+func TestPKCEInfo(t *testing.T) {
+	_, err := New(42)
+	assert.Error(t, err)
 
-// ApplyMiddlewareTokenAuth creates token authenticator
-func ApplyMiddlewareTokenAuth(authenticator jwtAuthenticator) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if tequil.IsUnprotectedRoute(c.Request.URL.Path) {
-			return
-		}
+	_, err = New(129)
+	assert.Error(t, err)
 
-		token, err := auth.TokenFromContext(c)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
+	for i := 43; i < 129; i++ {
+		info, err := New(uint(i))
+		assert.NoError(t, err)
 
-		if _, err := authenticator.ValidateToken(token); err != nil {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
+		assert.NotEmpty(t, info.CodeVerifier)
+		assert.NotEmpty(t, info.CodeChallenge)
+
+		assert.Equal(t, i, len(info.CodeVerifier))
+
+		assert.Equal(t, info.CodeChallenge, ChallengeSHA256(info.CodeVerifier))
+
+		decoded, err := base64.RawURLEncoding.DecodeString(info.Base64URLCodeVerifier())
+		assert.NoError(t, err)
+		assert.Equal(t, info.CodeVerifier, string(decoded))
 	}
+
 }

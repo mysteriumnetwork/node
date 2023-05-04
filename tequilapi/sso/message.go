@@ -15,37 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package middlewares
+package sso
 
 import (
-	"net/http"
-
-	"github.com/mysteriumnetwork/node/tequilapi/tequil"
-
-	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/node/core/auth"
+	"encoding/json"
 )
 
-type jwtAuthenticator interface {
-	ValidateToken(token string) (bool, error)
+// MystnodesMessage expected by mystnodes.com
+type MystnodesMessage struct {
+	CodeChallenge string `json:"codeChallenge"`
+	Identity      string `json:"identity"`
+	RedirectURL   string `json:"redirectUrl"` // http://guillem.nodeUI
 }
 
-// ApplyMiddlewareTokenAuth creates token authenticator
-func ApplyMiddlewareTokenAuth(authenticator jwtAuthenticator) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if tequil.IsUnprotectedRoute(c.Request.URL.Path) {
-			return
-		}
-
-		token, err := auth.TokenFromContext(c)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-
-		if _, err := authenticator.ValidateToken(token); err != nil {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
+func (msg MystnodesMessage) json() ([]byte, error) {
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		return []byte{}, err
 	}
+	return payload, nil
 }

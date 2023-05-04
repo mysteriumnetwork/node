@@ -71,7 +71,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 				return nil
 			},
 			tequilapi_endpoints.AddRouteForStop(utils.SoftKiller(di.Shutdown)),
-			tequilapi_endpoints.AddRoutesForAuthentication(di.Authenticator, di.JWTAuthenticator),
+			tequilapi_endpoints.AddRoutesForAuthentication(di.Authenticator, di.JWTAuthenticator, di.SSOMystnodes),
 			tequilapi_endpoints.AddRoutesForIdentities(di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor, di.BeneficiaryProvider, di.IdentityMover, di.PayoutAddressStorage, di.HermesMigrator),
 			tequilapi_endpoints.AddRoutesForConnection(di.MultiConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry, di.EventBus, di.AddressProvider),
 			tequilapi_endpoints.AddRoutesForSessions(di.SessionStorage),

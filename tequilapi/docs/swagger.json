@@ -147,6 +147,48 @@
         }
       }
     },
+    "/auth/login-mystnodes": {
+      "get": {
+        "description": "SSO init endpoint to auth via mystnodes",
+        "tags": [
+          "SSO"
+        ],
+        "summary": "LoginMystnodesInit",
+        "operationId": "LoginMystnodesInit",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "a redirect to send authorization grant to",
+            "name": "redirect_url",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "link response",
+            "schema": {
+              "$ref": "#/definitions/MystnodesSSOLinkResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "SSO login using grant provided by mystnodes.com",
+        "tags": [
+          "SSO"
+        ],
+        "summary": "LoginMystnodesWithGrant",
+        "operationId": "LoginMystnodesWithGrant",
+        "responses": {
+          "200": {
+            "description": "grant was verified against mystnodes using PKCE workflow. This will set access token cookie."
+          },
+          "401": {
+            "description": "grant failed to be verified"
+          }
+        }
+      }
+    },
     "/auth/logout": {
       "delete": {
         "description": "Clears authentication cookie",
@@ -4315,6 +4357,17 @@
       "description": "MonitoringStatus enum",
       "type": "string",
       "x-go-package": "github.com/mysteriumnetwork/node/core/node"
+    },
+    "MystnodesSSOLinkResponse": {
+      "description": "MystnodesSSOLinkResponse contains a link to initiate auth via mystnodes",
+      "type": "object",
+      "properties": {
+        "link": {
+          "type": "string",
+          "x-go-name": "Link"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "NATType": {
       "description": "NATType represents nat type",
