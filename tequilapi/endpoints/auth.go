@@ -148,21 +148,21 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 }
 
 // swagger:operation GET /auth/login-mystnodes SSO LoginMystnodesInit
-// ---
-// summary: LoginMystnodesInit
-// description: SSO init endpoint to auth via mystnodes
-// parameters:
-//   - in: query
-//     name: redirect_url
-//     description: a redirect to send authorization grant to
-//     type: string
 //
-// responses:
+//	---
+//	summary: LoginMystnodesInit
+//	description: SSO init endpoint to auth via mystnodes
+//	parameters:
+//	  - in: query
+//	    name: redirect_url
+//	    description: a redirect to send authorization grant to
+//	    type: string
 //
-//	200:
-//	  description: link response
-//	  schema:
-//	    "$ref": "#/definitions/MystnodesSSOLinkResponse"
+//	responses:
+//	  200:
+//	    description: link response
+//	    schema:
+//	      "$ref": "#/definitions/MystnodesSSOLinkResponse"
 func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
 	redirectURL, err := url.Parse(c.Query("redirect_uri"))
 	if err != nil {
@@ -181,16 +181,16 @@ func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
 }
 
 // swagger:operation POST /auth/login-mystnodes SSO LoginMystnodesWithGrant
-// ---
-// summary: LoginMystnodesWithGrant
-// description: SSO login using grant provided by mystnodes.com
 //
-// responses:
+//	---
+//	summary: LoginMystnodesWithGrant
+//	description: SSO login using grant provided by mystnodes.com
 //
-//	200:
-//	  description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
-//	401:
-//	  description: grant failed to be verified
+//	responses:
+//	  200:
+//	    description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
+//	  401:
+//	    description: grant failed to be verified
 func (api *authenticationAPI) LoginMystnodesWithGrant(c *gin.Context) {
 	var request contract.MystnodesSSOGrantLoginRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&request)
