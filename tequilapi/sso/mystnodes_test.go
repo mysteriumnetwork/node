@@ -19,6 +19,7 @@ package sso
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -49,7 +50,10 @@ func TestMystnodesSSOLink(t *testing.T) {
 	sso.lastUnlockedIdentity = identity.Identity{Address: "0x1"}
 
 	// expect
-	r, err := sso.SSOLink("local:6969")
+	redirect, err := url.Parse("http://local:6969/#/auth-sso")
+	assert.NoError(t, err)
+
+	r, err := sso.SSOLink(redirect)
 	assert.NoError(t, err)
 
 	assert.Equal(t, r.Host, "")
@@ -79,18 +83,22 @@ func TestMystnodesSSOLinkFail(t *testing.T) {
 	sso := NewMystnodes(signerFactory, nil)
 
 	// expect
-	_, err := sso.SSOLink("")
-	assert.ErrorIs(t, err, ErrHostMissing)
+	_, err := sso.SSOLink(nil)
+	assert.ErrorIs(t, err, ErrRedirectMissing)
 
-	_, err = sso.SSOLink("present")
+	_, err = sso.SSOLink(&url.URL{})
 	assert.ErrorIs(t, err, ErrNoUnlockedIdentity)
 }
 
 func TestMystnodesSSOGrantVerification(t *testing.T) {
+	// given
+	redirect, err := url.Parse("http://not_important:6969/#/auth-sso")
+	assert.NoError(t, err)
+
 	// when
 	sso := NewMystnodes(signerFactory, newHttpClientMock(&http.Response{StatusCode: 200, Status: "200 OK", Body: &readCloser{Reader: strings.NewReader("{}")}}))
 	sso.lastUnlockedIdentity = identity.Identity{Address: "0x1"}
-	_, err := sso.SSOLink("not_important")
+	_, err = sso.SSOLink(redirect)
 	assert.NoError(t, err)
 
 	// then
@@ -100,7 +108,7 @@ func TestMystnodesSSOGrantVerification(t *testing.T) {
 	// when
 	sso = NewMystnodes(signerFactory, newHttpClientMock(nil))
 	sso.lastUnlockedIdentity = identity.Identity{Address: "0x1"}
-	_, err = sso.SSOLink("not_important")
+	_, err = sso.SSOLink(redirect)
 	assert.NoError(t, err)
 
 	// then

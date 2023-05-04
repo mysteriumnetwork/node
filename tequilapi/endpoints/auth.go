@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -150,15 +151,27 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 // ---
 // summary: LoginMystnodesInit
 // description: SSO init endpoint to auth via mystnodes
+// parameters:
+//   - in: query
+//     name: redirect_url
+//     description: a redirect to send authorization grant to
+//     type: string
 //
 // responses:
 //
-//  200:
-//    description: link response
-//    schema:
-//      "$ref": "#/definitions/MystnodesSSOLinkResponse"
+//	200:
+//	  description: link response
+//	  schema:
+//	    "$ref": "#/definitions/MystnodesSSOLinkResponse"
 func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
-	link, err := api.ssoMystnodes.SSOLink(c.Request.Header.Get("X-Forwarded-Host"))
+	redirectURL, err := url.Parse(c.Query("redirect_uri"))
+	if err != nil {
+		log.Err(err).Msg("failed to generate mystnodes SSO link")
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	link, err := api.ssoMystnodes.SSOLink(redirectURL)
 	if err != nil {
 		log.Err(err).Msg("failed to generate mystnodes SSO link")
 		c.Error(apierror.Unauthorized())
@@ -174,10 +187,10 @@ func (api *authenticationAPI) LoginMystnodesInit(c *gin.Context) {
 //
 // responses:
 //
-//  200:
-//    description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
-//  401:
-//    description: grant failed to be verified
+//	200:
+//	  description: grant was verified against mystnodes using PKCE workflow. This will set access token cookie.
+//	401:
+//	  description: grant failed to be verified
 func (api *authenticationAPI) LoginMystnodesWithGrant(c *gin.Context) {
 	var request contract.MystnodesSSOGrantLoginRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&request)

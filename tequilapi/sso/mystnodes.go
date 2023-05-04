@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -34,8 +33,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrHostMissing host can't be blank
-var ErrHostMissing = errors.New("host must not be empty")
+// ErrRedirectMissing host can't be blank
+var ErrRedirectMissing = errors.New("host must not be empty")
 
 // ErrNoUnlockedIdentity no unlocked identity
 var ErrNoUnlockedIdentity = errors.New("lastUnlockedIdentity must not be empty")
@@ -99,12 +98,12 @@ func (m *Mystnodes) sign(msg []byte) (identity.Signature, error) {
 }
 
 // SSOLink build SSO link to begin authentication via mystnodes.com
-func (m *Mystnodes) SSOLink(host string) (*url.URL, error) {
+func (m *Mystnodes) SSOLink(redirectURL *url.URL) (*url.URL, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if len(host) == 0 {
-		return nil, ErrHostMissing
+	if redirectURL == nil {
+		return nil, ErrRedirectMissing
 	}
 
 	if len(m.lastUnlockedIdentity.Address) == 0 {
@@ -124,7 +123,7 @@ func (m *Mystnodes) SSOLink(host string) (*url.URL, error) {
 	}
 
 	m.lastCodeVerifierBase64url = info.Base64URLCodeVerifier()
-	messageJson, err := m.message(info, strings.Join([]string{"http://", host, "/#/auth-sso"}, "")).json()
+	messageJson, err := m.message(info, fmt.Sprint(redirectURL)).json()
 	if err != nil {
 		return &url.URL{}, err
 	}

@@ -25,7 +25,7 @@ import (
 type MystnodesMessage struct {
 	CodeChallenge string `json:"codeChallenge"`
 	Identity      string `json:"identity"`
-	RedirectURL   string `json:"redirectUrl"`
+	RedirectURL   string `json:"redirectUrl"` // http://guillem.nodeUI
 }
 
 func (msg MystnodesMessage) json() ([]byte, error) {
