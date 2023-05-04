@@ -55,22 +55,23 @@ func NewAccessPoliciesEndpoint(httpClient *requests.HTTPClient, accessPolicyEndp
 }
 
 // swagger:operation GET /access-policies AccessPolicies
-// ---
-// summary: Returns access policies
-// description: Returns list of access policies
-// responses:
-//   200:
-//     description: List of access policies
-//     schema:
-//       "$ref": "#/definitions/AccessPolicies"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns access policies
+//	description: Returns list of access policies
+//	responses:
+//	  200:
+//	    description: List of access policies
+//	    schema:
+//	      "$ref": "#/definitions/AccessPolicies"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ape *accessPoliciesEndpoint) List(c *gin.Context) {
 	req, err := requests.NewGetRequest(ape.accessPolicyEndpointURL, "", nil)
 	if err != nil {

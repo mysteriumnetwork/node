@@ -66,28 +66,30 @@ func NewNodeEndpoint(nodeStatusProvider nodeStatusProvider, nodeMonitoringAgent 
 
 // NodeStatus Status provides Node proposal status
 // swagger:operation GET /node/monitoring-status provider NodeStatus
-// ---
-// summary: Provides Node proposal status
-// description: Node Status as seen by monitoring agent
-// responses:
-//   200:
-//     description: Node status ("passed"/"failed"/"pending)
-//     schema:
-//       "$ref": "#/definitions/NodeStatusResponse"
+//
+//	---
+//	summary: Provides Node proposal status
+//	description: Node Status as seen by monitoring agent
+//	responses:
+//	  200:
+//	    description: Node status ("passed"/"failed"/"pending)
+//	    schema:
+//	      "$ref": "#/definitions/NodeStatusResponse"
 func (ne *NodeEndpoint) NodeStatus(c *gin.Context) {
 	utils.WriteAsJSON(contract.NodeStatusResponse{Status: ne.nodeStatusProvider.Status()}, c.Writer)
 }
 
 // MonitoringAgentStatuses Statuses from monitoring agent
 // swagger:operation GET /node/monitoring-agent-statuses provider MonitoringAgentStatuses
-// ---
-// summary: Provides Node connectivity statuses from monitoring agent
-// description: Node connectivity statuses as seen by monitoring agent
-// responses:
-//   200:
-//     description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
-//     schema:
-//       "$ref": "#/definitions/MonitoringAgentResponse"
+//
+//	---
+//	summary: Provides Node connectivity statuses from monitoring agent
+//	description: Node connectivity statuses as seen by monitoring agent
+//	responses:
+//	  200:
+//	    description: Monitoring agent statuses ("success"/"cancelled"/"connect_drop/"connect_fail/"internet_fail)
+//	    schema:
+//	      "$ref": "#/definitions/MonitoringAgentResponse"
 func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.Statuses()
 	if err != nil {
@@ -100,27 +102,28 @@ func (ne *NodeEndpoint) MonitoringAgentStatuses(c *gin.Context) {
 
 // GetProviderSessions A list of sessions metrics during a period of time
 // swagger:operation GET /node/provider/sessions provider GetProviderSessions
-// ---
-// summary: Provides Node sessions data during a period of time
-// description: Node sessions metrics during a period of time
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//     description: Provider sessions list
-//     schema:
-//       "$ref": "#/definitions/ProviderSessionsResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node sessions data during a period of time
+//	description: Node sessions metrics during a period of time
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	    description: Provider sessions list
+//	    schema:
+//	      "$ref": "#/definitions/ProviderSessionsResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -142,27 +145,28 @@ func (ne *NodeEndpoint) GetProviderSessions(c *gin.Context) {
 
 // GetProviderTransferredData A number of bytes transferred during a period of time
 // swagger:operation GET /node/provider/transferred-data provider GetProviderTransferredData
-// ---
-// summary: Provides total traffic served by the provider during a period of time
-// description: Node transferred data during a period of time
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//     description: Provider transferred data
-//     schema:
-//       "$ref": "#/definitions/ProviderTransferredDataResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides total traffic served by the provider during a period of time
+//	description: Node transferred data during a period of time
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	    description: Provider transferred data
+//	    schema:
+//	      "$ref": "#/definitions/ProviderTransferredDataResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -184,27 +188,28 @@ func (ne *NodeEndpoint) GetProviderTransferredData(c *gin.Context) {
 
 // GetProviderSessionsCount A number of sessions during a period of time
 // swagger:operation GET /node/provider/sessions-count provider GetProviderSessionsCount
-// ---
-// summary: Provides Node sessions number during a period of time
-// description: Node sessions count during a period of time
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//     description: Provider sessions count
-//     schema:
-//       "$ref": "#/definitions/ProviderSessionsCountResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node sessions number during a period of time
+//	description: Node sessions count during a period of time
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	    description: Provider sessions count
+//	    schema:
+//	      "$ref": "#/definitions/ProviderSessionsCountResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -226,27 +231,28 @@ func (ne *NodeEndpoint) GetProviderSessionsCount(c *gin.Context) {
 
 // GetProviderConsumersCount A number of consumers served during a period of time
 // swagger:operation GET /node/provider/consumers-count provider GetProviderConsumersCount
-// ---
-// summary: Provides Node consumers number served during a period of time
-// description: Node unique consumers count served during a period of time.
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//    description: Provider consumers count
-//    schema:
-//     "$ref": "#/definitions/ProviderConsumersCountResponse"
-//   400:
-//    description: Failed to parse or request validation failed
-//    schema:
-//     "$ref": "#/definitions/APIError"
-//   500:
-//    description: Internal server error
-//    schema:
-//     "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node consumers number served during a period of time
+//	description: Node unique consumers count served during a period of time.
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	   description: Provider consumers count
+//	   schema:
+//	    "$ref": "#/definitions/ProviderConsumersCountResponse"
+//	  400:
+//	   description: Failed to parse or request validation failed
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
+//	  500:
+//	   description: Internal server error
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderConsumersCount(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -268,27 +274,28 @@ func (ne *NodeEndpoint) GetProviderConsumersCount(c *gin.Context) {
 
 // GetProviderEarningsSeries A time series metrics of earnings during a period of time
 // swagger:operation GET /node/provider/series/earnings provider GetProviderEarningsSeries
-// ---
-// summary: Provides Node  time series metrics of earnings during a period of time
-// description: Node time series metrics of earnings during a period of time.
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//    description: Provider time series metrics of MYSTT earnings
-//    schema:
-//     "$ref": "#/definitions/ProviderEarningsSeriesResponse"
-//   400:
-//    description: Failed to parse or request validation failed
-//    schema:
-//     "$ref": "#/definitions/APIError"
-//   500:
-//    description: Internal server error
-//    schema:
-//     "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node  time series metrics of earnings during a period of time
+//	description: Node time series metrics of earnings during a period of time.
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	   description: Provider time series metrics of MYSTT earnings
+//	   schema:
+//	    "$ref": "#/definitions/ProviderEarningsSeriesResponse"
+//	  400:
+//	   description: Failed to parse or request validation failed
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
+//	  500:
+//	   description: Internal server error
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderEarningsSeries(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -310,27 +317,28 @@ func (ne *NodeEndpoint) GetProviderEarningsSeries(c *gin.Context) {
 
 // GetProviderSessionsSeries A time series metrics of sessions started during a period of time
 // swagger:operation GET /node/provider/series/sessions provider GetProviderSessionsSeries
-// ---
-// summary: Provides Node data series metrics of sessions started during a period of time
-// description: Node time series metrics of sessions started during a period of time.
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//    description: Provider time series metrics of started sessions
-//    schema:
-//     "$ref": "#/definitions/ProviderSessionsSeriesResponse"
-//   400:
-//    description: Failed to parse or request validation failed
-//    schema:
-//     "$ref": "#/definitions/APIError"
-//   500:
-//    description: Internal server error
-//    schema:
-//     "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node data series metrics of sessions started during a period of time
+//	description: Node time series metrics of sessions started during a period of time.
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	   description: Provider time series metrics of started sessions
+//	   schema:
+//	    "$ref": "#/definitions/ProviderSessionsSeriesResponse"
+//	  400:
+//	   description: Failed to parse or request validation failed
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
+//	  500:
+//	   description: Internal server error
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderSessionsSeries(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -352,27 +360,28 @@ func (ne *NodeEndpoint) GetProviderSessionsSeries(c *gin.Context) {
 
 // GetProviderTransferredDataSeries A time series metrics of transferred bytes during a period of time
 // swagger:operation GET /node/provider/series/data provider GetProviderTransferredDataSeries
-// ---
-// summary: Provides Node data series metrics of transferred bytes
-// description: Node data series metrics of transferred bytes during a period of time.
-// parameters:
-//   - in: query
-//     name: range
-//     description: period of time ("1d", "7d", "30d")
-//     type: string
-// responses:
-//   200:
-//    description: Provider time series metrics of transferred bytes
-//    schema:
-//     "$ref": "#/definitions/ProviderTransferredDataSeriesResponse"
-//   400:
-//    description: Failed to parse or request validation failed
-//    schema:
-//     "$ref": "#/definitions/APIError"
-//   500:
-//    description: Internal server error
-//    schema:
-//     "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node data series metrics of transferred bytes
+//	description: Node data series metrics of transferred bytes during a period of time.
+//	parameters:
+//	  - in: query
+//	    name: range
+//	    description: period of time ("1d", "7d", "30d")
+//	    type: string
+//	responses:
+//	  200:
+//	   description: Provider time series metrics of transferred bytes
+//	   schema:
+//	    "$ref": "#/definitions/ProviderTransferredDataSeriesResponse"
+//	  400:
+//	   description: Failed to parse or request validation failed
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
+//	  500:
+//	   description: Internal server error
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 	rangeTime := c.Query("range")
 
@@ -394,22 +403,23 @@ func (ne *NodeEndpoint) GetProviderTransferredDataSeries(c *gin.Context) {
 
 // GetProviderQuality a quality of provider
 // swagger:operation GET /node/provider/quality provider GetProviderQuality
-// ---
-// summary: Provides Node quality
-// description: Node connectivity quality
-// responses:
-//   200:
-//     description: Provider quality
-//     schema:
-//       "$ref": "#/definitions/QualityInfoResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node quality
+//	description: Node connectivity quality
+//	responses:
+//	  200:
+//	    description: Provider quality
+//	    schema:
+//	      "$ref": "#/definitions/QualityInfoResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderQuality(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.ProviderQuality()
 	if err != nil {
@@ -422,22 +432,23 @@ func (ne *NodeEndpoint) GetProviderQuality(c *gin.Context) {
 
 // GetProviderActivityStats is an activity stats of provider
 // swagger:operation GET /node/provider/activity-stats provider GetProviderActivityStats
-// ---
-// summary: Provides Node activity stats
-// description: Node activity stats
-// responses:
-//   200:
-//     description: Provider activity stats
-//     schema:
-//       "$ref": "#/definitions/ActivityStatsResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node activity stats
+//	description: Node activity stats
+//	responses:
+//	  200:
+//	    description: Provider activity stats
+//	    schema:
+//	      "$ref": "#/definitions/ActivityStatsResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderActivityStats(c *gin.Context) {
 
 	res, err := ne.nodeMonitoringAgent.ProviderActivityStats()
@@ -451,18 +462,19 @@ func (ne *NodeEndpoint) GetProviderActivityStats(c *gin.Context) {
 
 // GetLatestRelease retrieves information about the latest node release
 // swagger:operation GET /node/latest-release node GetLatestRelease
-// ---
-// summary: Latest Node release information
-// description: Checks for latest Node release package and retrieves its information
-// responses:
-//   200:
-//    description: Latest Node release information
-//    schema:
-//     "$ref": "#/definitions/LatestReleaseResponse"
-//   500:
-//    description: Failed to retrieve latest Node release information
-//    schema:
-//     "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Latest Node release information
+//	description: Checks for latest Node release package and retrieves its information
+//	responses:
+//	  200:
+//	   description: Latest Node release information
+//	   schema:
+//	    "$ref": "#/definitions/LatestReleaseResponse"
+//	  500:
+//	   description: Failed to retrieve latest Node release information
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetLatestRelease(c *gin.Context) {
 	version, err := ne.launchpadAPI.LatestPublishedReleaseVersion()
 	if err != nil {
@@ -476,22 +488,23 @@ func (ne *NodeEndpoint) GetLatestRelease(c *gin.Context) {
 
 // GetProviderServiceEarnings Node earnings per service and total earnings in the all network
 // swagger:operation GET /node/provider/service-earnings provider GetProviderServiceEarnings
-// ---
-// summary: Provides Node earnings per service and total earnings in the all network
-// description: Node earnings per service and total earnings in the all network.
-// responses:
-//   200:
-//    description: earnings per service and total earnings
-//    schema:
-//     "$ref": "#/definitions/EarningsPerServiceResponse"
-//   400:
-//    description: Failed to parse or request validation failed
-//    schema:
-//     "$ref": "#/definitions/APIError"
-//   500:
-//    description: Internal server error
-//    schema:
-//     "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Provides Node earnings per service and total earnings in the all network
+//	description: Node earnings per service and total earnings in the all network.
+//	responses:
+//	  200:
+//	   description: earnings per service and total earnings
+//	   schema:
+//	    "$ref": "#/definitions/EarningsPerServiceResponse"
+//	  400:
+//	   description: Failed to parse or request validation failed
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
+//	  500:
+//	   description: Internal server error
+//	   schema:
+//	    "$ref": "#/definitions/APIError"
 func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	res, err := ne.nodeMonitoringAgent.EarningsPerService()
 	if err != nil {

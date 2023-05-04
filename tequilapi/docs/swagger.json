@@ -3190,15 +3190,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "Address": {
-      "type": "array",
-      "title": "Address represents the 20 byte address of an Ethereum account.",
-      "items": {
-        "type": "integer",
-        "format": "uint8"
-      },
-      "x-go-package": "github.com/ethereum/go-ethereum/common"
-    },
     "AuthRequest": {
       "type": "object",
       "title": "AuthRequest request used to authenticate to API.",
@@ -3236,7 +3227,8 @@
       "title": "BalanceDTO holds balance information.",
       "properties": {
         "balance": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Balance"
         },
         "balance_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3540,7 +3532,9 @@
           "example": 1024
         },
         "tokens_spent": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "TokensSpent",
+          "example": "500000"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3599,13 +3593,17 @@
       "title": "CurrentPriceResponse represents the price.",
       "properties": {
         "price_per_gib": {
-          "$ref": "#/definitions/Int"
+          "description": "deprecated",
+          "type": "string",
+          "x-go-name": "PricePerGiB"
         },
         "price_per_gib_tokens": {
           "$ref": "#/definitions/Tokens"
         },
         "price_per_hour": {
-          "$ref": "#/definitions/Int"
+          "description": "deprecated",
+          "type": "string",
+          "x-go-name": "PricePerHour"
         },
         "price_per_hour_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3627,7 +3625,8 @@
       "type": "object",
       "properties": {
         "amount": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Amount"
         },
         "id": {
           "type": "string",
@@ -3791,7 +3790,8 @@
       "type": "object",
       "properties": {
         "decreaseStake": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "DecreaseStake"
         },
         "decrease_stake_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3807,13 +3807,15 @@
           "x-go-name": "HermesPercent"
         },
         "registration": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Registration"
         },
         "registration_tokens": {
           "$ref": "#/definitions/Tokens"
         },
         "settlement": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Settlement"
         },
         "settlement_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3969,7 +3971,9 @@
       ],
       "properties": {
         "balance": {
-          "$ref": "#/definitions/Int"
+          "description": "deprecated",
+          "type": "string",
+          "x-go-name": "Balance"
         },
         "balance_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3979,7 +3983,8 @@
           "x-go-name": "ChannelAddress"
         },
         "earnings": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Earnings"
         },
         "earnings_per_hermes": {
           "type": "object",
@@ -3992,7 +3997,8 @@
           "$ref": "#/definitions/Tokens"
         },
         "earnings_total": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "EarningsTotal"
         },
         "earnings_total_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -4012,7 +4018,8 @@
           "x-go-name": "RegistrationStatus"
         },
         "stake": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Stake"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4071,7 +4078,9 @@
           "x-go-name": "Beneficiary"
         },
         "fee": {
-          "$ref": "#/definitions/Int"
+          "description": "Fee: an agreed amount to pay for registration",
+          "type": "string",
+          "x-go-name": "Fee"
         },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
@@ -4110,12 +4119,6 @@
       },
       "x-go-name": "IdentityUnlockRequest",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "Int": {
-      "description": "Operations always take pointer arguments (*Int) rather\nthan Int values, and each unique Int value requires\nits own unique *Int pointer. To \"copy\" an Int value,\nan existing (or newly allocated) Int must be set to\na new value using the Int.Set method; shallow copies\nof Ints are not supported and may lead to errors.",
-      "type": "object",
-      "title": "An Int represents a signed multi-precision integer.\nThe zero value for an Int represents the value 0.",
-      "x-go-package": "math/big"
     },
     "LatestReleaseResponse": {
       "description": "LatestReleaseResponse latest release info",
@@ -4383,10 +4386,16 @@
           "x-go-name": "Beneficiary"
         },
         "earnings": {
-          "$ref": "#/definitions/Int"
+          "description": "Current unsettled earnings",
+          "type": "string",
+          "x-go-name": "Earnings",
+          "example": "19449034049997187"
         },
         "earnings_total": {
-          "$ref": "#/definitions/Int"
+          "description": "Earnings of all history",
+          "type": "string",
+          "x-go-name": "EarningsTotal",
+          "example": "19449034049997187"
         },
         "hermes_id": {
           "type": "string",
@@ -4974,12 +4983,8 @@
         },
         "options": {
           "description": "options with which service was started. Every service has a unique list of allowed options.",
-          "type": "object",
           "x-go-name": "Options",
-          "example": {
-            "port": 1123,
-            "protocol": "udp"
-          }
+          "example": "{\"port\": 1123, \"protocol\": \"udp\"}"
         },
         "proposal": {
           "$ref": "#/definitions/ProposalDTO"
@@ -5064,12 +5069,8 @@
         },
         "options": {
           "description": "service options. Every service has a unique list of allowed options.",
-          "type": "object",
           "x-go-name": "Options",
-          "example": {
-            "port": 1123,
-            "protocol": "udp"
-          }
+          "example": "{\"port\": 1123, \"protocol\": \"udp\"}"
         },
         "provider_id": {
           "description": "provider identity",
@@ -5183,7 +5184,9 @@
           "example": "Completed"
         },
         "tokens": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Tokens",
+          "example": "500000"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -5266,7 +5269,8 @@
           "x-go-name": "SumDuration"
         },
         "sum_tokens": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "SumTokens"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -5300,7 +5304,7 @@
         "hermes_ids": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Address"
+            "type": "string"
           },
           "x-go-name": "HermesIDs"
         },
@@ -5322,7 +5326,9 @@
       "title": "SettlementDTO represents the settlement object.",
       "properties": {
         "amount": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Amount",
+          "example": "500000"
         },
         "beneficiary": {
           "type": "string",
@@ -5345,7 +5351,9 @@
           "example": "internal server error"
         },
         "fees": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Fees",
+          "example": "500000"
         },
         "hermes_id": {
           "type": "string",
@@ -5482,7 +5490,8 @@
       "title": "TokenRewardAmount represents a response for token rewards.",
       "properties": {
         "amount": {
-          "$ref": "#/definitions/Int"
+          "type": "string",
+          "x-go-name": "Amount"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -5620,9 +5629,7 @@
       "properties": {
         "data": {
           "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          },
+          "additionalProperties": {},
           "x-go-name": "Data",
           "example": {
             "data": {

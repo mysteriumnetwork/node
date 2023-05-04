@@ -42,23 +42,24 @@ func NewAffiliatorEndpoint(affiliator Affiliator) *affiliatorEndpoint {
 }
 
 // swagger:operation POST /affiliator/token/{token}/reward AffiliatorTokenReward
-// ---
-// summary: Returns the amount of reward for a token (affiliator)
-// parameters:
-// - in: path
-//   name: token
-//   description: Token for which to lookup the reward
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Token Reward
-//     schema:
-//       "$ref": "#/definitions/TokenRewardAmount"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns the amount of reward for a token (affiliator)
+//	parameters:
+//	- in: path
+//	  name: token
+//	  description: Token for which to lookup the reward
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Token Reward
+//	    schema:
+//	      "$ref": "#/definitions/TokenRewardAmount"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (a *affiliatorEndpoint) TokenRewardAmount(c *gin.Context) {
 	token := c.Param("token")
 	reward, err := a.affiliator.RegistrationTokenReward(token)

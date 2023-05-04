@@ -64,18 +64,19 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 
 // ServiceList provides a list of running services on the node.
 // swagger:operation GET /services Service ServiceListResponse
-// ---
-// summary: List of services
-// description: ServiceList provides a list of running services on the node.
-// responses:
-//   200:
-//     description: List of running services
-//     schema:
-//       "$ref": "#/definitions/ServiceListResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: List of services
+//	description: ServiceList provides a list of running services on the node.
+//	responses:
+//	  200:
+//	    description: List of running services
+//	    schema:
+//	      "$ref": "#/definitions/ServiceListResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
 	includeAll := false
 	includeAllStr := c.Request.URL.Query().Get("include_all")
@@ -100,22 +101,23 @@ func (se *ServiceEndpoint) ServiceList(c *gin.Context) {
 
 // ServiceGet provides info for requested service on the node.
 // swagger:operation GET /services/:id Service serviceGet
-// ---
-// summary: Information about service
-// description: ServiceGet provides info for requested service on the node.
-// responses:
-//   200:
-//     description: Service detailed information
-//     schema:
-//       "$ref": "#/definitions/ServiceInfoDTO"
-//   404:
-//     description: Service not found
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Information about service
+//	description: ServiceGet provides info for requested service on the node.
+//	responses:
+//	  200:
+//	    description: Service detailed information
+//	    schema:
+//	      "$ref": "#/definitions/ServiceInfoDTO"
+//	  404:
+//	    description: Service not found
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceGet(c *gin.Context) {
 	id := service.ID(c.Param("id"))
 	instance := se.serviceManager.Service(id)
@@ -134,32 +136,33 @@ func (se *ServiceEndpoint) ServiceGet(c *gin.Context) {
 
 // ServiceStart starts requested service on the node.
 // swagger:operation POST /services Service serviceStart
-// ---
-// summary: Starts service
-// description: Provider starts serving new service to consumers
-// parameters:
-//   - in: body
-//     name: body
-//     description: Parameters in body (providerID) required for starting new service
-//     schema:
-//       $ref: "#/definitions/ServiceStartRequestDTO"
-// responses:
-//   201:
-//     description: Initiated service start
-//     schema:
-//       "$ref": "#/definitions/ServiceInfoDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   422:
-//     description: Unable to process the request at this point
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Starts service
+//	description: Provider starts serving new service to consumers
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Parameters in body (providerID) required for starting new service
+//	    schema:
+//	      $ref: "#/definitions/ServiceStartRequestDTO"
+//	responses:
+//	  201:
+//	    description: Initiated service start
+//	    schema:
+//	      "$ref": "#/definitions/ServiceInfoDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  422:
+//	    description: Unable to process the request at this point
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 	sr, err := se.toServiceRequest(c.Request)
 	if err != nil {
@@ -210,20 +213,21 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 
 // ServiceStop stops service on the node.
 // swagger:operation DELETE /services/:id Service serviceStop
-// ---
-// summary: Stops service
-// description: Initiates service stop
-// responses:
-//   202:
-//     description: Service Stop initiated
-//   404:
-//     description: No service exists
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Stops service
+//	description: Initiates service stop
+//	responses:
+//	  202:
+//	    description: Service Stop initiated
+//	  404:
+//	    description: No service exists
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 	id := service.ID(c.Param("id"))
 	instance := se.serviceManager.Service(id)

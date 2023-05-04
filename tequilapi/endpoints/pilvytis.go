@@ -67,27 +67,28 @@ func NewPilvytisEndpoint(pil api, pt paymentsIssuer, lf paymentLocationFallback)
 // GetPaymentGateways returns data about supported payment gateways.
 //
 // swagger:operation GET /v2/payment-order-gateways Order getPaymentGateways
-// ---
-// summary: Get payment gateway configuration.
-// description: Returns gateway configuration including supported currencies, minimum amounts, etc.
-// parameters:
-// - name: options_currency
-//   in: query
-//   description: Currency for payment order options
-//   type: string
-//   required: false
-//   default: MYST
-// responses:
-//   200:
-//     description: List of payment gateways
-//     schema:
-//       type: "array"
-//       items:
-//         "$ref": "#/definitions/GatewaysResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Get payment gateway configuration.
+//	description: Returns gateway configuration including supported currencies, minimum amounts, etc.
+//	parameters:
+//	- name: options_currency
+//	  in: query
+//	  description: Currency for payment order options
+//	  type: string
+//	  required: false
+//	  default: MYST
+//	responses:
+//	  200:
+//	    description: List of payment gateways
+//	    schema:
+//	      type: "array"
+//	      items:
+//	        "$ref": "#/definitions/GatewaysResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
 	optionsCurrency := exchange.Currency(strings.ToUpper(c.DefaultQuery("options_currency", "MYST")))
 	resp, err := e.api.GetPaymentGateways(optionsCurrency)
@@ -102,26 +103,27 @@ func (e *pilvytisEndpoint) GetPaymentGateways(c *gin.Context) {
 // GetPaymentGatewayOrders returns a list of payment orders.
 //
 // swagger:operation GET /v2/identities/{id}/payment-order Order getPaymentGatewayOrders
-// ---
-// summary: Get all orders for identity
-// description: Gets all orders for a given identity from the pilvytis service
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get orders
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: List of payment orders
-//     schema:
-//       type: "array"
-//       items:
-//         "$ref": "#/definitions/PaymentOrderResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Get all orders for identity
+//	description: Gets all orders for a given identity from the pilvytis service
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity for which to get orders
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: List of payment orders
+//	    schema:
+//	      type: "array"
+//	      items:
+//	        "$ref": "#/definitions/PaymentOrderResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGatewayOrders(c *gin.Context) {
 	resp, err := e.api.GetPaymentGatewayOrders(identity.FromAddress(c.Param("id")))
 	if err != nil {
@@ -135,29 +137,30 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrders(c *gin.Context) {
 // GetPaymentGatewayOrder returns a payment order which maches a given ID and identity.
 //
 // swagger:operation GET /v2/identities/{id}/payment-order/{order_id} Order getPaymentGatewayOrder
-// ---
-// summary: Get order
-// description: Gets an order for a given identity and order id combo from the pilvytis service
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get an order
-//   type: string
-//   required: true
-// - name: order_id
-//   in: path
-//   description: Order id
-//   type: integer
-//   required: true
-// responses:
-//   200:
-//     description: Order object
-//     schema:
-//       "$ref": "#/definitions/PaymentOrderResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Get order
+//	description: Gets an order for a given identity and order id combo from the pilvytis service
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity for which to get an order
+//	  type: string
+//	  required: true
+//	- name: order_id
+//	  in: path
+//	  description: Order id
+//	  type: integer
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Order object
+//	    schema:
+//	      "$ref": "#/definitions/PaymentOrderResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
 	resp, err := e.api.GetPaymentGatewayOrder(
 		identity.FromAddress(c.Param("id")),
@@ -174,27 +177,28 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrder(c *gin.Context) {
 // GetPaymentGatewayOrderInvoice returns an invoice for payment order matching the given ID and identity.
 //
 // swagger:operation GET /v2/identities/{id}/payment-order/{order_id}/invoice Order getPaymentGatewayOrderInvoice
-// ---
-// summary: Get invoice
-// description: Gets an invoice for payment order matching the given ID and identity
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to get an order invoice
-//   type: string
-//   required: true
-// - name: order_id
-//   in: path
-//   description: Order id
-//   type: integer
-//   required: true
-// responses:
-//   200:
-//     description: Invoice PDF (binary)
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Get invoice
+//	description: Gets an invoice for payment order matching the given ID and identity
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity for which to get an order invoice
+//	  type: string
+//	  required: true
+//	- name: order_id
+//	  in: path
+//	  description: Order id
+//	  type: integer
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Invoice PDF (binary)
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
 	resp, err := e.api.GetPaymentGatewayOrderInvoice(
 		identity.FromAddress(c.Param("id")),
@@ -211,34 +215,35 @@ func (e *pilvytisEndpoint) GetPaymentGatewayOrderInvoice(c *gin.Context) {
 // CreatePaymentGatewayOrder creates a new payment order.
 //
 // swagger:operation POST /v2/identities/{id}/{gw}/payment-order Order createPaymentGatewayOrder
-// ---
-// summary: Create order
-// description: Takes the given data and tries to create a new payment order in the pilvytis service.
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to create an order
-//   type: string
-//   required: true
-// - name: gw
-//   in: path
-//   description: Gateway for which a payment order is created
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: Required data to create a new order
-//   schema:
-//     $ref: "#/definitions/PaymentOrderRequest"
-// responses:
-//   200:
-//     description: Payment order
-//     schema:
-//       "$ref": "#/definitions/PaymentOrderResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Create order
+//	description: Takes the given data and tries to create a new payment order in the pilvytis service.
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity for which to create an order
+//	  type: string
+//	  required: true
+//	- name: gw
+//	  in: path
+//	  description: Gateway for which a payment order is created
+//	  type: string
+//	  required: true
+//	- in: body
+//	  name: body
+//	  description: Required data to create a new order
+//	  schema:
+//	    $ref: "#/definitions/PaymentOrderRequest"
+//	responses:
+//	  200:
+//	    description: Payment order
+//	    schema:
+//	      "$ref": "#/definitions/PaymentOrderResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 	var req contract.PaymentOrderRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
@@ -260,24 +265,25 @@ func (e *pilvytisEndpoint) CreatePaymentGatewayOrder(c *gin.Context) {
 // GetRegistrationPaymentStatus returns a whether a registration order has been paid.
 //
 // swagger:operation GET /v2/identities/{id}/registration-payment Order getRegistrationPaymentStatus
-// ---
-// summary: Check for registration payment
-// description: Checks if a registration payment order for an identity has been paid in pilvytis.
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity for which to check
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Registration order status
-//     schema:
-//       "$ref": "#/definitions/RegistrationPaymentResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Check for registration payment
+//	description: Checks if a registration payment order for an identity has been paid in pilvytis.
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity for which to check
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Registration order status
+//	    schema:
+//	      "$ref": "#/definitions/RegistrationPaymentResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (e *pilvytisEndpoint) GetRegistrationPaymentStatus(c *gin.Context) {
 	resp, err := e.api.GetRegistrationPaymentStatus(identity.FromAddress(c.Param("id")))
 	if err != nil {

@@ -50,14 +50,15 @@ func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
 
 // GetApiKey returns MMN's API key
 // swagger:operation GET /mmn/report MMN getApiKey
-// ---
-// summary: returns MMN's API key
-// description: returns MMN's API key
-// responses:
-//   200:
-//     description: MMN's API key
-//     schema:
-//       "$ref": "#/definitions/MMNApiKeyRequest"
+//
+//	---
+//	summary: returns MMN's API key
+//	description: returns MMN's API key
+//	responses:
+//	  200:
+//	    description: MMN's API key
+//	    schema:
+//	      "$ref": "#/definitions/MMNApiKeyRequest"
 func (api *mmnAPI) GetApiKey(c *gin.Context) {
 	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNAPIKey.Name)}
 	utils.WriteAsJSON(res, c.Writer)
@@ -65,30 +66,31 @@ func (api *mmnAPI) GetApiKey(c *gin.Context) {
 
 // SetApiKey sets MMN's API key
 // swagger:operation POST /mmn/api-key MMN setApiKey
-// ---
-// summary: sets MMN's API key
-// description: sets MMN's API key
-// parameters:
-//   - in: body
-//     name: body
-//     description: api_key field
-//     schema:
-//       $ref: "#/definitions/MMNApiKeyRequest"
-// responses:
-//   200:
-//     description: API key has been set
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   422:
-//     description: Unable to process the request at this point
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: sets MMN's API key
+//	description: sets MMN's API key
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: api_key field
+//	    schema:
+//	      $ref: "#/definitions/MMNApiKeyRequest"
+//	responses:
+//	  200:
+//	    description: API key has been set
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  422:
+//	    description: Unable to process the request at this point
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *mmnAPI) SetApiKey(c *gin.Context) {
 	var req contract.MMNApiKeyRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -129,16 +131,17 @@ func (api *mmnAPI) SetApiKey(c *gin.Context) {
 
 // ClearApiKey clears MMN's API key from config
 // swagger:operation DELETE /mmn/api-key MMN clearApiKey
-// ---
-// summary: Clears MMN's API key from config
-// description: Clears MMN's API key from config
-// responses:
-//   200:
-//     description: MMN API key removed
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Clears MMN's API key from config
+//	description: Clears MMN's API key from config
+//	responses:
+//	  200:
+//	    description: MMN API key removed
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *mmnAPI) ClearApiKey(c *gin.Context) {
 	api.config.RemoveUser(config.FlagMMNAPIKey.Name)
 	if err := api.config.SaveUserConfig(); err != nil {

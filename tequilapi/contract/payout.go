@@ -17,8 +17,8 @@
 
 package contract
 
-//PayoutAddressRequest payout address request
-//swagger:model PayoutAddressRequest
+// PayoutAddressRequest payout address request
+// swagger:model PayoutAddressRequest
 type PayoutAddressRequest struct {
 	Address string `json:"address"`
 }

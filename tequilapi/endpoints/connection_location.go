@@ -65,18 +65,19 @@ func NewConnectionLocationEndpoint(
 
 // GetConnectionIP responds with current ip, using its ip resolver
 // swagger:operation GET /connection/ip Connection getConnectionIP
-// ---
-// summary: Returns IP address
-// description: Returns current public IP address
-// responses:
-//   200:
-//     description: Public IP address
-//     schema:
-//       "$ref": "#/definitions/IPDTO"
-//   503:
-//     description: Service unavailable
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns IP address
+//	description: Returns current public IP address
+//	responses:
+//	  200:
+//	    description: Public IP address
+//	    schema:
+//	      "$ref": "#/definitions/IPDTO"
+//	  503:
+//	    description: Service unavailable
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (le *ConnectionLocationEndpoint) GetConnectionIP(c *gin.Context) {
 	ipAddress, err := le.ipResolver.GetPublicIP()
 	if err != nil {
@@ -92,18 +93,19 @@ func (le *ConnectionLocationEndpoint) GetConnectionIP(c *gin.Context) {
 
 // GetProxyIP responds with proxy ip, using its ip resolver
 // swagger:operation GET /connection/proxy/ip Connection getProxyIP
-// ---
-// summary: Returns IP address
-// description: Returns proxy public IP address
-// responses:
-//   200:
-//     description: Public IP address
-//     schema:
-//       "$ref": "#/definitions/IPDTO"
-//   503:
-//     description: Service unavailable
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns IP address
+//	description: Returns proxy public IP address
+//	responses:
+//	  200:
+//	    description: Public IP address
+//	    schema:
+//	      "$ref": "#/definitions/IPDTO"
+//	  503:
+//	    description: Service unavailable
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (le *ConnectionLocationEndpoint) GetProxyIP(c *gin.Context) {
 	n, _ := strconv.Atoi(c.Query("port"))
 	ipAddress, err := le.ipResolver.GetProxyIP(n)
@@ -120,18 +122,19 @@ func (le *ConnectionLocationEndpoint) GetProxyIP(c *gin.Context) {
 
 // GetConnectionLocation responds with current connection location
 // swagger:operation GET /connection/location Connection getConnectionLocation
-// ---
-// summary: Returns connection location
-// description: Returns connection locations
-// responses:
-//   200:
-//     description: Connection locations
-//     schema:
-//       "$ref": "#/definitions/LocationDTO"
-//   503:
-//     description: Service unavailable
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns connection location
+//	description: Returns connection locations
+//	responses:
+//	  200:
+//	    description: Connection locations
+//	    schema:
+//	      "$ref": "#/definitions/LocationDTO"
+//	  503:
+//	    description: Service unavailable
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (le *ConnectionLocationEndpoint) GetConnectionLocation(c *gin.Context) {
 	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
@@ -143,18 +146,19 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(c *gin.Context) {
 
 // GetProxyLocation responds with proxy connection location
 // swagger:operation GET /connection/proxy/location Connection getProxyLocation
-// ---
-// summary: Returns proxy connection location
-// description: Returns proxy connection locations
-// responses:
-//   200:
-//     description: Proxy connection locations
-//     schema:
-//       "$ref": "#/definitions/LocationDTO"
-//   503:
-//     description: Service unavailable
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns proxy connection location
+//	description: Returns proxy connection locations
+//	responses:
+//	  200:
+//	    description: Proxy connection locations
+//	    schema:
+//	      "$ref": "#/definitions/LocationDTO"
+//	  503:
+//	    description: Service unavailable
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (le *ConnectionLocationEndpoint) GetProxyLocation(c *gin.Context) {
 	p, _ := strconv.Atoi(c.Query("port"))
 	currentLocation, err := le.locationResolver.DetectProxyLocation(p)
@@ -167,14 +171,15 @@ func (le *ConnectionLocationEndpoint) GetProxyLocation(c *gin.Context) {
 
 // GetOriginLocation responds with original locations
 // swagger:operation GET /location Location getOriginLocation
-// ---
-// summary: Returns original location
-// description: Returns original locations
-// responses:
-//   200:
-//     description: Original locations
-//     schema:
-//       "$ref": "#/definitions/LocationDTO"
+//
+//	---
+//	summary: Returns original location
+//	description: Returns original locations
+//	responses:
+//	  200:
+//	    description: Original locations
+//	    schema:
+//	      "$ref": "#/definitions/LocationDTO"
 func (le *ConnectionLocationEndpoint) GetOriginLocation(c *gin.Context) {
 	originLocation := le.locationOriginResolver.GetOrigin()
 

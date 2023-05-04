@@ -37,12 +37,13 @@ func AddRouteForStop(stop ApplicationStopper) func(*gin.Engine) error {
 }
 
 // swagger:operation POST /stop Client applicationStop
-// ---
-// summary: Stops client
-// description: Initiates client termination
-// responses:
-//   202:
-//     description: Request accepted, stopping
+//
+//	---
+//	summary: Stops client
+//	description: Initiates client termination
+//	responses:
+//	  202:
+//	    description: Request accepted, stopping
 func newStopHandler(stop ApplicationStopper) func(*gin.Context) {
 	return func(c *gin.Context) {
 		log.Info().Msg("Application stop requested")

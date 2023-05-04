@@ -54,18 +54,19 @@ func NewNATEndpoint(stateProvider stateProvider, natProber natProber) *NATEndpoi
 
 // NATType provides NAT type in terms of traversal capabilities
 // swagger:operation GET /nat/type NAT NATTypeDTO
-// ---
-// summary: Shows NAT type in terms of traversal capabilities.
-// description: Returns NAT type. May produce invalid result while VPN connection is established
-// responses:
-//   200:
-//     description: NAT type
-//     schema:
-//       "$ref": "#/definitions/NATTypeDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Shows NAT type in terms of traversal capabilities.
+//	description: Returns NAT type. May produce invalid result while VPN connection is established
+//	responses:
+//	  200:
+//	    description: NAT type
+//	    schema:
+//	      "$ref": "#/definitions/NATTypeDTO"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ne *NATEndpoint) NATType(c *gin.Context) {
 	res, err := ne.natProber.Probe(c.Request.Context())
 	if err != nil {

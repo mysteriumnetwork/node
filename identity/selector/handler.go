@@ -33,7 +33,7 @@ type handler struct {
 	signerFactory identity.SignerFactory
 }
 
-//NewHandler creates new identity handler used by node
+// NewHandler creates new identity handler used by node
 func NewHandler(
 	manager identity.Manager,
 	cache identity.IdentityCacheInterface,

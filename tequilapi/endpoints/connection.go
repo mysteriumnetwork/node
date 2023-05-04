@@ -80,22 +80,23 @@ func NewConnectionEndpoint(manager connection.MultiManager, stateProvider stateP
 
 // Status returns status of connection
 // swagger:operation GET /connection Connection connectionStatus
-// ---
-// summary: Returns connection status
-// description: Returns status of current connection
-// responses:
-//   200:
-//     description: Status
-//     schema:
-//       "$ref": "#/definitions/ConnectionInfoDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns connection status
+//	description: Returns status of current connection
+//	responses:
+//	  200:
+//	    description: Status
+//	    schema:
+//	      "$ref": "#/definitions/ConnectionInfoDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 	n := 0
 	id := c.Query("id")
@@ -114,32 +115,33 @@ func (ce *ConnectionEndpoint) Status(c *gin.Context) {
 
 // Create starts new connection
 // swagger:operation PUT /connection Connection connectionCreate
-// ---
-// summary: Starts new connection
-// description: Consumer opens connection to provider
-// parameters:
-//   - in: body
-//     name: body
-//     description: Parameters in body (consumer_id, provider_id, service_type) required for creating new connection
-//     schema:
-//       $ref: "#/definitions/ConnectionCreateRequestDTO"
-// responses:
-//   201:
-//     description: Connection started
-//     schema:
-//       "$ref": "#/definitions/ConnectionInfoDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   422:
-//     description: Unable to process the request at this point
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Starts new connection
+//	description: Consumer opens connection to provider
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Parameters in body (consumer_id, provider_id, service_type) required for creating new connection
+//	    schema:
+//	      $ref: "#/definitions/ConnectionCreateRequestDTO"
+//	responses:
+//	  201:
+//	    description: Connection started
+//	    schema:
+//	      "$ref": "#/definitions/ConnectionInfoDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  422:
+//	    description: Unable to process the request at this point
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
 	if err != nil {
@@ -229,24 +231,25 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 
 // Kill stops connection
 // swagger:operation DELETE /connection Connection connectionCancel
-// ---
-// summary: Stops connection
-// description: Stops current connection
-// responses:
-//   202:
-//     description: Connection stopped
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   422:
-//     description: Unable to process the request at this point (e.g. no active connection exists)
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Stops connection
+//	description: Stops current connection
+//	responses:
+//	  202:
+//	    description: Connection stopped
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  422:
+//	    description: Unable to process the request at this point (e.g. no active connection exists)
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 	n := 0
 	id := c.Query("id")
@@ -274,14 +277,15 @@ func (ce *ConnectionEndpoint) Kill(c *gin.Context) {
 
 // GetStatistics returns statistics about current connection
 // swagger:operation GET /connection/statistics Connection connectionStatistics
-// ---
-// summary: Returns connection statistics
-// description: Returns statistics about current connection
-// responses:
-//   200:
-//     description: Connection statistics
-//     schema:
-//       "$ref": "#/definitions/ConnectionStatisticsDTO"
+//
+//	---
+//	summary: Returns connection statistics
+//	description: Returns statistics about current connection
+//	responses:
+//	  200:
+//	    description: Connection statistics
+//	    schema:
+//	      "$ref": "#/definitions/ConnectionStatisticsDTO"
 func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 	id := c.Query("id")
 	conn := ce.stateProvider.GetConnection(id)
@@ -292,18 +296,19 @@ func (ce *ConnectionEndpoint) GetStatistics(c *gin.Context) {
 
 // GetTraffic returns traffic information about requested connection
 // swagger:operation GET /connection/traffic Connection connectionTraffic
-// ---
-// summary: Returns connection traffic information
-// description: Returns traffic information about requested connection
-// responses:
-//   200:
-//     description: Connection traffic
-//     schema:
-//       "$ref": "#/definitions/ConnectionTrafficDTO"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns connection traffic information
+//	description: Returns traffic information about requested connection
+//	responses:
+//	  200:
+//	    description: Connection traffic
+//	    schema:
+//	      "$ref": "#/definitions/ConnectionTrafficDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (ce *ConnectionEndpoint) GetTraffic(c *gin.Context) {
 	n := 0
 	id := c.Query("id")

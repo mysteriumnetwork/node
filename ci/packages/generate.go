@@ -86,7 +86,7 @@ func GenerateDocs() error {
 
 // GetSwagger installs swagger tool.
 func GetSwagger() error {
-	err := sh.RunV("go", "install", "github.com/go-swagger/go-swagger/cmd/swagger@v0.29.0")
+	err := sh.RunV("go", "install", "github.com/go-swagger/go-swagger/cmd/swagger@v0.30.4")
 	if err != nil {
 		fmt.Println("could not go get swagger")
 		return err

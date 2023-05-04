@@ -22,7 +22,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//Start starts event log notifier
+// Start starts event log notifier
 func (n *Notifier) Start() {
 	log.Debug().Msg("Register for sleep log events")
 	watcher, err := winlog.NewWinLogWatcher()
@@ -45,7 +45,7 @@ func (n *Notifier) Start() {
 	watcher.Shutdown()
 }
 
-//Stop stops event log notifier
+// Stop stops event log notifier
 func (n *Notifier) Stop() {
 	n.stopOnce.Do(func() {
 		log.Debug().Msg("Unregister sleep log events watcher")

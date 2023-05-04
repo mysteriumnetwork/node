@@ -46,27 +46,28 @@ type authenticator interface {
 }
 
 // swagger:operation POST /auth/authenticate Authentication Authenticate
-// ---
-// summary: Authenticate
-// description: Authenticates user and issues auth token
-// parameters:
-//   - in: body
-//     name: body
-//     schema:
-//       $ref: "#/definitions/AuthRequest"
-// responses:
-//   200:
-//     description: Authentication succeeded
-//     schema:
-//       "$ref": "#/definitions/AuthResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   401:
-//     description: Authentication failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Authenticate
+//	description: Authenticates user and issues auth token
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    schema:
+//	      $ref: "#/definitions/AuthRequest"
+//	responses:
+//	  200:
+//	    description: Authentication succeeded
+//	    schema:
+//	      "$ref": "#/definitions/AuthResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  401:
+//	    description: Authentication failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *authenticationAPI) Authenticate(c *gin.Context) {
 	req, err := toAuthRequest(c.Request)
 	if err != nil {
@@ -90,27 +91,28 @@ func (api *authenticationAPI) Authenticate(c *gin.Context) {
 }
 
 // swagger:operation POST /auth/login Authentication Login
-// ---
-// summary: Login
-// description: Authenticates user and sets cookie with issued auth token
-// parameters:
-//   - in: body
-//     name: body
-//     schema:
-//       $ref: "#/definitions/AuthRequest"
-// responses:
-//   200:
-//     description: Authentication succeeded
-//     schema:
-//       "$ref": "#/definitions/AuthResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   401:
-//     description: Authentication failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Login
+//	description: Authenticates user and sets cookie with issued auth token
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    schema:
+//	      $ref: "#/definitions/AuthRequest"
+//	responses:
+//	  200:
+//	    description: Authentication succeeded
+//	    schema:
+//	      "$ref": "#/definitions/AuthResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  401:
+//	    description: Authentication failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *authenticationAPI) Login(c *gin.Context) {
 	req, err := toAuthRequest(c.Request)
 	if err != nil {
@@ -143,12 +145,13 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 }
 
 // swagger:operation DELETE /auth/logout Authentication Logout
-// ---
-// summary: Logout
-// description: Clears authentication cookie
-// responses:
-//   200:
-//     description: Logged out successfully
+//
+//	---
+//	summary: Logout
+//	description: Clears authentication cookie
+//	responses:
+//	  200:
+//	    description: Logged out successfully
 func (api *authenticationAPI) Logout(c *gin.Context) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     auth.JWTCookieName,
@@ -162,25 +165,26 @@ func (api *authenticationAPI) Logout(c *gin.Context) {
 }
 
 // swagger:operation PUT /auth/password Authentication changePassword
-// ---
-// summary: Change password
-// description: Changes user password
-// parameters:
-//   - in: body
-//     name: body
-//     schema:
-//       $ref: "#/definitions/ChangePasswordRequest"
-// responses:
-//   200:
-//     description: Password changed successfully
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   401:
-//     description: Unauthorized
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Change password
+//	description: Changes user password
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    schema:
+//	      $ref: "#/definitions/ChangePasswordRequest"
+//	responses:
+//	  200:
+//	    description: Password changed successfully
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  401:
+//	    description: Unauthorized
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (api *authenticationAPI) ChangePassword(c *gin.Context) {
 	var req *contract.ChangePasswordRequest
 	var err error

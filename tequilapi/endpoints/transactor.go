@@ -125,18 +125,19 @@ func NewTransactorEndpoint(
 }
 
 // swagger:operation GET /v2/transactor/fees CombinedFeesResponse
-// ---
-// summary: Returns fees
-// description: Returns fees applied by Transactor
-// responses:
-//   200:
-//     description: Fees applied by Transactor
-//     schema:
-//       "$ref": "#/definitions/CombinedFeesResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns fees
+//	description: Returns fees applied by Transactor
+//	responses:
+//	  200:
+//	    description: Fees applied by Transactor
+//	    schema:
+//	      "$ref": "#/definitions/CombinedFeesResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
 	chainID := config.GetInt64(config.FlagChainID)
 	if qcid, err := cast.ToInt64E(c.Query("chain_id")); err == nil {
@@ -174,19 +175,20 @@ func (te *transactorEndpoint) TransactorFeesV2(c *gin.Context) {
 }
 
 // swagger:operation GET /transactor/fees FeesDTO
-// ---
-// summary: Returns fees
-// deprecated: true
-// description: Returns fees applied by Transactor
-// responses:
-//   200:
-//     description: Fees applied by Transactor
-//     schema:
-//       "$ref": "#/definitions/FeesDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns fees
+//	deprecated: true
+//	description: Returns fees applied by Transactor
+//	responses:
+//	  200:
+//	    description: Fees applied by Transactor
+//	    schema:
+//	      "$ref": "#/definitions/FeesDTO"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 	chainID := config.GetInt64(config.FlagChainID)
 	if qcid, err := cast.ToInt64E(c.Query("chain_id")); err == nil {
@@ -237,22 +239,23 @@ func (te *transactorEndpoint) TransactorFees(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/settle/sync SettleSync
-// ---
-// summary: Forces the settlement of promises for the given provider and hermes
-// description: Forces a settlement for the hermes promises and blocks until the settlement is complete.
-// parameters:
-// - in: body
-//   name: body
-//   description: Settle request
-//   schema:
-//     $ref: "#/definitions/SettleRequestDTO"
-// responses:
-//   202:
-//     description: Settle request accepted
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Forces the settlement of promises for the given provider and hermes
+//	description: Forces a settlement for the hermes promises and blocks until the settlement is complete.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: Settle request
+//	  schema:
+//	    $ref: "#/definitions/SettleRequestDTO"
+//	responses:
+//	  202:
+//	    description: Settle request accepted
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.ForceSettle)
 	if err != nil {
@@ -264,22 +267,23 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/settle/async SettleAsync
-// ---
-// summary: forces the settlement of promises for the given provider and hermes
-// description: Forces a settlement for the hermes promises. Does not wait for completion.
-// parameters:
-// - in: body
-//   name: body
-//   description: Settle request
-//   schema:
-//     $ref: "#/definitions/SettleRequestDTO"
-// responses:
-//   202:
-//     description: Settle request accepted
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: forces the settlement of promises for the given provider and hermes
+//	description: Forces a settlement for the hermes promises. Does not wait for completion.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: Settle request
+//	  schema:
+//	    $ref: "#/definitions/SettleRequestDTO"
+//	responses:
+//	  202:
+//	    description: Settle request accepted
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
 	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes ...common.Address) error {
 		providerId := provider.ToCommonAddress()
@@ -336,37 +340,38 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
-// ---
-// summary: Registers identity
-// description: Registers identity on Mysterium Network smart contracts using Transactor
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity address to register
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: all body parameters a optional
-//   schema:
-//     $ref: "#/definitions/IdentityRegisterRequestDTO"
-// responses:
-//   200:
-//     description: Identity registered.
-//   202:
-//     description: Identity registration accepted and will be processed.
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   422:
-//     description: Unable to process the request at this point
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Registers identity
+//	description: Registers identity on Mysterium Network smart contracts using Transactor
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity address to register
+//	  type: string
+//	  required: true
+//	- in: body
+//	  name: body
+//	  description: all body parameters a optional
+//	  schema:
+//	    $ref: "#/definitions/IdentityRegisterRequestDTO"
+//	responses:
+//	  200:
+//	    description: Identity registered.
+//	  202:
+//	    description: Identity registration accepted and will be processed.
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  422:
+//	    description: Unable to process the request at this point
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 	id := identity.FromAddress(c.Param("id"))
 	chainID := config.GetInt64(config.FlagChainID)
@@ -421,22 +426,23 @@ func (te *transactorEndpoint) RegisterIdentity(c *gin.Context) {
 }
 
 // swagger:operation GET /settle/history settlementList
-// ---
-// summary: Returns settlement history
-// description: Returns settlement history
-// responses:
-//   200:
-//     description: Returns settlement history
-//     schema:
-//       "$ref": "#/definitions/SettlementListResponse"
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns settlement history
+//	description: Returns settlement history
+//	responses:
+//	  200:
+//	    description: Returns settlement history
+//	    schema:
+//	      "$ref": "#/definitions/SettlementListResponse"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
 	query := contract.NewSettlementListQuery()
 	if err := query.Bind(c.Request); err != nil {
@@ -469,26 +475,27 @@ func (te *transactorEndpoint) SettlementHistory(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/stake/decrease Decrease Stake
-// ---
-// summary: Decreases stake
-// description: Decreases stake on eth blockchain via the mysterium transactor.
-// parameters:
-// - in: body
-//   name: body
-//   description: decrease stake request
-//   schema:
-//     $ref: "#/definitions/DecreaseStakeRequest"
-// responses:
-//   200:
-//     description: Payout info registered
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Decreases stake
+//	description: Decreases stake on eth blockchain via the mysterium transactor.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: decrease stake request
+//	  schema:
+//	    $ref: "#/definitions/DecreaseStakeRequest"
+//	responses:
+//	  200:
+//	    description: Payout info registered
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
 	var req contract.DecreaseStakeRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -515,26 +522,27 @@ func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/settle/withdraw Withdraw
-// ---
-// summary: Asks to perform withdrawal to l1.
-// description: Asks to perform withdrawal to l1.
-// parameters:
-// - in: body
-//   name: body
-//   description: withdraw request body
-//   schema:
-//     $ref: "#/definitions/WithdrawRequestDTO"
-// responses:
-//   202:
-//     description: Withdraw request accepted
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Asks to perform withdrawal to l1.
+//	description: Asks to perform withdrawal to l1.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: withdraw request body
+//	  schema:
+//	    $ref: "#/definitions/WithdrawRequestDTO"
+//	responses:
+//	  202:
+//	    description: Withdraw request accepted
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 	var req contract.WithdrawRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -605,22 +613,23 @@ func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, er
 }
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
-// ---
-// summary: Forces the settlement with stake increase of promises for the given provider and hermes.
-// description: Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.
-// parameters:
-// - in: body
-//   name: body
-//   description: Settle request
-//   schema:
-//     $ref: "#/definitions/SettleRequestDTO"
-// responses:
-//   202:
-//     description: Settle request accepted
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Forces the settlement with stake increase of promises for the given provider and hermes.
+//	description: Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: Settle request
+//	  schema:
+//	    $ref: "#/definitions/SettleRequestDTO"
+//	responses:
+//	  202:
+//	    description: Settle request accepted
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.SettleIntoStake)
 	if err != nil {
@@ -633,22 +642,23 @@ func (te *transactorEndpoint) SettleIntoStakeSync(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/stake/increase/async StakeIncreaseAsync
-// ---
-// summary: forces the settlement with stake increase of promises for the given provider and hermes.
-// description: Forces a settlement with stake increase for the hermes promises and does not block.
-// parameters:
-// - in: body
-//   name: body
-//   description: settle request body
-//   schema:
-//     $ref: "#/definitions/SettleRequestDTO"
-// responses:
-//   202:
-//     description: Settle request accepted
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: forces the settlement with stake increase of promises for the given provider and hermes.
+//	description: Forces a settlement with stake increase for the hermes promises and does not block.
+//	parameters:
+//	- in: body
+//	  name: body
+//	  description: settle request body
+//	  schema:
+//	    $ref: "#/definitions/SettleRequestDTO"
+//	responses:
+//	  202:
+//	    description: Settle request accepted
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes ...common.Address) error {
 		go func() {
@@ -668,24 +678,25 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(c *gin.Context) {
 }
 
 // swagger:operation POST /transactor/token/{token}/reward Reward
-// ---
-// summary: Returns the amount of reward for a token
-// deprecated: true
-// parameters:
-// - in: path
-//   name: token
-//   description: Token for which to lookup the reward
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Token Reward
-//     schema:
-//       "$ref": "#/definitions/TokenRewardAmount"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns the amount of reward for a token
+//	deprecated: true
+//	parameters:
+//	- in: path
+//	  name: token
+//	  description: Token for which to lookup the reward
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Token Reward
+//	    schema:
+//	      "$ref": "#/definitions/TokenRewardAmount"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 	token := c.Param("token")
 	reward, err := te.affiliator.RegistrationTokenReward(token)
@@ -704,13 +715,14 @@ func (te *transactorEndpoint) TokenRewardAmount(c *gin.Context) {
 }
 
 // swagger:operation GET /transactor/chains-summary Chains
-// ---
-// summary: Returns available chain map
-// responses:
-//   200:
-//     description: Chain Summary
-//     schema:
-//       "$ref": "#/definitions/ChainSummary"
+//
+//	---
+//	summary: Returns available chain map
+//	responses:
+//	  200:
+//	    description: Chain Summary
+//	    schema:
+//	      "$ref": "#/definitions/ChainSummary"
 func (te *transactorEndpoint) ChainSummary(c *gin.Context) {
 	chains := registry.Chains()
 	result := map[int64]string{}
@@ -737,23 +749,24 @@ type EligibilityResponse struct {
 }
 
 // swagger:operation GET /transactor/identities/{id}/eligibility Eligibility
-// ---
-// summary: Checks if given id is eligible for free registration
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity address to register
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Eligibility response
-//     schema:
-//       "$ref": "#/definitions/EligibilityResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Checks if given id is eligible for free registration
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity address to register
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Eligibility response
+//	    schema:
+//	      "$ref": "#/definitions/EligibilityResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 	id := identity.FromAddress(c.Param("id"))
 
@@ -767,17 +780,18 @@ func (te *transactorEndpoint) FreeRegistrationEligibility(c *gin.Context) {
 }
 
 // swagger:operation GET /identities/provider/eligibility ProviderEligibility
-// ---
-// summary: Checks if provider is eligible for free registration
-// responses:
-//   200:
-//     description: Eligibility response
-//     schema:
-//       "$ref": "#/definitions/EligibilityResponse"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Checks if provider is eligible for free registration
+//	responses:
+//	  200:
+//	    description: Eligibility response
+//	    schema:
+//	      "$ref": "#/definitions/EligibilityResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context) {
 	res, err := te.transactor.GetFreeProviderRegistrationEligibility()
 	if err != nil {
@@ -789,26 +803,27 @@ func (te *transactorEndpoint) FreeProviderRegistrationEligibility(c *gin.Context
 }
 
 // swagger:operation GET /identities/{id}/beneficiary-status
-// ---
-// summary: Returns beneficiary transaction status
-// description: Returns the last beneficiary transaction status for given identity
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity address to register
-//   type: string
-//   required: true
-// responses:
-//   200:
-//     description: Returns beneficiary transaction status
-//     schema:
-//       "$ref": "#/definitions/BeneficiaryTxStatus"
-//   404:
-//     description: Beneficiary change never recorded.
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Returns beneficiary transaction status
+//	description: Returns the last beneficiary transaction status for given identity
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity address to register
+//	  type: string
+//	  required: true
+//	responses:
+//	  200:
+//	    description: Returns beneficiary transaction status
+//	    schema:
+//	      "$ref": "#/definitions/BeneficiaryTxStatus"
+//	  404:
+//	    description: Beneficiary change never recorded.
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
 	id := identity.FromAddress(c.Param("id"))
 	current, err := te.bprovider.GetBeneficiary(id.ToCommonAddress())
@@ -844,22 +859,23 @@ func (te *transactorEndpoint) BeneficiaryTxStatus(c *gin.Context) {
 }
 
 // swagger:operation POST /identities/{id}/beneficiary
-// ---
-// summary: Settle with Beneficiary
-// description: Change beneficiary and settle earnings to it. This is async method.
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity address to register
-//   type: string
-//   required: true
-// responses:
-//   202:
-//     description: Settle request accepted
-//   400:
-//     description: Failed to parse or request validation failed
-//     schema:
-//       "$ref": "#/definitions/APIError"
+//
+//	---
+//	summary: Settle with Beneficiary
+//	description: Change beneficiary and settle earnings to it. This is async method.
+//	parameters:
+//	- name: id
+//	  in: path
+//	  description: Identity address to register
+//	  type: string
+//	  required: true
+//	responses:
+//	  202:
+//	    description: Settle request accepted
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleWithBeneficiaryAsync(c *gin.Context) {
 	id := c.Param("id")
 
