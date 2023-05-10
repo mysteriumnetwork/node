@@ -95,3 +95,17 @@ func SetFlagLauncherVersion(val string) {
 func GetServiceTypes() []string {
 	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
 }
+
+type ServiceState struct {
+	Name  string
+	State string
+}
+
+// GetAllServicesState returns state of all services
+func (mb *MobileNode) GetAllServicesState() []ServiceState {
+	result := make([]ServiceState, 0)
+	for _, srv := range mb.servicesManager.List(true) {
+		result = append(result, ServiceState{srv.Type, string(srv.State())})
+	}
+	return result
+}
