@@ -20,6 +20,8 @@
 package mysterium
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
@@ -56,7 +58,7 @@ func (mb *MobileNode) StartProvider() {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	for _, serviceType := range GetServiceTypes() {
+	for _, serviceType := range getServiceTypes() {
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
 			log.Error().Err(err).Msg("GetStartOptions failed")
@@ -91,21 +93,26 @@ func SetFlagLauncherVersion(val string) {
 	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }
 
-// GetServiceTypes returns all possible service types
-func GetServiceTypes() []string {
+func getServiceTypes() []string {
 	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
 }
 
-type ServiceState struct {
-	Name  string
-	State string
+// GetServiceTypes returns all possible service types
+func GetServiceTypes() ([]byte, error) {
+	result := getServiceTypes()
+	return json.Marshal(&result)
+}
+
+type ServicesState struct {
+	Service string `json:"id"`
+	State   string `json:"state"`
 }
 
 // GetAllServicesState returns state of all services
-func (mb *MobileNode) GetAllServicesState() []ServiceState {
-	result := make([]ServiceState, 0)
+func (mb *MobileNode) GetAllServicesState() ([]byte, error) {
+	result := make([]ServicesState, 0)
 	for _, srv := range mb.servicesManager.List(true) {
-		result = append(result, ServiceState{srv.Type, string(srv.State())})
+		result = append(result, ServicesState{srv.Type, string(srv.State())})
 	}
-	return result
+	return json.Marshal(&result)
 }
