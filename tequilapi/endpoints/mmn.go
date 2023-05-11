@@ -20,6 +20,8 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -150,6 +152,45 @@ func (api *mmnAPI) ClearApiKey(c *gin.Context) {
 	}
 }
 
+// GetClaimLink generates claim link for mystnodes.com
+// swagger:operation GET /mmn/claim-link MMN getClaimLink
+//
+//	---
+//
+//	summary: Generate claim link
+//	description: Generates claim link to claim Node on mystnodes.com with a click
+//	responses:
+//	  200:
+//	    description: Link response
+//	    schema:
+//	      "$ref": "#/definitions/MMNClaimLinkResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+func (api *mmnAPI) GetClaimLink(c *gin.Context) {
+	redirectQuery := c.Query("redirect_uri")
+
+	if redirectQuery == "" {
+		c.Error(apierror.BadRequest("redirect_uri missing", contract.ErrCodeMMNClaimRedirectURLMissing))
+		return
+	}
+
+	redirectURL, err := url.Parse(redirectQuery)
+	if err != nil {
+		c.Error(apierror.BadRequest("redirect_uri malformed", contract.ErrCodeMMNClaimRedirectURLMissing))
+		return
+	}
+
+	link, err := api.mmn.ClaimLink(redirectURL)
+	if err != nil {
+		c.Error(apierror.Internal("Failed to generate claim link", contract.ErrCodeMMNClaimLink))
+		return
+	}
+
+	c.JSON(http.StatusOK, &contract.MMNClaimLinkResponse{Link: link.String()})
+}
+
 // AddRoutesForMMN registers /mmn endpoints in Tequilapi
 func AddRoutesForMMN(
 	mmn *mmn.MMN,
@@ -161,6 +202,8 @@ func AddRoutesForMMN(
 			g.GET("/api-key", api.GetApiKey)
 			g.POST("/api-key", api.SetApiKey)
 			g.DELETE("/api-key", api.ClearApiKey)
+
+			g.GET("/claim-link", api.GetClaimLink)
 		}
 		return nil
 	}

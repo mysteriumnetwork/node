@@ -18,14 +18,16 @@
 package mmn
 
 import (
+	"encoding/json"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
-// NodeInformationDto contains node information to be sent to MMN
-type NodeInformationDto struct {
+// NodeClaimRequest contains node information to be sent to MMN
+type NodeClaimRequest struct {
 	// local IP is used to give quick access to WebUI from MMN
 	LocalIP     string `json:"local_ip"`
 	Identity    string `json:"identity"`
@@ -34,6 +36,15 @@ type NodeInformationDto struct {
 	OS          string `json:"os"`
 	Arch        string `json:"arch"`
 	NodeVersion string `json:"node_version"`
+	RedirectURL string `json:"redirect_url,omitempty"`
+}
+
+func (ncr NodeClaimRequest) json() ([]byte, error) {
+	payload, err := json.Marshal(ncr)
+	if err != nil {
+		return []byte{}, err
+	}
+	return payload, nil
 }
 
 // NewClient returns MMN API client
@@ -52,8 +63,8 @@ type client struct {
 }
 
 // ClaimNode does an HTTP call to MMN and registers node
-func (m *client) ClaimNode(info *NodeInformationDto) error {
-	log.Debug().Msgf("Registering node to MMN: %+v", *info)
+func (m *client) ClaimNode(info NodeClaimRequest) error {
+	log.Debug().Msgf("Registering node to MMN: %+v", info)
 
 	id := identity.FromAddress(info.Identity)
 	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))
