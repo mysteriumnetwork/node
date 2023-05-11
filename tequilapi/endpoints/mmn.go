@@ -110,7 +110,7 @@ func (api *mmnAPI) SetApiKey(c *gin.Context) {
 		return
 	}
 
-	err = api.mmn.Register()
+	err = api.mmn.ClaimNode()
 	if err != nil {
 		log.Error().Msgf("MMN registration error: %s", err.Error())
 

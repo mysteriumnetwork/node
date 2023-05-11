@@ -91,13 +91,13 @@ func (m *MMN) handleServiceStart(e servicestate.AppEventServiceStatus) {
 		return
 	}
 
-	if err := m.register(); err != nil {
+	if err := m.claim(); err != nil {
 		log.Error().Msgf("Failed to register identity to MMN: %v", err)
 	}
 }
 
-func (m *MMN) register() error {
-	return m.client.RegisterNode(&NodeInformationDto{
+func (m *MMN) claim() error {
+	return m.client.ClaimNode(&NodeInformationDto{
 		LocalIP:     m.lastIP,
 		Identity:    m.lastIdentity,
 		APIKey:      config.GetString(config.FlagMMNAPIKey),
@@ -108,9 +108,9 @@ func (m *MMN) register() error {
 	})
 }
 
-// Register registers node to MMN
-func (m *MMN) Register() error {
-	return m.register()
+// ClaimNode registers node to MMN
+func (m *MMN) ClaimNode() error {
+	return m.claim()
 }
 
 func getOS() string {

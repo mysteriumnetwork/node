@@ -51,8 +51,8 @@ type client struct {
 	signer     identity.SignerFactory
 }
 
-// RegisterNode does an HTTP call to MMN and registers node
-func (m *client) RegisterNode(info *NodeInformationDto) error {
+// ClaimNode does an HTTP call to MMN and registers node
+func (m *client) ClaimNode(info *NodeInformationDto) error {
 	log.Debug().Msgf("Registering node to MMN: %+v", *info)
 
 	id := identity.FromAddress(info.Identity)
