@@ -18,6 +18,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -65,6 +67,7 @@ var (
 	FlagActiveServices = cli.StringFlag{
 		Name:  "active-services",
 		Usage: "Comma separated list of active services.",
+		Value: strings.Join([]string{"wireguard", "scraping", "data_transfer"}, ","),
 	}
 )
 
