@@ -132,18 +132,18 @@ func NewInstance(
 	proposal market.ServiceProposal,
 	state servicestate.State,
 	service Service,
-	policies *policy.Repository,
+	policyProvider policy.Provider,
 	discovery Discovery,
 ) *Instance {
 	return &Instance{
-		ProviderID: providerID,
-		Type:       serviceType,
-		Options:    options,
-		Proposal:   proposal,
-		state:      state,
-		service:    service,
-		policies:   policies,
-		discovery:  discovery,
+		ProviderID:     providerID,
+		Type:           serviceType,
+		Options:        options,
+		Proposal:       proposal,
+		state:          state,
+		service:        service,
+		policyProvider: policyProvider,
+		discovery:      discovery,
 	}
 }
 
@@ -157,7 +157,7 @@ type Instance struct {
 	Options         Options
 	service         Service
 	Proposal        market.ServiceProposal
-	policies        *policy.Repository
+	policyProvider  policy.Provider
 	discovery       Discovery
 	eventPublisher  Publisher
 	p2pChannelsLock sync.Mutex
@@ -170,9 +170,9 @@ func (i *Instance) Service() Service {
 	return i.service
 }
 
-// Policies returns service policies of the running service instance.
-func (i *Instance) Policies() *policy.Repository {
-	return i.policies
+// PolicyProvider returns policy provider implementation.
+func (i *Instance) PolicyProvider() policy.Provider {
+	return i.policyProvider
 }
 
 // State returns the service instance state.

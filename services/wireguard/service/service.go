@@ -129,7 +129,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 
 	var dnsIP net.IP
 	var releaseTrafficFirewall firewall.IncomingRuleRemove
-	if m.serviceInstance.Policies().HasDNSRules() {
+	if m.serviceInstance.PolicyProvider().HasDNSRules() {
 		releaseTrafficFirewall, err = m.trafficFirewall.BlockIncomingTraffic(providerConfig.Subnet)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to enable traffic blocking")
