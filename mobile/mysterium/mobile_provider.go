@@ -21,6 +21,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -37,7 +38,7 @@ import (
 func DefaultProviderNodeOptions() *MobileNodeOptions {
 	options := DefaultNodeOptionsByNetwork(string(config.Mainnet))
 	options.IsProvider = true
-	options.TequilapiSecured = true
+	options.TequilapiSecured = false
 	return options
 }
 
@@ -58,7 +59,13 @@ func (mb *MobileNode) StartProvider() {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	for _, serviceType := range getServiceTypes() {
+	serviceTypes := make([]string, 0)
+	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
+	if len(activeServices) != 0 {
+		serviceTypes = strings.Split(activeServices, ",")
+	}
+
+	for _, serviceType := range serviceTypes {
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
 			log.Error().Err(err).Msg("GetStartOptions failed")
@@ -93,13 +100,13 @@ func SetFlagLauncherVersion(val string) {
 	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }
 
-func getServiceTypes() []string {
+func getAllServiceTypes() []string {
 	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
 }
 
 // GetServiceTypes returns all possible service types
 func GetServiceTypes() ([]byte, error) {
-	result := getServiceTypes()
+	result := getAllServiceTypes()
 	return json.Marshal(&result)
 }
 
