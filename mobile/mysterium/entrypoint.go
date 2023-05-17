@@ -103,11 +103,6 @@ type earningsProvider interface {
 	GetEarningsDetailed(chainID int64, id identity.Identity) *pingpongEvent.EarningsDetailed
 }
 
-type serviceState struct {
-	id       service.ID
-	isActive bool
-}
-
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
 	Network                        string
@@ -224,7 +219,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	if options.IsProvider {
 		config.Current.SetDefault(config.FlagUserspace.Name, "true")
 		config.Current.SetDefault(config.FlagAgreedTermsConditions.Name, "true")
-		config.Current.SetDefault(config.FlagActiveServices.Name, "wireguard,scraping,data_transfer")
 		config.Current.SetDefault(config.FlagDiscoveryPingInterval.Name, "3m")
 		config.Current.SetDefault(config.FlagDiscoveryFetchInterval.Name, "3m")
 		config.Current.SetDefault(config.FlagAccessPolicyFetchInterval.Name, "10m")

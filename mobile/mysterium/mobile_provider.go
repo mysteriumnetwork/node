@@ -20,13 +20,17 @@
 package mysterium
 
 import (
-	"strings"
+	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/services/datatransfer"
+	"github.com/mysteriumnetwork/node/services/scraping"
+	"github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 // DefaultProviderNodeOptions returns default options.
@@ -54,10 +58,7 @@ func (mb *MobileNode) StartProvider() {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	activeServices := "wireguard,scraping,data_transfer"
-	serviceTypes := strings.Split(activeServices, ",")
-
-	for _, serviceType := range serviceTypes {
+	for _, serviceType := range getServiceTypes() {
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
 			log.Error().Err(err).Msg("GetStartOptions failed")
@@ -90,4 +91,28 @@ func (mb *MobileNode) StopProvider() {
 // SetFlagLauncherVersion sets LauncherVersion flag value, which is reported to Prometheus
 func SetFlagLauncherVersion(val string) {
 	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
+}
+
+func getServiceTypes() []string {
+	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
+}
+
+// GetServiceTypes returns all possible service types
+func GetServiceTypes() ([]byte, error) {
+	result := getServiceTypes()
+	return json.Marshal(&result)
+}
+
+type ServicesState struct {
+	Service string `json:"id"`
+	State   string `json:"state"`
+}
+
+// GetAllServicesState returns state of all services
+func (mb *MobileNode) GetAllServicesState() ([]byte, error) {
+	result := make([]ServicesState, 0)
+	for _, srv := range mb.servicesManager.List(true) {
+		result = append(result, ServicesState{srv.Type, string(srv.State())})
+	}
+	return json.Marshal(&result)
 }
