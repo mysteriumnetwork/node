@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/dns"
@@ -46,6 +46,7 @@ var connectionEndpointStub = &mockConnectionEndpoint{}
 
 func Test_Manager_Stop(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
+
 	service := service.NewInstance(
 		identity.FromAddress("0x1"),
 		"",
@@ -53,7 +54,7 @@ func Test_Manager_Stop(t *testing.T) {
 		market.ServiceProposal{},
 		servicestate.Running,
 		nil,
-		policy.NewRepository(),
+		localcopy.NewRepository(),
 		nil,
 	)
 

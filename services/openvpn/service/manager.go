@@ -83,8 +83,8 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	dnsPort := 11153
 	dnsHandler, err := dns.ResolveViaSystem()
 	if err == nil {
-		if instance.Policies().HasDNSRules() {
-			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficFirewall, instance.Policies())
+		if instance.PolicyProvider().HasDNSRules() {
+			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficFirewall, instance.PolicyProvider())
 			removeRule, err := m.trafficFirewall.BlockIncomingTraffic(m.vpnNetwork)
 			if err != nil {
 				return fmt.Errorf("failed to enable traffic blocking: %w", err)

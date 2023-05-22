@@ -22,8 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
+	"github.com/mysteriumnetwork/node/core/policy/requested"
+
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
-	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -35,8 +37,9 @@ import (
 )
 
 var (
-	serviceType      = "the-very-awesome-test-service-type"
-	mockPolicyOracle = policy.NewOracle(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
+	serviceType        = "the-very-awesome-test-service-type"
+	mockPolicyOracle   = localcopy.NewOracle(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute, true)
+	mockPolicyProvider = requested.NewRequestedProvider(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/")
 )
 
 func init() {
@@ -58,6 +61,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
+		mockPolicyProvider,
 		&mockP2PListener{}, nil, nil, mockLocationResolver{},
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
@@ -82,6 +86,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
+		mockPolicyProvider,
 		&mockP2PListener{}, nil, nil,
 		mockLocationResolver{},
 	)
@@ -109,6 +114,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		discoveryFactory,
 		eventBus,
 		mockPolicyOracle,
+		mockPolicyProvider,
 		&mockP2PListener{}, nil, nil,
 		mockLocationResolver{},
 	)
