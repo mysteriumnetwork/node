@@ -27,6 +27,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -82,7 +83,8 @@ func NewManager(
 	serviceRegistry *Registry,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
-	policyOracle *policy.Oracle,
+	policyOracle *localcopy.Oracle,
+	policyProvider policy.Provider,
 	p2pListener p2p.Listener,
 	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager,
 	statusStorage connectivity.StatusStorage,
@@ -94,6 +96,7 @@ func NewManager(
 		discoveryFactory: discoveryFactory,
 		eventPublisher:   eventPublisher,
 		policyOracle:     policyOracle,
+		policyProvider:   policyProvider,
 		p2pListener:      p2pListener,
 		sessionManager:   sessionManager,
 		statusStorage:    statusStorage,
@@ -108,7 +111,8 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
-	policyOracle     *policy.Oracle
+	policyOracle     *localcopy.Oracle
+	policyProvider   policy.Provider
 
 	p2pListener    p2p.Listener
 	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager
@@ -131,14 +135,19 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	policyRules := policy.NewRepository()
-	var accessPolicies []market.AccessPolicy
-	if len(policyIDs) > 0 {
-		accessPolicies = manager.policyOracle.Policies(policyIDs)
-		if err = manager.policyOracle.SubscribePolicies(accessPolicies, policyRules); err != nil {
-			log.Warn().Err(err).Msg("Can't find given access policies")
-			return id, ErrUnsupportedAccessPolicy
+	accessPolicies := manager.policyOracle.Policies(policyIDs)
+	var policyProvider policy.Provider
+	if len(policyIDs) == 1 && policyIDs[0] == "mysterium" {
+		policyProvider = manager.policyProvider
+	} else {
+		policyRules := localcopy.NewRepository()
+		if len(policyIDs) > 0 {
+			if err = manager.policyOracle.SubscribePolicies(accessPolicies, policyRules); err != nil {
+				log.Warn().Err(err).Msg("Can't find given access policyOracle")
+				return id, ErrUnsupportedAccessPolicy
+			}
 		}
+		policyProvider = policyRules
 	}
 
 	location, err := manager.location.DetectLocation()
@@ -167,7 +176,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		Options:        options,
 		service:        service,
 		Proposal:       proposal,
-		policies:       policyRules,
+		policyProvider: policyProvider,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
 		location:       manager.location,

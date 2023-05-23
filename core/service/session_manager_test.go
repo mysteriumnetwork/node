@@ -23,13 +23,16 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -45,14 +48,18 @@ import (
 var (
 	currentProposalID = 68
 	currentProposal   = market.NewProposal("0x1", "mockservice", market.NewProposalOpts{})
-	currentService    = NewInstance(
+
+	mockTrustOracle = httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+	)
+	currentService = NewInstance(
 		identity.FromAddress(currentProposal.ProviderID),
 		currentProposal.ServiceType,
 		struct{}{},
 		currentProposal,
 		servicestate.Running,
 		&mockService{},
-		policy.NewRepository(),
+		localcopy.NewRepository(),
 		&mockDiscovery{},
 	)
 	consumerID = identity.FromAddress("deadbeef")
@@ -121,7 +128,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		history := publisher.GetEventHistory()
-		if len(history) != 6 {
+		if len(history) != 7 {
 			return false
 		}
 
@@ -142,15 +149,19 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[3].Topic)
 		traceEvent3 := history[3].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (start)", traceEvent3.Key)
+		assert.Equal(t, "Session validation", traceEvent3.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[4].Topic)
 		traceEvent4 := history[4].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (payment)", traceEvent4.Key)
+		assert.Equal(t, "Provider session create (start)", traceEvent4.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[5].Topic)
 		traceEvent5 := history[5].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (configure)", traceEvent5.Key)
+		assert.Equal(t, "Provider session create (payment)", traceEvent5.Key)
+
+		assert.Equal(t, trace.AppTopicTraceEvent, history[6].Topic)
+		traceEvent6 := history[6].Event.(trace.Event)
+		assert.Equal(t, "Provider session create (configure)", traceEvent6.Key)
 
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
@@ -177,7 +188,7 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 	assert.EqualError(t, err, "first invoice was not paid: sorry, your money ended")
 	assert.Eventually(t, func() bool {
 		history := publisher.GetEventHistory()
-		if len(history) != 6 {
+		if len(history) != 7 {
 			return false
 		}
 
@@ -198,14 +209,18 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[3].Topic)
 		traceEvent3 := history[3].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (start)", traceEvent3.Key)
+		assert.Equal(t, "Session validation", traceEvent3.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[4].Topic)
 		traceEvent4 := history[4].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (payment)", traceEvent4.Key)
+		assert.Equal(t, "Provider session create (start)", traceEvent4.Key)
 
-		assert.Equal(t, sessionEvent.AppTopicSession, history[5].Topic)
-		closeEvent := history[5].Event.(sessionEvent.AppEventSession)
+		assert.Equal(t, trace.AppTopicTraceEvent, history[5].Topic)
+		traceEvent5 := history[5].Event.(trace.Event)
+		assert.Equal(t, "Provider session create (payment)", traceEvent5.Key)
+
+		assert.Equal(t, sessionEvent.AppTopicSession, history[6].Topic)
+		closeEvent := history[6].Event.(sessionEvent.AppEventSession)
 		assert.Equal(t, sessionEvent.RemovedStatus, closeEvent.Status)
 		assert.Equal(t, consumerID, closeEvent.Session.ConsumerID)
 		assert.Equal(t, hermesID, closeEvent.Session.HermesID)

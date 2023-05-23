@@ -21,8 +21,9 @@ import (
 	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
+
 	"github.com/miekg/dns"
-	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
@@ -164,8 +165,8 @@ func Test_WhitelistAnswers(t *testing.T) {
 	}
 }
 
-func createPolicies() *policy.Repository {
-	repo := policy.NewRepository()
+func createPolicies() *localcopy.Repository {
+	repo := localcopy.NewRepository()
 	repo.SetPolicyRules(policyDNSZone, policyDNSZoneRules)
 	repo.SetPolicyRules(policyDNSHostname, policyDNSHostnameRules)
 	return repo

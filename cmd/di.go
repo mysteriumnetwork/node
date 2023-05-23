@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
+
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -47,7 +50,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/payout"
-	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -141,7 +143,8 @@ type Dependencies struct {
 
 	dnsProxy *dns.Proxy
 
-	PolicyOracle *policy.Oracle
+	PolicyOracle   *localcopy.Oracle
+	PolicyProvider policy.Provider
 
 	SessionStorage                   *consumer_session.Storage
 	SessionConnectivityStatusStorage connectivity.StatusStorage

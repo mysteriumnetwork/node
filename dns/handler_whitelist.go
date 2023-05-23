@@ -20,8 +20,9 @@ package dns
 import (
 	"strings"
 
-	"github.com/miekg/dns"
 	"github.com/mysteriumnetwork/node/core/policy"
+
+	"github.com/miekg/dns"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/rs/zerolog/log"
 )
@@ -30,7 +31,7 @@ import (
 func WhitelistAnswers(
 	resolver dns.Handler,
 	trafficBlocker firewall.IncomingTrafficFirewall,
-	policies *policy.Repository,
+	policies policy.Provider,
 ) dns.Handler {
 	return &whitelistHandler{
 		resolver:       resolver,
@@ -42,7 +43,7 @@ func WhitelistAnswers(
 type whitelistHandler struct {
 	resolver       dns.Handler
 	trafficBlocker firewall.IncomingTrafficFirewall
-	policies       *policy.Repository
+	policies       policy.Provider
 }
 
 func (wh *whitelistHandler) ServeDNS(writer dns.ResponseWriter, req *dns.Msg) {

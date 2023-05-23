@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -169,6 +170,18 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 		return pb.SessionResponse{}, fmt.Errorf("cannot create new session: %w", err)
 	}
 
+	prices := manager.remapPricing(request.Consumer.Pricing)
+
+	var validationError error
+	validationWG := sync.WaitGroup{}
+	validationWG.Add(1)
+	go func() {
+		trace := session.tracer.StartStage("Session validation")
+		validationError = manager.validateSession(session, prices)
+		session.tracer.EndStage(trace)
+		validationWG.Done()
+	}()
+
 	rt := reftracker.Singleton()
 	chID := "channel:" + manager.channel.ID()
 
@@ -196,11 +209,15 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 		log.Debug().Msgf("Provider connection trace: %s", traceResult)
 	}()
 
-	prices := manager.remapPricing(request.Consumer.Pricing)
+	validationWG.Wait()
+	if validationError != nil {
+		return pb.SessionResponse{}, validationError
+	}
 
 	if err = manager.startSession(session, prices); err != nil {
 		return pb.SessionResponse{}, err
 	}
+
 	if err = manager.paymentLoop(session, prices); err != nil {
 		return pb.SessionResponse{}, err
 	}
@@ -249,10 +266,6 @@ func (manager *SessionManager) startSession(session *Session, prices market.Pric
 	trace := session.tracer.StartStage("Provider session create (start)")
 	defer session.tracer.EndStage(trace)
 
-	if err := manager.validateSession(session, prices); err != nil {
-		return err
-	}
-
 	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
 
 	manager.sessionStorage.Add(session)
@@ -267,7 +280,7 @@ func (manager *SessionManager) startSession(session *Session, prices market.Pric
 }
 
 func (manager *SessionManager) validateSession(session *Session, prices market.Price) error {
-	if !manager.service.Policies().IsIdentityAllowed(session.ConsumerID) {
+	if !manager.service.PolicyProvider().IsIdentityAllowed(session.ConsumerID) {
 		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
 	}
 
