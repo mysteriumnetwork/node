@@ -20,13 +20,15 @@ package cmd
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/policy/requested"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/dns"
@@ -253,12 +255,18 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 
 	di.ServiceSessions = service.NewSessionPool(di.EventBus)
 
-	di.PolicyOracle = policy.NewOracle(
+	di.PolicyOracle = localcopy.NewOracle(
 		di.HTTPClient,
 		config.GetString(config.FlagAccessPolicyAddress),
 		config.GetDuration(config.FlagAccessPolicyFetchInterval),
+		config.GetBool(config.FlagAccessPolicyFetchingEnabled),
 	)
 	go di.PolicyOracle.Start()
+
+	di.PolicyProvider = requested.NewRequestedProvider(
+		di.HTTPClient,
+		config.GetString(config.FlagAccessPolicyAddress),
+	)
 
 	di.HermesStatusChecker = pingpong.NewHermesStatusChecker(di.BCHelper, di.ObserverAPI, nodeOptions.Payments.HermesStatusRecheckInterval)
 
@@ -292,6 +300,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		di.DiscoveryFactory,
 		di.EventBus,
 		di.PolicyOracle,
+		di.PolicyProvider,
 		di.P2PListener,
 		newP2PSessionHandler,
 		di.SessionConnectivityStatusStorage,

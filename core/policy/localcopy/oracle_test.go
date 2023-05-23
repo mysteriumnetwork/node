@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package policy
+package localcopy
 
 import (
 	"fmt"
@@ -180,7 +180,12 @@ func Test_Oracle_StartSyncsPolicies(t *testing.T) {
 }
 
 func Test_PolicyRepository_StartMultipleTimes(t *testing.T) {
-	oracle := NewOracle(requests.NewHTTPClient("0.0.0.0", time.Second), "http://policy.localhost", time.Minute)
+	oracle := NewOracle(
+		requests.NewHTTPClient("0.0.0.0", time.Second),
+		"http://policy.localhost",
+		time.Minute,
+		true,
+	)
 	go oracle.Start()
 	oracle.Stop()
 
@@ -193,6 +198,7 @@ func createEmptyOracle(mockServerURL string) *Oracle {
 		requests.NewHTTPClient("0.0.0.0", 100*time.Millisecond),
 		mockServerURL+"/",
 		time.Minute,
+		true,
 	)
 }
 
@@ -201,6 +207,7 @@ func createFilledOracle(mockServerURL string, interval time.Duration, repo *Repo
 		requests.NewHTTPClient("0.0.0.0", time.Second),
 		mockServerURL+"/",
 		interval,
+		true,
 	)
 	oracle.SubscribePolicies(
 		[]market.AccessPolicy{oracle.Policy("1"), oracle.Policy("2")},

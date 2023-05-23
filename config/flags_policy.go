@@ -37,6 +37,12 @@ var (
 		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
 		Value: 10 * time.Minute,
 	}
+	// FlagAccessPolicyFetchingEnabled policy list fetch enable
+	FlagAccessPolicyFetchingEnabled = cli.BoolFlag{
+		Name:  "access-policy.fetching-enabled",
+		Usage: "Enable periodic fetching of access policies and saving to memory (allows support for whitelist types other than identity)",
+		Value: false,
+	}
 )
 
 // RegisterFlagsPolicy function registers Policy Oracle flags to flag list.
@@ -44,6 +50,7 @@ func RegisterFlagsPolicy(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		&FlagAccessPolicyAddress,
 		&FlagAccessPolicyFetchInterval,
+		&FlagAccessPolicyFetchingEnabled,
 	)
 }
 
@@ -51,4 +58,5 @@ func RegisterFlagsPolicy(flags *[]cli.Flag) {
 func ParseFlagsPolicy(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)
+	Current.ParseBoolFlag(ctx, FlagAccessPolicyFetchingEnabled)
 }

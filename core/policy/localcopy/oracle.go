@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package policy
+package localcopy
 
 import (
 	"fmt"
@@ -44,24 +44,29 @@ type Oracle struct {
 	fetchInterval      time.Duration
 	fetchLock          sync.RWMutex
 	fetchSubscriptions []policySubscription
+	fetchingEnabled    bool
 
 	fetchShutdown     chan struct{}
 	fetchShutdownOnce sync.Once
 }
 
 // NewOracle create instance of policy fetcher
-func NewOracle(client *requests.HTTPClient, policyURL string, interval time.Duration) *Oracle {
+func NewOracle(client *requests.HTTPClient, policyURL string, interval time.Duration, fetchingEnabled bool) *Oracle {
 	return &Oracle{
 		client:             client,
 		fetchURL:           policyURL,
 		fetchInterval:      interval,
 		fetchSubscriptions: make([]policySubscription, 0),
+		fetchingEnabled:    fetchingEnabled,
 		fetchShutdown:      make(chan struct{}),
 	}
 }
 
 // Start begins fetching policies to subscribers
 func (pr *Oracle) Start() {
+	if !pr.fetchingEnabled {
+		return
+	}
 	for {
 		select {
 		case <-pr.fetchShutdown:
@@ -114,6 +119,9 @@ func (pr *Oracle) Policies(policyIDs []string) []market.AccessPolicy {
 
 // SubscribePolicies adds given policies to repository and syncs changes of it's items from TrustOracle
 func (pr *Oracle) SubscribePolicies(policies []market.AccessPolicy, repository *Repository) error {
+	if !pr.fetchingEnabled {
+		return nil
+	}
 	pr.fetchLock.Lock()
 	defer pr.fetchLock.Unlock()
 
@@ -134,6 +142,11 @@ func (pr *Oracle) SubscribePolicies(policies []market.AccessPolicy, repository *
 
 	pr.fetchSubscriptions = subscriptionsNew
 	return nil
+}
+
+// PeriodicFetchingEnabled returns if periodic fetching is enabled
+func (pr *Oracle) PeriodicFetchingEnabled() bool {
+	return pr.fetchingEnabled
 }
 
 func (pr *Oracle) fetchPolicyRules(subscription *policySubscription) error {
