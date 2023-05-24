@@ -374,7 +374,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain1KnownHermeses)
 		nodeOptions.Chains.Chain1.KnownHermeses = config.GetStringSlice(config.FlagChain2KnownHermeses)
 		nodeOptions.Consumer = false
-		nodeOptions.TequilapiEnabled = true
+		nodeOptions.TequilapiEnabled = options.TequilapiSecured
 		nodeOptions.TequilapiPort = 4050
 		nodeOptions.TequilapiAddress = "127.0.0.1"
 		nodeOptions.TequilapiSecured = options.TequilapiSecured
