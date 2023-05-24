@@ -63,6 +63,11 @@ func (mb *MobileNode) StartProvider() {
 	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
 	if len(activeServices) != 0 {
 		serviceTypes = strings.Split(activeServices, ",")
+	} else {
+		// on the first run
+		if config.Current.GetString("terms.provider-agreed") == "" {
+			serviceTypes = getAllServiceTypes()
+		}
 	}
 
 	for _, serviceType := range serviceTypes {
