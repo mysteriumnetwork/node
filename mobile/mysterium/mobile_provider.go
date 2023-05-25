@@ -64,9 +64,9 @@ func (mb *MobileNode) StartProvider() {
 	if len(activeServices) != 0 {
 		serviceTypes = strings.Split(activeServices, ",")
 	} else {
-		// on the first run
+		// on the first run enable data scraping service
 		if config.Current.GetString("terms.provider-agreed") == "" {
-			serviceTypes = getAllServiceTypes()
+			serviceTypes = []string{scraping.ServiceType}
 		}
 	}
 
