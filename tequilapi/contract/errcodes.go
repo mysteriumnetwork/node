@@ -73,9 +73,11 @@ const (
 
 	// MMN
 
-	ErrCodeMMNNodeAlreadyClaimed = "err_mmn_node_already_claimed"
-	ErrCodeMMNAPIKey             = "err_mmn_api_key"
-	ErrCodeMMNRegistration       = "err_mmn_registration"
+	ErrCodeMMNNodeAlreadyClaimed      = "err_mmn_node_already_claimed"
+	ErrCodeMMNAPIKey                  = "err_mmn_api_key"
+	ErrCodeMMNRegistration            = "err_mmn_registration"
+	ErrCodeMMNClaimRedirectURLMissing = "err_mmn_claim_redirect_url_missing"
+	ErrCodeMMNClaimLink               = "err_mmn_claim_link"
 
 	// NAT
 
