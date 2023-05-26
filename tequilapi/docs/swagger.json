@@ -1244,6 +1244,30 @@
         }
       }
     },
+    "/mmn/claim-link": {
+      "get": {
+        "description": "Generates claim link to claim Node on mystnodes.com with a click",
+        "tags": [
+          "MMN"
+        ],
+        "summary": "Generate claim link",
+        "operationId": "getClaimLink",
+        "responses": {
+          "200": {
+            "description": "Link response",
+            "schema": {
+              "$ref": "#/definitions/MMNClaimLinkResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/mmn/report": {
       "get": {
         "description": "returns MMN's API key",
@@ -4312,6 +4336,17 @@
         "api_key": {
           "type": "string",
           "x-go-name": "ApiKey"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "MMNClaimLinkResponse": {
+      "description": "MMNClaimLinkResponse claim link response",
+      "type": "object",
+      "properties": {
+        "link": {
+          "type": "string",
+          "x-go-name": "Link"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
