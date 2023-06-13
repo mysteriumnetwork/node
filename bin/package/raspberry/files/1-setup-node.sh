@@ -21,6 +21,10 @@ add_apt_source "deb http://deb.debian.org/debian/ unstable main" "/etc/apt/sourc
 wget -O - https://ftp-master.debian.org/keys/archive-key-$(lsb_release -sr).asc | sudo apt-key add -
 printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' | sudo tee --append /etc/apt/preferences.d/limit-unstable
 
+# Import missing keys
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131
+
 apt-get update --allow-releaseinfo-change
 
 # Install myst dependencies
