@@ -1,5 +1,3 @@
-//go:build mobile_provider
-
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -61,8 +59,20 @@ func (mb *MobileNode) StartProvider() {
 
 	serviceTypes := make([]string, 0)
 	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
-	if len(activeServices) != 0 {
+	if len(activeServices) > 0 {
 		serviceTypes = strings.Split(activeServices, ",")
+	} else {
+		if len(mb.stoppedServices) > 0 {
+			// restore stopped service
+			serviceTypes = mb.stoppedServices
+			mb.stoppedServices = mb.stoppedServices[:0]
+		} else {
+
+			// on the first run enable data scraping service
+			if config.Current.GetString("terms.provider-agreed") == "" {
+				serviceTypes = []string{scraping.ServiceType}
+			}
+		}
 	}
 
 	for _, serviceType := range serviceTypes {
@@ -87,6 +97,8 @@ func (mb *MobileNode) StopProvider() {
 			continue
 		}
 
+		mb.stoppedServices = append(mb.stoppedServices, srv.Type)
+
 		err := mb.servicesManager.Stop(srv.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("servicesManager.Stop failed")
@@ -110,6 +122,7 @@ func GetServiceTypes() ([]byte, error) {
 	return json.Marshal(&result)
 }
 
+// ServicesState - state of service
 type ServicesState struct {
 	Service string `json:"id"`
 	State   string `json:"state"`

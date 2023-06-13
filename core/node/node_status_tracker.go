@@ -18,8 +18,6 @@
 package node
 
 import (
-	"github.com/mysteriumnetwork/node/core"
-
 	"github.com/mysteriumnetwork/node/identity"
 )
 
@@ -79,23 +77,11 @@ func (k *MonitoringStatusTracker) Status() MonitoringStatus {
 }
 
 func resolveMonitoringStatus(sessions []Session) MonitoringStatus {
-	wgSession, ok := findWireGuard(sessions)
-	if !ok {
-		return Pending
-	}
-
-	if wgSession.MonitoringFailed {
-		return Failed
-	}
-	return Passed
-}
-
-// openvpn is considered deprecated
-func findWireGuard(sessions []Session) (Session, bool) {
 	for _, s := range sessions {
-		if s.ServiceType == core.WireGuard.String() {
-			return s, true
+		if s.MonitoringFailed {
+			return Failed
 		}
 	}
-	return Session{}, false
+
+	return Passed
 }
