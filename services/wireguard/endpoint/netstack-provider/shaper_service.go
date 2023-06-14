@@ -24,6 +24,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const AppTopicConfigShaper = "config:shaper"
+
 var rateLimiter *rate.Limiter
 
 func getRateLimitter() *rate.Limiter {
@@ -31,24 +33,21 @@ func getRateLimitter() *rate.Limiter {
 }
 
 func InitUserspaceShaper(eventBus eventbus.EventBus) {
-
 	applyLimits := func(e interface{}) {
 		bandwidthBytes := config.GetUInt64(config.FlagShaperBandwidth) * 1024
 		bandwidth := rate.Limit(bandwidthBytes)
 		if !config.GetBool(config.FlagShaperEnabled) {
 			bandwidth = rate.Inf
 		}
-		log.Warn().Msgf("Shaper bandwidth: %v", config.GetUInt64(config.FlagShaperBandwidth))
+		log.Info().Msgf("Shaper bandwidth: %v", config.GetUInt64(config.FlagShaperBandwidth))
 		rateLimiter.SetLimit(bandwidth)
 	}
 
-	bandwidthBytes := config.GetUInt64(config.FlagShaperBandwidth) * 1024
-	bandwidth := rate.Limit(bandwidthBytes)
-	log.Warn().Msgf("Shaper bandwidth: %v", config.GetUInt64(config.FlagShaperBandwidth))
-	rateLimiter = rate.NewLimiter(bandwidth, int(bandwidthBytes))
+	rateLimiter = rate.NewLimiter(rate.Inf, 0)
+	applyLimits(nil)
 
-	err := eventBus.SubscribeAsync("config:shaper", applyLimits)
+	err := eventBus.SubscribeAsync(AppTopicConfigShaper, applyLimits)
 	if err != nil {
-		log.Warn().Msgf("could not subscribe to topic: %v", err)
+		log.Error().Msgf("could not subscribe to topic: %v", err)
 	}
 }
