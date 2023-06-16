@@ -76,13 +76,6 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol, icmp.NewProtocol6, icmp.NewProtocol4},
 	}
 
-	var limiter *rate.Limiter
-	if config.GetBool(config.FlagShaperEnabled) {
-		log.Warn().Msgf("Shaper bandwidth: %v", config.GetUInt64(config.FlagShaperBandwidth))
-		bandwidthBytes := config.GetUInt64(config.FlagShaperBandwidth) * 1024
-		limiter = rate.NewLimiter(rate.Limit(bandwidthBytes), int(bandwidthBytes))
-	}
-
 	privateIPv4Blocks := parseCIDR(strings.Split(config.FlagFirewallProtectedNetworks.GetValue(), ","))
 	dev := &netTun{
 		ep:                channel.New(1024, uint32(mtu), ""),
@@ -92,7 +85,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		mtu:               mtu,
 		dnsPort:           dnsPort,
 		localAddresses:    localAddresses,
-		limiter:           limiter,
+		limiter:           getRateLimitter(),
 		privateIPv4Blocks: privateIPv4Blocks,
 	}
 
