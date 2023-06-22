@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/services/datatransfer"
@@ -57,25 +58,44 @@ func (mb *MobileNode) StartProvider() {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	serviceTypes := make([]string, 0)
-	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
-	if len(activeServices) > 0 {
-		serviceTypes = strings.Split(activeServices, ",")
-	} else {
-		if len(mb.stoppedServices) > 0 {
-			// restore stopped service
-			serviceTypes = mb.stoppedServices
-			mb.stoppedServices = mb.stoppedServices[:0]
-		} else {
+	serviceTypes := strings.Split(config.Current.GetString(config.FlagActiveServices.Name), ",")
+	if len(serviceTypes) == 1 && serviceTypes[0] == "" {
+		serviceTypes = serviceTypes[:0]
+	}
+	stoppedServices := strings.Split(config.Current.GetString(config.FlagStoppedServices.Name), ",")
+	if len(stoppedServices) == 1 && stoppedServices[0] == "" {
+		stoppedServices = stoppedServices[:0]
+	}
 
+	if len(serviceTypes) == 0 {
+		if len(stoppedServices) > 0 {
+			// restore stopped service
+			serviceTypes = stoppedServices
+			stoppedServices = stoppedServices[:0]
+		} else {
 			// on the first run enable data scraping service
-			if config.Current.GetString("terms.provider-agreed") == "" {
+			if config.Current.GetString(contract.TermsProviderAgreed) == "" {
 				serviceTypes = []string{scraping.ServiceType}
 			}
 		}
 	}
 
+	setUserConfigRaw(config.FlagStoppedServices.Name, strings.Join(stoppedServices, ","))
+	setUserConfigRaw(config.FlagActiveServices.Name, strings.Join(serviceTypes, ","))
+	config.Current.SaveUserConfig()
+
+	// set of services to be started
+	serviceTypesSet := make(map[string]bool)
 	for _, serviceType := range serviceTypes {
+		serviceTypesSet[serviceType] = true
+	}
+	for _, srv := range mb.servicesManager.List(true) {
+		if srv.State() == servicestate.Running {
+			delete(serviceTypesSet, srv.Type)
+		}
+	}
+
+	for serviceType := range serviceTypesSet {
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
 			log.Error().Err(err).Msg("GetStartOptions failed")
@@ -92,19 +112,23 @@ func (mb *MobileNode) StartProvider() {
 
 // StopProvider stops all provider services, started by StartProvider
 func (mb *MobileNode) StopProvider() {
+	stoppedServices := []string{}
 	for _, srv := range mb.servicesManager.List(true) {
 		if srv.State() != servicestate.Running {
 			continue
 		}
 
-		mb.stoppedServices = append(mb.stoppedServices, srv.Type)
-
+		stoppedServices = append(stoppedServices, srv.Type)
 		err := mb.servicesManager.Stop(srv.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("servicesManager.Stop failed")
 			return
 		}
 	}
+
+	setUserConfigRaw(config.FlagStoppedServices.Name, strings.Join(stoppedServices, ","))
+	setUserConfigRaw(config.FlagActiveServices.Name, "")
+	config.Current.SaveUserConfig()
 }
 
 // SetFlagLauncherVersion sets LauncherVersion flag value, which is reported to Prometheus

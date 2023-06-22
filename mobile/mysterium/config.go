@@ -79,3 +79,7 @@ func setUserConfig(key, value string) error {
 	config.Current.SetUser(key, value)
 	return config.Current.SaveUserConfig()
 }
+
+func setUserConfigRaw(key string, value interface{}) {
+	config.Current.SetUser(key, value)
+}

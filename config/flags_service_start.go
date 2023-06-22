@@ -69,6 +69,13 @@ var (
 		Usage: "Comma separated list of active services.",
 		Value: strings.Join([]string{"wireguard", "scraping", "data_transfer"}, ","),
 	}
+
+	// FlagStoppedServices a comma-separated list of stopped services.
+	FlagStoppedServices = cli.StringFlag{
+		Name:  "stopped-services",
+		Usage: "Comma separated list of stopped services.",
+		Value: strings.Join([]string{}, ","),
+	}
 )
 
 // RegisterFlagsServiceStart registers CLI flags used to start a service.
@@ -81,6 +88,7 @@ func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 		&FlagPaymentPriceHour,
 		&FlagAccessPolicyList,
 		&FlagActiveServices,
+		&FlagStoppedServices,
 	)
 }
 
@@ -93,4 +101,5 @@ func ParseFlagsServiceStart(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentPriceHour)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
 	Current.ParseStringFlag(ctx, FlagActiveServices)
+	Current.ParseStringFlag(ctx, FlagStoppedServices)
 }

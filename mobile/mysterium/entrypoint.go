@@ -97,9 +97,6 @@ type MobileNode struct {
 	hermesMigrator            *migration.HermesMigrator
 	servicesManager           *service.Manager
 	earningsProvider          earningsProvider
-
-	// restore active services after StopProvider()
-	stoppedServices []string
 }
 
 type earningsProvider interface {
@@ -435,7 +432,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	if options.IsProvider {
 		mobileNode.servicesManager = di.ServicesManager
-		mobileNode.stoppedServices = make([]string, 0)
 	}
 
 	return mobileNode, nil
