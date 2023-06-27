@@ -60,19 +60,21 @@ func (mb *MobileNode) StartProvider() {
 
 	serviceTypes := strings.Split(config.Current.GetString(config.FlagActiveServices.Name), ",")
 	if len(serviceTypes) == 1 && serviceTypes[0] == "" {
-		serviceTypes = serviceTypes[:0]
+		serviceTypes = []string{}
 	}
 	stoppedServices := strings.Split(config.Current.GetString(config.FlagStoppedServices.Name), ",")
 	if len(stoppedServices) == 1 && stoppedServices[0] == "" {
-		stoppedServices = stoppedServices[:0]
+		stoppedServices = []string{}
 	}
 
 	if len(serviceTypes) == 0 {
 		if len(stoppedServices) > 0 {
+
 			// restore stopped service
 			serviceTypes = stoppedServices
-			stoppedServices = stoppedServices[:0]
+			stoppedServices = []string{}
 		} else {
+
 			// on the first run enable data scraping service
 			if config.Current.GetString(contract.TermsProviderAgreed) == "" {
 				serviceTypes = []string{scraping.ServiceType}
@@ -112,17 +114,32 @@ func (mb *MobileNode) StartProvider() {
 
 // StopProvider stops all provider services, started by StartProvider
 func (mb *MobileNode) StopProvider() {
-	stoppedServices := []string{}
+	haveActive := false
 	for _, srv := range mb.servicesManager.List(true) {
-		if srv.State() != servicestate.Running {
-			continue
+		if srv.State() == servicestate.Running {
+			haveActive = true
+			break
 		}
+	}
 
-		stoppedServices = append(stoppedServices, srv.Type)
-		err := mb.servicesManager.Stop(srv.ID)
-		if err != nil {
-			log.Error().Err(err).Msg("servicesManager.Stop failed")
-			return
+	stoppedServices := strings.Split(config.Current.GetString(config.FlagStoppedServices.Name), ",")
+	if len(stoppedServices) == 1 && stoppedServices[0] == "" {
+		stoppedServices = []string{}
+	}
+
+	if haveActive {
+		stoppedServices = []string{}
+		for _, srv := range mb.servicesManager.List(true) {
+			if srv.State() != servicestate.Running {
+				continue
+			}
+
+			stoppedServices = append(stoppedServices, srv.Type)
+			err := mb.servicesManager.Stop(srv.ID)
+			if err != nil {
+				log.Error().Err(err).Msg("servicesManager.Stop failed")
+				return
+			}
 		}
 	}
 
