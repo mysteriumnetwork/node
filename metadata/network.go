@@ -154,7 +154,6 @@ var TestnetDefinition = NetworkDefinition{
 		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
 		EtherClientRPC: []string{
 			"https://polygon-mumbai1.mysterium.network",
-			"https://matic-mumbai.chainstacklabs.com",
 		},
 		KnownHermeses: []string{
 			"0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
