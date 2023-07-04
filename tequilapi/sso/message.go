@@ -28,7 +28,8 @@ type MystnodesMessage struct {
 	RedirectURL   string `json:"redirectUrl"` // http://guillem.nodeUI
 }
 
-func (msg MystnodesMessage) json() ([]byte, error) {
+// JSON convenience receiver to convert MystnodesMessage struct to []byte
+func (msg MystnodesMessage) JSON() ([]byte, error) {
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		return []byte{}, err

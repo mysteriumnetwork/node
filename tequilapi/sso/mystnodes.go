@@ -123,7 +123,7 @@ func (m *Mystnodes) SSOLink(redirectURL *url.URL) (*url.URL, error) {
 	}
 
 	m.lastCodeVerifierBase64url = info.Base64URLCodeVerifier()
-	messageJson, err := m.message(info, fmt.Sprint(redirectURL)).json()
+	messageJson, err := m.message(info, fmt.Sprint(redirectURL)).JSON()
 	if err != nil {
 		return &url.URL{}, err
 	}

@@ -163,7 +163,7 @@ func (api *mmnAPI) ClearApiKey(c *gin.Context) {
 //	  200:
 //	    description: Link response
 //	    schema:
-//	      "$ref": "#/definitions/MMNClaimLinkResponse"
+//	      "$ref": "#/definitions/MMNLinkRedirectResponse"
 //	  500:
 //	    description: Internal server error
 //	    schema:
@@ -188,8 +188,52 @@ func (api *mmnAPI) GetClaimLink(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &contract.MMNClaimLinkResponse{Link: link.String()})
+	c.JSON(http.StatusOK, &contract.MMNLinkRedirectResponse{Link: link.String()})
 }
+
+// GetOnboardingLink generates claim link for mystnodes.com
+// swagger:operation GET /mmn/onboarding MMN getClaimLink
+//
+//	---
+//
+//	summary: Generate onboarding link
+//	description: Generates onboarding link for one click onboarding
+//	responses:
+//	  200:
+//	    description: Link response
+//	    schema:
+//	      "$ref": "#/definitions/MMNLinkRedirectResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+func (api *mmnAPI) GetOnboardingLink(c *gin.Context) {
+	redirectQuery := c.Query("redirect_uri")
+
+	if redirectQuery == "" {
+		c.Error(apierror.BadRequest("redirect_uri missing", contract.ErrCodeMMNClaimRedirectURLMissing))
+		return
+	}
+
+	redirectURL, err := url.Parse(redirectQuery)
+	if err != nil {
+		c.Error(apierror.BadRequest("redirect_uri malformed", contract.ErrCodeMMNClaimRedirectURLMissing))
+		return
+	}
+
+	link, err := api.mmn.OnboardingLink(redirectURL)
+	if err != nil {
+		c.Error(apierror.Internal("Failed to generate claim link", contract.ErrCodeMMNClaimLink))
+		return
+	}
+
+	c.JSON(http.StatusOK, &contract.MMNLinkRedirectResponse{Link: link.String()})
+}
+
+//func (api *mmnAPI) Onboard(c *gin.Context) {
+//	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNAPIKey.Name)}
+//	utils.WriteAsJSON(res, c.Writer)
+//}
 
 // AddRoutesForMMN registers /mmn endpoints in Tequilapi
 func AddRoutesForMMN(
@@ -204,6 +248,9 @@ func AddRoutesForMMN(
 			g.DELETE("/api-key", api.ClearApiKey)
 
 			g.GET("/claim-link", api.GetClaimLink)
+
+			g.GET("/onboarding", api.GetOnboardingLink)
+			//g.POST("/onboarding", api.Onboard)
 		}
 		return nil
 	}

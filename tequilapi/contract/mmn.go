@@ -38,8 +38,8 @@ func (r MMNApiKeyRequest) Validate() *apierror.APIError {
 	return v.Err()
 }
 
-// MMNClaimLinkResponse claim link response
-// swagger:model MMNClaimLinkResponse
-type MMNClaimLinkResponse struct {
+// MMNLinkRedirectResponse claim link response
+// swagger:model MMNLinkRedirectResponse
+type MMNLinkRedirectResponse struct {
 	Link string `json:"link"`
 }

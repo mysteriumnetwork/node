@@ -27,6 +27,10 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/tequilapi/pkce"
+
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -46,13 +50,14 @@ type MMN struct {
 	lastIP       string
 	lastIdentity identity.Identity
 
-	mystnodesURL string
-	claimPath    string
+	mystnodesURL   string
+	claimPath      string
+	onboardingPath string
 }
 
 // NewMMN creates new instance of MMN
 func NewMMN(resolver ip.Resolver, client *client) *MMN {
-	return &MMN{client: client, ipResolver: resolver, mystnodesURL: config.GetString(config.FlagMMNAddress), claimPath: "/node-claim"}
+	return &MMN{client: client, ipResolver: resolver, mystnodesURL: config.GetString(config.FlagMMNAddress), claimPath: "/node-claim", onboardingPath: "/clickboarding"}
 }
 
 // Subscribe subscribes to node events and reports them to MMN
@@ -122,6 +127,14 @@ func (m *MMN) claimRequest(redirectURL *url.URL) NodeClaimRequest {
 	}
 }
 
+func (m *MMN) onboardingRequest(info pkce.Info, redirectURL *url.URL) sso.MystnodesMessage {
+	return sso.MystnodesMessage{
+		CodeChallenge: info.CodeChallenge,
+		Identity:      m.lastIdentity.Address,
+		RedirectURL:   fmt.Sprint(redirectURL),
+	}
+}
+
 // ClaimNode registers node to MMN
 func (m *MMN) ClaimNode() error {
 	return m.client.ClaimNode(m.claimRequestNoRedirect())
@@ -145,6 +158,38 @@ func (m *MMN) ClaimLink(redirectURL *url.URL) (*url.URL, error) {
 	}
 
 	link = link.JoinPath(m.claimPath)
+
+	q := link.Query()
+	q.Set("message", base64.RawURLEncoding.EncodeToString(claimRequestJson))
+	q.Set("signature", base64.RawURLEncoding.EncodeToString(signature.Bytes()))
+	link.RawQuery = q.Encode()
+
+	return link, nil
+}
+
+// OnboardingLink generates a link with signed payload for one click onboarding via mystnodes.com
+func (m *MMN) OnboardingLink(redirectURL *url.URL) (*url.URL, error) {
+	info, err := pkce.New(128)
+	if err != nil {
+		return nil, err
+	}
+
+	claimRequestJson, err := m.onboardingRequest(info, redirectURL).JSON()
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := m.client.signer(m.lastIdentity).Sign(claimRequestJson)
+	if err != nil {
+		return nil, err
+	}
+
+	link, err := url.Parse(m.mystnodesURL)
+	if err != nil {
+		return nil, err
+	}
+
+	link = link.JoinPath(m.onboardingPath)
 
 	q := link.Query()
 	q.Set("message", base64.RawURLEncoding.EncodeToString(claimRequestJson))
