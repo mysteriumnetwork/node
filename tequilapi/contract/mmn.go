@@ -43,3 +43,10 @@ func (r MMNApiKeyRequest) Validate() *apierror.APIError {
 type MMNLinkRedirectResponse struct {
 	Link string `json:"link"`
 }
+
+// MMNGrantVerificationResponse message received via redirect from mystnodes.com
+// swagger:model MMNGrantVerificationResponse
+type MMNGrantVerificationResponse struct {
+	ApiKey        string `json:"api_key"`
+	WalletAddress string `json:"wallet_address"`
+}

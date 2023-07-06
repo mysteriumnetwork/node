@@ -200,7 +200,7 @@ func (api *authenticationAPI) LoginMystnodesWithGrant(c *gin.Context) {
 		return
 	}
 
-	err = api.ssoMystnodes.VerifyAuthorizationGrant(request.AuthorizationGrant)
+	_, err = api.ssoMystnodes.VerifyAuthorizationGrant(request.AuthorizationGrant, sso.DefaultVerificationOptions)
 	if err != nil {
 		log.Err(err).Msg("failed to verify mystnodes Authorization Grant")
 		c.Error(apierror.Unauthorized())

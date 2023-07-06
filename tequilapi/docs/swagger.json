@@ -1256,7 +1256,53 @@
           "200": {
             "description": "Link response",
             "schema": {
-              "$ref": "#/definitions/MMNClaimLinkResponse"
+              "$ref": "#/definitions/MMNLinkRedirectResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/mmn/onboarding": {
+      "get": {
+        "description": "Generates onboarding link for one click onboarding",
+        "tags": [
+          "MMN"
+        ],
+        "summary": "Generate onboarding link",
+        "operationId": "GetOnboardingLink",
+        "responses": {
+          "200": {
+            "description": "Link response",
+            "schema": {
+              "$ref": "#/definitions/MMNLinkRedirectResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "verify grant for onboarding",
+        "tags": [
+          "MMN"
+        ],
+        "summary": "verify grant for onboarding",
+        "operationId": "VerifyGrant",
+        "responses": {
+          "200": {
+            "description": "Link response",
+            "schema": {
+              "$ref": "#/definitions/MMNGrantVerificationResponse"
             }
           },
           "500": {
@@ -4340,8 +4386,23 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "MMNClaimLinkResponse": {
-      "description": "MMNClaimLinkResponse claim link response",
+    "MMNGrantVerificationResponse": {
+      "description": "MMNGrantVerificationResponse message received via redirect from mystnodes.com",
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "x-go-name": "ApiKey"
+        },
+        "wallet_address": {
+          "type": "string",
+          "x-go-name": "WalletAddress"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "MMNLinkRedirectResponse": {
+      "description": "MMNLinkRedirectResponse claim link response",
       "type": "object",
       "properties": {
         "link": {

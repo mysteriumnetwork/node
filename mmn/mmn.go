@@ -167,38 +167,6 @@ func (m *MMN) ClaimLink(redirectURL *url.URL) (*url.URL, error) {
 	return link, nil
 }
 
-// OnboardingLink generates a link with signed payload for one click onboarding via mystnodes.com
-func (m *MMN) OnboardingLink(redirectURL *url.URL) (*url.URL, error) {
-	info, err := pkce.New(128)
-	if err != nil {
-		return nil, err
-	}
-
-	claimRequestJson, err := m.onboardingRequest(info, redirectURL).JSON()
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := m.client.signer(m.lastIdentity).Sign(claimRequestJson)
-	if err != nil {
-		return nil, err
-	}
-
-	link, err := url.Parse(m.mystnodesURL)
-	if err != nil {
-		return nil, err
-	}
-
-	link = link.JoinPath(m.onboardingPath)
-
-	q := link.Query()
-	q.Set("message", base64.RawURLEncoding.EncodeToString(claimRequestJson))
-	q.Set("signature", base64.RawURLEncoding.EncodeToString(signature.Bytes()))
-	link.RawQuery = q.Encode()
-
-	return link, nil
-}
-
 func getOS() string {
 	switch runtime.GOOS {
 	case "darwin":

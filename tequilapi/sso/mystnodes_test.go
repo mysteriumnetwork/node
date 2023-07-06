@@ -102,7 +102,7 @@ func TestMystnodesSSOGrantVerification(t *testing.T) {
 	assert.NoError(t, err)
 
 	// then
-	err = sso.VerifyAuthorizationGrant("auth_grant")
+	_, err = sso.VerifyAuthorizationGrant("auth_grant", DefaultVerificationOptions)
 	assert.NoError(t, err)
 
 	// when
@@ -112,7 +112,7 @@ func TestMystnodesSSOGrantVerification(t *testing.T) {
 	assert.NoError(t, err)
 
 	// then
-	err = sso.VerifyAuthorizationGrant("auth_grant")
+	_, err = sso.VerifyAuthorizationGrant("auth_grant", DefaultVerificationOptions)
 	assert.Error(t, err)
 }
 
