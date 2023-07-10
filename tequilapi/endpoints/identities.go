@@ -60,6 +60,7 @@ type providerChannel interface {
 
 type identityMover interface {
 	Import(blob []byte, currPass, newPass string) (identity.Identity, error)
+	Export(address, currPass, newPass string) ([]byte, error)
 }
 
 type identitiesAPI struct {
@@ -200,6 +201,51 @@ func (ia *identitiesAPI) Create(c *gin.Context) {
 
 	idDTO := contract.NewIdentityDTO(id)
 	utils.WriteAsJSON(idDTO, c.Writer)
+}
+
+// swagger:operation POST /export export Identity
+//
+//	---
+//	summary: Exports a given identity
+//	description: Creates identity and stores in keystore encrypted with passphrase
+//	parameters:
+//	  - in: body
+//	    name: body
+//	    description: Parameter in body (passphrase) required for creating new identity
+//	    schema:
+//	      $ref: "#/definitions/IdentityExportRequestDTO"
+//	responses:
+//	  200:
+//	    description: Identity created
+//	    schema:
+//	      "$ref": "#/definitions/IdentityExportResponseDTO"
+//	  400:
+//	    description: Failed to parse or request validation failed
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+func (ia *identitiesAPI) Export(c *gin.Context) {
+	var req contract.IdentityExportRequest
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
+	if err != nil {
+		c.Error(apierror.ParseFailed())
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		c.Error(err)
+		return
+	}
+
+	resp, err := ia.mover.Export(req.Identity, "", req.NewPassphrase)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.Writer.Write(resp)
 }
 
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
@@ -751,6 +797,8 @@ func AddRoutesForIdentities(
 			identityGroup.PUT("/:id/balance/refresh", idAPI.BalanceRefresh)
 			identityGroup.POST("/:id/migrate-hermes", idAPI.MigrateHermes)
 			identityGroup.GET("/:id/migrate-hermes/status", idAPI.MigrationHermesStatus)
+			identityGroup.POST("/export", idAPI.Export)
+
 		}
 		e.POST("/identities-import", idAPI.Import)
 		return nil
