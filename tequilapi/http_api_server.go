@@ -74,6 +74,7 @@ func NewServer(
 	g.Use(gin.Recovery())
 	g.Use(cors.New(corsConfig))
 	g.Use(middlewares.NewHostFilter())
+	g.Use(middlewares.NewLocalhostOnlyFilter())
 	g.Use(apierror.ErrorHandler)
 
 	if nodeOptions.TequilapiSecured {
