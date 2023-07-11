@@ -133,6 +133,7 @@ type MobileNodeOptions struct {
 	ObserverAddress                string
 	IsProvider                     bool
 	TequilapiSecured               bool
+	UIFeaturesEnabled              string
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -218,6 +219,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
+	config.Current.SetDefault(config.FlagUIFeatures.Name, options.UIFeaturesEnabled)
 
 	if options.IsProvider {
 		config.Current.SetDefault(config.FlagUserspace.Name, "true")
