@@ -24,6 +24,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/rs/zerolog/log"
@@ -34,6 +36,9 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+const defaultTequilaLogin = "myst"
+const defaultTequilaPass = "mystberry"
+
 type mmnProvider interface {
 	GetString(key string) string
 	SetUser(key string, value interface{})
@@ -42,12 +47,14 @@ type mmnProvider interface {
 }
 
 type mmnAPI struct {
-	config mmnProvider
-	mmn    *mmn.MMN
+	config        mmnProvider
+	mmn           *mmn.MMN
+	ssoMystnodes  *sso.Mystnodes
+	authenticator authenticator
 }
 
-func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
-	return &mmnAPI{config: config, mmn: client}
+func newMMNAPI(config mmnProvider, client *mmn.MMN, ssoMystnodes *sso.Mystnodes, authenticator authenticator) *mmnAPI {
+	return &mmnAPI{config: config, mmn: client, ssoMystnodes: ssoMystnodes, authenticator: authenticator}
 }
 
 // GetApiKey returns MMN's API key
@@ -163,7 +170,7 @@ func (api *mmnAPI) ClearApiKey(c *gin.Context) {
 //	  200:
 //	    description: Link response
 //	    schema:
-//	      "$ref": "#/definitions/MMNClaimLinkResponse"
+//	      "$ref": "#/definitions/MMNLinkRedirectResponse"
 //	  500:
 //	    description: Internal server error
 //	    schema:
@@ -188,14 +195,116 @@ func (api *mmnAPI) GetClaimLink(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &contract.MMNClaimLinkResponse{Link: link.String()})
+	c.JSON(http.StatusOK, &contract.MMNLinkRedirectResponse{Link: link.String()})
+}
+
+func (api *mmnAPI) isDefaultCredentials() bool {
+	err := api.authenticator.CheckCredentials(defaultTequilaLogin, defaultTequilaPass)
+	return err == nil
+}
+
+func (api *mmnAPI) isApiKeySet() bool {
+	apiKey := api.config.GetString(api.config.GetString(config.FlagMMNAPIKey.Name))
+	return apiKey != ""
+}
+
+// GetOnboardingLink generates claim link for mystnodes.com
+// swagger:operation GET /mmn/onboarding MMN GetOnboardingLink
+//
+//	---
+//
+//	summary: Generate onboarding link
+//	description: Generates onboarding link for one click onboarding
+//	responses:
+//	  200:
+//	    description: Link response
+//	    schema:
+//	      "$ref": "#/definitions/MMNLinkRedirectResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+func (api *mmnAPI) GetOnboardingLink(c *gin.Context) {
+	if !api.isDefaultCredentials() || api.isApiKeySet() {
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	redirectQuery := c.Query("redirect_uri")
+
+	if redirectQuery == "" {
+		c.Error(apierror.BadRequest("redirect_uri missing", contract.ErrCodeMMNClaimRedirectURLMissing))
+		return
+	}
+
+	redirectURL, err := url.Parse(redirectQuery)
+	if err != nil {
+		c.Error(apierror.BadRequest("redirect_uri malformed", contract.ErrCodeMMNClaimRedirectURLMissing))
+		return
+	}
+
+	link, err := api.ssoMystnodes.SSOLink(redirectURL)
+	link.Path = "/clickboarding"
+	if err != nil {
+		c.Error(apierror.Internal("Failed to generate claim link", contract.ErrCodeMMNClaimLink))
+		return
+	}
+
+	c.JSON(http.StatusOK, &contract.MMNLinkRedirectResponse{Link: link.String()})
+}
+
+// VerifyGrant verify grant
+// swagger:operation POST /mmn/onboarding MMN VerifyGrant
+//
+//	---
+//
+//	summary: verify grant for onboarding
+//	description: verify grant for onboarding
+//	responses:
+//	  200:
+//	    description: Link response
+//	    schema:
+//	      "$ref": "#/definitions/MMNGrantVerificationResponse"
+//	  500:
+//	    description: Internal server error
+//	    schema:
+//	      "$ref": "#/definitions/APIError"
+func (api *mmnAPI) VerifyGrant(c *gin.Context) {
+	if !api.isDefaultCredentials() || api.isApiKeySet() {
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	var request contract.MystnodesSSOGrantLoginRequest
+	err := json.NewDecoder(c.Request.Body).Decode(&request)
+	if err != nil {
+		log.Err(err).Msg("failed decoding request")
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	vi, err := api.ssoMystnodes.VerifyAuthorizationGrant(request.AuthorizationGrant, sso.VerificationOptions{SkipNodeClaimCheck: true})
+	if err != nil {
+		log.Err(err).Msg("failed to verify mystnodes Authorization Grant")
+		c.Error(apierror.Unauthorized())
+		return
+	}
+
+	r := contract.MMNGrantVerificationResponse{
+		ApiKey:        vi.APIkey,
+		WalletAddress: vi.WalletAddress,
+	}
+
+	c.JSON(http.StatusOK, r)
 }
 
 // AddRoutesForMMN registers /mmn endpoints in Tequilapi
 func AddRoutesForMMN(
 	mmn *mmn.MMN,
+	ssoMystnodes *sso.Mystnodes,
+	authenticator authenticator,
 ) func(*gin.Engine) error {
-	api := newMMNAPI(config.Current, mmn)
+	api := newMMNAPI(config.Current, mmn, ssoMystnodes, authenticator)
 	return func(e *gin.Engine) error {
 		g := e.Group("/mmn")
 		{
@@ -204,6 +313,9 @@ func AddRoutesForMMN(
 			g.DELETE("/api-key", api.ClearApiKey)
 
 			g.GET("/claim-link", api.GetClaimLink)
+
+			g.GET("/onboarding", api.GetOnboardingLink)
+			g.POST("/onboarding/verify-grant", api.VerifyGrant)
 		}
 		return nil
 	}

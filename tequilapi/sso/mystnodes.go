@@ -19,7 +19,9 @@ package sso
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"sync"
@@ -123,7 +125,7 @@ func (m *Mystnodes) SSOLink(redirectURL *url.URL) (*url.URL, error) {
 	}
 
 	m.lastCodeVerifierBase64url = info.Base64URLCodeVerifier()
-	messageJson, err := m.message(info, fmt.Sprint(redirectURL)).json()
+	messageJson, err := m.message(info, fmt.Sprint(redirectURL)).JSON()
 	if err != nil {
 		return &url.URL{}, err
 	}
@@ -145,36 +147,66 @@ func (m *Mystnodes) consumeCodeVerifier() {
 	m.lastCodeVerifierBase64url = ""
 }
 
+// VerifyInfo information gathered during grant verification
+type VerifyInfo struct {
+	APIkey        string
+	WalletAddress string
+}
+
+// DefaultVerificationOptions default options
+var DefaultVerificationOptions = VerificationOptions{SkipNodeClaimCheck: false}
+
+// VerificationOptions options
+type VerificationOptions struct {
+	SkipNodeClaimCheck bool
+}
+
 // VerifyAuthorizationGrant verifies authorization grant against mystnodes.com using PKCE workflow
-func (m *Mystnodes) VerifyAuthorizationGrant(authorizationGrantToken string) error {
+func (m *Mystnodes) VerifyAuthorizationGrant(authorizationGrantToken string, opts VerificationOptions) (VerifyInfo, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	defer m.consumeCodeVerifier()
 
 	if len(m.lastCodeVerifierBase64url) == 0 {
-		return ErrCodeVerifierMissing
+		return VerifyInfo{}, ErrCodeVerifierMissing
 	}
 
 	if len(authorizationGrantToken) == 0 {
-		return ErrAuthorizationGrantTokenMissing
+		return VerifyInfo{}, ErrAuthorizationGrantTokenMissing
 	}
 
 	req, err := requests.NewPostRequest(config.GetString(config.FlagMMNAPIAddress), "auth/sso-verify-grant", contract.MystnodesSSOGrantVerificationRequest{
 		AuthorizationGrant:    authorizationGrantToken,
 		CodeVerifierBase64url: m.lastCodeVerifierBase64url,
 	})
+
+	req.Header.Add("mmn-skip-node-claim-check", fmt.Sprint(opts.SkipNodeClaimCheck))
+
 	if err != nil {
-		return err
+		return VerifyInfo{}, err
 	}
 
 	res, err := m.client.Do(req)
 	if err != nil {
-		return err
+		return VerifyInfo{}, err
 	}
 
 	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return errors.Wrap(ErrMystnodesAuthorizationFail, fmt.Sprintf("mystnodes SSO grant verification responded with %d", res.StatusCode))
+		return VerifyInfo{}, errors.Wrap(ErrMystnodesAuthorizationFail, fmt.Sprintf("mystnodes SSO grant verification responded with %d", res.StatusCode))
 	}
 
-	return nil
+	defer res.Body.Close()
+	var vi VerifyInfo
+
+	bytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return VerifyInfo{}, err
+	}
+
+	err = json.Unmarshal(bytes, &vi)
+	if err != nil {
+		return VerifyInfo{}, err
+	}
+
+	return vi, nil
 }

@@ -27,6 +27,10 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/tequilapi/pkce"
+
+	"github.com/mysteriumnetwork/node/tequilapi/sso"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -46,13 +50,14 @@ type MMN struct {
 	lastIP       string
 	lastIdentity identity.Identity
 
-	mystnodesURL string
-	claimPath    string
+	mystnodesURL   string
+	claimPath      string
+	onboardingPath string
 }
 
 // NewMMN creates new instance of MMN
 func NewMMN(resolver ip.Resolver, client *client) *MMN {
-	return &MMN{client: client, ipResolver: resolver, mystnodesURL: config.GetString(config.FlagMMNAddress), claimPath: "/node-claim"}
+	return &MMN{client: client, ipResolver: resolver, mystnodesURL: config.GetString(config.FlagMMNAddress), claimPath: "/node-claim", onboardingPath: "/clickboarding"}
 }
 
 // Subscribe subscribes to node events and reports them to MMN
@@ -119,6 +124,14 @@ func (m *MMN) claimRequest(redirectURL *url.URL) NodeClaimRequest {
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
 		RedirectURL: rru,
+	}
+}
+
+func (m *MMN) onboardingRequest(info pkce.Info, redirectURL *url.URL) sso.MystnodesMessage {
+	return sso.MystnodesMessage{
+		CodeChallenge: info.CodeChallenge,
+		Identity:      m.lastIdentity.Address,
+		RedirectURL:   fmt.Sprint(redirectURL),
 	}
 }
 
