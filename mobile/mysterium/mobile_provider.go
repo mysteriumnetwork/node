@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/services/datatransfer"
+	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 )
@@ -113,7 +114,7 @@ func SetFlagLauncherVersion(val string) {
 }
 
 func getAllServiceTypes() []string {
-	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
+	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}
 }
 
 // GetServiceTypes returns all possible service types

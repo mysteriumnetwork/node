@@ -183,10 +183,12 @@ type EarningsPerService struct {
 	EarningsPublic        string `json:"public"`
 	EarningsVPN           string `json:"data_transfer"`
 	EarningsScraping      string `json:"scraping"`
+	EarningsDVPN          string `json:"dvpn"`
 	EarningsTotal         string `json:"total"`
 	TotalEarningsPublic   string `json:"total_public"`
 	TotalEarningsVPN      string `json:"total_data_transfer"`
 	TotalEarningsScraping string `json:"total_scraping"`
+	TotalEarningsDVPN     string `json:"total_dvpn"`
 }
 
 // Sessions retrieves and resolved monitoring status from quality oracle
