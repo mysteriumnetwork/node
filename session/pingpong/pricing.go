@@ -18,6 +18,8 @@
 package pingpong
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -66,6 +68,10 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 							PricePerHour: defaultPrice.PricePerHour,
 							PricePerGiB:  defaultPrice.PricePerGiB,
 						},
+						DVPN: &market.Price{
+							PricePerHour: defaultPrice.PricePerHour,
+							PricePerGiB:  defaultPrice.PricePerGiB,
+						},
 					},
 					Other: &market.PriceByServiceType{
 						Wireguard: &market.Price{
@@ -77,6 +83,10 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 							PricePerGiB:  defaultPrice.PricePerGiB,
 						},
 						DataTransfer: &market.Price{
+							PricePerHour: defaultPrice.PricePerHour,
+							PricePerGiB:  defaultPrice.PricePerGiB,
+						},
+						DVPN: &market.Price{
 							PricePerHour: defaultPrice.PricePerHour,
 							PricePerGiB:  defaultPrice.PricePerGiB,
 						},
@@ -93,7 +103,11 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 func (p *Pricer) GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error) {
 	pricing := p.getPricing()
 
-	return *p.getCurrentByType(pricing, nodeType, country, serviceType), nil
+	price := p.getCurrentByType(pricing, nodeType, country, serviceType)
+	if price == nil {
+		return market.Price{}, errors.New("no data available")
+	}
+	return *price, nil
 }
 
 func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string) *market.PriceHistory {
@@ -120,6 +134,8 @@ func (p *Pricer) getCurrentByServiceType(pricingByServiceType *market.PriceBySer
 		return pricingByServiceType.Wireguard
 	case "scraping":
 		return pricingByServiceType.Scraping
+	case "dvpn":
+		return pricingByServiceType.DVPN
 	default:
 		return pricingByServiceType.DataTransfer
 	}

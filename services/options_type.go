@@ -29,6 +29,7 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/dvpn"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 )
 
@@ -39,6 +40,7 @@ var JSONParsersByType = map[string]ServiceOptionsParser{
 	wireguard.ServiceType:    wireguard_service.ParseJSONOptions,
 	scraping.ServiceType:     wireguard_service.ParseJSONOptions,
 	datatransfer.ServiceType: wireguard_service.ParseJSONOptions,
+	dvpn.ServiceType: wireguard_service.ParseJSONOptions,
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -46,7 +48,7 @@ type ServiceOptionsParser func(*json.RawMessage) (service.Options, error)
 
 // Types returns all possible service types.
 func Types() []string {
-	return []string{openvpn.ServiceType, wireguard.ServiceType, noop.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
+	return []string{openvpn.ServiceType, wireguard.ServiceType, noop.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}
 }
 
 // TypeConfiguredOptions returns specific service options.
@@ -61,6 +63,8 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 	case scraping.ServiceType:
 		return wireguard_service.GetOptions(), nil
 	case datatransfer.ServiceType:
+		return wireguard_service.GetOptions(), nil
+	case dvpn.ServiceType:
 		return wireguard_service.GetOptions(), nil
 	default:
 		return nil, errors.Errorf("unknown service type: %q", serviceType)

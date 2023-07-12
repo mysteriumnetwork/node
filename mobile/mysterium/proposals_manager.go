@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
+	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
@@ -215,6 +216,7 @@ func (m *proposalsManager) getFromRepository(req *GetProposalsRequest) ([]propos
 		wireguard.ServiceType:    true,
 		datatransfer.ServiceType: true,
 		scraping.ServiceType:     true,
+		dvpn.ServiceType:         true,
 	}
 	var res []proposal.PricedServiceProposal
 	for _, p := range allProposals {

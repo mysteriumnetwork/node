@@ -145,8 +145,10 @@ type EarningsPerServiceResponse struct {
 	EarningsPublic        Tokens `json:"public_tokens"`
 	EarningsVPN           Tokens `json:"data_transfer_tokens"`
 	EarningsScraping      Tokens `json:"scraping_tokens"`
+	EarningsDVPN          Tokens `json:"dvpn"`
 	EarningsTotal         Tokens `json:"total_tokens"`
 	TotalEarningsPublic   Tokens `json:"total_public_tokens"`
 	TotalEarningsVPN      Tokens `json:"total_data_transfer_tokens"`
 	TotalEarningsScraping Tokens `json:"total_scraping_tokens"`
+	TotalEarningsDVPN     Tokens `json:"total_dvpn_tokens"`
 }

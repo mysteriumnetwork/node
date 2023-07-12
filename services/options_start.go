@@ -23,10 +23,12 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
+	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -50,6 +52,8 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	case scraping.ServiceType:
 		opts.AccessPolicyList = []string{"mysterium"}
 	case datatransfer.ServiceType:
+		opts.AccessPolicyList = []string{"mysterium"}
+	case dvpn.ServiceType:
 		opts.AccessPolicyList = []string{"mysterium"}
 	}
 	return opts, nil
