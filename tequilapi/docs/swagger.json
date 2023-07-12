@@ -3802,6 +3802,9 @@
         "data_transfer_tokens": {
           "$ref": "#/definitions/Tokens"
         },
+        "dvpn_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "public_tokens": {
           "$ref": "#/definitions/Tokens"
         },
@@ -3809,6 +3812,9 @@
           "$ref": "#/definitions/Tokens"
         },
         "total_data_transfer_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "total_dvpn_tokens": {
           "$ref": "#/definitions/Tokens"
         },
         "total_public_tokens": {

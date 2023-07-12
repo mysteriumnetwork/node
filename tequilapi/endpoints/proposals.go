@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
+	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -296,12 +297,21 @@ func (pe *proposalsEndpoint) Countries(c *gin.Context) {
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
 func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
+	allowedServiceTypes := map[string]struct{}{
+		wireguard.ServiceType:    {},
+		scraping.ServiceType:     {},
+		datatransfer.ServiceType: {},
+		dvpn.ServiceType:         {},
+	}
+
 	serviceType := c.Request.URL.Query().Get("service_type")
 	if len(serviceType) == 0 {
 		serviceType = wireguard.ServiceType
-	} else if serviceType != wireguard.ServiceType && serviceType != scraping.ServiceType && serviceType != datatransfer.ServiceType {
-		c.Error(apierror.BadRequest("Invalid service type", contract.ErrCodeProposalsServiceType))
-		return
+	} else {
+		if _, ok := allowedServiceTypes[serviceType]; !ok {
+			c.Error(apierror.BadRequest("Invalid service type", contract.ErrCodeProposalsServiceType))
+			return
+		}
 	}
 
 	loc, err := pe.locationResolver.DetectLocation()
@@ -348,7 +358,7 @@ func (pe *proposalsEndpoint) CurrentPrices(c *gin.Context) {
 		return
 	}
 
-	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType}
+	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}
 	result := make([]contract.CurrentPriceResponse, len(serviceTypes))
 
 	for i, serviceType := range serviceTypes {
