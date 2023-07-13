@@ -15,24 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sso
+package dvpn
 
-import (
-	"encoding/json"
-)
-
-// MystnodesMessage expected by mystnodes.com
-type MystnodesMessage struct {
-	CodeChallenge string `json:"codeChallenge"`
-	Identity      string `json:"identity"`
-	RedirectURL   string `json:"redirectUrl"` // http://guillem.nodeUI
-}
-
-// JSON convenience receiver to convert MystnodesMessage struct to []byte
-func (msg MystnodesMessage) JSON() ([]byte, error) {
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		return []byte{}, err
-	}
-	return payload, nil
-}
+// ServiceType indicates "dvpn" service type
+const ServiceType = "dvpn"

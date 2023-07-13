@@ -85,7 +85,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForTransactor(di.IdentityRegistry, di.Transactor, di.Affiliator, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiaryProvider, di.BeneficiarySaver, di.PilvytisAPI),
 			tequilapi_endpoints.AddRoutesForAffiliator(di.Affiliator),
 			tequilapi_endpoints.AddRoutesForConfig,
-			tequilapi_endpoints.AddRoutesForMMN(di.MMN),
+			tequilapi_endpoints.AddRoutesForMMN(di.MMN, di.SSOMystnodes, di.Authenticator),
 			tequilapi_endpoints.AddRoutesForFeedback(di.Reporter),
 			tequilapi_endpoints.AddRoutesForConnectivityStatus(di.SessionConnectivityStatusStorage),
 			tequilapi_endpoints.AddRoutesForDocs,

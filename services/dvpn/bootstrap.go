@@ -15,24 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sso
+package dvpn
 
-import (
-	"encoding/json"
-)
+import "github.com/mysteriumnetwork/node/market"
 
-// MystnodesMessage expected by mystnodes.com
-type MystnodesMessage struct {
-	CodeChallenge string `json:"codeChallenge"`
-	Identity      string `json:"identity"`
-	RedirectURL   string `json:"redirectUrl"` // http://guillem.nodeUI
-}
-
-// JSON convenience receiver to convert MystnodesMessage struct to []byte
-func (msg MystnodesMessage) JSON() ([]byte, error) {
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		return []byte{}, err
-	}
-	return payload, nil
+// Bootstrap is called on program initialization time and registers various deserializers related to dvpn service
+func Bootstrap() {
+	market.RegisterServiceType(ServiceType)
 }
