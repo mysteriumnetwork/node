@@ -82,6 +82,7 @@ type Options struct {
 	Payments OptionsPayments
 
 	Consumer bool
+	Mobile   bool
 
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
