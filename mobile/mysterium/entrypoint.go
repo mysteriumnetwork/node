@@ -235,6 +235,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		config.Current.SetDefault(config.FlagChain1KnownHermeses.Name, config.FlagChain1KnownHermeses.Value)
 		config.Current.SetDefault(config.FlagChain2KnownHermeses.Name, config.FlagChain2KnownHermeses.Value)
 		config.Current.SetDefault(config.FlagDNSListenPort.Name, config.FlagDNSListenPort.Value)
+
+		config.Current.SetDefault(config.FlagUIFeatures.Name, "android_mobile_node,android_sso_deeplink")
 	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
