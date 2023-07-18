@@ -274,6 +274,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	nodeOptions := node.Options{
+		Mobile:     true,
 		LogOptions: logOptions,
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
