@@ -72,9 +72,10 @@ var (
 
 	// FlagStoppedServices a comma-separated list of stopped services.
 	FlagStoppedServices = cli.StringFlag{
-		Name:  "stopped-services",
-		Usage: "Comma separated list of stopped services.",
-		Value: strings.Join([]string{}, ","),
+		Name:   "stopped-services",
+		Usage:  "Comma separated list of stopped services.",
+		Value:  strings.Join([]string{}, ","),
+		Hidden: true,
 	}
 )
 
