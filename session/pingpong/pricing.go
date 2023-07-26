@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -101,7 +102,11 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 func (p *Pricer) GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error) {
 	pricing := p.getPricing()
 
-	return *p.getCurrentByType(pricing, nodeType, country, serviceType), nil
+	price := p.getCurrentByType(pricing, nodeType, country, serviceType)
+	if price == nil {
+		return market.Price{}, errors.New("no data available")
+	}
+	return *price, nil
 }
 
 func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string) *market.PriceHistory {
