@@ -217,6 +217,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
 	config.Current.SetDefault(config.FlagUIFeatures.Name, options.UIFeaturesEnabled)
+	config.Current.SetDefault(config.FlagActiveServices.Name, "scraping,data_transfer,dvpn")
 
 	if options.IsProvider {
 		config.Current.SetDefault(config.FlagUserspace.Name, "true")
