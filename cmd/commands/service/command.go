@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -122,6 +123,22 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		ctx.String(config.FlagIdentityPassphrase.Name),
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
+
+	if config.Current.GetString(config.FlagNodeVersion.Name) == "" {
+
+		// on first version update: enable dvpn service if wireguard service is enabled
+		mapServices := make(map[string]bool, 0)
+		for _, serviceType := range serviceTypes {
+			mapServices[serviceType] = true
+		}
+
+		if mapServices["wireguard"] && !mapServices["dvpn"] {
+			serviceTypes = append(serviceTypes, "dvpn")
+		}
+	}
+	// save the version
+	config.Current.SetUser(config.FlagNodeVersion.Name, metadata.BuildNumber)
+	config.Current.SaveUserConfig()
 
 	for _, serviceType := range serviceTypes {
 		serviceOpts, err := services.GetStartOptions(serviceType)
