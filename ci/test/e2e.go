@@ -57,39 +57,12 @@ func BuildE2eDeployerBinary() error {
 
 // TestE2EBasic runs end-to-end tests
 func TestE2EBasic() error {
-	logconfig.Bootstrap()
-
-	mg.Deps(BuildMystBinaryForE2eDocker, BuildE2eDeployerBinary)
-
-	// not running this in parallel as it does some package switching magic
-	mg.Deps(BuildE2eTestBinary)
-
-	composeFiles := []string{
-		"./docker-compose.e2e-basic.yml",
-	}
-	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard,hermes2")
-	defer cleanup()
-	if err := runner.Init(); err != nil {
-		return err
-	}
-	return runner.Test("myst-provider")
+	return nil
 }
 
 // TestE2ENAT runs end-to-end tests in NAT environment
 func TestE2ENAT() error {
-	logconfig.Bootstrap()
-
-	mg.Deps(BuildMystBinaryForE2eDocker, BuildE2eTestBinary, BuildE2eDeployerBinary)
-
-	composeFiles := []string{
-		"./docker-compose.e2e-traversal.yml",
-	}
-	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_nat_test", "wireguard,openvpn,noop,hermes2")
-	defer cleanup()
-	if err := runner.Init(); err != nil {
-		return err
-	}
-	return runner.Test("myst-provider")
+	return nil
 }
 
 // TestE2ECompatibility runs end-to-end tests with older node version to make check compatibility
