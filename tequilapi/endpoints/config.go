@@ -85,6 +85,30 @@ func (api *configAPI) GetDefaultConfig(c *gin.Context) {
 	utils.WriteAsJSON(res, c.Writer)
 }
 
+// GetUiFeatures returns config.ui.features value
+// swagger:operation GET /config/ui/features
+//
+//	---
+//	summary: Returns returns config.ui.features value
+//	description: Returns returns config.ui.features value
+//	responses:
+//	  200:
+//	    description: Default configuration values
+//	    schema:
+//	      type: string
+func (api *configAPI) GetUiFeatures(c *gin.Context) {
+	res := ""
+	cfg := api.config.GetConfig()
+	ui, ok := cfg["ui"].((map[string]interface{}))
+	if ok {
+		res_, ok := ui["features"]
+		if ok {
+			res = res_.(string)
+		}
+	}
+	c.Writer.Write([]byte(res))
+}
+
 // GetUserConfig returns current user configuration
 // swagger:operation GET /config/user Configuration getUserConfig
 //
@@ -172,6 +196,7 @@ func AddRoutesForConfig(
 		g.GET("/default", api.GetDefaultConfig)
 		g.GET("/user", api.GetUserConfig)
 		g.POST("/user", api.SetUserConfig)
+		g.GET("/ui/features", api.GetUiFeatures)
 	}
 	return nil
 }
