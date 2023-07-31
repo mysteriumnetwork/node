@@ -23,7 +23,7 @@ import "strings"
 const TequilapiURLPrefix = "/tequilapi"
 
 // UnprotectedRoutes these routes are not protected by reverse proxy
-var UnprotectedRoutes = []string{"/auth/authenticate", "/auth/login", "/healthcheck", "/config/user"}
+var UnprotectedRoutes = []string{"/auth/authenticate", "/auth/login", "/healthcheck", "/config/user", "/config/ui/features"}
 
 // IsUnprotectedRoute helper method for checking if route is unprotected
 func IsUnprotectedRoute(url string) bool {
