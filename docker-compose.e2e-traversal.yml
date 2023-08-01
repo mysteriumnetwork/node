@@ -121,23 +121,41 @@ services:
       public1:
         ipv4_address: 172.31.0.201
 
-  discovery:
+  discovery-service:
     image: mysteriumnetwork/discovery:2.18.3
+    expose:
+      - 8081
+    environment:
+      - PORT=8081
+      - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
+      - QUALITY_ORACLE_URL=http://morqa:8085
+      - BROKER_URL=broker
+      - UNIVERSE_JWT_SECRET=suchsecret
+      - REDIS_ADDRESS=redis:6379
+      - BADGER_ADDRESS=http://badger:1234
+      - QUALITY_CACHE_TTL=20m
+      - LOCATION_ADDRESS="badurl"
     depends_on:
       - db
       - redis
       - http-mock
+
+  discovery:
+    image: nginx:latest
     expose:
       - 8080
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
+    volumes:
+      - ./e2e/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - discovery-service
+      - discovery-pricer
+
+  discovery-pricer:
+    image: mysteriumnetwork/discovery-pricer:2.18.3
+    expose:
+      - 8091
     environment:
-      - PORT=8080
+      - PORT=8091
       - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
       - QUALITY_ORACLE_URL=http://morqa:8085
       - BROKER_URL=broker
@@ -146,6 +164,18 @@ services:
       - BADGER_ADDRESS=http://badger:1234
       - QUALITY_CACHE_TTL=20m
       - LOCATION_ADDRESS="badurl"
+      - SENTINEL_URL="https://sentinel.mysterium.network"
+    depends_on:
+      - db
+      - redis
+      - http-mock
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -354,7 +384,7 @@ services:
   
   pilvytis-mock:
     image: wiremock/wiremock:2.32.0
-    expose: 
+    expose:
       - 8080
     volumes:
       - ./e2e/pilvytis:/home/wiremock
