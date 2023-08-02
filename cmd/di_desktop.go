@@ -77,7 +77,10 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 
 	di.dnsProxy = dns.NewProxy("", config.GetInt(config.FlagDNSListenPort), dnsHandler)
 
-	di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
+	// disable for mobile
+	if !nodeOptions.Mobile {
+		di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
+	}
 	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDVPN(nodeOptions, resourcesAllocator, di.WireguardClientFactory)

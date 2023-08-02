@@ -217,6 +217,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
 	config.Current.SetDefault(config.FlagUIFeatures.Name, options.UIFeaturesEnabled)
+	config.Current.SetDefault(config.FlagActiveServices.Name, "scraping,data_transfer,dvpn")
 
 	if options.IsProvider {
 		config.Current.SetDefault(config.FlagUserspace.Name, "true")
@@ -235,6 +236,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		config.Current.SetDefault(config.FlagChain1KnownHermeses.Name, config.FlagChain1KnownHermeses.Value)
 		config.Current.SetDefault(config.FlagChain2KnownHermeses.Name, config.FlagChain2KnownHermeses.Value)
 		config.Current.SetDefault(config.FlagDNSListenPort.Name, config.FlagDNSListenPort.Value)
+
+		config.Current.SetDefault(config.FlagUIFeatures.Name, "android_mobile_node,android_sso_deeplink")
 	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
@@ -272,6 +275,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	nodeOptions := node.Options{
+		Mobile:     true,
 		LogOptions: logOptions,
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
