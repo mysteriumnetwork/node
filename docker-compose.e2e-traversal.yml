@@ -139,6 +139,19 @@ services:
       - db
       - redis
       - http-mock
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.214
+      public1:
+        ipv4_address: 172.31.0.214
 
   discovery:
     image: nginx:latest
@@ -149,6 +162,19 @@ services:
     depends_on:
       - discovery-service
       - discovery-pricer
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.215
+      public1:
+        ipv4_address: 172.31.0.215
 
   discovery-pricer:
     image: mysteriumnetwork/discovery-pricer:2.18.3
@@ -381,7 +407,7 @@ services:
         ipv4_address: 172.30.0.204
       public1:
         ipv4_address: 172.31.0.204
-  
+
   pilvytis-mock:
     image: wiremock/wiremock:2.32.0
     expose:
