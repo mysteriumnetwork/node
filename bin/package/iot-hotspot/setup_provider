@@ -1,0 +1,17 @@
+#!/bin/bash
+
+mkdir /tmp/myst-inst
+cd /tmp/myst-inst
+
+wget https://github.com/mysteriumnetwork/node/releases/latest/download/myst_linux_arm.tar.gz
+
+tar -xzvf myst_linux_arm.tar.gz
+cp myst /usr/bin/myst
+
+wget https://raw.githubusercontent.com/mysteriumnetwork/node/features/iot-scripts/bin/package/iot-hostspot/mysterium-node.service
+cp mysterium-node.service /etc/systemd/system
+cd ..
+rm -r /tmp/myst-inst
+
+adduser --system --group myst
+systemctl start mysterium-node.service
