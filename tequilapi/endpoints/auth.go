@@ -19,8 +19,10 @@ package endpoints
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -122,10 +124,20 @@ func (api *authenticationAPI) Login(c *gin.Context) {
 		c.Error(apierror.ParseFailed())
 		return
 	}
-	err = api.authenticator.CheckCredentials(req.Username, req.Password)
-	if err != nil {
-		c.Error(apierror.Unauthorized())
-		return
+
+	isLocal := net.ParseIP(c.ClientIP()).IsLoopback()
+	if _, err := os.Stat("/.dockerenv"); err == nil && c.RemoteIP() == "172.17.0.1" {
+		isLocal = true
+	}
+
+	if isLocal && req.Password == "" {
+		// allow login w/o password for localhost and docker/172.17.0.1
+	} else {
+		err = api.authenticator.CheckCredentials(req.Username, req.Password)
+		if err != nil {
+			c.Error(apierror.Unauthorized())
+			return
+		}
 	}
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)

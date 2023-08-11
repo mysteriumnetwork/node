@@ -64,6 +64,7 @@ type Options struct {
 	BindAddress            string
 	UI                     OptionsUI
 	FeedbackURL            string
+	LocalhostNoAuth        bool
 
 	Keystore OptionsKeystore
 
@@ -126,6 +127,8 @@ func GetOptions() *Options {
 		},
 		SwarmDialerDNSHeadstart: config.GetDuration(config.FlagDNSResolutionHeadstart),
 		FeedbackURL:             config.GetString(config.FlagFeedbackURL),
+		LocalhostNoAuth:         true,
+
 		Keystore: OptionsKeystore{
 			UseLightweight: config.GetBool(config.FlagKeystoreLightweight),
 		},
