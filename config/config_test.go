@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/scraping"
-	"github.com/mysteriumnetwork/node/services/wireguard"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
@@ -239,7 +238,7 @@ func TestUserConfig_GetConfig(t *testing.T) {
 
 func TestHardcodedServicesNameFlagValues(t *testing.T) {
 	// importing these constants into config package create cyclic dependency
-	assert.Equal(t, strings.Join([]string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}, ","), FlagActiveServices.Value)
+	assert.Equal(t, strings.Join([]string{scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}, ","), FlagActiveServices.Value)
 }
 
 func must(t *testing.T, err error) {
