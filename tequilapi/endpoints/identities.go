@@ -37,6 +37,7 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/node/tequilapi/middlewares"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/rs/zerolog/log"
 )
@@ -797,7 +798,7 @@ func AddRoutesForIdentities(
 			identityGroup.PUT("/:id/balance/refresh", idAPI.BalanceRefresh)
 			identityGroup.POST("/:id/migrate-hermes", idAPI.MigrateHermes)
 			identityGroup.GET("/:id/migrate-hermes/status", idAPI.MigrationHermesStatus)
-			identityGroup.POST("/export", idAPI.Export)
+			identityGroup.POST("/export", middlewares.NewLocalhostOnlyFilter(), idAPI.Export)
 
 		}
 		e.POST("/identities-import", idAPI.Import)

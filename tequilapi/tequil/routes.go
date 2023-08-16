@@ -25,19 +25,6 @@ const TequilapiURLPrefix = "/tequilapi"
 // UnprotectedRoutes these routes are not protected by reverse proxy
 var UnprotectedRoutes = []string{"/auth/authenticate", "/auth/login", "/healthcheck", "/config/user", "/config/ui/features"}
 
-// LocalhostOnlyRoutes these routes can be used only by host itself
-var LocalhostOnlyRoutes = []string{"/identities/export"}
-
-// IsLocalhostOnlyRoute helper method for checking if route is unprotected
-func IsLocalhostOnlyRoute(url string) bool {
-	for _, route := range LocalhostOnlyRoutes {
-		if strings.Contains(url, route) {
-			return true
-		}
-	}
-	return false
-}
-
 // IsUnprotectedRoute helper method for checking if route is unprotected
 func IsUnprotectedRoute(url string) bool {
 	for _, route := range UnprotectedRoutes {

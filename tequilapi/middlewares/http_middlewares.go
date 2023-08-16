@@ -25,7 +25,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/tequilapi/tequil"
 	"github.com/mysteriumnetwork/node/utils/domain"
 )
 
@@ -64,15 +63,14 @@ func NewHostFilter() func(*gin.Context) {
 }
 
 // NewLocalhostOnlyFilter returns instance of middleware allowing only requests
-// with local client IP to protected (localhost-only) routes
+// with local client IP.
+// Don't forget to Engine.SetTrustedProxies() if reverse proxy is used.
 func NewLocalhostOnlyFilter() func(*gin.Context) {
 	return func(c *gin.Context) {
-		if !tequil.IsLocalhostOnlyRoute(c.Request.URL.Path) {
-			return
-		}
 
+		// ClientIP() parses the headers defined in Engine.RemoteIPHeaders if there is
 		clientIP := c.ClientIP()
-		if clientIP == "127.0.0.1" || clientIP == "::1" {
+		if net.ParseIP(clientIP).IsLoopback() {
 			return
 		}
 
