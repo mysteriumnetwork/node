@@ -647,6 +647,46 @@
         }
       }
     },
+    "/export": {
+      "post": {
+        "description": "Creates identity and stores in keystore encrypted with passphrase",
+        "tags": [
+          "export"
+        ],
+        "summary": "Exports a given identity",
+        "operationId": "Identity",
+        "parameters": [
+          {
+            "description": "Parameter in body (passphrase) required for creating new identity",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/IdentityExportRequestDTO"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Identity created",
+            "schema": {
+              "$ref": "#/definitions/IdentityExportResponseDTO"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/feedback/issue": {
       "post": {
         "description": "Reports user issue to github",
@@ -4142,6 +4182,46 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "IdentityExportRequestDTO": {
+      "type": "object",
+      "title": "IdentityExportRequest is received in identity export endpoint.",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "x-go-name": "Identity"
+        },
+        "newpassphrase": {
+          "type": "string",
+          "x-go-name": "NewPassphrase"
+        }
+      },
+      "x-go-name": "IdentityExportRequest",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "IdentityExportResponseDTO": {
+      "type": "object",
+      "title": "EncryptedKeyJSON represents response to IdentityExportRequest.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "x-go-name": "Address"
+        },
+        "crypto": {
+          "$ref": "#/definitions/cryptoJSON"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "Id"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Version"
+        }
+      },
+      "x-go-name": "EncryptedKeyJSON",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "IdentityImportRequest": {
       "type": "object",
       "title": "IdentityImportRequest is received in identity import endpoint.",
@@ -5779,6 +5859,16 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
+    "cipherparamsJSON": {
+      "type": "object",
+      "properties": {
+        "iv": {
+          "type": "string",
+          "x-go-name": "IV"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "configPayload": {
       "type": "object",
       "properties": {
@@ -5799,6 +5889,36 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+    },
+    "cryptoJSON": {
+      "type": "object",
+      "properties": {
+        "cipher": {
+          "type": "string",
+          "x-go-name": "Cipher"
+        },
+        "cipherparams": {
+          "$ref": "#/definitions/cipherparamsJSON"
+        },
+        "ciphertext": {
+          "type": "string",
+          "x-go-name": "CipherText"
+        },
+        "kdf": {
+          "type": "string",
+          "x-go-name": "KDF"
+        },
+        "kdfparams": {
+          "type": "object",
+          "additionalProperties": {},
+          "x-go-name": "KDFParams"
+        },
+        "mac": {
+          "type": "string",
+          "x-go-name": "MAC"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "dlStatus": {
       "type": "string",

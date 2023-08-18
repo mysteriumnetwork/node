@@ -203,3 +203,43 @@ func (i *IdentityImportRequest) Validate() *apierror.APIError {
 	}
 	return v.Err()
 }
+
+// IdentityExportRequest is received in identity export endpoint.
+// swagger:model IdentityExportRequestDTO
+type IdentityExportRequest struct {
+	Identity      string `json:"identity,omitempty"`
+	NewPassphrase string `json:"newpassphrase,omitempty"`
+}
+
+// Validate validates the Export request.
+func (i *IdentityExportRequest) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
+	if len(i.NewPassphrase) == 0 {
+		v.Required("newpassphrase")
+	}
+	return v.Err()
+}
+
+// borrowed from github.com/ethereum/go-ethereum@v1.10.17/accounts/keystore/key.go
+
+// EncryptedKeyJSON represents response to IdentityExportRequest.
+// swagger:model IdentityExportResponseDTO
+type EncryptedKeyJSON struct {
+	Address string     `json:"address"`
+	Crypto  cryptoJSON `json:"crypto"`
+	Id      string     `json:"id"`
+	Version int        `json:"version"`
+}
+
+type cryptoJSON struct {
+	Cipher       string                 `json:"cipher"`
+	CipherText   string                 `json:"ciphertext"`
+	CipherParams cipherparamsJSON       `json:"cipherparams"`
+	KDF          string                 `json:"kdf"`
+	KDFParams    map[string]interface{} `json:"kdfparams"`
+	MAC          string                 `json:"mac"`
+}
+
+type cipherparamsJSON struct {
+	IV string `json:"iv"`
+}
