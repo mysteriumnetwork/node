@@ -1,0 +1,33 @@
+# If you modify this, please also make sure to edit initd.sh
+
+[Unit]
+Description=Server for Mysterium - decentralised VPN Network
+Documentation=https://mysterium.network/
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+User=myst
+Group=myst
+
+RuntimeDirectory=mysterium-node
+RuntimeDirectoryMode=0750
+LogsDirectory=mysterium-node
+
+EnvironmentFile=-/etc/default/mysterium-node
+ExecStart=/usr/bin/myst \
+    --userspace \
+    --vendor.id=emrit \
+    --ui.features=restart \
+    --log-level=info \
+    service \
+    --agreed-terms-and-conditions
+
+KillMode=process
+SendSIGKILL=yes
+Restart=on-failure
+RestartSec=5
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
