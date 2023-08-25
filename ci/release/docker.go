@@ -39,7 +39,7 @@ func ReleaseDockerSnapshot() error {
 	})
 
 	return packages.BuildMystAlpineImage(
-		[]string{"mysteriumnetwork/myst-snapshots:" + env.Str(env.BuildVersion) + "-alpine"},
+		[]string{"mysteriumnetwork/myst-snapshots:" + env.Str(env.BuildVersion) + "-alpine", "mysteriumnetwork/myst-snapshots:latest"},
 		true,
 	)
 }
