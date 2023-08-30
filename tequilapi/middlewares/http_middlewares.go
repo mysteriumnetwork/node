@@ -20,7 +20,6 @@ package middlewares
 import (
 	"net"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -65,16 +64,12 @@ func NewHostFilter() func(*gin.Context) {
 
 // NewLocalhostOnlyFilter returns instance of middleware allowing only requests
 // with local client IP.
-// Don't forget to Engine.SetTrustedProxies() if reverse proxy is used.
 func NewLocalhostOnlyFilter() func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		// ClientIP() parses the headers defined in Engine.RemoteIPHeaders if there is
 		// so it handles clients behind proxy
 		isLocal := net.ParseIP(c.ClientIP()).IsLoopback()
-		if _, err := os.Stat("/.dockerenv"); err == nil && c.ClientIP() == "172.17.0.1" && c.RemoteIP() == "127.0.0.1" {
-			isLocal = true
-		}
 		if isLocal {
 			return
 		}
