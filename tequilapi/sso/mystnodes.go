@@ -149,8 +149,9 @@ func (m *Mystnodes) consumeCodeVerifier() {
 
 // VerifyInfo information gathered during grant verification
 type VerifyInfo struct {
-	APIkey        string
-	WalletAddress string
+	APIkey                        string `json:"apiKey"`
+	WalletAddress                 string `json:"walletAddress"`
+	IsEligibleForFreeRegistration bool   `json:"isEligibleForFreeRegistration"`
 }
 
 // DefaultVerificationOptions default options
