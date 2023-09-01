@@ -47,6 +47,7 @@ type MMNLinkRedirectResponse struct {
 // MMNGrantVerificationResponse message received via redirect from mystnodes.com
 // swagger:model MMNGrantVerificationResponse
 type MMNGrantVerificationResponse struct {
-	ApiKey        string `json:"api_key"`
-	WalletAddress string `json:"wallet_address"`
+	ApiKey                        string `json:"api_key"`
+	WalletAddress                 string `json:"wallet_address"`
+	IsEligibleForFreeRegistration bool   `json:"is_eligible_for_free_registration"`
 }

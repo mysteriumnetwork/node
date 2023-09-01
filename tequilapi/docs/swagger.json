@@ -4480,6 +4480,10 @@
           "type": "string",
           "x-go-name": "ApiKey"
         },
+        "is_eligible_for_free_registration": {
+          "type": "boolean",
+          "x-go-name": "IsEligibleForFreeRegistration"
+        },
         "wallet_address": {
           "type": "string",
           "x-go-name": "WalletAddress"

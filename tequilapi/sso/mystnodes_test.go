@@ -96,14 +96,17 @@ func TestMystnodesSSOGrantVerification(t *testing.T) {
 	assert.NoError(t, err)
 
 	// when
-	sso := NewMystnodes(signerFactory, newHttpClientMock(&http.Response{StatusCode: 200, Status: "200 OK", Body: &readCloser{Reader: strings.NewReader("{}")}}))
+	sso := NewMystnodes(signerFactory, newHttpClientMock(&http.Response{StatusCode: 200, Status: "200 OK", Body: &readCloser{Reader: strings.NewReader(`{"walletAddress": "0x111", "apiKey": "xxx", "isEligibleForFreeRegistration": true}`)}}))
 	sso.lastUnlockedIdentity = identity.Identity{Address: "0x1"}
 	_, err = sso.SSOLink(redirect)
 	assert.NoError(t, err)
 
 	// then
-	_, err = sso.VerifyAuthorizationGrant("auth_grant", DefaultVerificationOptions)
+	vi, err := sso.VerifyAuthorizationGrant("auth_grant", DefaultVerificationOptions)
 	assert.NoError(t, err)
+	assert.Equal(t, true, vi.IsEligibleForFreeRegistration)
+	assert.Equal(t, "0x111", vi.WalletAddress)
+	assert.Equal(t, "xxx", vi.APIkey)
 
 	// when
 	sso = NewMystnodes(signerFactory, newHttpClientMock(nil))
