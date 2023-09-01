@@ -291,8 +291,9 @@ func (api *mmnAPI) VerifyGrant(c *gin.Context) {
 	}
 
 	r := contract.MMNGrantVerificationResponse{
-		ApiKey:        vi.APIkey,
-		WalletAddress: vi.WalletAddress,
+		ApiKey:                        vi.APIkey,
+		WalletAddress:                 vi.WalletAddress,
+		IsEligibleForFreeRegistration: vi.IsEligibleForFreeRegistration,
 	}
 
 	c.JSON(http.StatusOK, r)
