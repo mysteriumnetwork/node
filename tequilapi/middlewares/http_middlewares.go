@@ -64,13 +64,13 @@ func NewHostFilter() func(*gin.Context) {
 
 // NewLocalhostOnlyFilter returns instance of middleware allowing only requests
 // with local client IP.
-// Don't forget to Engine.SetTrustedProxies() if reverse proxy is used.
 func NewLocalhostOnlyFilter() func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		// ClientIP() parses the headers defined in Engine.RemoteIPHeaders if there is
-		clientIP := c.ClientIP()
-		if net.ParseIP(clientIP).IsLoopback() {
+		// so it handles clients behind proxy
+		isLocal := net.ParseIP(c.ClientIP()).IsLoopback()
+		if isLocal {
 			return
 		}
 

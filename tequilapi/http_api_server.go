@@ -80,6 +80,10 @@ func NewServer(
 		g.Use(middlewares.ApplyMiddlewareTokenAuth(authenticator))
 	}
 
+	// Set to protect localhost-only endpoints due to use of nodeUI proxy
+	// With this set, context.ClientIP() will return only IP set by trusted proxy, not by a client!
+	g.SetTrustedProxies([]string{"127.0.0.1"})
+
 	for _, h := range handlers {
 		err := h(g)
 		if err != nil {
