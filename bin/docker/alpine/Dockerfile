@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.20-alpine AS builder
 
 # Install packages
 RUN apk add --no-cache git bash gcc musl-dev make linux-headers
@@ -13,7 +13,8 @@ WORKDIR /go/src/github.com/mysteriumnetwork/node
 ADD go.mod go.sum ./
 RUN go mod download
 ADD . .
-RUN bin/build
+ARG TARGETOS TARGETARCH
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH BUILD_STATIC=1 bin/build
 
 
 FROM alpine:3.14
