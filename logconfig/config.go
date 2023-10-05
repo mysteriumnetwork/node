@@ -46,7 +46,7 @@ func Bootstrap() {
 	}
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.TimeFieldFormat = time.RFC3339Nano
-	zerolog.CallerMarshalFunc = func(file string, line int) string {
+	zerolog.CallerMarshalFunc = func(_ uintptr, file string, line int) string {
 		var ok bool
 		for _, prefix := range trimPrefixes {
 			file, ok = trimLeftInclusive(file, prefix)
