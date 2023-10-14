@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -31,7 +30,7 @@ import (
 )
 
 func TestHermesPromiseStorage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "hermesPromiseStorageTest")
+	dir, err := os.MkdirTemp("", "hermesPromiseStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -106,7 +105,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 }
 
 func TestHermesPromiseStorageDelete(t *testing.T) {
-	dir, err := ioutil.TempDir("", "hermesPromiseStorageTest")
+	dir, err := os.MkdirTemp("", "hermesPromiseStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 

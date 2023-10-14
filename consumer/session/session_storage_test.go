@@ -18,7 +18,6 @@
 package session
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -483,7 +482,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 }
 
 func newStorage() (*Storage, func()) {
-	dir, err := ioutil.TempDir("", "sessionStorageTest")
+	dir, err := os.MkdirTemp("", "sessionStorageTest")
 	if err != nil {
 		panic(err)
 	}

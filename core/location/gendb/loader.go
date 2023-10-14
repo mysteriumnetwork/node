@@ -20,7 +20,7 @@ package gendb
 import (
 	"compress/gzip"
 	"encoding/base64"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -37,7 +37,7 @@ func EncodedDataLoader(data string, originalSize int, compressed bool) (decompre
 		}
 	}
 
-	decompressed, err = ioutil.ReadAll(reader)
+	decompressed, err = io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

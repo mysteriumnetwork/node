@@ -19,7 +19,6 @@ package identity
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -75,7 +74,7 @@ func (ic *IdentityCache) cacheExists() bool {
 }
 
 func (ic *IdentityCache) readCache() (cache *cacheData, err error) {
-	data, err := ioutil.ReadFile(ic.File)
+	data, err := os.ReadFile(ic.File)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +93,6 @@ func (ic *IdentityCache) writeCache(cache cacheData) (err error) {
 		return
 	}
 
-	err = ioutil.WriteFile(ic.File, cacheString, 0644)
+	err = os.WriteFile(ic.File, cacheString, 0644)
 	return
 }

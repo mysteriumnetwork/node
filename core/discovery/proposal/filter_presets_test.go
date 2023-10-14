@@ -21,13 +21,12 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/stretchr/testify/assert"
 
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func Test_ProposalFilterPreset(t *testing.T) {
-	dir, err := ioutil.TempDir("", "consumerTotalsStorageTest")
+	dir, err := os.MkdirTemp("", "consumerTotalsStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 

@@ -18,7 +18,6 @@
 package payout
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -28,7 +27,7 @@ import (
 
 func TestPayout(t *testing.T) {
 	// given:
-	dir, err := ioutil.TempDir("/tmp", "mysttest")
+	dir, err := os.MkdirTemp("/tmp", "mysttest")
 	assert.NoError(t, err)
 
 	defer os.RemoveAll(dir)

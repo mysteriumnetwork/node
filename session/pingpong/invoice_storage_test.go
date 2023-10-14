@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -50,7 +49,7 @@ var invoiceTwo = crypto.Invoice{
 
 func TestProviderInvoiceStorage(t *testing.T) {
 	providerID := identity.FromAddress("0xprovider")
-	dir, err := ioutil.TempDir("", "providerInvoiceTest")
+	dir, err := os.MkdirTemp("", "providerInvoiceTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 

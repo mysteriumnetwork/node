@@ -19,7 +19,6 @@
 package boltdbtest
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -47,7 +46,7 @@ func CleanupDB(t *testing.T, fileName string, db *storm.DB) {
 
 // CreateTempFile creates a temporary file and returns its path
 func CreateTempFile(t *testing.T) string {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	assert.Nil(t, err)
 	return file.Name()
 }
@@ -62,7 +61,7 @@ func CleanupTempFile(t *testing.T, fileName string) {
 
 // CreateTempDir creates a temporary directory
 func CreateTempDir(t *testing.T) string {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
 	return dir
 }

@@ -19,7 +19,6 @@ package packages
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -192,7 +191,7 @@ func fetchRaspbianImage() (filename string, err error) {
 		return "", err
 	}
 
-	extractedFiles, err := ioutil.ReadDir(localRaspbianImgDir)
+	extractedFiles, err := os.ReadDir(localRaspbianImgDir)
 	if err != nil {
 		return "", err
 	}

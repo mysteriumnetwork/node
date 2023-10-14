@@ -26,7 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 
@@ -251,7 +251,7 @@ func (u *unlocked) deriveKey() ([]byte, error) {
 
 func loadStoredKey(addr common.Address, filename, auth string) (*ethKs.Key, error) {
 	// Load the key from the keystore and decrypt its contents
-	keyjson, err := ioutil.ReadFile(filename)
+	keyjson, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

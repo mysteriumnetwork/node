@@ -18,7 +18,6 @@
 package logconfig
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -96,13 +95,13 @@ func TestCollector_Archive(t *testing.T) {
 }
 
 func NewTempFileName(t *testing.T, dir, pattern string) string {
-	file, err := ioutil.TempFile(dir, pattern)
+	file, err := os.CreateTemp(dir, pattern)
 	assert.NoError(t, err)
 	return file.Name()
 }
 
 func NewTempDirName(t *testing.T, pattern string) string {
-	dir, err := ioutil.TempDir("", pattern)
+	dir, err := os.MkdirTemp("", pattern)
 	assert.NoError(t, err)
 	return dir
 }
