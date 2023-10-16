@@ -3388,6 +3388,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "BeneficiaryAddressRequest": {
+      "description": "BeneficiaryAddressRequest address of the beneficiary",
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "x-go-name": "Address"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "BeneficiaryTxStatus": {
       "type": "object",
       "title": "BeneficiaryTxStatus settle with beneficiary transaction status.",
@@ -4789,17 +4800,6 @@
         "tax_sub_total": {
           "type": "string",
           "x-go-name": "TaxSubTotal"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "PayoutAddressRequest": {
-      "description": "PayoutAddressRequest payout address request",
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string",
-          "x-go-name": "Address"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

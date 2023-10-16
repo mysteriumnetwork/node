@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/payout"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -65,18 +65,18 @@ type identityMover interface {
 }
 
 type identitiesAPI struct {
-	mover            identityMover
-	idm              identity.Manager
-	selector         identity_selector.Handler
-	registry         registry.IdentityRegistry
-	addressProvider  AddressProvider
-	balanceProvider  balanceProvider
-	earningsProvider earningsProvider
-	bc               providerChannel
-	transactor       Transactor
-	bprovider        beneficiaryProvider
-	addressStorage   *payout.AddressStorage
-	hermesMigrator   *migration.HermesMigrator
+	mover              identityMover
+	idm                identity.Manager
+	selector           identity_selector.Handler
+	registry           registry.IdentityRegistry
+	addressProvider    AddressProvider
+	balanceProvider    balanceProvider
+	earningsProvider   earningsProvider
+	bc                 providerChannel
+	transactor         Transactor
+	bprovider          beneficiaryProvider
+	beneficiaryStorage *beneficiary.AddressStorage
+	hermesMigrator     *migration.HermesMigrator
 }
 
 // AddressProvider provides sc addresses.
@@ -578,11 +578,11 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 	utils.WriteAsJSON(idDTO, c.Writer)
 }
 
-// swagger:operation GET /identities/:id/payout-address
+// swagger:operation GET /identities/:id/beneficiary-async
 //
 //	---
-//	summary: Get payout address
-//	description: Get payout address stored locally
+//	summary: Get beneficiary address
+//	description: Get beneficiary address stored locally
 //	parameters:
 //	- in: path
 //	  name: id
@@ -591,9 +591,9 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 //	  required: true
 //	responses:
 //	  200:
-//	    description: Unlocked identity returned
+//	    description: Local beneficiary address returned
 //	    schema:
-//	      "$ref": "#/definitions/PayoutAddressRequest"
+//	      "$ref": "#/definitions/BeneficiaryAddressRequest"
 //	  400:
 //	    description: Failed to parse or request validation failed
 //	    schema:
@@ -602,26 +602,26 @@ func (ia *identitiesAPI) Import(c *gin.Context) {
 //	    description: Internal server error
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
-func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
+func (ia *identitiesAPI) GetBeneficiaryAddressAsync(c *gin.Context) {
 	id := c.Param("id")
-	addr, err := ia.addressStorage.Address(id)
+	addr, err := ia.beneficiaryStorage.Address(id)
 	if err != nil {
-		if errors.Is(err, payout.ErrNotFound) {
-			utils.WriteAsJSON(contract.PayoutAddressRequest{}, c.Writer)
+		if errors.Is(err, beneficiary.ErrNotFound) {
+			utils.WriteAsJSON(contract.BeneficiaryAddressRequest{}, c.Writer)
 			return
 		}
-		c.Error(apierror.Internal("Failed to get payout address", contract.ErrCodeIDGetPayoutAddress))
+		c.Error(apierror.Internal("Failed to get beneficiary address", contract.ErrCodeIDGetBeneficiaryAddress))
 		return
 	}
 
-	utils.WriteAsJSON(contract.PayoutAddressRequest{Address: addr}, c.Writer)
+	utils.WriteAsJSON(contract.BeneficiaryAddressRequest{Address: addr}, c.Writer)
 }
 
-// swagger:operation PUT /identities/:id/payout-address
+// swagger:operation POST /identities/:id/beneficiary-async
 //
 //	---
-//	summary: Save payout address
-//	description: Stores payout address locally
+//	summary: Save beneficiary address to local storage
+//	description: Stores beneficiary address locally
 //	parameters:
 //	- in: path
 //	  name: id
@@ -630,29 +630,29 @@ func (ia *identitiesAPI) GetPayoutAddress(c *gin.Context) {
 //	  required: true
 //	- in: body
 //	  name: body
-//	  description: Payout address request.
+//	  description: Beneficiary address request.
 //	  schema:
-//	    $ref: "#/definitions/PayoutAddressRequest"
+//	    $ref: "#/definitions/BeneficiaryAddressRequest"
 //	responses:
 //	  200:
-//	    description: Unlocked identity returned
+//	    description: Local beneficiary address returned
 //	    schema:
-//	      "$ref": "#/definitions/PayoutAddressRequest"
+//	      "$ref": "#/definitions/BeneficiaryChangeRequest"
 //	  400:
 //	    description: Failed to parse or request validation failed
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
-func (ia *identitiesAPI) SavePayoutAddress(c *gin.Context) {
-	var par contract.PayoutAddressRequest
+func (ia *identitiesAPI) SaveBeneficiaryAddressAsync(c *gin.Context) {
+	var par contract.BeneficiaryAddressRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&par); err != nil {
 		c.Error(apierror.ParseFailed())
 		return
 	}
 
 	id := c.Param("id")
-	err := ia.addressStorage.Save(id, par.Address)
+	err := ia.beneficiaryStorage.Save(id, par.Address)
 	if err != nil {
-		c.Error(apierror.BadRequest("Invalid address", contract.ErrCodeIDSavePayoutAddress))
+		c.Error(apierror.BadRequest("Invalid address", contract.ErrCodeIDSaveBeneficiaryAddress))
 		return
 	}
 
@@ -765,22 +765,22 @@ func AddRoutesForIdentities(
 	transactor Transactor,
 	bprovider beneficiaryProvider,
 	mover identityMover,
-	addressStorage *payout.AddressStorage,
+	addressStorage *beneficiary.AddressStorage,
 	hermesMigrator *migration.HermesMigrator,
 ) func(*gin.Engine) error {
 	idAPI := &identitiesAPI{
-		mover:            mover,
-		idm:              idm,
-		selector:         selector,
-		registry:         registry,
-		balanceProvider:  balanceProvider,
-		addressProvider:  addressProvider,
-		earningsProvider: earningsProvider,
-		bc:               bc,
-		transactor:       transactor,
-		bprovider:        bprovider,
-		addressStorage:   addressStorage,
-		hermesMigrator:   hermesMigrator,
+		mover:              mover,
+		idm:                idm,
+		selector:           selector,
+		registry:           registry,
+		balanceProvider:    balanceProvider,
+		addressProvider:    addressProvider,
+		earningsProvider:   earningsProvider,
+		bc:                 bc,
+		transactor:         transactor,
+		bprovider:          bprovider,
+		beneficiaryStorage: addressStorage,
+		hermesMigrator:     hermesMigrator,
 	}
 	return func(e *gin.Engine) error {
 		identityGroup := e.Group("/identities")
@@ -793,8 +793,8 @@ func AddRoutesForIdentities(
 			identityGroup.PUT("/:id/unlock", idAPI.Unlock)
 			identityGroup.GET("/:id/registration", idAPI.RegistrationStatus)
 			identityGroup.GET("/:id/beneficiary", idAPI.Beneficiary)
-			identityGroup.GET("/:id/payout-address", idAPI.GetPayoutAddress)
-			identityGroup.PUT("/:id/payout-address", idAPI.SavePayoutAddress)
+			identityGroup.GET("/:id/beneficiary-async", idAPI.GetBeneficiaryAddressAsync)
+			identityGroup.POST("/:id/beneficiary-async", idAPI.SaveBeneficiaryAddressAsync)
 			identityGroup.PUT("/:id/balance/refresh", idAPI.BalanceRefresh)
 			identityGroup.POST("/:id/migrate-hermes", idAPI.MigrateHermes)
 			identityGroup.GET("/:id/migrate-hermes/status", idAPI.MigrationHermesStatus)
