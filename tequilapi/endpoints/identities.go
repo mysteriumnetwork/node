@@ -75,7 +75,7 @@ type identitiesAPI struct {
 	bc                 providerChannel
 	transactor         Transactor
 	bprovider          beneficiaryProvider
-	beneficiaryStorage *beneficiary.AddressStorage
+	beneficiaryStorage beneficiary.BeneficiaryStorage
 	hermesMigrator     *migration.HermesMigrator
 }
 
@@ -765,7 +765,7 @@ func AddRoutesForIdentities(
 	transactor Transactor,
 	bprovider beneficiaryProvider,
 	mover identityMover,
-	addressStorage *beneficiary.AddressStorage,
+	addressStorage beneficiary.BeneficiaryStorage,
 	hermesMigrator *migration.HermesMigrator,
 ) func(*gin.Engine) error {
 	idAPI := &identitiesAPI{
