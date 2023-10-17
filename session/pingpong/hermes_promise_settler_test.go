@@ -27,6 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -46,6 +47,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		},
 	}
 	ks := identity.NewMockKeystore()
+	lbs := beneficiary.AddressStorage{}
 
 	fac := &mockHermesCallerFactory{}
 
@@ -63,6 +65,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
 		&mockObserver{},
+		&lbs,
 		cfg)
 
 	settler.currentState[mockID] = settlementState{}
@@ -125,6 +128,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	}
 	ks := identity.NewMockKeystore()
 	fac := &mockHermesCallerFactory{}
+	lbs := beneficiary.AddressStorage{}
 
 	settler := NewHermesPromiseSettler(
 		&mockTransactor{},
@@ -140,6 +144,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
 		&mockObserver{},
+		&lbs,
 		cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
@@ -182,7 +187,9 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 			ValidUntil: time.Now().Add(30 * time.Minute),
 		},
 	}
-	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, cfg)
+	lbs := beneficiary.AddressStorage{}
+
+	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, &lbs, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{}, beneficiaryID)
@@ -258,6 +265,8 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	acc2, err := ks.NewAccount("")
 	assert.NoError(t, err)
 
+	lbs := beneficiary.AddressStorage{}
+
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[string]mockRegistrationStatus{
 			"0" + strings.ToLower(acc2.Address.Hex()): {
@@ -284,6 +293,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
 		&mockObserver{},
+		&lbs,
 		cfg)
 
 	settler.handleNodeStart()
