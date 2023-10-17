@@ -131,7 +131,7 @@ type hermesPromiseSettler struct {
 	publisher                  eventbus.Publisher
 	hf                         hermesFees
 	observerApi                observerApi
-	beneficiaryLocalStorage    *beneficiary.AddressStorage
+	beneficiaryLocalStorage    beneficiary.BeneficiaryStorage
 	currentState               map[identity.Identity]settlementState
 	settleQueue                chan receivedPromise
 	stop                       chan struct{}
@@ -175,7 +175,7 @@ type HermesPromiseSettlerConfig struct {
 var errFeeNotCovered = errors.New("fee not covered, cannot continue")
 
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
-func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, observerApi observerApi, beneficiaryLocalStorage *beneficiary.AddressStorage, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
+func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, observerApi observerApi, beneficiaryLocalStorage beneficiary.BeneficiaryStorage, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
 	return &hermesPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		ks:                         ks,

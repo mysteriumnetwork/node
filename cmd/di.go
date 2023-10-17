@@ -206,7 +206,7 @@ type Dependencies struct {
 
 	ResidentCountry *identity.ResidentCountry
 
-	BeneficiaryAddressStorage *beneficiary.AddressStorage
+	BeneficiaryAddressStorage beneficiary.BeneficiaryStorage
 	NodeStatusTracker         *node.MonitoringStatusTracker
 	NodeStatsTracker          *node.StatsTracker
 	uiVersionConfig           versionmanager.NodeUIVersionConfig
