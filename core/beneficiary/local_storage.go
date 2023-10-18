@@ -40,6 +40,12 @@ type localStorage interface {
 	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
 }
 
+// BeneficiaryStorage handles storing of beneficiary address
+type BeneficiaryStorage interface {
+	Address(identity string) (string, error)
+	Save(identity, address string) error
+}
+
 // AddressStorage handles storing of beneficiary address
 type AddressStorage struct {
 	storage localStorage
