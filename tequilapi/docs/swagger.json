@@ -687,29 +687,29 @@
         }
       }
     },
-    "/feedback/issue": {
+    "/feedback/bug-report": {
       "post": {
-        "description": "Reports user issue to github",
+        "description": "Creates a bug report with logs",
         "tags": [
           "Feedback"
         ],
-        "summary": "Reports user issue to github",
-        "operationId": "reportIssueGithub",
+        "summary": "Creates a bug report",
+        "operationId": "bugReport",
         "parameters": [
           {
-            "description": "Report issue request",
+            "description": "Report a bug",
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/ReportIssueRequest"
+              "$ref": "#/definitions/BugReport"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Issue reported",
+            "description": "Bug report response",
             "schema": {
-              "$ref": "#/definitions/ReportIssueSuccess"
+              "$ref": "#/definitions/CreateBugReportResponse"
             }
           },
           "400": {
@@ -729,6 +729,65 @@
             "schema": {
               "$ref": "#/definitions/APIError"
             }
+          },
+          "503": {
+            "description": "Unavailable",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/feedback/issue": {
+      "post": {
+        "description": "Reports user issue to github",
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Reports user issue to github",
+        "operationId": "reportIssueGithub",
+        "deprecated": true,
+        "parameters": [
+          {
+            "description": "Report issue request",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/UserReport"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Issue reported",
+            "schema": {
+              "$ref": "#/definitions/ReportIssueGithubResponse"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "429": {
+            "description": "Too many requests (max. 1/minute)",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
           }
         }
       }
@@ -741,13 +800,14 @@
         ],
         "summary": "Reports user issue to intercom",
         "operationId": "reportIssueIntercom",
+        "deprecated": true,
         "parameters": [
           {
             "description": "Report issue request",
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/ReportIntercomIssueRequest"
+              "$ref": "#/definitions/UserReport"
             }
           }
         ],
@@ -769,6 +829,12 @@
           },
           "500": {
             "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "503": {
+            "description": "Unavailable",
             "schema": {
               "$ref": "#/definitions/APIError"
             }
@@ -3418,6 +3484,21 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "BugReport": {
+      "description": "BugReport represents user input when submitting an issue report",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "email": {
+          "type": "string",
+          "x-go-name": "Email"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/feedback"
+    },
     "BuildInfoDTO": {
       "type": "object",
       "title": "BuildInfoDTO holds info about build.",
@@ -3734,6 +3815,37 @@
       },
       "x-go-name": "sessionConnectivityStatusCollection",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+    },
+    "CreateBugReportResponse": {
+      "description": "CreateBugReportResponse response for bug report creation",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "x-go-name": "Email"
+        },
+        "identity": {
+          "type": "string",
+          "x-go-name": "Identity"
+        },
+        "ip": {
+          "type": "string",
+          "x-go-name": "Ip"
+        },
+        "ip_type": {
+          "type": "string",
+          "x-go-name": "IpType"
+        },
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        },
+        "node_country": {
+          "type": "string",
+          "x-go-name": "NodeCountry"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/feedback"
     },
     "CurrencyExchangeDTO": {
       "type": "object",
@@ -5125,66 +5237,8 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ReportIntercomIssueRequest": {
-      "description": "ReportIntercomIssueRequest params for intercom issue report",
-      "type": "object",
-      "properties": {
-        "description": {
-          "type": "string",
-          "x-go-name": "Description"
-        },
-        "email": {
-          "type": "string",
-          "x-go-name": "Email"
-        },
-        "user_id": {
-          "type": "string",
-          "x-go-name": "UserId"
-        },
-        "user_type": {
-          "type": "string",
-          "x-go-name": "UserType"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-    },
-    "ReportIssueError": {
-      "description": "ReportIssueError issue report error",
-      "type": "object",
-      "properties": {
-        "errors": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string",
-                "x-go-name": "Message"
-              }
-            }
-          },
-          "x-go-name": "Errors"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-    },
-    "ReportIssueRequest": {
-      "description": "ReportIssueRequest params for issue report",
-      "type": "object",
-      "properties": {
-        "description": {
-          "type": "string",
-          "x-go-name": "Description"
-        },
-        "email": {
-          "type": "string",
-          "x-go-name": "Email"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-    },
-    "ReportIssueSuccess": {
-      "description": "ReportIssueSuccess successful issue report",
+    "ReportIssueGithubResponse": {
+      "description": "ReportIssueGithubResponse response for github issue creation",
       "type": "object",
       "properties": {
         "issue_id": {
@@ -5789,6 +5843,29 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "UserReport": {
+      "description": "UserReport represents user input when submitting an issue report",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "email": {
+          "type": "string",
+          "x-go-name": "Email"
+        },
+        "user_id": {
+          "type": "string",
+          "x-go-name": "UserId"
+        },
+        "user_type": {
+          "type": "string",
+          "x-go-name": "UserType"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/feedback"
     },
     "WithdrawRequestDTO": {
       "type": "object",

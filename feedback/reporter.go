@@ -18,13 +18,15 @@
 package feedback
 
 import (
+	"fmt"
 	"net/mail"
 	"strings"
 
 	"github.com/mysteriumnetwork/feedback/client"
+	"github.com/mysteriumnetwork/feedback/feedback"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -65,6 +67,7 @@ type identityProvider interface {
 }
 
 // UserReport represents user input when submitting an issue report
+// swagger:model UserReport
 type UserReport struct {
 	Email       string `json:"email"`
 	Description string `json:"description"`
@@ -73,49 +76,51 @@ type UserReport struct {
 }
 
 // Validate validate UserReport
-func (ur *UserReport) Validate() error {
-	if strings.TrimSpace(ur.Email) != "" {
-		if _, err := mail.ParseAddress(ur.Email); err != nil {
-			return err
-		}
+func (ur *UserReport) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
+	if strings.TrimSpace(ur.Email) == "" {
+		v.Required("email")
+	} else if _, err := mail.ParseAddress(ur.Email); err != nil {
+		v.Invalid("email", "Invalid email address")
 	}
 
-	if trimmed := strings.TrimSpace(ur.Description); len(trimmed) < 30 {
-		return errors.New("Description too short. Provide at least 30 character long description.")
+	ur.Description = strings.TrimSpace(ur.Description)
+	if len(ur.Description) < 30 {
+		v.Invalid("description", "Description too short. Provide at least 30 character long description.")
 	}
 
-	return nil
+	return v.Err()
 }
 
 // NewIssue sends node logs, Identity and UserReport to the feedback service
-func (r *Reporter) NewIssue(report UserReport) (result *client.CreateGithubIssueResult, err error) {
-	if err := report.Validate(); err != nil {
-		return nil, err
+func (r *Reporter) NewIssue(report UserReport) (*feedback.CreateGithubIssueResponse, *apierror.APIError, error) {
+	if apiErr := report.Validate(); apiErr != nil {
+		return nil, apiErr, fmt.Errorf("invalid report: %w", apiErr)
 	}
 
 	userID := r.currentIdentity()
 
 	archiveFilepath, err := r.logCollector.Archive()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create log archive")
+		return nil, apierror.Internal("could not create log archive", "cannot_get_logs"), fmt.Errorf("could not create log archive: %w", err)
 	}
 
-	result, err = r.feedbackAPI.CreateGithubIssue(client.CreateGithubIssueRequest{
+	result, apierr, err := r.feedbackAPI.CreateGithubIssue(feedback.CreateGithubIssueRequest{
 		UserId:      userID,
 		Description: report.Description,
 		Email:       report.Email,
-		Filepath:    archiveFilepath,
-	})
+	}, archiveFilepath)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create github issue")
+		return nil, nil, fmt.Errorf("could not create github issue: %w", err)
 	}
-	return result, nil
+
+	return result, apierr, nil
 }
 
 // NewIntercomIssue sends node logs, Identity and UserReport to intercom
-func (r *Reporter) NewIntercomIssue(report UserReport) (result *client.CreateIntercomIssueResult, err error) {
-	if err := report.Validate(); err != nil {
-		return nil, err
+func (r *Reporter) NewIntercomIssue(report UserReport) (*feedback.CreateIntercomIssueResponse, *apierror.APIError, error) {
+	if apiErr := report.Validate(); apiErr != nil {
+		return nil, apiErr, fmt.Errorf("invalid report: %w", apiErr)
 	}
 
 	nodeID := r.currentIdentity()
@@ -123,24 +128,94 @@ func (r *Reporter) NewIntercomIssue(report UserReport) (result *client.CreateInt
 
 	archiveFilepath, err := r.logCollector.Archive()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create log archive")
+		return nil, apierror.Internal("could not create log archive", "cannot_get_logs"), fmt.Errorf("could not create log archive: %w", err)
 	}
 
-	result, err = r.feedbackAPI.CreateIntercomIssue(client.CreateIntercomIssueRequest{
+	result, apierr, err := r.feedbackAPI.CreateIntercomIssue(feedback.CreateIntercomIssueRequest{
 		UserId:       report.UserId,
 		Description:  report.Description,
 		Email:        report.Email,
-		Filepath:     archiveFilepath,
 		NodeIdentity: nodeID,
 		NodeCountry:  location.Country,
 		IpType:       location.IPType,
 		Ip:           location.IP,
 		UserType:     report.UserType,
-	})
+	}, archiveFilepath)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create intercom issue")
+		return nil, nil, fmt.Errorf("could not create intercom issue: %w", err)
 	}
-	return result, nil
+
+	return result, apierr, nil
+}
+
+// BugReport represents user input when submitting an issue report
+// swagger:model BugReport
+type BugReport struct {
+	Email       string `json:"email"`
+	Description string `json:"description"`
+}
+
+// Validate validates a bug report
+func (br *BugReport) Validate() *apierror.APIError {
+	v := apierror.NewValidator()
+	if strings.TrimSpace(br.Email) != "" {
+		if _, err := mail.ParseAddress(br.Email); err != nil {
+			v.Invalid("email", "Invalid email address")
+		}
+	}
+
+	br.Description = strings.TrimSpace(br.Description)
+	if len(br.Description) < 30 {
+		v.Invalid("description", "Description too short. Provide at least 30 character long description.")
+	}
+
+	return v.Err()
+}
+
+// CreateBugReportResponse response for bug report creation
+// swagger:model CreateBugReportResponse
+type CreateBugReportResponse struct {
+	Message     string `json:"message"`
+	Email       string `json:"email"`
+	Identity    string `json:"identity"`
+	NodeCountry string `json:"node_country"`
+	IpType      string `json:"ip_type"`
+	Ip          string `json:"ip"`
+}
+
+// NewIntercomIssue sends node logs, Identity and UserReport to intercom
+func (r *Reporter) NewBugReport(report BugReport) (*CreateBugReportResponse, *apierror.APIError, error) {
+	if apiErr := report.Validate(); apiErr != nil {
+		return nil, apiErr, fmt.Errorf("invalid report: %w", apiErr)
+	}
+
+	nodeID := r.currentIdentity()
+	location := r.originResolver.GetOrigin()
+
+	archiveFilepath, err := r.logCollector.Archive()
+	if err != nil {
+		return nil, apierror.Internal("could not create log archive", "cannot_get_logs"), fmt.Errorf("could not create log archive: %w", err)
+	}
+
+	result, apierr, err := r.feedbackAPI.CreateBugReport(feedback.CreateBugReportRequest{
+		NodeIdentity: nodeID,
+		Description:  report.Description,
+		Email:        report.Email,
+	}, archiveFilepath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not create intercom issue: %w", err)
+	} else if apierr != nil {
+		return nil, apierr, apierr
+	}
+
+	return &CreateBugReportResponse{
+		Message:     result.Message,
+		Email:       result.Email,
+		Identity:    result.NodeIdentity,
+		NodeCountry: location.Country,
+		IpType:      location.IPType,
+		Ip:          location.IP,
+	}, nil, nil
 }
 
 func (r *Reporter) currentIdentity() (identity string) {
