@@ -54,9 +54,9 @@ type ReportIssueGithubResponse struct {
 //	parameters:
 //	  - in: body
 //	    name: body
-//	    description: Report issue request
+//	    description: Bug report issue request
 //	    schema:
-//	      $ref: "#/definitions/UserReport"
+//	      $ref: "#/definitions/BugReport"
 //	responses:
 //	  200:
 //	    description: Issue reported
@@ -79,7 +79,7 @@ type ReportIssueGithubResponse struct {
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) ReportIssueGithub(c *gin.Context) {
-	req := feedback.UserReport{}
+	var req feedback.BugReport
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		c.Error(apierror.ParseFailed())
@@ -136,7 +136,7 @@ func (api *feedbackAPI) ReportIssueGithub(c *gin.Context) {
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) ReportIssueIntercom(c *gin.Context) {
-	req := feedback.UserReport{}
+	var req feedback.UserReport
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		c.Error(apierror.ParseFailed())
@@ -192,7 +192,7 @@ func (api *feedbackAPI) ReportIssueIntercom(c *gin.Context) {
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
 func (api *feedbackAPI) BugReport(c *gin.Context) {
-	req := feedback.BugReport{}
+	var req feedback.BugReport
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		c.Error(apierror.ParseFailed())

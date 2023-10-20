@@ -750,11 +750,11 @@
         "deprecated": true,
         "parameters": [
           {
-            "description": "Report issue request",
+            "description": "Bug report issue request",
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/UserReport"
+              "$ref": "#/definitions/BugReport"
             }
           }
         ],

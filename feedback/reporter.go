@@ -66,26 +66,25 @@ type identityProvider interface {
 	GetIdentities() []identity.Identity
 }
 
-// UserReport represents user input when submitting an issue report
-// swagger:model UserReport
-type UserReport struct {
+// BugReport represents user input when submitting an issue report
+// swagger:model BugReport
+type BugReport struct {
 	Email       string `json:"email"`
 	Description string `json:"description"`
-	UserId      string `json:"user_id"`
-	UserType    string `json:"user_type"`
 }
 
-// Validate validate UserReport
-func (ur *UserReport) Validate() *apierror.APIError {
+// Validate validates a bug report
+func (br *BugReport) Validate() *apierror.APIError {
 	v := apierror.NewValidator()
-	if strings.TrimSpace(ur.Email) == "" {
+	br.Email = strings.TrimSpace(br.Email)
+	if br.Email == "" {
 		v.Required("email")
-	} else if _, err := mail.ParseAddress(ur.Email); err != nil {
+	} else if _, err := mail.ParseAddress(br.Email); err != nil {
 		v.Invalid("email", "Invalid email address")
 	}
 
-	ur.Description = strings.TrimSpace(ur.Description)
-	if len(ur.Description) < 30 {
+	br.Description = strings.TrimSpace(br.Description)
+	if len(br.Description) < 30 {
 		v.Invalid("description", "Description too short. Provide at least 30 character long description.")
 	}
 
@@ -93,7 +92,7 @@ func (ur *UserReport) Validate() *apierror.APIError {
 }
 
 // NewIssue sends node logs, Identity and UserReport to the feedback service
-func (r *Reporter) NewIssue(report UserReport) (*feedback.CreateGithubIssueResponse, *apierror.APIError, error) {
+func (r *Reporter) NewIssue(report BugReport) (*feedback.CreateGithubIssueResponse, *apierror.APIError, error) {
 	if apiErr := report.Validate(); apiErr != nil {
 		return nil, apiErr, fmt.Errorf("invalid report: %w", apiErr)
 	}
@@ -115,6 +114,19 @@ func (r *Reporter) NewIssue(report UserReport) (*feedback.CreateGithubIssueRespo
 	}
 
 	return result, apierr, nil
+}
+
+// UserReport represents user input when submitting an issue report
+// swagger:model UserReport
+type UserReport struct {
+	BugReport
+	UserId   string `json:"user_id"`
+	UserType string `json:"user_type"`
+}
+
+// Validate validate UserReport
+func (ur *UserReport) Validate() *apierror.APIError {
+	return ur.BugReport.Validate()
 }
 
 // NewIntercomIssue sends node logs, Identity and UserReport to intercom
@@ -148,30 +160,6 @@ func (r *Reporter) NewIntercomIssue(report UserReport) (*feedback.CreateIntercom
 	return result, apierr, nil
 }
 
-// BugReport represents user input when submitting an issue report
-// swagger:model BugReport
-type BugReport struct {
-	Email       string `json:"email"`
-	Description string `json:"description"`
-}
-
-// Validate validates a bug report
-func (br *BugReport) Validate() *apierror.APIError {
-	v := apierror.NewValidator()
-	if strings.TrimSpace(br.Email) != "" {
-		if _, err := mail.ParseAddress(br.Email); err != nil {
-			v.Invalid("email", "Invalid email address")
-		}
-	}
-
-	br.Description = strings.TrimSpace(br.Description)
-	if len(br.Description) < 30 {
-		v.Invalid("description", "Description too short. Provide at least 30 character long description.")
-	}
-
-	return v.Err()
-}
-
 // CreateBugReportResponse response for bug report creation
 // swagger:model CreateBugReportResponse
 type CreateBugReportResponse struct {
@@ -183,7 +171,7 @@ type CreateBugReportResponse struct {
 	Ip          string `json:"ip"`
 }
 
-// NewIntercomIssue sends node logs, Identity and UserReport to intercom
+// NewBugReport creates a new bug report and returns the message that can be sent to intercom
 func (r *Reporter) NewBugReport(report BugReport) (*CreateBugReportResponse, *apierror.APIError, error) {
 	if apiErr := report.Validate(); apiErr != nil {
 		return nil, apiErr, fmt.Errorf("invalid report: %w", apiErr)
