@@ -38,7 +38,7 @@ require (
 	github.com/mysteriumnetwork/EventBus v0.0.0-20220415063055-d22cb121672c
 	github.com/mysteriumnetwork/feedback v1.3.2
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d
-	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.12.1
+	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.13.0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.3.1
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
