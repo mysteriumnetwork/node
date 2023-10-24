@@ -299,6 +299,56 @@ func TestPromiseSettler_handleHermesPromiseReceivedWithLocalBeneficiary(t *testi
 	assert.Equal(t, localBeneficiary, p.beneficiary)
 }
 
+func TestPromiseSettler_doNotSettleIfBeneficiaryIsAChannel(t *testing.T) {
+	channelProvider := &mockHermesChannelProvider{}
+	channelStatusProvider := &mockProviderChannelStatusProvider{}
+	mrsp := &mockRegistrationStatusProvider{
+		identities: map[string]mockRegistrationStatus{
+			mockChainIdentity: {
+				status: registry.Registered,
+			},
+		},
+	}
+	ks := identity.NewMockKeystore()
+	fac := &mockHermesCallerFactory{}
+	tm := &mockTransactor{
+		feesToReturn: registry.FeesResponse{
+			Fee:        units.FloatEthToBigIntWei(0.05),
+			ValidUntil: time.Now().Add(30 * time.Minute),
+		},
+	}
+	lbs := newMockAddressStorage()
+
+	mockAddressProvider := newMockAddressProvider()
+	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, mockAddressProvider, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, lbs, cfg)
+
+	expectedChannel := client.ProviderChannel{Stake: big.NewInt(1000)}
+	expectedPromise := crypto.Promise{Amount: units.FloatEthToBigIntWei(6)}
+	settler.currentState[mockID] = settlementState{
+		registered:       true,
+		settleInProgress: map[common.Address]struct{}{},
+	}
+	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise}, beneficiaryID)
+	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
+		HermesID:   hermesID,
+		ProviderID: mockID,
+		Promise:    expectedPromise,
+	})
+
+	p := <-settler.settleQueue
+	assert.Equal(t, mockID, p.provider)
+	assert.Equal(t, beneficiaryID, p.beneficiary)
+
+	mockAddressProvider.setChannelAddress(0, mockID.ToCommonAddress(), beneficiaryID)
+	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise}, beneficiaryID)
+	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
+		HermesID:   hermesID,
+		ProviderID: mockID,
+		Promise:    expectedPromise,
+	})
+	assertNoReceive(t, settler.settleQueue)
+}
+
 func assertNoReceive(t *testing.T, ch chan receivedPromise) {
 	// at this point, we should not receive an event on settled queue as we have no info on provider, let's check for that
 	select {
