@@ -377,6 +377,14 @@ func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel, maxFee 
 	if localBeneficiaryAddress != "" && localBeneficiaryAddress != channel.Beneficiary.Hex() {
 		channel.Beneficiary = common.HexToAddress(localBeneficiaryAddress)
 	}
+	benefiriaryEqualToAddress, err := aps.isBenenficiarySetToChannel(aps.chainID(), channel.Identity.ToCommonAddress(), channel.Beneficiary)
+	if err != nil {
+		log.Error().Msgf("Failed to verify beneficiary and channel equality")
+	}
+	if benefiriaryEqualToAddress {
+		log.Warn().Msgf("payment channel for identity %s is set as beneficiary, skip settling", channel.Identity.Address)
+		return
+	}
 	aps.settleQueue <- receivedPromise{
 		hermesID:    channel.HermesID,
 		provider:    channel.Identity,
@@ -1386,6 +1394,23 @@ func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThresh
 		return true, nil
 	}
 
+	return false, nil
+}
+
+func (aps *hermesPromiseSettler) isBenenficiarySetToChannel(chainID int64, identity, beneficiary common.Address) (bool, error) {
+	hermeses, err := aps.addressProvider.GetKnownHermeses(chainID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get list of known hermeses: %w", err)
+	}
+	for _, h := range hermeses {
+		channelAddr, err := aps.addressProvider.GetHermesChannelAddress(chainID, identity, h)
+		if err != nil {
+			return false, fmt.Errorf("failed to generate channel address: %w", err)
+		}
+		if channelAddr == beneficiary {
+			return true, nil
+		}
+	}
 	return false, nil
 }
 
