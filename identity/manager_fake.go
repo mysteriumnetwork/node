@@ -54,6 +54,10 @@ func (fakeIdm *idmFake) GetUnlockedIdentity() (Identity, bool) {
 	return fakeIdm.newIdentity, false
 }
 
+func (fakeIdm *idmFake) CountIdentities() int {
+	return 1
+}
+
 func (fakeIdm *idmFake) GetIdentity(address string) (Identity, error) {
 	for _, fakeIdentity := range fakeIdm.existingIdentities {
 		if address == fakeIdentity.Address {

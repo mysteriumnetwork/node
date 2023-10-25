@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -32,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"math/big"
 )
 
 type registryStorage interface {
@@ -46,6 +48,8 @@ type hermesCaller interface {
 
 type transactor interface {
 	FetchRegistrationStatus(id string) ([]TransactorStatusResponse, error)
+	GetFreeRegistrationEligibility(identity identity.Identity) (bool, error)
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 }
 
 type contractRegistry struct {
@@ -58,6 +62,7 @@ type contractRegistry struct {
 	ap         AddressProvider
 	hermes     hermesCaller
 	transactor transactor
+	manager    identity.Manager
 	cfg        IdentityRegistryConfig
 }
 
@@ -330,6 +335,14 @@ func (registry *contractRegistry) loadInitialState() error {
 		return errors.Wrap(err, "Could not fetch previous registrations")
 	}
 
+	if len(entries) == 0 {
+		err = registry.handleFirstStart()
+		if err != nil {
+			log.Error().Err(err).Msg("Could not handle first start")
+		}
+		return nil
+	}
+
 	for i := range entries {
 		switch entries[i].RegistrationStatus {
 		case RegistrationError, InProgress:
@@ -342,6 +355,39 @@ func (registry *contractRegistry) loadInitialState() error {
 			log.Debug().Msgf("Identity %q already registered, skipping", entries[i].Identity)
 		}
 	}
+	return nil
+}
+
+func (registry *contractRegistry) handleFirstStart() error {
+	registry.lock.Lock()
+	defer registry.lock.Unlock()
+
+	if registry.manager.CountIdentities() > 0 {
+		return nil
+	}
+
+	log.Info().Msg("Attempting to create new identity")
+	id, err := registry.manager.CreateNewIdentity("")
+	if err != nil {
+		return fmt.Errorf("failed to create identity: %w", err)
+	}
+
+	eligible, err := registry.transactor.GetFreeRegistrationEligibility(id)
+
+	if err != nil {
+		return fmt.Errorf("failed to check free registration eligibility: %w", err)
+	}
+
+	if !eligible {
+		log.Warn().Msg("Free registration is not eligible")
+		return nil
+	}
+	chainID := config.GetInt64(config.FlagChainID)
+	err = registry.transactor.RegisterIdentity(id.Address, big.NewInt(0), big.NewInt(0), "", chainID, nil)
+	if err != nil {
+		return fmt.Errorf("could not register identity: %w", err)
+	}
+	log.Info().Msgf("Identity created and registered for free: %s", id.Address)
 	return nil
 }
 
