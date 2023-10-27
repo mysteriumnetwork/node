@@ -255,7 +255,6 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.SettlementHistoryStorage,
 		di.EventBus,
 		di.ObserverAPI,
-		di.BeneficiaryAddressStorage,
 		pingpong.HermesPromiseSettlerConfig{
 			BalanceThreshold:        nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxFeeThreshold:         nodeOptions.Payments.MaxFeeSettlingThreshold,

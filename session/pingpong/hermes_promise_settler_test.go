@@ -46,7 +46,6 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		},
 	}
 	ks := identity.NewMockKeystore()
-	lbs := newMockAddressStorage()
 
 	fac := &mockHermesCallerFactory{}
 
@@ -64,7 +63,6 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
 		&mockObserver{},
-		lbs,
 		cfg)
 
 	settler.currentState[mockID] = settlementState{}
@@ -127,7 +125,6 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	}
 	ks := identity.NewMockKeystore()
 	fac := &mockHermesCallerFactory{}
-	lbs := newMockAddressStorage()
 
 	settler := NewHermesPromiseSettler(
 		&mockTransactor{},
@@ -143,7 +140,6 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
 		&mockObserver{},
-		lbs,
 		cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
@@ -186,9 +182,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 			ValidUntil: time.Now().Add(30 * time.Minute),
 		},
 	}
-	lbs := newMockAddressStorage()
-
-	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, lbs, cfg)
+	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{}, beneficiaryID)
@@ -246,109 +240,6 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	assertNoReceive(t, settler.settleQueue)
 }
 
-func TestPromiseSettler_handleHermesPromiseReceivedWithLocalBeneficiary(t *testing.T) {
-	channelProvider := &mockHermesChannelProvider{}
-	channelStatusProvider := &mockProviderChannelStatusProvider{}
-	mrsp := &mockRegistrationStatusProvider{
-		identities: map[string]mockRegistrationStatus{
-			mockChainIdentity: {
-				status: registry.Registered,
-			},
-		},
-	}
-	ks := identity.NewMockKeystore()
-	fac := &mockHermesCallerFactory{}
-	tm := &mockTransactor{
-		feesToReturn: registry.FeesResponse{
-			Fee:        units.FloatEthToBigIntWei(0.05),
-			ValidUntil: time.Now().Add(30 * time.Minute),
-		},
-	}
-	lbs := newMockAddressStorage()
-
-	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, &mockAddressProvider{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, lbs, cfg)
-
-	expectedChannel := client.ProviderChannel{Stake: big.NewInt(1000)}
-	expectedPromise := crypto.Promise{Amount: units.FloatEthToBigIntWei(6)}
-	settler.currentState[mockID] = settlementState{
-		registered:       true,
-		settleInProgress: map[common.Address]struct{}{},
-	}
-	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise}, beneficiaryID)
-	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
-		HermesID:   hermesID,
-		ProviderID: mockID,
-		Promise:    expectedPromise,
-	})
-
-	p := <-settler.settleQueue
-	assert.Equal(t, mockID, p.provider)
-	assert.Equal(t, beneficiaryID, p.beneficiary)
-
-	localBeneficiary := common.HexToAddress("0x00000000000000000000000000000000000000133")
-	err := lbs.Save(mockID.Address, localBeneficiary.Hex())
-	assert.NoError(t, err)
-
-	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
-		HermesID:   hermesID,
-		ProviderID: mockID,
-		Promise:    expectedPromise,
-	})
-	p = <-settler.settleQueue
-	assert.Equal(t, mockID, p.provider)
-	assert.Equal(t, localBeneficiary, p.beneficiary)
-}
-
-func TestPromiseSettler_doNotSettleIfBeneficiaryIsAChannel(t *testing.T) {
-	channelProvider := &mockHermesChannelProvider{}
-	channelStatusProvider := &mockProviderChannelStatusProvider{}
-	mrsp := &mockRegistrationStatusProvider{
-		identities: map[string]mockRegistrationStatus{
-			mockChainIdentity: {
-				status: registry.Registered,
-			},
-		},
-	}
-	ks := identity.NewMockKeystore()
-	fac := &mockHermesCallerFactory{}
-	tm := &mockTransactor{
-		feesToReturn: registry.FeesResponse{
-			Fee:        units.FloatEthToBigIntWei(0.05),
-			ValidUntil: time.Now().Add(30 * time.Minute),
-		},
-	}
-	lbs := newMockAddressStorage()
-
-	mockAddressProvider := newMockAddressProvider()
-	settler := NewHermesPromiseSettler(tm, &mockHermesPromiseStorage{}, &mockPayAndSettler{}, mockAddressProvider, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, &mockPublisher{}, &mockObserver{}, lbs, cfg)
-
-	expectedChannel := client.ProviderChannel{Stake: big.NewInt(1000)}
-	expectedPromise := crypto.Promise{Amount: units.FloatEthToBigIntWei(6)}
-	settler.currentState[mockID] = settlementState{
-		registered:       true,
-		settleInProgress: map[common.Address]struct{}{},
-	}
-	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise}, beneficiaryID)
-	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
-		HermesID:   hermesID,
-		ProviderID: mockID,
-		Promise:    expectedPromise,
-	})
-
-	p := <-settler.settleQueue
-	assert.Equal(t, mockID, p.provider)
-	assert.Equal(t, beneficiaryID, p.beneficiary)
-
-	mockAddressProvider.setChannelAddress(0, mockID.ToCommonAddress(), beneficiaryID)
-	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise}, beneficiaryID)
-	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
-		HermesID:   hermesID,
-		ProviderID: mockID,
-		Promise:    expectedPromise,
-	})
-	assertNoReceive(t, settler.settleQueue)
-}
-
 func assertNoReceive(t *testing.T, ch chan receivedPromise) {
 	// at this point, we should not receive an event on settled queue as we have no info on provider, let's check for that
 	select {
@@ -366,8 +257,6 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	assert.NoError(t, err)
 	acc2, err := ks.NewAccount("")
 	assert.NoError(t, err)
-
-	lbs := newMockAddressStorage()
 
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[string]mockRegistrationStatus{
@@ -395,7 +284,6 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		&settlementHistoryStorageMock{},
 		&mockPublisher{},
 		&mockObserver{},
-		lbs,
 		cfg)
 
 	settler.handleNodeStart()
@@ -836,22 +724,5 @@ func (shsm *settlementHistoryStorageMock) Store(_ SettlementHistoryEntry) error 
 type mockPayAndSettler struct{}
 
 func (mpas *mockPayAndSettler) PayAndSettle(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
-	return nil
-}
-
-type mockAddressStorage struct {
-	data map[string]string
-}
-
-func newMockAddressStorage() *mockAddressStorage {
-	return &mockAddressStorage{data: make(map[string]string)}
-}
-
-func (m mockAddressStorage) Address(identity string) (string, error) {
-	return m.data[identity], nil
-}
-
-func (m mockAddressStorage) Save(identity, address string) error {
-	m.data[identity] = address
 	return nil
 }

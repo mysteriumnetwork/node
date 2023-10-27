@@ -49,6 +49,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -206,10 +207,10 @@ type Dependencies struct {
 
 	ResidentCountry *identity.ResidentCountry
 
-	BeneficiaryAddressStorage beneficiary.BeneficiaryStorage
-	NodeStatusTracker         *node.MonitoringStatusTracker
-	NodeStatsTracker          *node.StatsTracker
-	uiVersionConfig           versionmanager.NodeUIVersionConfig
+	PayoutAddressStorage *payout.AddressStorage
+	NodeStatusTracker    *node.MonitoringStatusTracker
+	NodeStatsTracker     *node.StatsTracker
+	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -553,7 +554,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
-	di.BeneficiaryAddressStorage = beneficiary.NewAddressStorage(di.Storage)
+	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
 	di.bootstrapBeneficiaryProvider(nodeOptions)
 
 	di.HermesPromiseHandler = pingpong.NewHermesPromiseHandler(pingpong.HermesPromiseHandlerDeps{
