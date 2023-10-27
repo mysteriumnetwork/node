@@ -465,11 +465,6 @@ func TestConsumerBalance_GetBalance(t *testing.T) {
 type mockAddressProvider struct {
 	transactor   common.Address
 	addrToReturn common.Address
-	channels     map[string]common.Address
-}
-
-func newMockAddressProvider() *mockAddressProvider {
-	return &mockAddressProvider{channels: make(map[string]common.Address)}
 }
 
 func (ma *mockAddressProvider) GetActiveChannelAddress(chainID int64, id common.Address) (common.Address, error) {
@@ -490,17 +485,7 @@ func (ma *mockAddressProvider) GetRegistryAddress(chainID int64) (common.Address
 func (ma *mockAddressProvider) GetArbitraryChannelAddress(hermes, registry, channel common.Address, id common.Address) (common.Address, error) {
 	return ma.addrToReturn, nil
 }
+
 func (ma *mockAddressProvider) GetChannelImplementationForHermes(chainID int64, hermes common.Address) (common.Address, error) {
 	return common.Address{}, nil
-}
-func (ma *mockAddressProvider) GetKnownHermeses(chainID int64) ([]common.Address, error) {
-	return []common.Address{ma.addrToReturn}, nil
-}
-func (ma *mockAddressProvider) GetHermesChannelAddress(chainID int64, id, hermesAddr common.Address) (common.Address, error) {
-	channelAddr, _ := ma.channels[fmt.Sprintf("%d-%s", chainID, id)]
-	return channelAddr, nil
-}
-
-func (ma *mockAddressProvider) setChannelAddress(chainID int64, id, channelAddr common.Address) {
-	ma.channels[fmt.Sprintf("%d-%s", chainID, id)] = channelAddr
 }

@@ -243,9 +243,3 @@ type cryptoJSON struct {
 type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
-
-// BeneficiaryAddressRequest address of the beneficiary
-// swagger:model BeneficiaryAddressRequest
-type BeneficiaryAddressRequest struct {
-	Address string `json:"address"`
-}

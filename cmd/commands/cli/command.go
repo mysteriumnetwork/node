@@ -643,6 +643,8 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("new"),
 			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("get-payout-address", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("set-payout-address", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("beneficiary-status", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("beneficiary-set", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("settle", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),

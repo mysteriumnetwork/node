@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package beneficiary
+package payout
 
 import (
 	"time"
@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	bucket = "beneficiary-address"
+	bucket = "payout-address-bucket"
 )
 
 // ErrInvalidAddress represents invalid address error
@@ -35,30 +35,24 @@ var (
 	ErrNotFound       = errors.New("beneficiary not found")
 )
 
-type localStorage interface {
+type storage interface {
 	Store(bucket string, data interface{}) error
 	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
 }
 
-// BeneficiaryStorage handles storing of beneficiary address
-type BeneficiaryStorage interface {
-	Address(identity string) (string, error)
-	Save(identity, address string) error
-}
-
-// AddressStorage handles storing of beneficiary address
+// AddressStorage handles storing of payout address
 type AddressStorage struct {
-	storage localStorage
+	storage storage
 }
 
 // NewAddressStorage constructor
-func NewAddressStorage(storage localStorage) *AddressStorage {
+func NewAddressStorage(storage storage) *AddressStorage {
 	return &AddressStorage{
 		storage: storage,
 	}
 }
 
-// Save beneficiary address for identity
+// Save save payout address for identity
 func (as *AddressStorage) Save(identity, address string) error {
 	if !common.IsHexAddress(address) {
 		return ErrInvalidAddress
@@ -72,7 +66,7 @@ func (as *AddressStorage) Save(identity, address string) error {
 	return as.storage.Store(bucket, store)
 }
 
-// Address retrieve beneficiary address for identity
+// Address retrieve payout address for identity
 func (as *AddressStorage) Address(identity string) (string, error) {
 	result := &storedBeneficiary{}
 	err := as.storage.GetOneByField(bucket, "ID", identity, result)

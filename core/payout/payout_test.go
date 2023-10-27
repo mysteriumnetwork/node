@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package beneficiary
+package payout
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -25,28 +26,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLocalBeneficiaryStorage(t *testing.T) {
+func TestPayout(t *testing.T) {
 	// given:
-	dir, err := os.MkdirTemp("/tmp", "mysttest")
+	dir, err := ioutil.TempDir("/tmp", "mysttest")
 	assert.NoError(t, err)
 
 	defer os.RemoveAll(dir)
 	db, err := boltdb.NewStorage(dir)
-	localBeneficiaryStorage := NewAddressStorage(db)
+	payout := NewAddressStorage(db)
 
 	// when
-	addr, err := localBeneficiaryStorage.Address("random")
+	addr, err := payout.Address("random")
 	assert.Error(t, err)
 
 	// when
-	assert.NoError(t, localBeneficiaryStorage.Save("0x1111111111111111111111111111111111111111", "0x3333333333333333333333333333333333333333"))
-	assert.NoError(t, localBeneficiaryStorage.Save("0x2222222222222222222222222222222222222222", "0x6666666666666666666666666666666666666666"))
+	assert.NoError(t, payout.Save("0x1111111111111111111111111111111111111111", "0x3333333333333333333333333333333333333333"))
+	assert.NoError(t, payout.Save("0x2222222222222222222222222222222222222222", "0x6666666666666666666666666666666666666666"))
 
-	addr, err = localBeneficiaryStorage.Address("0x1111111111111111111111111111111111111111")
+	addr, err = payout.Address("0x1111111111111111111111111111111111111111")
 	assert.NoError(t, err)
 	assert.Equal(t, "0x3333333333333333333333333333333333333333", addr)
 
-	addr, err = localBeneficiaryStorage.Address("0x2222222222222222222222222222222222222222")
+	addr, err = payout.Address("0x2222222222222222222222222222222222222222")
 	assert.NoError(t, err)
 	assert.Equal(t, "0x6666666666666666666666666666666666666666", addr)
 }
