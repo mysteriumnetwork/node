@@ -131,10 +131,6 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
-func (idm *identityManager) CountIdentities() int {
-	return len(idm.keystoreManager.Accounts())
-}
-
 func (idm *identityManager) GetIdentity(address string) (identity Identity, err error) {
 	account, err := idm.findAccount(address)
 	if err != nil {

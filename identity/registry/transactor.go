@@ -359,6 +359,14 @@ func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiar
 	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken, chainID)
 }
 
+func (t *Transactor) RegisterProviderIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
+	if referralToken == nil {
+		return t.registerIdentity("identity/register/provider", id, stake, fee, beneficiary, chainID)
+	}
+
+	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken, chainID)
+}
+
 func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string, chainID int64) (IdentityRegistrationRequest, error) {
 	registry, err := t.addresser.GetRegistryAddress(chainID)
 	if err != nil {

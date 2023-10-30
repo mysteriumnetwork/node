@@ -1,0 +1,83 @@
+package registry
+
+import (
+	"fmt"
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/eventbus"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/rs/zerolog/log"
+	"math/big"
+	"sync"
+)
+
+type FreeRegistrar struct {
+	lock                    sync.Mutex
+	selector                identity_selector.Handler
+	transactor              transactor
+	contractRegistry        IdentityRegistry
+	freeRegistrationEnabled bool
+}
+
+func NewFreeRegistrar(selector identity_selector.Handler, transactor transactor, contractRegistry IdentityRegistry, freeRegistrationEnabled bool) *FreeRegistrar {
+	return &FreeRegistrar{
+		selector:                selector,
+		transactor:              transactor,
+		contractRegistry:        contractRegistry,
+		freeRegistrationEnabled: freeRegistrationEnabled,
+	}
+}
+
+func (f *FreeRegistrar) Subscribe(eb eventbus.Subscriber) error {
+	if !f.freeRegistrationEnabled {
+		return nil
+	}
+	err := eb.SubscribeAsync(event.AppTopicNode, f.handleNodeEvent)
+	return err
+}
+
+func (f *FreeRegistrar) handleNodeEvent(ev event.Payload) {
+	if ev.Status == event.StatusStarted {
+		err := f.handleStart()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to handle free registrar start")
+		}
+		return
+	}
+}
+
+func (f *FreeRegistrar) handleStart() error {
+	log.Debug().Msg("Try register provider for free")
+
+	chainID := config.GetInt64(config.FlagChainID)
+	id, err := f.selector.UseOrCreate("", "", chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not create default identity identity")
+		return nil
+	}
+	status, err := f.contractRegistry.GetRegistrationStatus(chainID, id)
+	if err != nil {
+		log.Error().Err(err).Msg("could not check registration status")
+		return err
+	}
+	if status == Registered {
+		log.Info().Msg("Default identity is already registered")
+		return nil
+	}
+
+	eligible, err := f.transactor.GetFreeProviderRegistrationEligibility()
+	if err != nil {
+		return fmt.Errorf("failed to check free registration eligibility: %w", err)
+	}
+
+	if !eligible {
+		log.Warn().Msg("Free registration is not eligible")
+		return nil
+	}
+	err = f.transactor.RegisterProviderIdentity(id.Address, big.NewInt(0), big.NewInt(0), "", chainID, nil)
+	if err != nil {
+		return fmt.Errorf("could not register identity: %w", err)
+	}
+	log.Info().Msgf("Identity created and registered for free: %s", id.Address)
+	return nil
+}
