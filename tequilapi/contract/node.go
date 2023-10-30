@@ -29,7 +29,7 @@ import (
 // NodeStatusResponse a node status reflects monitoring agent POV on node availability
 // swagger:model NodeStatusResponse
 type NodeStatusResponse struct {
-	Status monitoring.MonitoringStatus `json:"status"`
+	Status monitoring.Status `json:"status"`
 }
 
 // MonitoringAgentResponse reflects amount of connectivity statuses for each service_type.

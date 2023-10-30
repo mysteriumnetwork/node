@@ -40,7 +40,7 @@ type natProber interface {
 }
 
 type nodeStatusProvider interface {
-	Status() monitoring.MonitoringStatus
+	Status() monitoring.Status
 }
 
 // NewNATEndpoint creates and returns nat endpoint

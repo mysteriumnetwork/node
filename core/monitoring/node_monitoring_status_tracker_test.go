@@ -60,7 +60,7 @@ func TestShit(t *testing.T) {
 	for _, data := range []struct {
 		identityLocked bool
 		identity       string
-		expectedStatus MonitoringStatus
+		expectedStatus Status
 		response       quality.MonitoringStatusResponse
 	}{
 		{
@@ -125,7 +125,7 @@ func TestShit(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("status %s when %+v", data.expectedStatus, data), func(t *testing.T) {
-			fixture := NewMonitoringStatusTracker(
+			fixture := NewStatusTracker(
 				newMockCurrentIdentity(data.identity, data.identityLocked),
 				&mockMonitoringStatusApi{response: data.response},
 			)

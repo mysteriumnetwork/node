@@ -209,7 +209,7 @@ type Dependencies struct {
 	ResidentCountry *identity.ResidentCountry
 
 	PayoutAddressStorage *payout.AddressStorage
-	NodeStatusTracker    *monitoring.MonitoringStatusTracker
+	NodeStatusTracker    *monitoring.StatusTracker
 	NodeStatsTracker     *node.StatsTracker
 	uiVersionConfig      versionmanager.NodeUIVersionConfig
 }
@@ -623,7 +623,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapPilvytis(nodeOptions)
 
-	di.NodeStatusTracker = monitoring.NewMonitoringStatusTracker(
+	di.NodeStatusTracker = monitoring.NewStatusTracker(
 		di.IdentityManager,
 		di.QualityClient,
 	)

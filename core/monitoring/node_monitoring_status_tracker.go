@@ -24,18 +24,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// MonitoringStatus enum
-type MonitoringStatus string
+// Status enum
+type Status string
 
 const (
 	// Success enum
-	Success MonitoringStatus = "success"
+	Success Status = "success"
 	// Failed enum
-	Failed MonitoringStatus = "failed"
+	Failed Status = "failed"
 	// Pending enum
-	Pending MonitoringStatus = "pending"
+	Pending Status = "pending"
 	// Unknown enum
-	Unknown MonitoringStatus = "unknown"
+	Unknown Status = "unknown"
 )
 
 type currentIdentity interface {
@@ -46,32 +46,25 @@ type monitoringStatusApi interface {
 	MonitoringStatus(providerIds []string) quality.MonitoringStatusResponse
 }
 
-// Session represent session monitoring state
-type Session struct {
-	ProviderID       string
-	ServiceType      string
-	MonitoringFailed bool
-}
-
-// MonitoringStatusTracker tracks node status for service
-type MonitoringStatusTracker struct {
+// StatusTracker tracks node status for service
+type StatusTracker struct {
 	currentIdentity     currentIdentity
 	monitoringStatusApi monitoringStatusApi
 }
 
-// NewMonitoringStatusTracker constructor
-func NewMonitoringStatusTracker(
+// NewStatusTracker constructor
+func NewStatusTracker(
 	currentIdentity currentIdentity,
 	monitoringStatusApi monitoringStatusApi,
-) *MonitoringStatusTracker {
-	return &MonitoringStatusTracker{
+) *StatusTracker {
+	return &StatusTracker{
 		currentIdentity:     currentIdentity,
 		monitoringStatusApi: monitoringStatusApi,
 	}
 }
 
 // Status retrieves and resolved monitoring status from quality oracle
-func (k *MonitoringStatusTracker) Status() MonitoringStatus {
+func (k *StatusTracker) Status() Status {
 	id, ok := k.currentIdentity.GetUnlockedIdentity()
 
 	if !ok {
@@ -85,5 +78,5 @@ func (k *MonitoringStatusTracker) Status() MonitoringStatus {
 		return "unknown"
 	}
 
-	return MonitoringStatus(value.MonitoringStatus)
+	return Status(value.MonitoringStatus)
 }
