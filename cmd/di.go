@@ -19,8 +19,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/mysteriumnetwork/node/core/monitoring"
 	"net"
+
+	"github.com/mysteriumnetwork/node/core/monitoring"
 
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/policy/localcopy"

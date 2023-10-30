@@ -20,10 +20,11 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mysteriumnetwork/node/core/monitoring"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/mysteriumnetwork/node/core/monitoring"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

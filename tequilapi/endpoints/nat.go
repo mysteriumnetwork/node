@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"context"
+
 	"github.com/mysteriumnetwork/node/core/monitoring"
 
 	"github.com/gin-gonic/gin"

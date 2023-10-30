@@ -18,8 +18,9 @@
 package contract
 
 import (
-	"github.com/mysteriumnetwork/node/core/monitoring"
 	"time"
+
+	"github.com/mysteriumnetwork/node/core/monitoring"
 
 	"github.com/shopspring/decimal"
 

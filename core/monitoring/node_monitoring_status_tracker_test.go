@@ -19,8 +19,9 @@ package monitoring
 
 import (
 	"fmt"
-	"github.com/mysteriumnetwork/node/core/quality"
 	"testing"
+
+	"github.com/mysteriumnetwork/node/core/quality"
 
 	"github.com/stretchr/testify/assert"
 
@@ -113,6 +114,7 @@ func TestShit(t *testing.T) {
 				},
 			},
 		},
+
 		{
 			identityLocked: true,
 			identity:       "0xa",

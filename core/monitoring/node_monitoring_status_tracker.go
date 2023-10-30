@@ -19,6 +19,7 @@ package monitoring
 
 import (
 	"fmt"
+
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/rs/zerolog/log"
