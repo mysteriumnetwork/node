@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -130,11 +131,11 @@ type hermesPromiseSettler struct {
 	publisher                  eventbus.Publisher
 	hf                         hermesFees
 	observerApi                observerApi
-	// TODO: Consider adding chain ID to this as well.
-	currentState map[identity.Identity]settlementState
-	settleQueue  chan receivedPromise
-	stop         chan struct{}
-	once         sync.Once
+	beneficiaryLocalStorage    beneficiary.BeneficiaryStorage
+	currentState               map[identity.Identity]settlementState
+	settleQueue                chan receivedPromise
+	stop                       chan struct{}
+	once                       sync.Once
 }
 
 type hermesFees struct {
@@ -174,7 +175,7 @@ type HermesPromiseSettlerConfig struct {
 var errFeeNotCovered = errors.New("fee not covered, cannot continue")
 
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
-func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, observerApi observerApi, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
+func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorage, paySettler paySettler, addressProvider addressProvider, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, publisher eventbus.Publisher, observerApi observerApi, beneficiaryLocalStorage beneficiary.BeneficiaryStorage, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
 	return &hermesPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		ks:                         ks,
@@ -189,6 +190,7 @@ func NewHermesPromiseSettler(transactor transactor, promiseStorage promiseStorag
 		promiseStorage:             promiseStorage,
 		paySettler:                 paySettler,
 		publisher:                  publisher,
+		beneficiaryLocalStorage:    beneficiaryLocalStorage,
 		hf: hermesFees{
 			fees: make(map[string]uint16),
 		},
@@ -368,7 +370,21 @@ func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel, maxFee 
 		return
 	}
 	channel.lastPromise.Promise.R = hexR
-
+	localBeneficiaryAddress, err := aps.beneficiaryLocalStorage.Address(channel.Identity.Address)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("could not get local beneficiary address: %w", err))
+	}
+	if localBeneficiaryAddress != "" && localBeneficiaryAddress != channel.Beneficiary.Hex() {
+		channel.Beneficiary = common.HexToAddress(localBeneficiaryAddress)
+	}
+	benefiriaryEqualToAddress, err := aps.isBenenficiarySetToChannel(aps.chainID(), channel.Identity.ToCommonAddress(), channel.Beneficiary)
+	if err != nil {
+		log.Error().Msgf("Failed to verify beneficiary and channel equality")
+	}
+	if benefiriaryEqualToAddress {
+		log.Warn().Msgf("payment channel for identity %s is set as beneficiary, skip settling", channel.Identity.Address)
+		return
+	}
 	aps.settleQueue <- receivedPromise{
 		hermesID:    channel.HermesID,
 		provider:    channel.Identity,
@@ -1378,6 +1394,23 @@ func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThresh
 		return true, nil
 	}
 
+	return false, nil
+}
+
+func (aps *hermesPromiseSettler) isBenenficiarySetToChannel(chainID int64, identity, beneficiary common.Address) (bool, error) {
+	hermeses, err := aps.addressProvider.GetKnownHermeses(chainID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get list of known hermeses: %w", err)
+	}
+	for _, h := range hermeses {
+		channelAddr, err := aps.addressProvider.GetHermesChannelAddress(chainID, identity, h)
+		if err != nil {
+			return false, fmt.Errorf("failed to generate channel address: %w", err)
+		}
+		if channelAddr == beneficiary {
+			return true, nil
+		}
+	}
 	return false, nil
 }
 
