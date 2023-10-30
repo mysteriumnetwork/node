@@ -359,6 +359,7 @@ func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiar
 	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken, chainID)
 }
 
+// RegisterProviderIdentity instructs Transactor to register Provider on behalf of a client identified by 'id'
 func (t *Transactor) RegisterProviderIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
 	if referralToken == nil {
 		return t.registerIdentity("identity/register/provider", id, stake, fee, beneficiary, chainID)

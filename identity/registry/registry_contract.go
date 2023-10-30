@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/node/event"
@@ -33,7 +35,6 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
 )
 
 type registryStorage interface {

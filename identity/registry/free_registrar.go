@@ -2,15 +2,17 @@ package registry
 
 import (
 	"fmt"
+	"math/big"
+	"sync"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/rs/zerolog/log"
-	"math/big"
-	"sync"
 )
 
+// FreeRegistrar is responsible for registering default identity for free
 type FreeRegistrar struct {
 	lock                    sync.Mutex
 	selector                identity_selector.Handler
@@ -19,6 +21,7 @@ type FreeRegistrar struct {
 	freeRegistrationEnabled bool
 }
 
+// NewFreeRegistrar creates new free registrar
 func NewFreeRegistrar(selector identity_selector.Handler, transactor transactor, contractRegistry IdentityRegistry, freeRegistrationEnabled bool) *FreeRegistrar {
 	return &FreeRegistrar{
 		selector:                selector,
@@ -28,6 +31,7 @@ func NewFreeRegistrar(selector identity_selector.Handler, transactor transactor,
 	}
 }
 
+// Subscribe subscribes to Node events
 func (f *FreeRegistrar) Subscribe(eb eventbus.Subscriber) error {
 	if !f.freeRegistrationEnabled {
 		return nil
