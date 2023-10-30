@@ -746,16 +746,18 @@ type SendFeedbackRequest struct {
 
 // SendFeedback sends user feedback via feedback reported.
 func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
-	report := feedback.BugReport{
+	report := feedback.UserReport{
 		Email:       req.Email,
 		Description: req.Description,
 	}
 
-	_, apierr, err := mb.feedbackReporter.NewIssue(report)
+	result, err := mb.feedbackReporter.NewIssue(report)
 	if err != nil {
 		return fmt.Errorf("could not create user report: %w", err)
-	} else if apierr != nil {
-		return fmt.Errorf("could not create user report: %w", apierr)
+	}
+
+	if !result.Success {
+		return errors.New("user report sent but got error response")
 	}
 
 	return nil

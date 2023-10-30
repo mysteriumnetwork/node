@@ -38,6 +38,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
+	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -94,7 +95,7 @@ type transactorEndpoint struct {
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
 	addressProvider           addressProvider
-	addressStorage            *beneficiary.AddressStorage
+	addressStorage            *payout.AddressStorage
 	bprovider                 beneficiaryProvider
 	bhandler                  beneficiarySaver
 	pilvytis                  pilvytisApi

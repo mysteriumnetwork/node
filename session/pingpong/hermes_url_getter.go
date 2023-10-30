@@ -44,8 +44,6 @@ type addressProvider interface {
 	GetMystAddress(chainID int64) (common.Address, error)
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
-	GetKnownHermeses(chainID int64) ([]common.Address, error)
-	GetHermesChannelAddress(chainID int64, id, hermesAddr common.Address) (common.Address, error)
 }
 
 type observerApi interface {

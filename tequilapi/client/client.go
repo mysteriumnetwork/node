@@ -480,14 +480,14 @@ func (client *Client) Unlock(identity, passphrase string) error {
 	return nil
 }
 
-// SetBeneficiaryAsync store beneficiary address locally for identity.
-func (client *Client) SetBeneficiaryAsync(identity, ethAddress string) error {
-	path := fmt.Sprintf("identities/%s/beneficiary-async", identity)
-	payload := contract.BeneficiaryAddressRequest{
+// SetPayout registers payout address for identity.
+func (client *Client) SetPayout(identity, ethAddress string) error {
+	path := fmt.Sprintf("identities/%s/payout-address", identity)
+	payload := contract.PayoutAddressRequest{
 		Address: ethAddress,
 	}
 
-	response, err := client.http.Post(path, payload)
+	response, err := client.http.Put(path, payload)
 	if err != nil {
 		return err
 	}
@@ -496,10 +496,10 @@ func (client *Client) SetBeneficiaryAsync(identity, ethAddress string) error {
 	return nil
 }
 
-// GetBeneficiaryAsync gets locally saved beneficiary address.
-func (client *Client) GetBeneficiaryAsync(identity string) (contract.BeneficiaryAddressRequest, error) {
-	path := fmt.Sprintf("identities/%s/beneficiary-async", identity)
-	res := contract.BeneficiaryAddressRequest{}
+// GetPayout gets the current payout address.
+func (client *Client) GetPayout(identity string) (contract.PayoutAddressRequest, error) {
+	path := fmt.Sprintf("identities/%s/payout-address", identity)
+	res := contract.PayoutAddressRequest{}
 	response, err := client.http.Get(path, nil)
 	if err != nil {
 		return res, err
