@@ -15,30 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package monitoring
 
 import (
+	"fmt"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/rs/zerolog/log"
 )
 
 // MonitoringStatus enum
 type MonitoringStatus string
 
 const (
-	// Passed enum
-	Passed MonitoringStatus = "passed"
+	// Success enum
+	Success MonitoringStatus = "success"
 	// Failed enum
 	Failed MonitoringStatus = "failed"
 	// Pending enum
 	Pending MonitoringStatus = "pending"
+	// Unknown enum
+	Unknown MonitoringStatus = "unknown"
 )
 
 type currentIdentity interface {
 	GetUnlockedIdentity() (identity.Identity, bool)
 }
 
-// ProviderSessions should return provider session monitoring state
-type ProviderSessions func(providerID string) []Session
+type monitoringStatusApi interface {
+	MonitoringStatus(providerIds []string) quality.MonitoringStatusResponse
+}
 
 // Session represent session monitoring state
 type Session struct {
@@ -49,39 +55,35 @@ type Session struct {
 
 // MonitoringStatusTracker tracks node status for service
 type MonitoringStatusTracker struct {
-	providerSessions ProviderSessions
-	currentIdentity  currentIdentity
+	currentIdentity     currentIdentity
+	monitoringStatusApi monitoringStatusApi
 }
 
 // NewMonitoringStatusTracker constructor
 func NewMonitoringStatusTracker(
-	providerSessions ProviderSessions,
 	currentIdentity currentIdentity,
+	monitoringStatusApi monitoringStatusApi,
 ) *MonitoringStatusTracker {
-	keeper := &MonitoringStatusTracker{
-		providerSessions: providerSessions,
-		currentIdentity:  currentIdentity,
+	return &MonitoringStatusTracker{
+		currentIdentity:     currentIdentity,
+		monitoringStatusApi: monitoringStatusApi,
 	}
-	return keeper
 }
 
 // Status retrieves and resolved monitoring status from quality oracle
 func (k *MonitoringStatusTracker) Status() MonitoringStatus {
 	id, ok := k.currentIdentity.GetUnlockedIdentity()
 
-	if ok {
-		return resolveMonitoringStatus(k.providerSessions(id.Address))
+	if !ok {
+		return "unknown"
 	}
 
-	return Pending
-}
-
-func resolveMonitoringStatus(sessions []Session) MonitoringStatus {
-	for _, s := range sessions {
-		if s.MonitoringFailed {
-			return Failed
-		}
+	response := k.monitoringStatusApi.MonitoringStatus([]string{id.Address})
+	value, ok := response[id.Address]
+	if !ok {
+		log.Error().Msg(fmt.Sprintf("Monitoring status information was not received for: %s", id.Address))
+		return "unknown"
 	}
 
-	return Passed
+	return MonitoringStatus(value.MonitoringStatus)
 }

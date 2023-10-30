@@ -15,10 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package monitoring
 
 import (
 	"fmt"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,16 +27,12 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-func MockSessionProvider(monitoringFailed bool) ProviderSessions {
-	return func(providerID string) []Session {
-		return []Session{
-			{
-				ProviderID:       providerID,
-				ServiceType:      "wireguard",
-				MonitoringFailed: monitoringFailed,
-			},
-		}
-	}
+type mockMonitoringStatusApi struct {
+	response quality.MonitoringStatusResponse
+}
+
+func (m *mockMonitoringStatusApi) MonitoringStatus(providerIds []string) quality.MonitoringStatusResponse {
+	return m.response
 }
 
 type mockCurrentIdentity struct {
@@ -61,40 +58,76 @@ func (mci *mockCurrentIdentity) GetUnlockedIdentity() (identity.Identity, bool) 
 func TestShit(t *testing.T) {
 
 	for _, data := range []struct {
-		monitoringFailed bool
-		identityLocked   bool
-		identity         string
-		expectedStatus   MonitoringStatus
+		identityLocked bool
+		identity       string
+		expectedStatus MonitoringStatus
+		response       quality.MonitoringStatusResponse
 	}{
 		{
-			monitoringFailed: true,
-			identityLocked:   false,
-			identity:         "0xa",
-			expectedStatus:   Failed,
+			identityLocked: false,
+			identity:       "0xa",
+			expectedStatus: Failed,
+			response: map[string]quality.MonitoringStatus{
+				"0xa": {
+					MonitoringStatus: "failed",
+				},
+			},
 		},
 		{
-			monitoringFailed: false,
-			identityLocked:   false,
-			identity:         "0xa",
-			expectedStatus:   Passed,
+			identityLocked: false,
+			identity:       "0xa",
+			expectedStatus: Success,
+			response: map[string]quality.MonitoringStatus{
+				"0xa": {
+					MonitoringStatus: "success",
+				},
+			},
 		},
 		{
-			monitoringFailed: false,
-			identityLocked:   true,
-			identity:         "0xa",
-			expectedStatus:   Pending,
+			identityLocked: false,
+			identity:       "0xa",
+			expectedStatus: Pending,
+			response: map[string]quality.MonitoringStatus{
+				"0xa": {
+					MonitoringStatus: "pending",
+				},
+			},
 		},
 		{
-			monitoringFailed: true,
-			identityLocked:   true,
-			identity:         "0xa",
-			expectedStatus:   Pending,
+			identityLocked: false,
+			identity:       "0xa",
+			expectedStatus: Unknown,
+			response: map[string]quality.MonitoringStatus{
+				"0xa": {
+					MonitoringStatus: "unknown",
+				},
+			},
+		},
+		{
+			identityLocked: true,
+			identity:       "0xa",
+			expectedStatus: Unknown,
+			response: map[string]quality.MonitoringStatus{
+				"0xa": {
+					MonitoringStatus: "success",
+				},
+			},
+		},
+		{
+			identityLocked: true,
+			identity:       "0xa",
+			expectedStatus: Unknown,
+			response: map[string]quality.MonitoringStatus{
+				"not_matching": {
+					MonitoringStatus: "success",
+				},
+			},
 		},
 	} {
 		t.Run(fmt.Sprintf("status %s when %+v", data.expectedStatus, data), func(t *testing.T) {
 			fixture := NewMonitoringStatusTracker(
-				MockSessionProvider(data.monitoringFailed),
 				newMockCurrentIdentity(data.identity, data.identityLocked),
+				&mockMonitoringStatusApi{response: data.response},
 			)
 
 			assert.Equal(t, data.expectedStatus, fixture.Status())
