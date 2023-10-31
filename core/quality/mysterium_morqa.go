@@ -61,6 +61,9 @@ type MysteriumMORQA struct {
 
 	once sync.Once
 	stop chan struct{}
+
+	lastCallToQualityAt          time.Time
+	lastMonitoringStatusResponse MonitoringStatusResponse
 }
 
 type batchWithTimeout struct {
@@ -232,6 +235,40 @@ func (m *MysteriumMORQA) sendMetrics(owner string) error {
 	delete(m.batch, owner)
 
 	return nil
+}
+
+// MonitoringStatus retrieve monitoring statuses.
+func (m *MysteriumMORQA) MonitoringStatus(providerIds []string) MonitoringStatusResponse {
+	if m.lastCallToQualityAt.After(time.Now().Add(time.Minute * -1)) {
+		return m.lastMonitoringStatusResponse
+	}
+
+	payload := struct {
+		Providers []string `json:"providers"`
+	}{Providers: providerIds}
+
+	request, err := m.newRequestJSON(http.MethodPost, "providers/monitoring-status", &payload)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed creating request POST: /providers/monitoring-status")
+		return map[string]MonitoringStatus{}
+	}
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to request proposals quality POST: /providers/monitoring-status")
+		return map[string]MonitoringStatus{}
+	}
+	defer response.Body.Close()
+
+	var r MonitoringStatusResponse
+	if err = parseResponseJSON(response, &r); err != nil {
+		log.Warn().Err(err).Msg("Failed parsing response from POST: /providers/monitoring-status")
+		return nil
+	}
+
+	m.lastCallToQualityAt = time.Now()
+	m.lastMonitoringStatusResponse = r
+	return r
 }
 
 // ProposalsQuality returns a list of proposals with a quality parameters.

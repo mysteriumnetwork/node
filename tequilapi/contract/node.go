@@ -20,6 +20,8 @@ package contract
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/monitoring"
+
 	"github.com/shopspring/decimal"
 
 	"github.com/mysteriumnetwork/node/core/node"
@@ -28,7 +30,7 @@ import (
 // NodeStatusResponse a node status reflects monitoring agent POV on node availability
 // swagger:model NodeStatusResponse
 type NodeStatusResponse struct {
-	Status node.MonitoringStatus `json:"status"`
+	Status monitoring.Status `json:"status"`
 }
 
 // MonitoringAgentResponse reflects amount of connectivity statuses for each service_type.

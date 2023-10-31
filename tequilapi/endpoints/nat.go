@@ -20,10 +20,10 @@ package endpoints
 import (
 	"context"
 
-	"github.com/mysteriumnetwork/go-rest/apierror"
-	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/monitoring"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mysteriumnetwork/go-rest/apierror"
 
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -41,7 +41,7 @@ type natProber interface {
 }
 
 type nodeStatusProvider interface {
-	Status() node.MonitoringStatus
+	Status() monitoring.Status
 }
 
 // NewNATEndpoint creates and returns nat endpoint
