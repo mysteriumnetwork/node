@@ -4662,11 +4662,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/core/node"
     },
-    "MonitoringStatus": {
-      "description": "MonitoringStatus enum",
-      "type": "string",
-      "x-go-package": "github.com/mysteriumnetwork/node/core/node"
-    },
     "MystnodesSSOLinkResponse": {
       "description": "MystnodesSSOLinkResponse contains a link to initiate auth via mystnodes",
       "type": "object",
@@ -4702,7 +4697,7 @@
       "type": "object",
       "properties": {
         "status": {
-          "$ref": "#/definitions/MonitoringStatus"
+          "$ref": "#/definitions/Status"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -5717,6 +5712,11 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "Status": {
+      "description": "Status enum",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/core/monitoring"
     },
     "SwitchNodeUIRequest": {
       "description": "SwitchNodeUIRequest request for switching NodeUI version",

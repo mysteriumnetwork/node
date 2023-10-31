@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/monitoring"
+
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 
@@ -207,7 +209,7 @@ type Dependencies struct {
 	ResidentCountry *identity.ResidentCountry
 
 	BeneficiaryAddressStorage beneficiary.BeneficiaryStorage
-	NodeStatusTracker         *node.MonitoringStatusTracker
+	NodeStatusTracker         *monitoring.StatusTracker
 	NodeStatsTracker          *node.StatsTracker
 	uiVersionConfig           versionmanager.NodeUIVersionConfig
 }
@@ -621,16 +623,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapPilvytis(nodeOptions)
 
-	sessionProviderFunc := func(providerID string) (results []node.Session) {
-		for _, session := range di.QualityClient.ProviderSessions(providerID) {
-			results = append(results, node.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
-		}
-		return results
-	}
-
-	di.NodeStatusTracker = node.NewMonitoringStatusTracker(
-		sessionProviderFunc,
+	di.NodeStatusTracker = monitoring.NewStatusTracker(
 		di.IdentityManager,
+		di.QualityClient,
 	)
 
 	di.NodeStatsTracker = node.NewNodeStatsTracker(

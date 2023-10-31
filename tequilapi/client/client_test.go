@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/monitoring"
 
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +49,7 @@ func Test_NATStatus_ReturnsStatus(t *testing.T) {
 	status, err := client.NATStatus()
 
 	assert.NoError(t, err)
-	assert.Equal(t, node.Failed, status.Status)
+	assert.Equal(t, monitoring.Failed, status.Status)
 }
 
 func Test_NATStatus_ReturnsError(t *testing.T) {

@@ -61,6 +61,10 @@ type ProviderActivityStats func(id identity.Identity) (ActivityStats, error)
 // ProviderQuality should return provider quality
 type ProviderQuality func(id identity.Identity) (QualityInfo, error)
 
+type currentIdentity interface {
+	GetUnlockedIdentity() (identity.Identity, bool)
+}
+
 // StatsTracker tracks metrics for service
 type StatsTracker struct {
 	providerStatuses              ProviderStatuses
