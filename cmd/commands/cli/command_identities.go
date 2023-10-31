@@ -37,7 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/mysteriumnetwork/payments/units"
 )
 
 func (c *cliApp) identities(args []string) (err error) {
@@ -51,8 +51,6 @@ func (c *cliApp) identities(args []string) (err error) {
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
 		"  " + usageSettle,
-		"  " + usageSetPayoutAddress,
-		"  " + usageGetPayoutAddress,
 		"  " + usageSetBeneficiary,
 		"  " + usageSetBeneficiaryStatus,
 		"  " + usageGetReferralCode,
@@ -87,10 +85,6 @@ func (c *cliApp) identities(args []string) (err error) {
 		return c.registerIdentity(actionArgs)
 	case "settle":
 		return c.settle(actionArgs)
-	case "set-payout-address":
-		return c.setPayoutAddress(actionArgs)
-	case "get-payout-address":
-		return c.getPayoutAddress(actionArgs)
 	case "beneficiary-set":
 		return c.setBeneficiary(actionArgs)
 	case "beneficiary-status":
@@ -308,37 +302,6 @@ func (c *cliApp) settle(args []string) (err error) {
 	}
 }
 
-const usageGetPayoutAddress = "get-payout-address <identity>"
-
-func (c *cliApp) getPayoutAddress(args []string) error {
-	if len(args) != 1 {
-		clio.Info("Usage: " + usageGetPayoutAddress)
-		return errWrongArgumentCount
-	}
-	addr, err := c.tequilapi.GetPayout(args[0])
-	if err != nil {
-		return fmt.Errorf("could not get payout address: %w", err)
-	}
-	clio.Info("Payout address: ", addr.Address)
-	return nil
-}
-
-const usageSetPayoutAddress = "set-payout-address <providerIdentity> <beneficiary>"
-
-func (c *cliApp) setPayoutAddress(args []string) error {
-	if len(args) != 2 {
-		clio.Info("Usage: " + usageSetPayoutAddress)
-		return errWrongArgumentCount
-	}
-	err := c.tequilapi.SetPayout(args[0], args[1])
-	if err != nil {
-		return fmt.Errorf("could not set payout address: %w", err)
-	}
-
-	clio.Info("Payout address set to: ", args[0])
-	return nil
-}
-
 const usageSetBeneficiary = "beneficiary-set <providerIdentity> <beneficiary> [hermesID]"
 
 func (c *cliApp) setBeneficiary(actionArgs []string) error {
@@ -478,7 +441,7 @@ func (c *cliApp) withdraw(args []string) error {
 			return errors.New("max withdrawal amount is 99 MYST")
 		}
 
-		amount = crypto.FloatToBigMyst(amf)
+		amount = units.FloatEthToBigIntWei(amf)
 	}
 
 	clio.Info("Waiting for withdrawal to complete")

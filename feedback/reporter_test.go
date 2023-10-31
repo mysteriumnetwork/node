@@ -18,6 +18,7 @@
 package feedback
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,18 @@ func TestUserReport_Validate(t *testing.T) {
 			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
 			expectToFail: true,
 			testMSG:      "fail bad email",
+		},
+		{
+			email:        "",
+			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
+			expectToFail: true,
+			testMSG:      "fail missing email",
+		},
+		{
+			email:        "   ",
+			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
+			expectToFail: true,
+			testMSG:      "fail missing email 2",
 		},
 		{
 			email:        "qa@qa.qa",
@@ -55,25 +68,22 @@ func TestUserReport_Validate(t *testing.T) {
 			testMSG:      "fail empty description",
 		},
 		{
-			email:        "",
-			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
+			email:        "      test@email.com        ",
+			description:  "     A proper description that has no trailing spaces to pad out it's length and has some grain of meaning              ",
 			expectToFail: false,
-			testMSG:      "pass valid report",
-		},
-		{
-			email:        "   ",
-			description:  "A proper description that has no trailing spaces to pad out it's length and has some grain of meaning",
-			expectToFail: false,
-			testMSG:      "pass valid report",
+			testMSG:      "pass valid email and description with spaces",
 		},
 	} {
 		t.Run(data.testMSG, func(t *testing.T) {
 			r := UserReport{
-				Email:       data.email,
-				Description: data.description,
+				BugReport: BugReport{
+					Email:       data.email,
+					Description: data.description,
+				},
 			}
 
-			assert.Equal(t, data.expectToFail, r.Validate() != nil)
+			assert.Equal(t, data.expectToFail, r.Validate() != nil, fmt.Sprintf("email= %s description= %s expected=%t", data.email, data.description, data.expectToFail))
+			assert.Equal(t, data.expectToFail, r.BugReport.Validate() != nil, fmt.Sprintf("email= %s description= %s expected=%t", data.email, data.description, data.expectToFail))
 		})
 	}
 }
