@@ -58,6 +58,14 @@ type ProposalQuality struct {
 	MonitoringFailed bool       `json:"monitoringFailed"`
 }
 
+// MonitoringStatus identity's monitoring status
+type MonitoringStatus struct {
+	MonitoringStatus string `json:"monitoring_status"`
+}
+
+// MonitoringStatusResponse monitoring status API response
+type MonitoringStatusResponse = map[string]MonitoringStatus
+
 // ProviderSession represents a provider session
 type ProviderSession struct {
 	ProposalID       ProposalID   `json:"proposalId"`

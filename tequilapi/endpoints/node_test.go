@@ -24,6 +24,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/monitoring"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
@@ -32,7 +34,7 @@ import (
 )
 
 type mockNodeStatusProvider struct {
-	status node.MonitoringStatus
+	status monitoring.Status
 }
 
 type mockMonitoringAgent struct {
@@ -49,7 +51,7 @@ type mockMonitoringAgent struct {
 	serviceEarnings       node.EarningsPerService
 }
 
-func (nodeStatusTracker *mockNodeStatusProvider) Status() node.MonitoringStatus {
+func (nodeStatusTracker *mockNodeStatusProvider) Status() monitoring.Status {
 	return nodeStatusTracker.status
 }
 
@@ -110,10 +112,11 @@ func Test_NodeStatus(t *testing.T) {
 	assert.Nil(t, err)
 
 	// expect:
-	for _, status := range []node.MonitoringStatus{
-		"passed",
+	for _, status := range []monitoring.Status{
+		"success",
 		"failed",
 		"pending",
+		"unknown",
 	} {
 		t.Run(fmt.Sprintf("Consumer receives node status: %s", status), func(t *testing.T) {
 			resp := httptest.NewRecorder()

@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/monitoring"
+
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 
@@ -49,7 +51,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/payout"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -208,10 +209,10 @@ type Dependencies struct {
 
 	ResidentCountry *identity.ResidentCountry
 
-	PayoutAddressStorage *payout.AddressStorage
-	NodeStatusTracker    *node.MonitoringStatusTracker
-	NodeStatsTracker     *node.StatsTracker
-	uiVersionConfig      versionmanager.NodeUIVersionConfig
+	BeneficiaryAddressStorage beneficiary.BeneficiaryStorage
+	NodeStatusTracker         *monitoring.StatusTracker
+	NodeStatsTracker          *node.StatsTracker
+	uiVersionConfig           versionmanager.NodeUIVersionConfig
 }
 
 // Bootstrap initiates all container dependencies
@@ -555,7 +556,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
-	di.PayoutAddressStorage = payout.NewAddressStorage(di.Storage)
+	di.BeneficiaryAddressStorage = beneficiary.NewAddressStorage(di.Storage)
 	di.bootstrapBeneficiaryProvider(nodeOptions)
 
 	di.HermesPromiseHandler = pingpong.NewHermesPromiseHandler(pingpong.HermesPromiseHandlerDeps{
@@ -623,16 +624,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.bootstrapPilvytis(nodeOptions)
 
-	sessionProviderFunc := func(providerID string) (results []node.Session) {
-		for _, session := range di.QualityClient.ProviderSessions(providerID) {
-			results = append(results, node.Session{ProviderID: session.ProposalID.ProviderID, MonitoringFailed: session.MonitoringFailed, ServiceType: session.ProposalID.ServiceType})
-		}
-		return results
-	}
-
-	di.NodeStatusTracker = node.NewMonitoringStatusTracker(
-		sessionProviderFunc,
+	di.NodeStatusTracker = monitoring.NewStatusTracker(
 		di.IdentityManager,
+		di.QualityClient,
 	)
 
 	di.NodeStatsTracker = node.NewNodeStatsTracker(

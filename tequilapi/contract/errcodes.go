@@ -35,8 +35,8 @@ const (
 	ErrCodeIDBlockchainRegistrationCheck = "err_id_registration_blockchain_status_check"
 	ErrCodeIDRegistrationInProgress      = "err_id_registration_in_progress"
 	ErrCodeIDCalculateAddress            = "err_id_calculate_address"
-	ErrCodeIDSavePayoutAddress           = "err_id_save_payout_invalid_address"
-	ErrCodeIDGetPayoutAddress            = "err_id_get_payout_address"
+	ErrCodeIDSaveBeneficiaryAddress      = "err_id_save_beneficiary_invalid_address"
+	ErrCodeIDGetBeneficiaryAddress       = "err_id_get_beneficiary_address"
 	ErrCodeHermesMigration               = "err_id_check_hermes_migration"
 	ErrCodeCheckHermesMigrationStatus    = "err_id_check_hermes_migration_status"
 
