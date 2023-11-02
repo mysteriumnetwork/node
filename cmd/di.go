@@ -131,6 +131,7 @@ type Dependencies struct {
 	IdentityRegistry registry.IdentityRegistry
 	IdentitySelector identity_selector.Handler
 	IdentityMover    *identity.Mover
+	FreeRegistrar    *registry.FreeRegistrar
 
 	DiscoveryFactory    service.DiscoveryFactory
 	ProposalRepository  *discovery.PricedServiceProposalRepository
@@ -824,7 +825,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		TransactorPollTimeout:  options.Payments.RegistryTransactorPollTimeout,
 	}
 
-	if di.IdentityRegistry, err = registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, registryCfg); err != nil {
+	if di.IdentityRegistry, err = registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller, di.Transactor, di.IdentitySelector, registryCfg); err != nil {
 		return err
 	}
 
@@ -876,6 +877,11 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 		di.Keystore,
 		di.EventBus,
 		di.SignerFactory)
+
+	di.FreeRegistrar = registry.NewFreeRegistrar(di.IdentitySelector, di.Transactor, di.IdentityRegistry, options.Transactor.TryFreeRegistration)
+	if err := di.FreeRegistrar.Subscribe(di.EventBus); err != nil {
+		return err
+	}
 	return nil
 }
 

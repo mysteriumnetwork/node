@@ -24,4 +24,5 @@ type OptionsTransactor struct {
 	TransactorEndpointAddress       string
 	ProviderMaxRegistrationAttempts int
 	TransactorFeesValidTime         time.Duration
+	TryFreeRegistration             bool
 }

@@ -44,6 +44,12 @@ var (
 		Usage:  "The duration we will consider transactor fees valid for (more than 5 minutes is likely to fail)",
 		Hidden: true,
 	}
+	// FlagProviderTryFreeRegistration if set to true, the provider will try to register for free.
+	FlagProviderTryFreeRegistration = cli.BoolFlag{
+		Name:  "transactor.provider.try-free-registration",
+		Usage: "if set to true, the provider will try to register for free. ",
+		Value: false,
+	}
 )
 
 // RegisterFlagsTransactor function register network flags to flag list
@@ -53,6 +59,7 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		&FlagTransactorAddress,
 		&FlagTransactorProviderMaxRegistrationAttempts,
 		&FlagTransactorFeesValidTime,
+		&FlagProviderTryFreeRegistration,
 	)
 }
 
@@ -61,4 +68,5 @@ func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorFeesValidTime)
+	Current.ParseBoolFlag(ctx, FlagProviderTryFreeRegistration)
 }
