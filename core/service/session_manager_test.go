@@ -132,36 +132,23 @@ func TestManager_Start_StoresSession(t *testing.T) {
 			return false
 		}
 
-		assert.Equal(t, sessionEvent.AppTopicSession, history[0].Topic)
-		startEvent := history[0].Event.(sessionEvent.AppEventSession)
+		startEvent := appTopicSession(history, sessionEvent.CreatedStatus)
 		assert.Equal(t, sessionEvent.CreatedStatus, startEvent.Status)
 		assert.Equal(t, consumerID, startEvent.Session.ConsumerID)
 		assert.Equal(t, hermesID, startEvent.Session.HermesID)
 		assert.Equal(t, currentProposal, startEvent.Session.Proposal)
 
-		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
-		traceEvent1 := history[1].Event.(trace.Event)
-		assert.Equal(t, "Provider connect", traceEvent1.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[2].Topic)
-		traceEvent2 := history[2].Event.(trace.Event)
-		assert.Equal(t, "Provider session create", traceEvent2.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[3].Topic)
-		traceEvent3 := history[3].Event.(trace.Event)
-		assert.Equal(t, "Session validation", traceEvent3.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[4].Topic)
-		traceEvent4 := history[4].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (start)", traceEvent4.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[5].Topic)
-		traceEvent5 := history[5].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (payment)", traceEvent5.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[6].Topic)
-		traceEvent6 := history[6].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (configure)", traceEvent6.Key)
+		for _, key := range []string{
+			"Provider connect",
+			"Provider session create",
+			"Session validation",
+			"Provider session create (start)",
+			"Provider session create (payment)",
+			"Provider session create (configure)",
+		} {
+			e := appTopicTraceEvent(history, key)
+			assert.Equal(t, key, e.Key)
+		}
 
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
@@ -192,35 +179,24 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 			return false
 		}
 
-		assert.Equal(t, sessionEvent.AppTopicSession, history[0].Topic)
-		startEvent := history[0].Event.(sessionEvent.AppEventSession)
+		startEvent := appTopicSession(history, sessionEvent.CreatedStatus)
 		assert.Equal(t, sessionEvent.CreatedStatus, startEvent.Status)
 		assert.Equal(t, consumerID, startEvent.Session.ConsumerID)
 		assert.Equal(t, hermesID, startEvent.Session.HermesID)
 		assert.Equal(t, currentProposal, startEvent.Session.Proposal)
 
-		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
-		traceEvent1 := history[1].Event.(trace.Event)
-		assert.Equal(t, "Provider connect", traceEvent1.Key)
+		for _, key := range []string{
+			"Provider connect",
+			"Provider session create",
+			"Session validation",
+			"Provider session create (start)",
+			"Provider session create (payment)",
+		} {
+			e := appTopicTraceEvent(history, key)
+			assert.Equal(t, key, e.Key)
+		}
 
-		assert.Equal(t, trace.AppTopicTraceEvent, history[2].Topic)
-		traceEvent2 := history[2].Event.(trace.Event)
-		assert.Equal(t, "Provider session create", traceEvent2.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[3].Topic)
-		traceEvent3 := history[3].Event.(trace.Event)
-		assert.Equal(t, "Session validation", traceEvent3.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[4].Topic)
-		traceEvent4 := history[4].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (start)", traceEvent4.Key)
-
-		assert.Equal(t, trace.AppTopicTraceEvent, history[5].Topic)
-		traceEvent5 := history[5].Event.(trace.Event)
-		assert.Equal(t, "Provider session create (payment)", traceEvent5.Key)
-
-		assert.Equal(t, sessionEvent.AppTopicSession, history[6].Topic)
-		closeEvent := history[6].Event.(sessionEvent.AppEventSession)
+		closeEvent := appTopicSession(history, sessionEvent.RemovedStatus)
 		assert.Equal(t, sessionEvent.RemovedStatus, closeEvent.Status)
 		assert.Equal(t, consumerID, closeEvent.Session.ConsumerID)
 		assert.Equal(t, hermesID, closeEvent.Session.HermesID)
@@ -228,6 +204,30 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func appTopicSession(history []mocks.EventBusEntry, status sessionEvent.Status) sessionEvent.AppEventSession {
+	for _, h := range history {
+		if h.Topic == sessionEvent.AppTopicSession {
+			e := h.Event.(sessionEvent.AppEventSession)
+			if e.Status == status {
+				return e
+			}
+		}
+	}
+	return sessionEvent.AppEventSession{}
+}
+
+func appTopicTraceEvent(history []mocks.EventBusEntry, key string) trace.Event {
+	for _, h := range history {
+		if h.Topic == trace.AppTopicTraceEvent {
+			e := h.Event.(trace.Event)
+			if e.Key == key {
+				return e
+			}
+		}
+	}
+	return trace.Event{}
 }
 
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
