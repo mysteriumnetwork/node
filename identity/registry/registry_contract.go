@@ -22,11 +22,14 @@ import (
 	"sync"
 	"time"
 
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/payments/bindings"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -46,6 +49,8 @@ type hermesCaller interface {
 
 type transactor interface {
 	FetchRegistrationStatus(id string) ([]TransactorStatusResponse, error)
+	GetFreeProviderRegistrationEligibility() (bool, error)
+	RegisterProviderIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 }
 
 type contractRegistry struct {
@@ -58,6 +63,7 @@ type contractRegistry struct {
 	ap         AddressProvider
 	hermes     hermesCaller
 	transactor transactor
+	manager    identity.Manager
 	cfg        IdentityRegistryConfig
 }
 
@@ -68,7 +74,7 @@ type IdentityRegistryConfig struct {
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient paymentClient.EtherClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller, transactor transactor, cfg IdentityRegistryConfig) (*contractRegistry, error) {
+func NewIdentityRegistryContract(ethClient paymentClient.EtherClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller, transactor transactor, selector identity_selector.Handler, cfg IdentityRegistryConfig) (*contractRegistry, error) {
 	return &contractRegistry{
 		storage:    registryStorage,
 		stop:       make(chan struct{}),
@@ -155,7 +161,6 @@ func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identi
 }
 
 func (registry *contractRegistry) handleNodeEvent(ev event.Payload) {
-	log.Debug().Msgf("event received %v", ev)
 	if ev.Status == event.StatusStarted {
 		registry.handleStart()
 		return
@@ -321,10 +326,10 @@ func (registry *contractRegistry) handleStart() {
 }
 
 func (registry *contractRegistry) loadInitialState() error {
+	log.Debug().Msg("Loading initial state")
 	registry.lock.Lock()
 	defer registry.lock.Unlock()
 
-	log.Debug().Msg("Loading initial state")
 	entries, err := registry.storage.GetAll()
 	if err != nil {
 		return errors.Wrap(err, "Could not fetch previous registrations")
@@ -342,6 +347,7 @@ func (registry *contractRegistry) loadInitialState() error {
 			log.Debug().Msgf("Identity %q already registered, skipping", entries[i].Identity)
 		}
 	}
+
 	return nil
 }
 
