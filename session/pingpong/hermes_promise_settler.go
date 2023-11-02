@@ -482,6 +482,22 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 		}
 
 		channel.lastPromise.Promise.R = hexR
+
+		localBeneficiaryAddress, err := aps.beneficiaryLocalStorage.Address(channel.Identity.Address)
+		if err != nil {
+			return fmt.Errorf("could not get local beneficiary address: %w", err)
+		}
+		if localBeneficiaryAddress != "" && localBeneficiaryAddress != channel.Beneficiary.Hex() {
+			channel.Beneficiary = common.HexToAddress(localBeneficiaryAddress)
+		}
+		beneficiaryEqualToAddress, err := aps.isBenenficiarySetToChannel(aps.chainID(), channel.Identity.ToCommonAddress(), channel.Beneficiary)
+		if err != nil {
+			return fmt.Errorf("could not verify beneficiary and channel equality: %w", err)
+		}
+		if beneficiaryEqualToAddress {
+			return fmt.Errorf("payment channel for identity %s is set as beneficiary, skip settling", channel.Identity.Address)
+		}
+
 		err = aps.settle(
 			func(promise crypto.Promise) (string, error) {
 				return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
