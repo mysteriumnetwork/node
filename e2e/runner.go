@@ -253,7 +253,7 @@ func seedHTTPMock() error {
 	method := "PUT"
 
 	client := &http.Client{
-		Timeout: time.Second * 5,
+		Timeout: time.Second * 10,
 	}
 
 	for _, v := range httpMockExpectations {

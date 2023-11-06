@@ -370,21 +370,6 @@ func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel, maxFee 
 		return
 	}
 	channel.lastPromise.Promise.R = hexR
-	localBeneficiaryAddress, err := aps.beneficiaryLocalStorage.Address(channel.Identity.Address)
-	if err != nil {
-		log.Error().Err(fmt.Errorf("could not get local beneficiary address: %w", err))
-	}
-	if localBeneficiaryAddress != "" && localBeneficiaryAddress != channel.Beneficiary.Hex() {
-		channel.Beneficiary = common.HexToAddress(localBeneficiaryAddress)
-	}
-	benefiriaryEqualToAddress, err := aps.isBenenficiarySetToChannel(aps.chainID(), channel.Identity.ToCommonAddress(), channel.Beneficiary)
-	if err != nil {
-		log.Error().Msgf("Failed to verify beneficiary and channel equality")
-	}
-	if benefiriaryEqualToAddress {
-		log.Warn().Msgf("payment channel for identity %s is set as beneficiary, skip settling", channel.Identity.Address)
-		return
-	}
 	aps.settleQueue <- receivedPromise{
 		hermesID:    channel.HermesID,
 		provider:    channel.Identity,
@@ -407,14 +392,37 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 			if !found {
 				continue
 			}
+			localBeneficiaryAddress, err := aps.beneficiaryLocalStorage.Address(channel.Identity.Address)
+			if err != nil {
+				if !errors.Is(err, beneficiary.ErrNotFound) {
+					log.Error().Err(err).Msg("could not get local beneficiary address")
+				}
+				localBeneficiaryAddress = ""
+			}
+			settleFunc := func(promise crypto.Promise) (string, error) {
+				return aps.transactor.SettleAndRebalance(p.hermesID.Hex(), p.provider.Address, promise)
+			}
+			if localBeneficiaryAddress != "" && !strings.EqualFold(localBeneficiaryAddress, p.beneficiary.Hex()) {
+				channel.Beneficiary = common.HexToAddress(localBeneficiaryAddress)
+				settleFunc = func(promise crypto.Promise) (string, error) {
+					return aps.transactor.SettleWithBeneficiary(p.provider.Address, channel.Beneficiary.Hex(), p.hermesID.Hex(), promise)
+				}
+			}
+			beneficiaryEqualToAddress, err := aps.isBenenficiarySetToChannel(aps.chainID(), channel.Identity.ToCommonAddress(), channel.Beneficiary)
+			if err != nil {
+				log.Error().Msgf("Failed to verify beneficiary and channel equality")
+			}
+			if beneficiaryEqualToAddress {
+				log.Warn().Msgf("payment channel for identity %s is set as beneficiary, skip settling", channel.Identity.Address)
+				continue
+			}
+
 			go aps.settle(
-				func(promise crypto.Promise) (string, error) {
-					return aps.transactor.SettleAndRebalance(p.hermesID.Hex(), p.provider.Address, promise)
-				},
+				settleFunc,
 				p.provider,
 				p.hermesID,
 				p.promise,
-				p.beneficiary,
+				channel.Beneficiary,
 				channel.Channel.Settled,
 				p.maxFee,
 			)
@@ -485,10 +493,19 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 
 		localBeneficiaryAddress, err := aps.beneficiaryLocalStorage.Address(channel.Identity.Address)
 		if err != nil {
-			return fmt.Errorf("could not get local beneficiary address: %w", err)
+			if !errors.Is(err, beneficiary.ErrNotFound) {
+				return fmt.Errorf("could not get local beneficiary address: %w", err)
+			}
+			localBeneficiaryAddress = ""
 		}
-		if localBeneficiaryAddress != "" && localBeneficiaryAddress != channel.Beneficiary.Hex() {
+		settleFunc := func(promise crypto.Promise) (string, error) {
+			return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
+		}
+		if localBeneficiaryAddress != "" && !strings.EqualFold(localBeneficiaryAddress, channel.Beneficiary.Hex()) {
 			channel.Beneficiary = common.HexToAddress(localBeneficiaryAddress)
+			settleFunc = func(promise crypto.Promise) (string, error) {
+				return aps.transactor.SettleWithBeneficiary(providerID.Address, channel.Beneficiary.Hex(), hermesID.Hex(), promise)
+			}
 		}
 		beneficiaryEqualToAddress, err := aps.isBenenficiarySetToChannel(aps.chainID(), channel.Identity.ToCommonAddress(), channel.Beneficiary)
 		if err != nil {
@@ -499,9 +516,7 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 		}
 
 		err = aps.settle(
-			func(promise crypto.Promise) (string, error) {
-				return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
-			},
+			settleFunc,
 			providerID,
 			hermesID,
 			channel.lastPromise.Promise,

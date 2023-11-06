@@ -296,7 +296,6 @@ func TestPromiseSettler_handleHermesPromiseReceivedWithLocalBeneficiary(t *testi
 	})
 	p = <-settler.settleQueue
 	assert.Equal(t, mockID, p.provider)
-	assert.Equal(t, localBeneficiary, p.beneficiary)
 }
 
 func TestPromiseSettler_doNotSettleIfBeneficiaryIsAChannel(t *testing.T) {
@@ -346,7 +345,10 @@ func TestPromiseSettler_doNotSettleIfBeneficiaryIsAChannel(t *testing.T) {
 		ProviderID: mockID,
 		Promise:    expectedPromise,
 	})
-	assertNoReceive(t, settler.settleQueue)
+
+	p = <-settler.settleQueue
+	assert.Equal(t, mockID, p.provider)
+	assert.Equal(t, beneficiaryID, p.beneficiary)
 }
 
 func assertNoReceive(t *testing.T, ch chan receivedPromise) {
