@@ -32,19 +32,20 @@ func TestLocalBeneficiaryStorage(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 	db, err := boltdb.NewStorage(dir)
+	assert.NoError(t, err)
 	localBeneficiaryStorage := NewAddressStorage(db)
 
 	// when
-	addr, err := localBeneficiaryStorage.Address("random")
+	_, err = localBeneficiaryStorage.Address("random")
 	assert.Error(t, err)
 
 	// when
-	assert.NoError(t, localBeneficiaryStorage.Save("0x1111111111111111111111111111111111111111", "0x3333333333333333333333333333333333333333"))
+	assert.NoError(t, localBeneficiaryStorage.Save("0xaA11111111111111111111111111111111111111", "0xaaa3333333333333333333333333333333333333"))
 	assert.NoError(t, localBeneficiaryStorage.Save("0x2222222222222222222222222222222222222222", "0x6666666666666666666666666666666666666666"))
 
-	addr, err = localBeneficiaryStorage.Address("0x1111111111111111111111111111111111111111")
+	addr, err := localBeneficiaryStorage.Address("0xaa11111111111111111111111111111111111111")
 	assert.NoError(t, err)
-	assert.Equal(t, "0x3333333333333333333333333333333333333333", addr)
+	assert.Equal(t, "0xaaa3333333333333333333333333333333333333", addr)
 
 	addr, err = localBeneficiaryStorage.Address("0x2222222222222222222222222222222222222222")
 	assert.NoError(t, err)

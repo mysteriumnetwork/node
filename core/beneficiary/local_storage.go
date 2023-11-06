@@ -18,6 +18,7 @@
 package beneficiary
 
 import (
+	"strings"
 	"time"
 
 	"github.com/asdine/storm/v3"
@@ -65,7 +66,7 @@ func (as *AddressStorage) Save(identity, address string) error {
 	}
 
 	store := &storedBeneficiary{
-		ID:          identity,
+		ID:          strings.ToLower(identity),
 		Beneficiary: address,
 		LastUpdated: time.Now().UTC(),
 	}
@@ -75,7 +76,7 @@ func (as *AddressStorage) Save(identity, address string) error {
 // Address retrieve beneficiary address for identity
 func (as *AddressStorage) Address(identity string) (string, error) {
 	result := &storedBeneficiary{}
-	err := as.storage.GetOneByField(bucket, "ID", identity, result)
+	err := as.storage.GetOneByField(bucket, "ID", strings.ToLower(identity), result)
 	if err != nil {
 		if errors.Is(err, storm.ErrNotFound) {
 			return "", ErrNotFound

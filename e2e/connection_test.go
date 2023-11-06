@@ -190,11 +190,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, balanceAfterRegistration, providerStatus.Balance)
 
-		// settle hermes 2 with beneficiary
-		err = tequilapiProvider.SettleWithBeneficiary(providerID, "0x1234aaaaaaaaaaaaaa123412", hermes2ID)
-		assert.NoError(t, err)
-
-		// settle hermes 1
+		// try to settle hermes 1
 		hermeses := []common.Address{
 			common.HexToAddress(hermesID),
 		}
@@ -202,6 +198,12 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "payment channel is set as beneficiary")
 
+		hermeses = append(hermeses, common.HexToAddress(hermes2ID))
+		beneficiary := "0x1234aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa123412"
+		err = tequilapiProvider.SetBeneficiaryAsync(providerID, beneficiary)
+		assert.NoError(t, err)
+
+		// settle hermes 1 and 2 (should settle with beneficiary)
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), hermeses, true)
 		assert.NoError(t, err)
 
@@ -236,7 +238,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		feeSum := big.NewInt(0).Add(big.NewInt(0).Add(fees.Settlement, hermesFee), fees.Settlement)
 		expected := new(big.Int).Sub(totalEarnings, feeSum)
-		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerChannelAddress))
+		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(beneficiary))
 		assert.NoError(t, err)
 
 		diff := getDiffFloat(balance, expected)

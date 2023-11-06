@@ -493,6 +493,10 @@ func (client *Client) SetBeneficiaryAsync(identity, ethAddress string) error {
 	}
 	defer response.Body.Close()
 
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to save")
+	}
+
 	return nil
 }
 
@@ -695,7 +699,7 @@ func (client *Client) Settle(providerID identity.Identity, hermesIDs []common.Ad
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
-		return errors.Wrap(err, "could not settle promise")
+		return fmt.Errorf("could not settle promise")
 	}
 	return nil
 }
