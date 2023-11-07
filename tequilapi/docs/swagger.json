@@ -2781,6 +2781,7 @@
         "description": "Asks to perform withdrawal to l1.",
         "summary": "Asks to perform withdrawal to l1.",
         "operationId": "Withdraw",
+        "deprecated": true,
         "parameters": [
           {
             "description": "withdraw request body",

@@ -519,6 +519,10 @@ func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ ...common.Add
 	return ms.errToReturn
 }
 
+func (ms *mockSettler) ForceSettleAsync(_ int64, _ identity.Identity, _ ...common.Address) error {
+	return ms.errToReturn
+}
+
 func (ms *mockSettler) SettleIntoStake(_ int64, providerID identity.Identity, hermesID ...common.Address) error {
 	return nil
 }
