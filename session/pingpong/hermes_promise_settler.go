@@ -105,6 +105,7 @@ type receivedPromise struct {
 // HermesPromiseSettler is responsible for settling the hermes promises.
 type HermesPromiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
+	ForceSettleAsync(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	SettleWithBeneficiary(chainID int64, providerID identity.Identity, beneficiary common.Address, hermeses []common.Address) error
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, hermesID common.Address) (uint16, error)

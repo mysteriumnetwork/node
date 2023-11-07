@@ -95,7 +95,6 @@ type transactorEndpoint struct {
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
 	addressProvider           addressProvider
-	addressStorage            *beneficiary.AddressStorage
 	bprovider                 beneficiaryProvider
 	bhandler                  beneficiarySaver
 	pilvytis                  pilvytisApi
@@ -288,10 +287,10 @@ func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
 	err := te.settle(c.Request, te.promiseSettler.ForceSettleAsync)
 	if err != nil {
 		log.Err(err).Msg("Settle async failed")
-		utils.ForwardError(c, err, apierror.Internal("Failed to force settle async", contract.ErrCodeHermesSettle))
+		utils.ForwardError(c, err, apierror.Internal("Failed to force settle async", contract.ErrCodeHermesSettleAsync))
 		return
 	}
-	c.Status(http.StatusOK)
+	c.Status(http.StatusAccepted)
 }
 
 func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, identity.Identity, ...common.Address) error) error {
@@ -578,19 +577,6 @@ func (te *transactorEndpoint) Withdraw(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
-}
-
-func (te *transactorEndpoint) parseWithdrawalAmount(amount string) (*big.Int, error) {
-	if amount == "" {
-		return nil, nil
-	}
-
-	res, ok := big.NewInt(0).SetString(amount, 10)
-	if !ok {
-		return nil, fmt.Errorf("%v is not a valid integer", amount)
-	}
-
-	return res, nil
 }
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
