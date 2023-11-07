@@ -63,6 +63,7 @@ type Transactor interface {
 // promiseSettler settles the given promises
 type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
+	ForceSettleAsync(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID ...common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	Withdraw(fromChainID int64, toChainID int64, providerID identity.Identity, hermesID, beneficiary common.Address, amount *big.Int) error
@@ -284,33 +285,13 @@ func (te *transactorEndpoint) SettleSync(c *gin.Context) {
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
 func (te *transactorEndpoint) SettleAsync(c *gin.Context) {
-	err := te.settle(c.Request, func(chainID int64, provider identity.Identity, hermes ...common.Address) error {
-		providerId := provider.ToCommonAddress()
-		beneficiary, err := te.bprovider.GetBeneficiary(providerId)
-		if err != nil {
-			return fmt.Errorf("failed to get beneficiary: %w", err)
-		}
-		isChannel, err := isBenenficiarySetToChannel(te.addressProvider, chainID, providerId, beneficiary)
-		if err != nil {
-			return fmt.Errorf("failed to check if channel is set as beneficiary: %w", err)
-		}
-		if isChannel {
-			return fmt.Errorf("payment channel is set as beneficiary, please turn on auto-withdrawals using your personal wallet address")
-		}
-		go func() {
-			err := te.promiseSettler.ForceSettle(chainID, provider, hermes...)
-			if err != nil {
-				log.Error().Err(err).Msgf("Could not settle provider(%q) promises", provider.Address)
-			}
-		}()
-		return nil
-	})
+	err := te.settle(c.Request, te.promiseSettler.ForceSettleAsync)
 	if err != nil {
-		utils.ForwardError(c, err, apierror.Internal("Failed to force settle async", contract.ErrCodeHermesSettleAsync))
+		log.Err(err).Msg("Settle async failed")
+		utils.ForwardError(c, err, apierror.Internal("Failed to force settle async", contract.ErrCodeHermesSettle))
 		return
 	}
-
-	c.Status(http.StatusAccepted)
+	c.Status(http.StatusOK)
 }
 
 func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, identity.Identity, ...common.Address) error) error {
@@ -524,6 +505,7 @@ func (te *transactorEndpoint) DecreaseStake(c *gin.Context) {
 //
 //	---
 //	summary: Asks to perform withdrawal to l1.
+//	deprecated: true
 //	description: Asks to perform withdrawal to l1.
 //	parameters:
 //	- in: body
