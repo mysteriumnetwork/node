@@ -22,8 +22,8 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
 )
@@ -78,7 +78,7 @@ func (n *Node) Start() (err error) {
 	n.libP2PNodeCtx, n.libP2PNodeCancel = context.WithCancel(context.Background())
 
 	// Start libp2p node.
-	n.libP2PNode, err = n.libP2PConfig.NewNode(n.libP2PNodeCtx)
+	n.libP2PNode, err = n.libP2PConfig.NewNode()
 	if err != nil {
 		return fmt.Errorf("failed to start DHT node: %w", err)
 	}
@@ -96,6 +96,7 @@ func (n *Node) Start() (err error) {
 // Stop stops DHT node.
 func (n *Node) Stop() {
 	n.libP2PNodeCancel()
+	n.libP2PNode.Close()
 }
 
 func (n *Node) connectToPeer(peerInfo peer.AddrInfo) {
