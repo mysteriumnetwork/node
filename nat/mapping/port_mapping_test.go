@@ -141,15 +141,15 @@ type mockRouter struct {
 	mapping mapping
 }
 
-func (m *mockRouter) AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) error {
+func (m *mockRouter) AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) (uint16, error) {
 	m.Lock()
 	defer m.Unlock()
 
 	if !m.uPnPEnabled {
-		return errors.New("uPnP not supported")
+		return 0, errors.New("uPnP not supported")
 	}
 	if m.permanentLease && lifetime > 0 {
-		return errors.New("router supports permanent port lease only")
+		return 0, errors.New("router supports permanent port lease only")
 	}
 	m.mapping = mapping{
 		protocol: protocol,
@@ -158,7 +158,7 @@ func (m *mockRouter) AddMapping(protocol string, extport, intport int, name stri
 		name:     name,
 		lifetime: lifetime,
 	}
-	return nil
+	return uint16(extport), nil
 }
 
 func (m *mockRouter) addedMapping() mapping {
