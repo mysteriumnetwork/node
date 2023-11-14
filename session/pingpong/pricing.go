@@ -120,7 +120,7 @@ func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string)
 func (p *Pricer) getCurrentByType(pricing market.LatestPrices, nodeType string, country string, serviceType string) *market.Price {
 	base := p.getPriceForCountry(pricing, country)
 	switch strings.ToLower(nodeType) {
-	case "residential":
+	case "residential", "cellular":
 		return p.getCurrentByServiceType(base.Current.Residential, serviceType)
 	default:
 		return p.getCurrentByServiceType(base.Current.Other, serviceType)
@@ -143,7 +143,7 @@ func (p *Pricer) getCurrentByServiceType(pricingByServiceType *market.PriceBySer
 func (p *Pricer) getPreviousByType(pricing market.LatestPrices, nodeType string, country string, serviceType string) *market.Price {
 	base := p.getPriceForCountry(pricing, country)
 	switch strings.ToLower(nodeType) {
-	case "residential":
+	case "residential", "cellular":
 		return p.getCurrentByServiceType(base.Previous.Residential, serviceType)
 	default:
 		return p.getCurrentByServiceType(base.Previous.Other, serviceType)
