@@ -370,7 +370,11 @@ func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
 // ParseStringSliceFlag parses a cli.StringSliceFlag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFlag) {
-	cfg.SetDefault(flag.Name, flag.Value.Value())
+	var value []string = nil
+	if flag.Value != nil {
+		value = flag.Value.Value()
+	}
+	cfg.SetDefault(flag.Name, value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.StringSlice(flag.Name))
 	} else {
