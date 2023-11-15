@@ -18,7 +18,6 @@
 package identity
 
 import (
-	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
@@ -61,7 +60,7 @@ func TestResidentEvent(t *testing.T) {
 }
 
 func NewTempFileName(t *testing.T) string {
-	file, err := ioutil.TempFile("", "*")
+	file, err := os.CreateTemp("", "*")
 	assert.NoError(t, err)
 	return file.Name()
 }

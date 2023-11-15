@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -622,7 +622,7 @@ func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Mes
 }
 
 func parseResponseJSON(response *http.Response, dto interface{}) error {
-	responseJSON, err := ioutil.ReadAll(response.Body)
+	responseJSON, err := io.ReadAll(response.Body)
 	if err != nil {
 		return err
 	}

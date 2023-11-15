@@ -19,7 +19,7 @@ package launchpad
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -33,7 +33,7 @@ func (m *mockLaunchpadAPI) Do(req *http.Request) (*http.Response, error) {
 	return &http.Response{
 		Status:     "200 OK",
 		StatusCode: http.StatusOK,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
+		Body:       io.NopCloser(bytes.NewBufferString(responseJSON)),
 	}, nil
 }
 

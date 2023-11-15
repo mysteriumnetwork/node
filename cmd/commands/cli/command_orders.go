@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -242,7 +242,7 @@ func (c *cliApp) invoice(args []string) (err error) {
 	}
 	filename := fmt.Sprintf("invoice-%v.pdf", args[1])
 	clio.Info("Writing invoice to", filename)
-	return ioutil.WriteFile(filename, resp, 0644)
+	return os.WriteFile(filename, resp, 0644)
 }
 
 func printOrder(o contract.PaymentOrderResponse, rc *remote.Config) {

@@ -22,7 +22,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -72,7 +71,7 @@ func NewVersionManager(
 func (vm *VersionManager) ListLocalVersions() ([]LocalVersion, error) {
 	var versions = make([]LocalVersion, 0)
 
-	files, err := ioutil.ReadDir(vm.versionConfig.uiDir())
+	files, err := os.ReadDir(vm.versionConfig.uiDir())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return versions, nil

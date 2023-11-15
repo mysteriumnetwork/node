@@ -18,7 +18,6 @@
 package ui
 
 import (
-	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
@@ -40,7 +39,7 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 
 func Test_Server_ServesHTML(t *testing.T) {
 	// given
-	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	tmpDIr, err := os.MkdirTemp("", "nodeuiversiontest")
 	assert.NoError(t, err)
 	defer os.Remove(tmpDIr)
 

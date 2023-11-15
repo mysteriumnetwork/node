@@ -18,8 +18,8 @@
 package rollingwriter
 
 import (
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -61,7 +61,7 @@ func (w *RollingWriter) Write(b []byte) (int, error) {
 // rollingWriter only handles file rolling at runtime, but if the node is restarted, the count is lost thus we have
 // to do this manually.
 func (w *RollingWriter) CleanObsoleteLogs() error {
-	files, err := ioutil.ReadDir(w.config.LogPath)
+	files, err := os.ReadDir(w.config.LogPath)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,11 @@ func (w *RollingWriter) CleanObsoleteLogs() error {
 	baseFilename := w.config.FileName + ".log"
 	for _, file := range files {
 		if strings.Contains(file.Name(), baseFilename) && file.Name() != baseFilename {
-			oldLogFiles = append(oldLogFiles, file)
+			fInfo, err := file.Info()
+			if err != nil {
+				return fmt.Errorf("failed to get file info: %w", err)
+			}
+			oldLogFiles = append(oldLogFiles, fInfo)
 		}
 	}
 	if len(oldLogFiles) <= w.config.MaxRemain {

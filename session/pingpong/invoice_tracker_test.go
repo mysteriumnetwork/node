@@ -19,7 +19,6 @@ package pingpong
 
 import (
 	"encoding/hex"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"strings"
@@ -94,7 +93,7 @@ func (mac *mockHermesCaller) RefreshLatestProviderPromise(chainID int64, id stri
 }
 
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -143,7 +142,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 }
 
 func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -192,7 +191,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 }
 
 func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -243,7 +242,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 }
 
 func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -300,7 +299,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 }
 
 func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -353,7 +352,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 }
 
 func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -405,7 +404,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 }
 
 func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -564,7 +563,7 @@ func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
 }
 
 func generateExchangeMessage(t *testing.T, amount *big.Int, invoice crypto.Invoice, channel string) (crypto.ExchangeMessage, string) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -590,7 +589,7 @@ func generateExchangeMessage(t *testing.T, amount *big.Int, invoice crypto.Invoi
 }
 
 func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	dir, err := os.MkdirTemp("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 

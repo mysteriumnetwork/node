@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -32,7 +31,7 @@ import (
 )
 
 func TestSettlementHistoryStorage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "providerInvoiceTest")
+	dir, err := os.MkdirTemp("", "providerInvoiceTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 

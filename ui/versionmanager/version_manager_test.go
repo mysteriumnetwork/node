@@ -18,7 +18,6 @@
 package versionmanager
 
 import (
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -42,7 +41,7 @@ func (m *mockServer) SwitchUI(path string) {
 
 func TestSwitchUI(t *testing.T) {
 	// given
-	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	tmpDIr, err := os.MkdirTemp("", "nodeuiversiontest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDIr)
 
@@ -92,7 +91,7 @@ func TestSwitchUI(t *testing.T) {
 
 func TestListLocal(t *testing.T) {
 	// given
-	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	tmpDIr, err := os.MkdirTemp("", "nodeuiversiontest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDIr)
 
@@ -127,7 +126,7 @@ func TestListLocal(t *testing.T) {
 
 func TestBundledVersion(t *testing.T) {
 	// given
-	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	tmpDIr, err := os.MkdirTemp("", "nodeuiversiontest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDIr)
 
@@ -152,7 +151,7 @@ func TestBundledVersion(t *testing.T) {
 
 func TestListLocalDirectoryRemoved(t *testing.T) {
 	// given
-	tmpDIr, err := ioutil.TempDir("", "nodeuiversiontest")
+	tmpDIr, err := os.MkdirTemp("", "nodeuiversiontest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDIr)
 

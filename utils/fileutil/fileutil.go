@@ -36,7 +36,6 @@
 package fileutil
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -82,7 +81,7 @@ func CopyDirs(src, dest string) error {
 // It tries to also copy it with the same permissions,
 // if thats not possible 0644 is used.
 func copyFile(src, dest string) error {
-	data, err := ioutil.ReadFile(src)
+	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
@@ -92,7 +91,7 @@ func copyFile(src, dest string) error {
 		perm = info.Mode().Perm()
 	}
 
-	err = ioutil.WriteFile(dest, data, perm)
+	err = os.WriteFile(dest, data, perm)
 	if err != nil {
 		return err
 	}
