@@ -144,9 +144,9 @@ func (p *portMapper) notify(id string, err error) {
 }
 
 func (p *portMapper) addMapping(protocol string, extPort, intPort int, name string) (permanent bool, err error) {
-	if err := p.config.MapInterface.AddMapping(protocol, extPort, intPort, name, p.config.MapLifetime); err != nil {
+	if _, err := p.config.MapInterface.AddMapping(protocol, extPort, intPort, name, p.config.MapLifetime); err != nil {
 		log.Warn().Err(err).Msgf("Couldn't add port mapping for port %d: retrying with permanent lease", extPort)
-		if err := p.config.MapInterface.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
+		if _, err := p.config.MapInterface.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			log.Warn().Err(err).Msgf("Couldn't add port mapping for port %d", extPort)
 			return false, err
