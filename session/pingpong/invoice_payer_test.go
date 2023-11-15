@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"sync"
@@ -87,7 +86,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 }
 
 func Test_InvoicePayer_SendsMessage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -156,7 +155,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 }
 
 func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -223,7 +222,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 }
 
 func Test_InvoicePayer_BubblesErrors(t *testing.T) {
-	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	dir, err := os.MkdirTemp("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 

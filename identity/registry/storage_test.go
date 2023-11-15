@@ -18,7 +18,6 @@
 package registry
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -29,7 +28,7 @@ import (
 
 func TestRegistrationStatusStorage(t *testing.T) {
 	var chainID int64 = 1
-	dir, err := ioutil.TempDir("", "consumerTotalsStorageTest")
+	dir, err := os.MkdirTemp("", "consumerTotalsStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 

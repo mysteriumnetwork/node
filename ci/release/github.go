@@ -19,7 +19,7 @@ package release
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"time"
 
@@ -53,7 +53,7 @@ func releaseGithub(opts *releaseGithubOpts) error {
 		return err
 	}
 
-	artifactFilenames, err := ioutil.ReadDir("build/package")
+	artifactFilenames, err := os.ReadDir("build/package")
 	if err != nil {
 		return err
 	}

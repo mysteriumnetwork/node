@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -80,7 +79,7 @@ func Test_EthEndpoints(t *testing.T) {
 }
 
 func NewTempFileName(t *testing.T) string {
-	file, err := ioutil.TempFile("", "*")
+	file, err := os.CreateTemp("", "*")
 	assert.NoError(t, err)
 	return file.Name()
 }

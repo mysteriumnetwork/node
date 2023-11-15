@@ -23,7 +23,6 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -44,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	binaryData, err := ioutil.ReadFile(*dbFilename)
+	binaryData, err := os.ReadFile(*dbFilename)
 	exitOnError(err)
 	originalDataSize := len(binaryData)
 

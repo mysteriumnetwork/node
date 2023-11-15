@@ -19,7 +19,7 @@ package quality
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -49,7 +49,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	var events metrics.SignedBatch
 
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		body, _ := ioutil.ReadAll(request.Body)
+		body, _ := io.ReadAll(request.Body)
 		_ = proto.Unmarshal(body, &events)
 		response.WriteHeader(http.StatusAccepted)
 	}))

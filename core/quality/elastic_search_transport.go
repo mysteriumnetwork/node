@@ -18,7 +18,7 @@
 package quality
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -51,7 +51,7 @@ func (transport *elasticSearchTransport) SendEvent(event Event) error {
 	}
 	defer response.Body.Close()
 
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		return errors.Wrapf(err, "error while reading response body")
 	}

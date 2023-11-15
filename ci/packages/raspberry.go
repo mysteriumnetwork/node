@@ -19,14 +19,13 @@ package packages
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
@@ -192,7 +191,7 @@ func fetchRaspbianImage() (filename string, err error) {
 		return "", err
 	}
 
-	extractedFiles, err := ioutil.ReadDir(localRaspbianImgDir)
+	extractedFiles, err := os.ReadDir(localRaspbianImgDir)
 	if err != nil {
 		return "", err
 	}

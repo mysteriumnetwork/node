@@ -20,7 +20,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
@@ -554,7 +553,7 @@ func (c *cliApp) importIdentity(actionsArgs []string) (err error) {
 
 	blob := []byte(key)
 	if _, err := os.Stat(key); err == nil {
-		blob, err = ioutil.ReadFile(key)
+		blob, err = os.ReadFile(key)
 		if err != nil {
 			return fmt.Errorf("can't read provided file: %s reason: %w", key, err)
 		}

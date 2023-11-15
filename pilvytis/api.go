@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -221,7 +221,7 @@ func (a *API) GetPaymentGatewayOrderInvoice(id identity.Identity, oid string) ([
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.ReadAll(res.Body)
+	return io.ReadAll(res.Body)
 }
 
 // GatewayClientCallback triggers a payment callback from the client-side.

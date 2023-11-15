@@ -19,7 +19,6 @@ package reset
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -30,7 +29,7 @@ import (
 )
 
 func TestActionRun(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 

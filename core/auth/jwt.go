@@ -20,7 +20,7 @@ package auth
 import (
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +43,7 @@ const JWTCookieName string = "token"
 
 type jwtClaims struct {
 	Username string `json:"username"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 const expiresIn = 48 * time.Hour
@@ -62,8 +62,8 @@ func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWT, error) {
 	expirationTime := jwtAuth.getExpirationTime()
 	claims := &jwtClaims{
 		Username: username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
 	}
 

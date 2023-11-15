@@ -19,7 +19,7 @@ package deb
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -51,7 +51,7 @@ func TermsTemplateFile(path string) error {
 
 	defer resp.Body.Close()
 
-	terms, err := ioutil.ReadAll(resp.Body)
+	terms, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

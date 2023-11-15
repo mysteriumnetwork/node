@@ -19,11 +19,11 @@ package logconfig
 
 import (
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/pkg/errors"
 )
 
@@ -62,18 +62,22 @@ func (c *Collector) Archive() (outputFilepath string, err error) {
 func (c *Collector) logFilepaths() (result []string, err error) {
 	filename := path.Base(c.options.Filepath)
 	dir := path.Dir(c.options.Filepath)
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read directory: "+dir)
 	}
 
 	var mostRecent fs.FileInfo
 	for _, f := range files {
+		fInfo, err := f.Info()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get file info: "+f.Name())
+		}
 		if f.Name() == filename+".log" {
 			result = append(result, path.Join(dir, f.Name()))
-		} else if strings.Contains(f.Name(), ".log.gz") && f.Mode().IsRegular() &&
-			(mostRecent == nil || f.ModTime().After(mostRecent.ModTime())) {
-			mostRecent = f
+		} else if strings.Contains(f.Name(), ".log.gz") && fInfo.Mode().IsRegular() &&
+			(mostRecent == nil || fInfo.ModTime().After(mostRecent.ModTime())) {
+			mostRecent = fInfo
 		}
 	}
 	if mostRecent != nil {

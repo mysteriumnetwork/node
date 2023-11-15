@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -147,7 +146,7 @@ func parseResponseJSON(response *http.Response, dto interface{}) error {
 	// NopCloser returns a ReadCloser with a no-op Close method wrapping the provided Reader r.
 	// parseResponseError "empties" the contents of an errored response
 	// this way the response can be read and parsed again further down the line
-	response.Body = ioutil.NopCloser(b)
+	response.Body = io.NopCloser(b)
 
 	return nil
 }

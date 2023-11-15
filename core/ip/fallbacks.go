@@ -19,7 +19,7 @@ package ip
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"strings"
 
@@ -64,7 +64,7 @@ func RequestAndParsePlainIPResponse(c *requests.HTTPClient, url string) (string,
 	}
 	defer res.Body.Close()
 
-	r, err := ioutil.ReadAll(res.Body)
+	r, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
