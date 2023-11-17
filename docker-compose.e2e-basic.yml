@@ -28,7 +28,7 @@ services:
       - 9090
 
   ipify:
-    image: bunetz/ipify
+    image: mysteriumnetwork/ipify:1.0.1
     expose:
       - 3000
 

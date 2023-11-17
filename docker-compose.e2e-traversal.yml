@@ -43,7 +43,7 @@ services:
         ipv4_address: 172.31.0.199
 
   ipify:
-    image: bunetz/ipify
+    image: mysteriumnetwork/ipify:1.0.1
     expose:
       - 3000
     cap_add:
