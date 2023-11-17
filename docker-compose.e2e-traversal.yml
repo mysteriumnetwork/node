@@ -43,7 +43,7 @@ services:
         ipv4_address: 172.31.0.199
 
   ipify:
-    image: owlab/ipify
+    image: bunetz/ipify
     expose:
       - 3000
     cap_add:
@@ -211,11 +211,11 @@ services:
 
   # private blockchain
   ganache:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.3.2
     expose:
       - 8545
     command: >
-      --chain.chainId 5 --chain.networkId 5 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+      --chain.chainId 5 --chain.networkId 5 --wallet.mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
     dns: 172.30.0.254
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
@@ -229,11 +229,11 @@ services:
         ipv4_address: 172.31.0.202
 
   ganache2:
-    image: trufflesuite/ganache:v7.0.3
+    image: trufflesuite/ganache:v7.3.2
     expose:
       - 8545
     command: >
-      --chain.chainId 80001 --chain.networkId 80001 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+      --chain.chainId 80001 --chain.networkId 80001 --wallet.mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
     dns: 172.30.0.254
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
@@ -264,7 +264,7 @@ services:
         ipv4_address: 172.31.0.207
 
   http-mock:
-    image: mockserver/mockserver:mockserver-5.11.2
+    image: mockserver/mockserver:mockserver-5.15.0
     dns: 172.30.0.254
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
@@ -422,7 +422,7 @@ services:
         ipv4_address: 172.31.0.213
 
   redis:
-    image: bitnami/redis:6.2.6
+    image: bitnami/redis:6.2.14
     container_name: 'hermes_redis'
     expose:
       - 6379
