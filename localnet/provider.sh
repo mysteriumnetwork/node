@@ -11,7 +11,7 @@ exec /node/build/myst/myst \
   --discovery.ping=10s \
   --discovery.fetch=10s \
   --log-level=debug \
-  --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665 \
+  --payments.mystscaddress=0xaa9c4e723609cb913430143fbc86d3cbe7adca21 \
   --ip-detector=http://ipify:3000/?format=json \
   --location.type=manual \
   --location.country=e2e-land \
