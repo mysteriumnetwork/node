@@ -130,7 +130,7 @@ type MobileNodeOptions struct {
 	ObserverAddress                string
 	IsProvider                     bool
 	TequilapiSecured               bool
-	UIFeaturesEnabled              string
+	UIFeatures                     string
 }
 
 // ConsumerPaymentConfig defines consumer side payment configuration
@@ -216,7 +216,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	config.Current.SetDefault(config.FlagSTUNservers.Name, []string{"stun.l.google.com:19302", "stun1.l.google.com:19302", "stun2.l.google.com:19302"})
 	config.Current.SetDefault(config.FlagUDPListenPorts.Name, "10000:60000")
 	config.Current.SetDefault(config.FlagStatsReportInterval.Name, time.Second)
-	config.Current.SetDefault(config.FlagUIFeatures.Name, options.UIFeaturesEnabled)
+
+	if options.UIFeatures != "" {
+		config.Current.SetDefault(config.FlagUIFeatures.Name, options.UIFeatures)
+	}
 	config.Current.SetDefault(config.FlagActiveServices.Name, "scraping")
 
 	if options.IsProvider {
@@ -237,7 +240,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		config.Current.SetDefault(config.FlagChain2KnownHermeses.Name, config.FlagChain2KnownHermeses.Value)
 		config.Current.SetDefault(config.FlagDNSListenPort.Name, config.FlagDNSListenPort.Value)
 
-		config.Current.SetDefault(config.FlagUIFeatures.Name, "android_mobile_node,android_sso_deeplink,disableUpdateNotifications")
+		// for backward compatibility with version of mobile app wich dont use SetUIFeatures
+		if options.UIFeatures != "" {
+			config.Current.SetDefault(config.FlagUIFeatures.Name, "android_mobile_node,android_sso_deeplink,disableUpdateNotifications")
+		}
 	}
 
 	bcNetwork, err := config.ParseBlockchainNetwork(options.Network)
