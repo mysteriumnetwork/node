@@ -140,11 +140,6 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "could not pull images")
 	}
 
-	log.Info().Msg("building runner")
-	if err := r.compose("build", "go-runner"); err != nil {
-		return errors.Wrap(err, "could not pull images")
-	}
-
 	if err := r.compose("up", "-d", "broker", "ganache", "ganache2", "ipify", "morqa", "mongodb", "transactordatabase", "pilvytis-mock"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
@@ -164,7 +159,7 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "starting http-mock failed!")
 	}
 
-	log.Info().Msg("Force rebuilding go runner")
+	log.Info().Msg("building runner")
 	if err := r.compose("build", "go-runner"); err != nil {
 		return fmt.Errorf("could not build go runner %w", err)
 	}
@@ -200,8 +195,6 @@ func (r *Runner) Init() error {
 	if err := r.compose("up", "-d", "transactor", "transactor-sidecar"); err != nil {
 		return errors.Wrap(err, "starting transactor failed!")
 	}
-
-	time.Sleep(time.Second * 5)
 
 	log.Info().Msg("Building app images")
 	if err := r.compose("build"); err != nil {

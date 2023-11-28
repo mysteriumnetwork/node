@@ -3,16 +3,16 @@
 blockchain:
   chain_1_rpc_endpoint: "http://ganache:8545"
   chain_1_chain_id: 5
-  chain_1_hermes_sc_address: 0x599d43715DF3070f83355D9D90AE62c159E62A75
-  chain_1_channel_implementation: 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-  chain_1_registry: 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-  chain_1_myst_sc_address: 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+  chain_1_hermes_sc_address: 0x241f6e1d0bb17f45767dc60a6bd3d21cdb543a0c
+  chain_1_channel_implementation: 0x599d43715df3070f83355d9d90ae62c159e62a75
+  chain_1_registry: 0x427c2bad22335710aec5e477f3e3adcd313a9bcb
+  chain_1_myst_sc_address: 0xaa9c4e723609cb913430143fbc86d3cbe7adca21
   chain_2_rpc_endpoint: "ws://ganache2:8545"
   chain_2_chain_id: 80001
-  chain_2_hermes_sc_address:  0x599d43715DF3070f83355D9D90AE62c159E62A75
-  chain_2_channel_implementation: 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-  chain_2_registry: 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-  chain_2_myst_sc_address: 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+  chain_2_hermes_sc_address:  0x241f6e1d0bb17f45767dc60a6bd3d21cdb543a0c
+  chain_2_channel_implementation: 0x599d43715df3070f83355d9d90ae62c159e62a75
+  chain_2_registry: 0x427c2bad22335710aec5e477f3e3adcd313a9bcb
+  chain_2_myst_sc_address: 0xaa9c4e723609cb913430143fbc86d3cbe7adca21
   bc_timeout: 30s
   fallback_hermes_fee: 2000
   min_settlement_duration: 100

@@ -780,8 +780,8 @@ github.com/mysteriumnetwork/gvisor v0.0.0-20231116101341-753b6ae8ddcb h1:m4CwpzA
 github.com/mysteriumnetwork/gvisor v0.0.0-20231116101341-753b6ae8ddcb/go.mod h1:exVfPZjgc0vGqFDB0Un4K0f4RBdf6Xi/dsojN2P6PAU=
 github.com/mysteriumnetwork/metrics v0.0.19 h1:sqmUVStDWQOSUUxKTrEnxOZs6dy9nKrlICKBrzTbKSI=
 github.com/mysteriumnetwork/metrics v0.0.19/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
-github.com/mysteriumnetwork/payments v1.0.1-0.20231114145317-f5ed35819c93 h1:F1M6R2BRkA86Cc8J50NDR/jHp5yzNY2I28nS9U47XOs=
-github.com/mysteriumnetwork/payments v1.0.1-0.20231114145317-f5ed35819c93/go.mod h1:G194Qz0O5frVbzqep/e4uEmcnz1u8GPdr2d49R3A7qY=
+github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54 h1:mqdzogdLpkgAgP3svQxnxo4AbRSLNH9x51gGQKaXl1Y=
+github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54/go.mod h1:G194Qz0O5frVbzqep/e4uEmcnz1u8GPdr2d49R3A7qY=
 github.com/mysteriumnetwork/terms v0.0.53 h1:QI49mqts3MBdbusj7zXmgViLDt6AMyrMaXJyEZ2YY4c=
 github.com/mysteriumnetwork/terms v0.0.53/go.mod h1:xWwHA/G22cDBqaCT95KyZUTDzgScDIF7waiufaadD2o=
 github.com/mysteriumnetwork/wireguard-go v0.0.0-20230310142505-f95bd75c0cb1 h1:gaDgsEaxLejOKPPyd/A4v+o05eCuzLKXu6zmwcca5fk=

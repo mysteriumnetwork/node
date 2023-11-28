@@ -46,19 +46,19 @@ blockchain:
     5:
       rpc: "http://ganache:8545" # Rpc endpoints for the chain
       fallback_hermeses: # Fallback list of hermes addresses
-        - "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
-        - "0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
+        - "0xd68defb97d0765741f8ecf179df2f9564e1466a3"
+        - "0xfd63dc49c7163d82d6f0a4c23ff13216d702ce50"
       registry_addresses: # A list of registry smart contract addresses
-        - "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"
-      myst_sc_address: "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+        - "0x427c2bad22335710aec5e477f3e3adcd313a9bcb"
+      myst_sc_address: "0xaa9c4e723609cb913430143fbc86d3cbe7adca21"
     80001:
       rpc: "ws://ganache2:8545"
       fallback_hermeses:
-        - "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
-        - "0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
+        - "0xd68defb97d0765741f8ecf179df2f9564e1466a3"
+        - "0xfd63dc49c7163d82d6f0a4c23ff13216d702ce50"
       registry_addresses:
-        - "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"
-      myst_sc_address: "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+        - "0x427c2bad22335710aec5e477f3e3adcd313a9bcb"
+      myst_sc_address: "0xaa9c4e723609cb913430143fbc86d3cbe7adca21"
 
 ########
 # Fees #

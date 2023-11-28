@@ -51,11 +51,11 @@ var (
 	providerID                  = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase          = "localprovider"
 	chainID               int64 = 80001
-	hermesID                    = "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7"
-	hermes2ID                   = "0x66D0a6DD6c1120B0e11513A4bA439f6eaed0E0Ed"
-	mystAddress                 = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
-	registryAddress             = "0x241F6e1d0bb17f45767dc60a6bd3d21cdb543a0c"
-	channelImplementation       = "0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21"
+	hermesID                    = "0xd68defb97d0765741f8ecf179df2f9564e1466a3"
+	hermes2ID                   = "0xfd63dc49c7163d82d6f0a4c23ff13216d702ce50"
+	mystAddress                 = "0xaa9c4e723609cb913430143fbc86d3cbe7adca21"
+	registryAddress             = "0x427c2bad22335710aec5e477f3e3adcd313a9bcb"
+	channelImplementation       = "0x599d43715df3070f83355d9d90ae62c159e62a75"
 	addressForTopups            = "0xa29fb77b25181df094908b027821a7492ca4245b"
 	tenthThou                   = float64(1) / float64(10000)
 )
@@ -67,7 +67,7 @@ var (
 )
 
 var (
-	providerChannelAddress      = "0xa57b6Eb01f6883f59B41d525b603A1012B5879f9"
+	providerChannelAddress      = "0xa2305c7214045100B6EF5Df8f8FEc5C57F42051A"
 	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
 	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
 )
