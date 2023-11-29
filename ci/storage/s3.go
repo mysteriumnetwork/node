@@ -120,7 +120,10 @@ func (s *Storage) GetCacheableFile(bucket string, predicate func(types.Object) b
 		return "", errors.Wrap(err, "could not find file in bucket")
 	}
 	remoteFilename := aws.ToString(object.Key)
-	remoteFileSize := object.Size
+	var remoteFileSize int64 = 0
+	if object.Size != nil {
+		remoteFileSize = *object.Size
+	}
 
 	localFilename := filepath.Join(cacheDir, remoteFilename)
 	localFileInfo, err := os.Stat(localFilename)
