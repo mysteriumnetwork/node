@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.25.8
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.46.0
-	github.com/cenkalti/backoff/v4 v4.2.1
+	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/chzyer/readline v1.5.1
 	github.com/ethereum/go-ethereum v1.13.5
 	github.com/gin-contrib/cors v1.4.0
