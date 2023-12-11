@@ -782,8 +782,8 @@ github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54 h1:mqd
 github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54/go.mod h1:G194Qz0O5frVbzqep/e4uEmcnz1u8GPdr2d49R3A7qY=
 github.com/mysteriumnetwork/terms v0.0.53 h1:QI49mqts3MBdbusj7zXmgViLDt6AMyrMaXJyEZ2YY4c=
 github.com/mysteriumnetwork/terms v0.0.53/go.mod h1:xWwHA/G22cDBqaCT95KyZUTDzgScDIF7waiufaadD2o=
-github.com/mysteriumnetwork/wireguard-go v0.0.0-20230913205650-7e9a5ef7c088 h1:TgiZjOrqEJE2NPY2Yz9Qtjr4+wAVqJ7HXBSF56kLtBw=
-github.com/mysteriumnetwork/wireguard-go v0.0.0-20230913205650-7e9a5ef7c088/go.mod h1:KNrjddgin1zD9sfQawwoXCUwWboceZH78ASVHkXu6GM=
+github.com/mysteriumnetwork/wireguard-go v0.0.0-20231211132832-8f7bf3c68307 h1:/VntqpDVMcbOhhlxFa/v2SWwAqR7xF7Jtw/o2mheOUQ=
+github.com/mysteriumnetwork/wireguard-go v0.0.0-20231211132832-8f7bf3c68307/go.mod h1:KNrjddgin1zD9sfQawwoXCUwWboceZH78ASVHkXu6GM=
 github.com/nats-io/nats.go v1.31.0 h1:/WFBHEc/dOKBF6qf1TZhrdEfTmOZ5JzdJ+Y3m6Y/p7E=
 github.com/nats-io/nats.go v1.31.0/go.mod h1:di3Bm5MLsoB4Bx61CBTsxuarI36WbhAwOm8QrW39+i8=
 github.com/nats-io/nkeys v0.4.6 h1:IzVe95ru2CT6ta874rt9saQRkWfe2nFj1NtvYSLqMzY=
