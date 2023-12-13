@@ -382,6 +382,11 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 			promised = consumer.LatestPromise.Amount
 		}
 
+		// if settled is bigger than promised, use settled as promised
+		if consumer.Settled != nil && consumer.Settled.Cmp(promised) == 1 {
+			promised = consumer.Settled
+		}
+
 		previous, _ := cbt.getBalance(chainID, id)
 		cbt.setBalance(chainID, id, ConsumerBalance{
 			BCBalance:          consumer.Balance,
@@ -649,11 +654,16 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 		return err
 	}
 
-	if data.LatestPromise.Amount == nil {
-		data.LatestPromise.Amount = new(big.Int)
+	latestPromised := big.NewInt(0)
+	if data.LatestPromise.Amount != nil {
+		latestPromised = data.LatestPromise.Amount
+	}
+	// if settled is bigger than promised, use settled as promised
+	if data.Settled != nil && data.Settled.Cmp(latestPromised) == 1 {
+		latestPromised = data.Settled
 	}
 
-	log.Debug().Msgf("Loaded hermes state: already promised: %v", data.LatestPromise.Amount)
+	log.Debug().Msgf("Loaded hermes state: already promised: %v", latestPromised)
 
 	hermes, err := cbt.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
@@ -661,7 +671,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 		return err
 	}
 
-	return cbt.consumerGrandTotalsStorage.Store(chainID, identity, hermes, data.LatestPromise.Amount)
+	return cbt.consumerGrandTotalsStorage.Store(chainID, identity, hermes, latestPromised)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
