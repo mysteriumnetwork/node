@@ -21,8 +21,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 func protectedNetworks() (nets []*net.IPNet) {
@@ -39,4 +40,12 @@ func protectedNetworks() (nets []*net.IPNet) {
 		nets = append(nets, ipNet)
 	}
 	return nets
+}
+
+func protectedPortsTCP() (ports []string) {
+	return strings.Split(config.GetString(config.FlagFirewallProtectedPortsTCP), ",")
+}
+
+func protectedPortsUDP() (ports []string) {
+	return strings.Split(config.GetString(config.FlagFirewallProtectedPortsUDP), ",")
 }

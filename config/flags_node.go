@@ -99,6 +99,27 @@ var (
 		Usage: "List of comma separated (no spaces) subnets to be protected from access via VPN",
 		Value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8",
 	}
+
+	// FlagFirewallProtectedPortsEnabled enables provider's TCP&UDP ports protection from access via VPN.
+	FlagFirewallProtectedPortsEnabled = cli.BoolFlag{
+		Name:  "firewall.protected.ports.enabled",
+		Usage: "Enable TCP&UDP ports to be whitelisted for access via VPN, other are blocked",
+		Value: true,
+	}
+
+	// FlagFirewallProtectedPortsTCP protects provider's TCP ports from access via VPN.
+	FlagFirewallProtectedPortsTCP = cli.StringFlag{
+		Name:  "firewall.protected.ports.tcp",
+		Usage: "List of comma separated (no spaces) TCP ports to be whitelisted for access via VPN",
+		Value: "22,25,53,80,81,110,143,443,465,993,995,3074,3478,3479,3480,8080,8443,5223",
+	}
+
+	// FlagFirewallProtectedPortsUDP protects provider's UDP ports from access via VPN.
+	FlagFirewallProtectedPortsUDP = cli.StringFlag{
+		Name:  "firewall.protected.ports.udp",
+		Usage: "List of comma separated (no spaces) UDP ports to be whitelisted for access via VPN",
+		Value: "53,88,500,3074,3075,3478,3479,3544,4500,22728,33233",
+	}
 	// FlagShaperEnabled enables bandwidth limitation.
 	FlagShaperEnabled = cli.BoolFlag{
 		Name:  "shaper.enabled",
@@ -324,6 +345,9 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagFeedbackURL,
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
+		&FlagFirewallProtectedPortsEnabled,
+		&FlagFirewallProtectedPortsTCP,
+		&FlagFirewallProtectedPortsUDP,
 		&FlagShaperEnabled,
 		&FlagShaperBandwidth,
 		&FlagKeystoreLightweight,
@@ -371,7 +395,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsChains(ctx)
 	ParseFlagsUI(ctx)
 	ParseFlagsSSE(ctx)
-	//it is important to have this one at the end so it overwrites defaults correctly
+	// it is important to have this one at the end so it overwrites defaults correctly
 	ParseFlagsBlockchainNetwork(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
@@ -385,6 +409,9 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
+	Current.ParseBoolFlag(ctx, FlagFirewallProtectedPortsEnabled)
+	Current.ParseStringFlag(ctx, FlagFirewallProtectedPortsTCP)
+	Current.ParseStringFlag(ctx, FlagFirewallProtectedPortsUDP)
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 	Current.ParseUInt64Flag(ctx, FlagShaperBandwidth)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)

@@ -160,13 +160,45 @@ func (svc *serviceIPTables) prepare() error {
 		return fmt.Errorf("failed to create MYST iptables chain: %w", err)
 	}
 
+	if err := svc.protectPrivateNetworks(); err != nil {
+		return err
+	}
+
+	if !config.GetBool(config.FlagFirewallProtectedPortsEnabled) {
+		return nil
+	}
+
+	return svc.allowOnlyWhitelistedPorts()
+}
+
+func (svc *serviceIPTables) protectPrivateNetworks() error {
 	for _, ipNet := range protectedNetworks() {
 		// Protect private networks rule
-		err = svc.applyRule(iptables.AppendTo(chainMyst).RuleSpec(
+		err := svc.applyRule(iptables.AppendTo(chainMyst).RuleSpec(
 			"--destination", ipNet.String(), "--jump", "DNAT", "--to-destination", "240.0.0.1", "--table", "nat"))
 		if err != nil {
 			return fmt.Errorf("failed to create blackhole rule in the MYST iptables chain: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (svc *serviceIPTables) allowOnlyWhitelistedPorts() error {
+	for _, port := range protectedPortsTCP() {
+		if err := svc.applyRule(iptables.AppendTo(chainMyst).RuleSpec("--protocol", "tcp", "--destination-port", port, "--jump", "ACCEPT", "--table", "nat")); err != nil {
+			return fmt.Errorf("failed to create ACCEPT rule in the MYST iptables chain: %w", err)
+		}
+	}
+
+	for _, port := range protectedPortsUDP() {
+		if err := svc.applyRule(iptables.AppendTo(chainMyst).RuleSpec("--protocol", "udp", "--destination-port", port, "--jump", "ACCEPT", "--table", "nat")); err != nil {
+			return fmt.Errorf("failed to create ACCEPT rule in the MYST iptables chain: %w", err)
+		}
+	}
+
+	if err := svc.applyRule(iptables.AppendTo(chainMyst).RuleSpec("--jump", "DNAT", "--to-destination", "240.0.0.1", "--table", "nat")); err != nil {
+		return fmt.Errorf("failed to create TCP blackhole rule in the MYST iptables chain: %w", err)
 	}
 
 	return nil
