@@ -39,7 +39,7 @@ import (
 // PackageLinuxAmd64 builds and stores linux amd64 package
 func PackageLinuxAmd64() error {
 	logconfig.Bootstrap()
-	if err := packageStandalone("build/myst/myst_linux_amd64", "linux", "amd64"); err != nil {
+	if err := packageStandalone("build/myst/myst_linux_amd64", "linux", "amd64", nil); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -48,7 +48,7 @@ func PackageLinuxAmd64() error {
 // PackageLinuxArm builds and stores linux arm package
 func PackageLinuxArm() error {
 	logconfig.Bootstrap()
-	if err := packageStandalone("build/myst/myst_linux_arm", "linux", "arm"); err != nil {
+	if err := packageStandalone("build/myst/myst_linux_arm", "linux", "arm", nil); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -114,7 +114,7 @@ func PackageLinuxDebianArm64() error {
 // PackageMacOSAmd64 builds and stores macOS amd64 package
 func PackageMacOSAmd64() error {
 	logconfig.Bootstrap()
-	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
+	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64", nil); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -123,7 +123,7 @@ func PackageMacOSAmd64() error {
 // PackageMacOSArm64 builds and stores macOS arm64 package
 func PackageMacOSArm64() error {
 	logconfig.Bootstrap()
-	if err := packageStandalone("build/myst/myst_darwin_arm64", "darwin", "arm64"); err != nil {
+	if err := packageStandalone("build/myst/myst_darwin_arm64", "darwin", "arm64", nil); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -132,7 +132,7 @@ func PackageMacOSArm64() error {
 // PackageWindowsAmd64 builds and stores Windows amd64 package
 func PackageWindowsAmd64() error {
 	logconfig.Bootstrap()
-	if err := packageStandalone("build/myst/myst_windows_amd64.exe", "windows", "amd64"); err != nil {
+	if err := packageStandalone("build/myst/myst_windows_amd64.exe", "windows", "amd64", nil); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -341,13 +341,13 @@ func goGet(pkg string) error {
 	return sh.RunWith(map[string]string{"GO111MODULE": "off"}, "go", "get", "-u", pkg)
 }
 
-func packageStandalone(binaryPath, os, arch string) error {
+func packageStandalone(binaryPath, os, arch string, extraEnvs map[string]string) error {
 	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
 	var err error
 	if os == "linux" {
 		filename := path.Base(binaryPath)
 		binaryPath = path.Join("build", filename, filename)
-		err = buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), filename, os, arch, true)
+		err = buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), filename, os, arch, extraEnvs, true)
 	} else {
 		err = buildCrossBinary(os, arch)
 	}
@@ -355,7 +355,7 @@ func packageStandalone(binaryPath, os, arch string) error {
 		return err
 	}
 
-	err = buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch, true)
+	err = buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch, extraEnvs, true)
 	if err != nil {
 		return err
 	}
