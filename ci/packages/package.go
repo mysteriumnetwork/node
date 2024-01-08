@@ -54,6 +54,18 @@ func PackageLinuxArm() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
+// PackageLinuxArmv6l builds and stores linux armv6 package
+func PackageLinuxArmv6l() error {
+	logconfig.Bootstrap()
+	extraEnv := map[string]string{
+		"GOARM": "6",
+	}
+	if err := packageStandalone("build/myst/myst_linux_armv6l", "linux", "arm", extraEnv); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
+}
+
 // PackageLinuxDebianAmd64 builds and stores debian amd64 package
 func PackageLinuxDebianAmd64() error {
 	logconfig.Bootstrap()
@@ -73,7 +85,7 @@ func PackageLinuxDebianAmd64() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
-// PackageLinuxDebianArm builds and stores debian arm package
+// PackageLinuxDebianArm builds and stores debian armv7l+ package
 func PackageLinuxDebianArm() error {
 	logconfig.Bootstrap()
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
@@ -82,6 +94,26 @@ func PackageLinuxDebianArm() error {
 	envi := map[string]string{
 		"GOOS":   "linux",
 		"GOARCH": "arm",
+	}
+	if err := sh.RunWith(envi, "bin/build"); err != nil {
+		return err
+	}
+	if err := packageDebian("build/myst/myst", "armhf"); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
+}
+
+// PackageLinuxDebianArm64 builds and stores debian armv6l package
+func PackageLinuxDebianArmv6l() error {
+	logconfig.Bootstrap()
+	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+		return err
+	}
+	envi := map[string]string{
+		"GOOS":   "linux",
+		"GOARCH": "arm",
+		"GOARM":  "6",
 	}
 	if err := sh.RunWith(envi, "bin/build"); err != nil {
 		return err
