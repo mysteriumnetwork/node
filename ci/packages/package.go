@@ -104,7 +104,7 @@ func PackageLinuxDebianArm() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
-// PackageLinuxDebianArm64 builds and stores debian armv6l package
+// PackageLinuxDebianArmv6l builds and stores linux armv6 package
 func PackageLinuxDebianArmv6l() error {
 	logconfig.Bootstrap()
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
