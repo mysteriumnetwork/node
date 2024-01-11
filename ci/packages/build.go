@@ -76,10 +76,10 @@ func buildBinary(source, target string) error {
 	if !ok {
 		targetArch = runtime.GOARCH
 	}
-	return buildBinaryFor(source, target, targetOS, targetArch, false)
+	return buildBinaryFor(source, target, targetOS, targetArch, nil, false)
 }
 
-func buildBinaryFor(source, target, targetOS, targetArch string, buildStatic bool) error {
+func buildBinaryFor(source, target, targetOS, targetArch string, extraEnvs map[string]string, buildStatic bool) error {
 	log.Info().Msgf("Building %s -> %s %s/%s", source, target, targetOS, targetArch)
 
 	buildDir, err := filepath.Abs(path.Join("build", target))
@@ -110,6 +110,10 @@ func buildBinaryFor(source, target, targetOS, targetArch string, buildStatic boo
 		"GOOS":   targetOS,
 		"GOARCH": targetArch,
 	}
+	for envKey, envValue := range extraEnvs {
+		envi[envKey] = envValue
+	}
+
 	if buildStatic {
 		envi["CGO_ENABLED"] = "0"
 	}

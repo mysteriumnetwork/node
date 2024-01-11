@@ -109,6 +109,11 @@ package:linux-debian-arm:
   tags: [go]
   script: go run mage.go -v PackageLinuxDebianArm
 
+package:linux-debian-armv6l:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageLinuxDebianArmv6l
+
 package:linux-debian-arm64:
   stage: build
   tags: [go]
