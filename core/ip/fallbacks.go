@@ -31,6 +31,7 @@ import (
 var IPFallbackAddresses = []string{
 	"https://api.ipify.org",
 	"https://ip2location.io/ip",
+	"https://ipinfo.io/ip",
 	"https://api.ipify.org",
 	"https://ifconfig.me",
 	"https://www.trackip.net/ip",
