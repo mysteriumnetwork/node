@@ -70,7 +70,9 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}
 	calc := mockAddressProvider{}
 
-	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, defaultCfg)
+	mockBlockchainProvider := mockBlockchainInfoProvider{}
+
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, &mockBlockchainProvider, defaultCfg)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -129,6 +131,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 			},
 		}
 		calc := mockAddressProvider{}
+		mockBlockchainProvider := mockBlockchainInfoProvider{}
 
 		var ba = big.NewInt(10000000)
 		cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
@@ -137,7 +140,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 				BountyAmount: ba,
 				ChainID:      1,
 			},
-		}, &mockRegistrationStatusProvider{}, &calc, defaultCfg)
+		}, &mockRegistrationStatusProvider{}, &calc, &mockBlockchainProvider, defaultCfg)
 
 		err := cbt.Subscribe(bus)
 		assert.NoError(t, err)
@@ -168,6 +171,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 			mystBalanceToReturn: ba,
 		}
 		calc := mockAddressProvider{}
+		mockBlockchainProvider := mockBlockchainInfoProvider{}
 
 		cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
 			statusToReturn: registry.TransactorStatusResponse{
@@ -175,7 +179,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 				BountyAmount: big.NewInt(0),
 				ChainID:      1,
 			},
-		}, &mockRegistrationStatusProvider{}, &calc, defaultCfg)
+		}, &mockRegistrationStatusProvider{}, &calc, &mockBlockchainProvider, defaultCfg)
 
 		err := cbt.Subscribe(bus)
 		assert.NoError(t, err)
@@ -207,7 +211,9 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 		},
 	}
 	calc := mockAddressProvider{}
-	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, defaultCfg)
+	mockBlockchainProvider := mockBlockchainInfoProvider{}
+
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised, new(big.Int)}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, &mockBlockchainProvider, defaultCfg)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -261,7 +267,9 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 	cfg := defaultCfg
 	cfg.LongSync.Interval = time.Millisecond * 300
 	calc := mockAddressProvider{}
-	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
+	mockBlockchainProvider := mockBlockchainInfoProvider{}
+
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised, new(big.Int)}, &mockTransactor{
 		statusToReturn: registry.TransactorStatusResponse{
 			Status:       registry.TransactorRegistrationEntryStatusCreated,
 			ChainID:      1,
@@ -273,7 +281,7 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 				status: registry.InProgress,
 			},
 		},
-	}, &calc, cfg)
+	}, &calc, &mockBlockchainProvider, cfg)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -299,13 +307,15 @@ func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
 		errToReturn:         errors.New("boom"),
 	}
 	calc := mockAddressProvider{}
-	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
+	mockBlockchainProvider := mockBlockchainInfoProvider{}
+
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised, new(big.Int)}, &mockTransactor{}, &mockRegistrationStatusProvider{
 		map[string]mockRegistrationStatus{
 			fmt.Sprintf("%d%s", 1, id1.Address): {
 				status: registry.Unregistered,
 			},
 		},
-	}, &calc, defaultCfg)
+	}, &calc, &mockBlockchainProvider, defaultCfg)
 
 	b := cbt.ForceBalanceUpdate(1, id1)
 	assert.Equal(t, initialBalance, b)
@@ -326,7 +336,9 @@ func TestConsumerBalanceTracker_InprogressUnregisteredBalanceReturnedWhenNoBount
 	cfg := defaultCfg
 	cfg.LongSync.Interval = time.Millisecond * 300
 	calc := mockAddressProvider{}
-	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
+	mockBlockchainProvider := mockBlockchainInfoProvider{}
+
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{grandTotalPromised, new(big.Int)}, &mockTransactor{
 		statusToReturn: registry.TransactorStatusResponse{
 			Status:       registry.TransactorRegistrationEntryStatusCreated,
 			ChainID:      1,
@@ -338,7 +350,7 @@ func TestConsumerBalanceTracker_InprogressUnregisteredBalanceReturnedWhenNoBount
 				status: registry.InProgress,
 			},
 		},
-	}, &calc, cfg)
+	}, &calc, &mockBlockchainProvider, cfg)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -348,6 +360,36 @@ func TestConsumerBalanceTracker_InprogressUnregisteredBalanceReturnedWhenNoBount
 	})
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(1, id1).Cmp(initialBalance) == 0
+	}, defaultWaitTime, defaultWaitInterval)
+}
+
+func TestConsumerBalanceTracker_RecoverGrandTotalPromisedSettledIsBiggerThanPromissedNotOffChain(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	grandTotalPromised := big.NewInt(10)
+	settledAmount := big.NewInt(11)
+	bus := eventbus.New()
+	mcts := NewConsumerTotalsStorage(bus)
+	bc := mockConsumerBalanceChecker{}
+	cfg := defaultCfg
+	cfg.LongSync.Interval = time.Millisecond * 300
+	calc := mockAddressProvider{}
+	mockBlockchainProvider := &mockBlockchainInfoProvider{}
+
+	mockBlockchainProvider.AddConsumerChannelsHermes(1, id1.ToCommonAddress(), client.ConsumersHermes{
+		Settled: big.NewInt(6),
+	})
+
+	cbt := NewConsumerBalanceTracker(bus, &bc, mcts, &mockconsumerInfoGetter{grandTotalPromised, settledAmount}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, mockBlockchainProvider, defaultCfg)
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id1,
+	})
+	assert.Eventually(t, func() bool {
+		savedBalance, _ := mcts.Get(1, id1, common.BigToAddress(big.NewInt(0)))
+		return savedBalance.Cmp(big.NewInt(6)) == 0
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
@@ -381,11 +423,13 @@ func (mcbc *mockConsumerBalanceChecker) GetMystBalance(chainID int64, mystAddres
 }
 
 type mockconsumerInfoGetter struct {
-	amount *big.Int
+	amount  *big.Int
+	settled *big.Int
 }
 
 func (mcig *mockconsumerInfoGetter) GetConsumerData(_ int64, _ string, _ time.Duration) (HermesUserInfo, error) {
 	return HermesUserInfo{
+		Settled: mcig.settled,
 		LatestPromise: LatestPromise{
 			Amount: mcig.amount,
 		},
@@ -402,8 +446,9 @@ func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) 
 		},
 	}
 	calc := mockAddressProvider{}
+	mockBlockchainProvider := mockBlockchainInfoProvider{}
 
-	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, defaultCfg)
+	cbt := NewConsumerBalanceTracker(bus, &bc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, &mockBlockchainProvider, defaultCfg)
 
 	// Make sure we are not dead locked here. https://github.com/mysteriumnetwork/node/issues/2181
 	cbt.updateGrandTotal(1, identity.FromAddress("0x0000"), big.NewInt(1))
@@ -503,4 +548,31 @@ func (ma *mockAddressProvider) GetHermesChannelAddress(chainID int64, id, hermes
 
 func (ma *mockAddressProvider) setChannelAddress(chainID int64, id, channelAddr common.Address) {
 	ma.channels[fmt.Sprintf("%d-%s", chainID, id)] = channelAddr
+}
+
+var _ blockchainInfoProvider = (*mockBlockchainInfoProvider)(nil)
+
+type mockBlockchainInfoProvider struct {
+	consumerChannelsHermesMap map[string]client.ConsumersHermes
+}
+
+func (p *mockBlockchainInfoProvider) GetConsumerChannelsHermes(chainID int64, channelAddress common.Address) (client.ConsumersHermes, error) {
+	result, ok := p.consumerChannelsHermesMap[p.mapKey(chainID, channelAddress)]
+	if !ok {
+		return client.ConsumersHermes{}, fmt.Errorf("mock consumer channels hermes not found")
+	}
+
+	return result, nil
+}
+
+func (p *mockBlockchainInfoProvider) AddConsumerChannelsHermes(chainID int64, channelAddress common.Address, consumerHermes client.ConsumersHermes) {
+	if p.consumerChannelsHermesMap == nil {
+		p.consumerChannelsHermesMap = map[string]client.ConsumersHermes{}
+	}
+
+	p.consumerChannelsHermesMap[p.mapKey(chainID, channelAddress)] = consumerHermes
+}
+
+func (p *mockBlockchainInfoProvider) mapKey(chainID int64, channelAddress common.Address) string {
+	return fmt.Sprintf("%d_%s", chainID, channelAddress.String())
 }

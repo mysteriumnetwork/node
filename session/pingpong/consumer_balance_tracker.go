@@ -69,6 +69,7 @@ type ConsumerBalanceTracker struct {
 	consumerGrandTotalsStorage           consumerTotalsStorage
 	consumerInfoGetter                   consumerInfoGetter
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider
+	blockchainInfoProvider               blockchainInfoProvider
 	stop                                 chan struct{}
 	once                                 sync.Once
 
@@ -82,6 +83,10 @@ type ConsumerBalanceTracker struct {
 type transactorRegistrationStatusProvider interface {
 	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
 	FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error)
+}
+
+type blockchainInfoProvider interface {
+	GetConsumerChannelsHermes(chainID int64, channelAddress common.Address) (client.ConsumersHermes, error)
 }
 
 // PollConfig sets the interval and timeout for polling.
@@ -105,6 +110,7 @@ func NewConsumerBalanceTracker(
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider,
 	registry registrationStatusProvider,
 	addressProvider addressProvider,
+	blockchainInfoProvider blockchainInfoProvider,
 	cfg ConsumerBalanceTrackerConfig,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
@@ -115,6 +121,7 @@ func NewConsumerBalanceTracker(
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
 		consumerInfoGetter:                   consumerInfoGetter,
 		transactorRegistrationStatusProvider: transactorRegistrationStatusProvider,
+		blockchainInfoProvider:               blockchainInfoProvider,
 		registry:                             registry,
 		addressProvider:                      addressProvider,
 		stop:                                 make(chan struct{}),
@@ -382,9 +389,11 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 			promised = consumer.LatestPromise.Amount
 		}
 
-		// if settled is bigger than promised, use settled as promised
-		if consumer.Settled != nil && consumer.Settled.Cmp(promised) == 1 {
-			promised = consumer.Settled
+		if isSettledBiggerThanPromised(consumer.Settled, promised) {
+			promised, err = cbt.getPromisedWhenSettledIsBigger(consumer, promised, chainID, id.ToCommonAddress())
+			if err != nil {
+				return err
+			}
 		}
 
 		previous, _ := cbt.getBalance(chainID, id)
@@ -658,9 +667,13 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 	if data.LatestPromise.Amount != nil {
 		latestPromised = data.LatestPromise.Amount
 	}
-	// if settled is bigger than promised, use settled as promised
-	if data.Settled != nil && data.Settled.Cmp(latestPromised) == 1 {
-		latestPromised = data.Settled
+
+	if isSettledBiggerThanPromised(data.Settled, latestPromised) {
+		var err error
+		latestPromised, err = cbt.getPromisedWhenSettledIsBigger(data, latestPromised, chainID, identity.ToCommonAddress())
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Debug().Msgf("Loaded hermes state: already promised: %v", latestPromised)
@@ -772,6 +785,19 @@ func (cbt *ConsumerBalanceTracker) identityRegistrationStatus(ctx context.Contex
 	return data, backoff.Retry(toRetry, boff)
 }
 
+func (cbt *ConsumerBalanceTracker) getPromisedWhenSettledIsBigger(data HermesUserInfo, latestPromised *big.Int, chainID int64, channelAddress common.Address) (*big.Int, error) {
+	if data.IsOffchain {
+		return data.Settled, nil
+	}
+
+	consumerHermes, err := cbt.blockchainInfoProvider.GetConsumerChannelsHermes(chainID, channelAddress)
+	if err != nil {
+		return nil, fmt.Errorf("error getting consumer channels hermes: %w", err)
+	}
+
+	return consumerHermes.Settled, nil
+}
+
 func safeSub(a, b *big.Int) *big.Int {
 	if a == nil || b == nil {
 		return new(big.Int)
@@ -781,6 +807,10 @@ func safeSub(a, b *big.Int) *big.Int {
 		return new(big.Int).Sub(a, b)
 	}
 	return new(big.Int)
+}
+
+func isSettledBiggerThanPromised(settled, promised *big.Int) bool {
+	return settled != nil && settled.Cmp(promised) == 1
 }
 
 // ConsumerBalance represents the consumer balance
