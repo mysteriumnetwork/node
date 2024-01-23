@@ -785,12 +785,17 @@ func (cbt *ConsumerBalanceTracker) identityRegistrationStatus(ctx context.Contex
 	return data, backoff.Retry(toRetry, boff)
 }
 
-func (cbt *ConsumerBalanceTracker) getPromisedWhenSettledIsBigger(data HermesUserInfo, latestPromised *big.Int, chainID int64, channelAddress common.Address) (*big.Int, error) {
+func (cbt *ConsumerBalanceTracker) getPromisedWhenSettledIsBigger(data HermesUserInfo, latestPromised *big.Int, chainID int64, identityAddress common.Address) (*big.Int, error) {
 	if data.IsOffchain {
 		return data.Settled, nil
 	}
 
-	consumerHermes, err := cbt.blockchainInfoProvider.GetConsumerChannelsHermes(chainID, channelAddress)
+	activeChannelAddress, err := cbt.addressProvider.GetActiveChannelAddress(chainID, identityAddress)
+	if err != nil {
+		return nil, fmt.Errorf("error getting active channel address: %w", err)
+	}
+
+	consumerHermes, err := cbt.blockchainInfoProvider.GetConsumerChannelsHermes(chainID, activeChannelAddress)
 	if err != nil {
 		return nil, fmt.Errorf("error getting consumer channels hermes: %w", err)
 	}

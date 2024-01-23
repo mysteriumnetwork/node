@@ -372,14 +372,15 @@ func TestConsumerBalanceTracker_RecoverGrandTotalPromisedSettledIsBiggerThanProm
 	bc := mockConsumerBalanceChecker{}
 	cfg := defaultCfg
 	cfg.LongSync.Interval = time.Millisecond * 300
-	calc := mockAddressProvider{}
+	calc := newMockAddressProvider()
+	calc.addrToReturn = id1.ToCommonAddress()
 	mockBlockchainProvider := &mockBlockchainInfoProvider{}
 
 	mockBlockchainProvider.AddConsumerChannelsHermes(1, id1.ToCommonAddress(), client.ConsumersHermes{
 		Settled: big.NewInt(6),
 	})
 
-	cbt := NewConsumerBalanceTracker(bus, &bc, mcts, &mockconsumerInfoGetter{grandTotalPromised, settledAmount}, &mockTransactor{}, &mockRegistrationStatusProvider{}, &calc, mockBlockchainProvider, defaultCfg)
+	cbt := NewConsumerBalanceTracker(bus, &bc, mcts, &mockconsumerInfoGetter{grandTotalPromised, settledAmount}, &mockTransactor{}, &mockRegistrationStatusProvider{}, calc, mockBlockchainProvider, defaultCfg)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
