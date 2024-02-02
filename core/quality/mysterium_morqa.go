@@ -251,15 +251,8 @@ func (m *MysteriumMORQA) MonitoringStatus(providerIds []string) MonitoringStatus
 		return map[string]MonitoringStatus{}
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to request proposals quality POST: /providers/monitoring-status")
-		return map[string]MonitoringStatus{}
-	}
-	defer response.Body.Close()
-
 	var r MonitoringStatusResponse
-	if err = m.parseAndCacheResponse(request, response, time.Minute, &r); err != nil {
+	if err = m.doRequestAndCacheResponse(request, time.Minute, &r); err != nil {
 		log.Warn().Err(err).Msg("Failed parsing response from POST: /providers/monitoring-status")
 		return nil
 	}
@@ -276,16 +269,8 @@ func (m *MysteriumMORQA) ProposalsQuality() []ProposalQuality {
 		return nil
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to request proposals quality")
-
-		return nil
-	}
-	defer response.Body.Close()
-
 	var qualityResponse []ProposalQuality
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &qualityResponse); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &qualityResponse); err != nil {
 		log.Warn().Err(err).Msg("Failed to parse proposals quality")
 
 		return nil
@@ -303,18 +288,10 @@ func (m *MysteriumMORQA) ProviderSessions(providerID string) []ProviderSession {
 		return nil
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to request proposals quality")
-
-		return nil
-	}
-	defer response.Body.Close()
-
 	var responseBody struct {
 		Connects []ProviderSession `json:"connects"`
 	}
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &responseBody); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &responseBody); err != nil {
 		log.Warn().Err(err).Msg("Failed to parse proposals quality")
 
 		return nil
@@ -331,16 +308,9 @@ func (m *MysteriumMORQA) ProviderStatuses(providerID string) (node.MonitoringAge
 		return nil, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		log.Err(err).Msg("Failed to request provider monitoring agent statuses")
-		return nil, err
-	}
-	defer response.Body.Close()
-
 	var statuses node.MonitoringAgentStatuses
 
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &statuses); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &statuses); err != nil {
 		log.Err(err).Msg("Failed to parse provider monitoring agent statuses")
 		return nil, err
 	}
@@ -355,15 +325,9 @@ func (m *MysteriumMORQA) ProviderSessionsList(id identity.Identity, rangeTime st
 		return nil, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to request provider monitoring sessions list: %w", err)
-	}
-	defer response.Body.Close()
-
 	var sessions []node.SessionItem
 
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &sessions); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &sessions); err != nil {
 		log.Err(err).Msg("Failed to parse provider monitoring sessions list")
 		return nil, err
 	}
@@ -379,13 +343,7 @@ func (m *MysteriumMORQA) ProviderTransferredData(id identity.Identity, rangeTime
 		return data, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return data, fmt.Errorf("failed to request provider transferred data: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &data); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &data); err != nil {
 		log.Err(err).Msg("Failed to parse provider transferred data")
 		return data, err
 	}
@@ -401,13 +359,7 @@ func (m *MysteriumMORQA) ProviderSessionsCount(id identity.Identity, rangeTime s
 		return count, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return count, fmt.Errorf("failed to request provider monitoring sessions count: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &count); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &count); err != nil {
 		log.Err(err).Msg("Failed to parse provider monitoring sessions count")
 		return count, err
 	}
@@ -423,13 +375,7 @@ func (m *MysteriumMORQA) ProviderConsumersCount(id identity.Identity, rangeTime 
 		return count, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return count, fmt.Errorf("failed to request provider monitoring consumers count: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &count); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &count); err != nil {
 		log.Err(err).Msg("Failed to parse provider monitoring consumers count")
 		return count, err
 	}
@@ -445,13 +391,7 @@ func (m *MysteriumMORQA) ProviderEarningsSeries(id identity.Identity, rangeTime 
 		return data, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return data, fmt.Errorf("failed to request provider series earnings: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &data); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &data); err != nil {
 		log.Err(err).Msg("Failed to parse provider series earnings")
 		return data, err
 	}
@@ -467,13 +407,7 @@ func (m *MysteriumMORQA) ProviderSessionsSeries(id identity.Identity, rangeTime 
 		return data, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return data, fmt.Errorf("failed to request provider series sessions: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &data); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &data); err != nil {
 		log.Err(err).Msg("Failed to parse provider series sessions")
 		return data, err
 	}
@@ -489,13 +423,7 @@ func (m *MysteriumMORQA) ProviderTransferredDataSeries(id identity.Identity, ran
 		return data, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return data, fmt.Errorf("failed to request provider series data: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &data); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &data); err != nil {
 		log.Err(err).Msg("Failed to parse provider series data")
 		return data, err
 	}
@@ -511,13 +439,7 @@ func (m *MysteriumMORQA) ProviderServiceEarnings(id identity.Identity) (node.Ear
 		return data, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return data, fmt.Errorf("failed to request service earnings: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &data); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &data); err != nil {
 		log.Err(err).Msg("Failed to parse service earnings")
 		return data, err
 	}
@@ -533,13 +455,7 @@ func (m *MysteriumMORQA) ProviderActivityStats(id identity.Identity) (node.Activ
 		return stats, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return stats, fmt.Errorf("failed to request provider activity stats: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &stats); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &stats); err != nil {
 		log.Err(err).Msg("Failed to parse provider activity stats")
 		return stats, err
 	}
@@ -555,13 +471,7 @@ func (m *MysteriumMORQA) ProviderQuality(id identity.Identity) (node.QualityInfo
 		return res, err
 	}
 
-	response, err := m.client.Do(request)
-	if err != nil {
-		return res, fmt.Errorf("failed to request provider quality: %w", err)
-	}
-	defer response.Body.Close()
-
-	if err = m.parseAndCacheResponse(request, response, 10*time.Minute, &res); err != nil {
+	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &res); err != nil {
 		log.Err(err).Msg("Failed to parse provider quality")
 		return res, err
 	}
@@ -617,14 +527,25 @@ func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Mes
 	return request, err
 }
 
-func (m *MysteriumMORQA) parseAndCacheResponse(request *http.Request, response *http.Response, ttl time.Duration, dto interface{}) error {
+func (m *MysteriumMORQA) doRequestAndCacheResponse(request *http.Request, ttl time.Duration, dto interface{}) error {
 	if resp, ok := m.cache.Get(request.URL.RequestURI()); ok {
-		dto = resp
-		return nil
+		serializedDTO, err := json.Marshal(resp)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(serializedDTO, dto)
 	}
 
-	err := parseResponseJSON(response, dto)
+	response, err := m.client.Do(request)
 	if err != nil {
+		log.Warn().Err(err).Msg("Failed to request proposals quality")
+
+		return nil
+	}
+	defer response.Body.Close()
+
+	if err := parseResponseJSON(response, dto); err != nil {
 		return err
 	}
 
