@@ -40,7 +40,7 @@ jobs:
           API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN }}
         with:
           source-directory: mobile-app
-          destination-github-username: 'MysteriumTeam'
+          destination-github-username: 'mysteriumnetwork'
           destination-repository-name: 'mysterium-mobile-provider'
           user-email: core-services@mysterium.network
           commit-message: Create release version ${{ env.RELEASE_VERSION }}
