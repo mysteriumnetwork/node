@@ -70,6 +70,16 @@ var (
 		Name:  "token",
 		Usage: "Either a referral or affiliate token which can be used when registering",
 	}
+
+	flagCountry = cli.StringFlag{
+		Name:  "country",
+		Usage: "Country code",
+	}
+
+	flagState = cli.StringFlag{
+		Name:  "state",
+		Usage: "State code",
+	}
 )
 
 // NewCommand function creates license command.
@@ -111,7 +121,7 @@ func NewCommand() *cli.Command {
 			{
 				Name:  "topup",
 				Usage: "Create a new top-up for your account",
-				Flags: []cli.Flag{&flagAmount, &flagCurrency, &flagGateway, &flagGwData},
+				Flags: []cli.Flag{&flagAmount, &flagCurrency, &flagGateway, &flagGwData, &flagCountry, &flagState},
 				Action: func(ctx *cli.Context) error {
 					cmd.topup(ctx)
 					return nil
@@ -230,6 +240,21 @@ func (c *command) topup(ctx *cli.Context) {
 		return
 	}
 
+	country := ctx.String(flagCountry.Name)
+	if country == "" {
+		clio.Warn("Country is required")
+		return
+	} else if len(country) != 2 {
+		clio.Warn("Country code must be 2 characters long")
+		return
+	}
+
+	state := ctx.String(flagState.Name)
+	if state != "" && len(state) != 2 {
+		clio.Warn("State code must be 2 characters long")
+		return
+	}
+
 	callerData := json.RawMessage("{}")
 	if gwData := ctx.String(flagGwData.Name); len(gwData) > 0 {
 		data := map[string]interface{}{}
@@ -265,6 +290,8 @@ func (c *command) topup(ctx *cli.Context) {
 		MystAmount:  amount,
 		PayCurrency: currency,
 		CallerData:  callerData,
+		Country:     country,
+		State:       state,
 	})
 	if err != nil {
 		clio.Error("Failed to create a top-up request, make sure your requested amount is equal or more than 0.0001 BTC")
