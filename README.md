@@ -17,7 +17,8 @@ Currently node supports WireGuard as its underlying VPN transport.
 - [Latest release](https://github.com/mysteriumnetwork/node/releases/latest)
 - [Snapshot builds](https://github.com/mysteriumnetwork/node-builds/releases) - bleeding edge, use at your own risk
 - [Documentation](https://docs.mysterium.network/)
-- [Installation guide](https://docs.mysterium.network/for-node-runners/linux-guide)
+- [Help Center](https://help.mystnodes.com/)
+- [Installation guide](https://help.mystnodes.com/en/?q=installation)
 
 ## Installation options
 
@@ -49,7 +50,7 @@ Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Deb
 
 Our docker images can be found in [Docker hub](https://hub.docker.com/r/mysteriumnetwork/myst).
 
-To run a node in a docker container you will need [docker](https://www.docker.com/). On Linux, to manage docker as a non-root user (execute commands without `sudo`), follow [postinstall guide](https://docs.docker.com/install/linux/linux-postinstall/).
+To run a node in a docker container you will need [docker](https://www.docker.com/). On Linux, to manage docker as a non-root user (execute commands without `sudo`), follow [postinstall guide](https://help.mystnodes.com/en/articles/3777670-running-a-node-as-docker-image-on-linux-host/).
 You should be able to run a node on any OS that supports docker. We have tested it on these OSes so far:
 - Debian 9
 - Debian 10
@@ -74,8 +75,8 @@ docker logs -f myst
 
 ### Further information
 
-More installation options are described in the [installation guide](https://docs.mysterium.network/for-node-runners/).
-For possible issues while running a node refer to our [Troubleshooting guide](https://docs.mysterium.network/troubleshooting/).
+More installation options are described in the [installation guides](https://help.mystnodes.com/en/?q=installation).
+For possible issues while running a node refer to our [Troubleshooting guides](https://help.mystnodes.com/en/collections/1992526-troubleshooting-mystnodes-help-center).
 
 ## Built With
 
