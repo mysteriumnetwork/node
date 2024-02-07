@@ -867,6 +867,8 @@ github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646/go.mod h
 github.com/mysteriumnetwork/gvisor v0.0.0-20231116101341-753b6ae8ddcb h1:m4CwpzAoDZ0eAwwTVsTakcObaS9IyoPrl01pxlBmMoU=
 github.com/mysteriumnetwork/gvisor v0.0.0-20231116101341-753b6ae8ddcb/go.mod h1:exVfPZjgc0vGqFDB0Un4K0f4RBdf6Xi/dsojN2P6PAU=
 github.com/mysteriumnetwork/logger v0.0.9/go.mod h1:JBQaYFRlv3xj4GbVPEFQcAqB7tHTNbvqL3/C3ywKQSM=
+github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8 h1:suXQZZ29eOeiqnp0YCujb1cmTq3Xl59Q0gANMgW3tNc=
+github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8/go.mod h1:exVfPZjgc0vGqFDB0Un4K0f4RBdf6Xi/dsojN2P6PAU=
 github.com/mysteriumnetwork/metrics v0.0.19 h1:sqmUVStDWQOSUUxKTrEnxOZs6dy9nKrlICKBrzTbKSI=
 github.com/mysteriumnetwork/metrics v0.0.19/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54 h1:mqdzogdLpkgAgP3svQxnxo4AbRSLNH9x51gGQKaXl1Y=

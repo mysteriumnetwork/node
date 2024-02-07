@@ -270,5 +270,5 @@ require (
 
 replace (
 	golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20231211132832-8f7bf3c68307
-	gvisor.dev/gvisor => github.com/mysteriumnetwork/gvisor v0.0.0-20231116101341-753b6ae8ddcb
+	gvisor.dev/gvisor => github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8
 )
