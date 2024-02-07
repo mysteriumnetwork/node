@@ -48,6 +48,7 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/oschwald/geoip2-golang v1.1.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pion/stun v0.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.31.0
@@ -210,7 +211,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.1 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.12.0 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
@@ -224,7 +224,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
-	github.com/quic-go/quic-go v0.40.0 // indirect
+	github.com/quic-go/quic-go v0.40.1 // indirect
 	github.com/quic-go/webtransport-go v0.6.0 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
