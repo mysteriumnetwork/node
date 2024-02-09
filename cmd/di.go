@@ -540,6 +540,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.Transactor,
 		di.IdentityRegistry,
 		di.AddressProvider,
+		di.BCHelper,
 		pingpong.ConsumerBalanceTrackerConfig{
 			FastSync: pingpong.PollConfig{
 				Interval: nodeOptions.Payments.BalanceFastPollInterval,

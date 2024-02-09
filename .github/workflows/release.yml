@@ -1,0 +1,132 @@
+name: Released
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Get Release
+        run: |
+          echo $RELEASE_VERSION
+          echo ${{ env.RELEASE_VERSION }}
+
+      - name: Checkout tools repo
+        uses: actions/checkout@v4
+        with:
+          repository: mysteriumnetwork/mysterium-mobile-provider
+          ref: 'master'
+          path: mobile-app
+          token: ${{ secrets.REPO_TOKEN }}
+
+      - name: Update version
+        run: |
+          APP_VERSION=$(echo "$(grep "versionName" "./mobile-app/android/app/build.gradle.kts" | awk -F '"' '{print $2}')" + 0.1 | bc)
+          sed -i -E "/versionName\s*=\s*\"[0-9]+\.[0-9]+\"/s/\"[0-9]+\.[0-9]+\"/\"$APP_VERSION\"/" "./mobile-app/android/app/build.gradle.kts"
+          sed -i -E "/node\s*=\s*\"[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?\"/s/\"[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?\"/\"${{ env.RELEASE_VERSION }}\"/" "./mobile-app/android/gradle/libs.versions.toml"
+
+      - name: Pushes to another repository
+        id: push_directory
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN }}
+        with:
+          source-directory: mobile-app
+          destination-github-username: 'mysteriumnetwork'
+          destination-repository-name: 'mysterium-mobile-provider'
+          user-email: core-services@mysterium.network
+          commit-message: Create release version ${{ env.RELEASE_VERSION }}
+          target-branch: master
+
+      - name: Send pull-request
+        env:
+          GH_TOKEN: ${{ secrets.REPO_TOKEN }}
+        run: |
+          LATEST_TAG=$(git describe --tags --always --abbrev=0)
+          REPOSITORY="mysteriumTeam/mysterium-mobile-provider"
+          FOLDER="bin/$REPOSITORY"
+          BRANCH_NAME="release-$LATEST_TAG"
+
+          # Clone the remote repository and change working directory to the
+          # folder it was cloned to.
+          git clone \
+            --depth=1 \
+            --branch=bitrise \
+            https://mpolubotko:${{ secrets.REPO_TOKEN }}@github.com/$REPOSITORY \
+            $FOLDER
+
+          cd $FOLDER
+
+          # Setup the committers identity.
+          git config user.email "core-services@mysterium.network"
+          git config user.name "MysteriumTeam"
+
+          # Create a new feature branch for the changes.
+          git checkout -b $BRANCH_NAME
+
+          # Update the script files to the latest version.
+          cp -R ../../../mobile-app/android android
+
+          # Commit the changes and push the feature branch to origin
+          git add .
+          git commit -m "update files for new release version $LATEST_TAG"
+          git push origin $BRANCH_NAME
+
+          # Store the PAT in a file that can be accessed by the
+          # GitHub CLI.
+          echo "${{ secrets.REPO_TOKEN }}" > token.txt
+
+          # Authorize GitHub CLI for the current repository and
+          # create a pull-request containing the updates.
+          PR_URL=$(gh pr create \
+            --body "" \
+            --title "Release $LATEST_TAG" \
+            --head "$BRANCH_NAME" \
+            --base "master" \
+            | sed -n 's#https://github\.com/[^/]\+/[^/]\+/\pull/\([0-9]\+\).*#\1#p')
+          echo "PR_NUMBER=$PR_URL" >> $GITHUB_ENV
+
+      - name: Approve Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+          REPO_OWNER: "MysteriumTeam"
+          REPO_NAME: "mysterium-mobile-provider"
+          PR_NUMBER: ${{ env.PR_NUMBER }}
+        run: | 
+          response=$(curl -s -o /dev/null -w "%{http_code}" -L -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls/$PR_NUMBER/merge \
+            -d '{"commit_title":"Release v${{ env.RELEASE_VERSION }}","commit_message":"${{ env.RELEASE_VERSION }}"}')
+          
+          # Check HTTP response
+          if [ "$response" == "204" ] || [ "$response" == "200" ] || [ "$response" == "201" ]; then
+            echo "PR was approved successfully"
+          else
+            echo "Couldn't approved PR, HTTP-status: $response"
+            exit 1  
+          fi
+      
+      - name: "Call Bitrise API"
+        uses: indiesdev/curl@v1.1
+        with:
+          url: https://api.bitrise.io/v0.1/apps/${{ secrets.BITRISE_APP_ID }}/builds
+          method: "POST"
+          id: api
+          accept: 200, 201
+          headers: '{ "accept": "application/json", "Authorization": "${{ secrets.BITRISE_TOKEN }}", "Content-Type": "application/json" }'
+          body: '{ "hook_info": {"type": "bitrise"}, "build_params": {"branch":"master", "workflow_id":"build"}}'
+          timeout: 10000
+          log-response: true
+
+      - name: "Bitrise response"
+        run: echo ${{ steps.api.outputs.response }}
