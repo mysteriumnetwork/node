@@ -150,6 +150,11 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	return config, nil
 }
 
+// ReleaseIP releases an IP, so it could be reused later.
+func (ce *connectionEndpoint) ReleaseIP(ip net.IPNet) {
+	ce.resourceAllocator.ReleaseIPNet(ip)
+}
+
 // Stop closes wireguard client and destroys wireguard network interface.
 func (ce *connectionEndpoint) Stop() error {
 	if err := ce.wgClient.Close(); err != nil {
