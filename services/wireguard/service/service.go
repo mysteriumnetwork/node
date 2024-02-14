@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"runtime"
 	"sync"
 	"time"
 
@@ -189,7 +190,9 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		if err := conn.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")
 		}
-		conn.ReleaseIP(config.Consumer.IPAddress)
+		if runtime.GOOS == "windows" {
+			conn.ReleaseIP(config.Consumer.IPAddress)
+		}
 
 		if err := m.resourcesAllocator.ReleaseIPNet(providerConfig.Subnet); err != nil {
 			log.Error().Err(err).Msg("Failed to release IP network")
