@@ -57,10 +57,10 @@ jobs:
            password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: E2E basic test
-        run: |
-          go run mage.go -v TestE2EBasic
+        run: go run mage.go -v TestE2EBasic
 
-      # - name: E2E NAT test
+      - name: E2E NAT test
+        run: go run mage.go -v TestE2ENAT
 
   # create-release:
   #   name: Create Release
