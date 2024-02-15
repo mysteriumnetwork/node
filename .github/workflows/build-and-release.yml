@@ -1,0 +1,66 @@
+name: Test and build
+on:
+  push:
+    branches:
+      - ci-migration
+env:
+  # following envs are added for the back compatibility
+  # we need to check if they are used at all
+  GO_PACKAGE: github.com/mysteriumnetwork/node
+  GOFLAGS: "-count=1"
+  GITHUB_OWNER: "mysteriumnetwork"
+  GITHUB_REPO: "node"
+  GITHUB_SNAPSHOT_REPO: "node-builds"
+  GITHUB_API_TOKEN: ""
+  BUILD_BRANCH: ${{ github.ref_name }}
+  BUILD_NUMBER: ${{ github.job_id }}
+  # BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
+  # BUILD_BRANCH_SAFE: $CI_COMMIT_REF_SLUG
+  # BUILD_TAG: $CI_COMMIT_TAG
+  # GIT_CLONE_PATH:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+
+      - name: Install protoc
+        run: sudo apt install -y protobuf-compiler
+
+      # - name: Prepare Env
+      #   run: |
+      #     go run mage.go -v GenerateEnvFile
+
+      - name: Unit tests and linters
+        run: |
+          go run mage.go -v Generate
+          go run mage.go -v Check
+          go run mage.go -v TestWithCoverage
+
+      - name: Upload codecov report 
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      # - name: E2E basic test
+      # - name: E2E NAT test
+
+  # create-release:
+  #   name: Create Release
+  #   if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+  #   runs-on: ubuntu-latest
+  #   needs: publish-images
+
+    # - name: Login to Docker Hub
+    #   uses: docker/login-action@v3
+    #   with:
+    #      username: ${{ secrets.DOCKERHUB_USERNAME }}
+    #      password: ${{ secrets.DOCKERHUB_TOKEN }}
