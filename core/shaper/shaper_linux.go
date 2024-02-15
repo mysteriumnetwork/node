@@ -31,7 +31,22 @@ type linuxShaper struct {
 	listenTopic string
 }
 
-func create(listener eventListener) *linuxShaper {
+type linuxShaperNoop struct{}
+
+func (s *linuxShaperNoop) Start(interfaceName string) error {
+	return nil
+}
+
+func (s *linuxShaperNoop) Clear(interfaceName string) {
+	return
+}
+
+func create(listener eventListener) Shaper {
+	// return a noop filter if userspace flag is set
+	if config.GetBool(config.FlagUserspace) {
+		return &linuxShaperNoop{}
+	}
+
 	ws := wondershaper.New()
 	ws.Stdout = log.Logger
 	ws.Stderr = log.Logger
