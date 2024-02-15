@@ -1,0 +1,44 @@
+name: Test and build
+on: [pull_request]
+
+env:
+  GOFLAGS: "-count=1"
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+
+      - name: Install protoc
+        run: sudo apt install -y protobuf-compiler
+
+      - name: Unit tests and linters
+        run: |
+          go run mage.go -v Generate
+          go run mage.go -v Check
+          go run mage.go -v TestWithCoverage
+
+      - name: Upload codecov report 
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+           username: ${{ secrets.DOCKERHUB_USERNAME }}
+           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: E2E basic test
+        run: go run mage.go -v TestE2EBasic
+
+      - name: E2E NAT test
+        run: go run mage.go -v TestE2ENAT
