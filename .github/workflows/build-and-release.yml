@@ -1,23 +1,8 @@
 name: Test and build
-on:
-  push:
-    branches:
-      - ci-migration
+on: [pull_request]
+
 env:
-  # following envs are added for the back compatibility
-  # we need to check if they are used at all
-  GO_PACKAGE: github.com/mysteriumnetwork/node
   GOFLAGS: "-count=1"
-  GITHUB_OWNER: "mysteriumnetwork"
-  GITHUB_REPO: "node"
-  GITHUB_SNAPSHOT_REPO: "node-builds"
-  GITHUB_API_TOKEN: ""
-  BUILD_BRANCH: ${{ github.ref_name }}
-  BUILD_NUMBER: ${{ github.job_id }}
-  # BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
-  # BUILD_BRANCH_SAFE: $CI_COMMIT_REF_SLUG
-  # BUILD_TAG: $CI_COMMIT_TAG
-  # GIT_CLONE_PATH:
 
 jobs:
   test-and-build:
@@ -33,10 +18,6 @@ jobs:
 
       - name: Install protoc
         run: sudo apt install -y protobuf-compiler
-
-      # - name: Prepare Env
-      #   run: |
-      #     go run mage.go -v GenerateEnvFile
 
       - name: Unit tests and linters
         run: |
@@ -61,10 +42,3 @@ jobs:
 
       - name: E2E NAT test
         run: go run mage.go -v TestE2ENAT
-
-  # create-release:
-  #   name: Create Release
-  #   if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-  #   runs-on: ubuntu-latest
-  #   needs: publish-images
-
