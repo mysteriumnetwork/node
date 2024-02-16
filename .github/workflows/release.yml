@@ -1,0 +1,53 @@
+name: Build and Release
+on:
+  workflow_run:
+    workflows: [E2E tests]
+    types: [completed]
+    branches: [master, ci-migration]
+  push:
+    tags:
+      - "v*"
+
+env:
+  RELEASE_BUILD: false
+  SNAPSHOT_BUILD: false
+  BUILD_VERSION: ${{ github.sha }}
+
+jobs:
+  build-packages:
+    if: |
+      ${{ github.event.workflow_run.conclusion == 'success' }} || 
+      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    strategy:
+      max-parallel: 3
+      matrix:
+        platform:
+          - PackageLinuxAmd64
+          - PackageLinuxArm
+          - PackageLinuxDebianAmd64
+          - PackageLinuxDebianArm64
+          - PackageLinuxDebianArm
+          - PackageLinuxRaspberryImage
+          - PackageMacOSAmd64
+          - PackageMacOSArm64
+          - PackageWindowsAmd64
+          - PackageAndroid
+          - PackageAndroidProvider
+          - PackageDockerSwaggerRedoc
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+      - name: Setup FPM
+        run: |
+          sudo apt-get install ruby-dev build-essential
+          sudo gem i fpm -f
+      
+      - name: Build package
+        run: go run mage.go -v  ${{ matrix.platform }}

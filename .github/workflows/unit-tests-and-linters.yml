@@ -1,0 +1,39 @@
+name: Unit tests and linters
+on: 
+  pull_request:
+  # for debug purposes only
+  push:
+    branches: [ci-migration]
+
+env:
+  GOFLAGS: "-count=1"
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+
+      - name: Install protoc
+        run: sudo apt install -y protobuf-compiler
+
+      - name: Unit tests and linters
+        run: |
+          go run mage.go -v Generate
+          go run mage.go -v Check
+          go run mage.go -v TestWithCoverage
+
+      - name: Upload codecov report 
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+
+
