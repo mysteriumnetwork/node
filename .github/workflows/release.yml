@@ -1,21 +1,13 @@
 name: Build and Release
+# Start build and release process only on E2E completion on master branch
+# Big chunk of the release process logic is in the mage build targets
 on:
   workflow_run:
     workflows: [E2E tests]
     types: [completed]
-    branches: [master, ci-migration]
-  push:
-    tags:
-      - "v*"
-  # for debug purposes only
-    branches: [ci-migration]
+    branches: [master]
 
-# env:
-  # RELEASE_BUILD: ${{ contains(github.ref, 'refs/tags/v') && 'true' || 'false' }}
-  # SNAPSHOT_BUILD: ${{ github.ref == 'refs/heads/master' && 'true' || 'false' }}
-  # RC_BUILD: ${{ github.ref_type == 'tag' && endsWith(github.ref, '-rc') && 'true' || 'false' }}
-  # BUILD_VERSION: 
-
+# Mage's `GenerateEnvFile` talks to GH API to setup tags, versions, etc.
 env:
   GITHUB_OWNER: mysteriumnetwork
   GITHUB_REPO: node
@@ -24,9 +16,9 @@ env:
 
 jobs:
   build-packages:
-    # if: |
-      # ${{ github.event.workflow_run.conclusion == 'success' }} || 
-      # ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+    if: |
+      ${{ github.event.workflow_run.conclusion == 'success' }} || 
+      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     environment: production
 
@@ -45,7 +37,39 @@ jobs:
           - PackageWindowsAmd64
           - PackageAndroid
           - PackageAndroidProvider
-          - PackageDockerSwaggerRedoc
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+      - name: Generate Env
+        run: go run mage.go -v GenerateEnvFile
+
+      - name: Setup FPM
+        run: |
+          sudo apt-get install ruby-dev build-essential
+          sudo gem i fpm -f
+      
+      - name: Build package
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          source build/env.sh
+          # Following line ensures that s3 bucket name won't overlap with the old CI's target
+          # Should be removed when the old CI is disabled
+          export BUILD_NUMBER=$BUILD_NUMBER"-ghactions" 
+          go run mage.go -v ${{ matrix.platform }}
+
+  build-swagger:
+    if: |
+      ${{ github.event.workflow_run.conclusion == 'success' }} || 
+      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    environment: production
+    needs: [build-packages]
 
     steps:
       - uses: actions/checkout@v4
@@ -63,15 +87,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup FPM
-        run: |
-          sudo apt-get install ruby-dev build-essential
-          sudo gem i fpm -f
-      
-      - name: Build package
+      - name: Build docker
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           source build/env.sh
-          go run mage.go -v  ${{ matrix.platform }}
+          # Following line ensures that s3 bucket name won't overlap with the old CI's target
+          # Should be removed when the old CI is disabled
+          export BUILD_NUMBER=$BUILD_NUMBER"-ghactions" 
+          go run mage.go -v PackageDockerSwaggerRedoc

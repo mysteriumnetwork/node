@@ -1,9 +1,7 @@
 name: Unit tests and linters
+# Run unit tests on all pull requests
 on: 
   pull_request:
-  # # for debug purposes only
-  # push:
-  #   branches: [ci-migration]
 
 env:
   GOFLAGS: "-count=1"
