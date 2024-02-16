@@ -3,6 +3,10 @@ on:
   workflow_run:
     workflows: [Unit tests and linters]
     types: [completed]
+  # # for debug purposes only
+  # push:
+  #   branches: [ci-migration]
+
 
 jobs:
   e2e-tests:

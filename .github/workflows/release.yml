@@ -7,6 +7,8 @@ on:
   push:
     tags:
       - "v*"
+  # for debug purposes only
+    branches: [ci-migration]
 
 env:
   RELEASE_BUILD: false
@@ -15,9 +17,9 @@ env:
 
 jobs:
   build-packages:
-    if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }} || 
-      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+    # if: |
+      # ${{ github.event.workflow_run.conclusion == 'success' }} || 
+      # ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     environment: production
 
@@ -50,4 +52,7 @@ jobs:
           sudo gem i fpm -f
       
       - name: Build package
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: go run mage.go -v  ${{ matrix.platform }}
