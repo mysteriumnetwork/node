@@ -10,10 +10,17 @@ on:
   # for debug purposes only
     branches: [ci-migration]
 
+# env:
+  # RELEASE_BUILD: ${{ contains(github.ref, 'refs/tags/v') && 'true' || 'false' }}
+  # SNAPSHOT_BUILD: ${{ github.ref == 'refs/heads/master' && 'true' || 'false' }}
+  # RC_BUILD: ${{ github.ref_type == 'tag' && endsWith(github.ref, '-rc') && 'true' || 'false' }}
+  # BUILD_VERSION: 
+
 env:
-  RELEASE_BUILD: false
-  SNAPSHOT_BUILD: false
-  BUILD_VERSION: ${{ github.sha }}
+  GITHUB_OWNER: mysteriumnetwork
+  GITHUB_REPO: node
+  GITHUB_SNAPSHOT_REPO: node-builds
+  GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   build-packages:
@@ -24,15 +31,15 @@ jobs:
     environment: production
 
     strategy:
-      max-parallel: 3
+      max-parallel: 4
       matrix:
         platform:
+          - PackageLinuxRaspberryImage
           - PackageLinuxAmd64
           - PackageLinuxArm
           - PackageLinuxDebianAmd64
           - PackageLinuxDebianArm64
           - PackageLinuxDebianArm
-          - PackageLinuxRaspberryImage
           - PackageMacOSAmd64
           - PackageMacOSArm64
           - PackageWindowsAmd64
@@ -46,6 +53,16 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.21.x'
+      - name: Generate Env
+        run: go run mage.go -v GenerateEnvFile
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+           username: ${{ secrets.DOCKERHUB_USERNAME }}
+           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Setup FPM
         run: |
           sudo apt-get install ruby-dev build-essential
@@ -55,4 +72,6 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: go run mage.go -v  ${{ matrix.platform }}
+        run: |
+          source build/env.sh
+          go run mage.go -v  ${{ matrix.platform }}
