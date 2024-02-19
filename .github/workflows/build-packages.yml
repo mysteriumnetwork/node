@@ -1,11 +1,10 @@
-name: Build and Release
-# Start build and release process only on E2E completion on master branch
-# Big chunk of the release process logic is in the mage build targets
+name: Build packages
+# Start build process only on E2E completion
+# Big chunk of the build process logic is in the mage build targets
 on:
   workflow_run:
     workflows: [E2E tests]
     types: [completed]
-    branches: [master]
 
 # Mage's `GenerateEnvFile` talks to GH API to setup tags, versions, etc.
 env:
@@ -17,8 +16,7 @@ env:
 jobs:
   build-packages:
     if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }} || 
-      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+      ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: production
 
@@ -65,8 +63,7 @@ jobs:
 
   build-swagger:
     if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }} || 
-      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+      ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     needs: [build-packages]

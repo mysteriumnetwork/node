@@ -1,20 +1,15 @@
 name: E2E tests
 # Run E2E tests after Unit tests (currently, they run on PRs)
-# and on "v*" tags push events
 on:
   workflow_run:
     workflows: [Unit tests and linters]
     types: [completed]
-  push:
-    tags:
-      - "v*"
 
 jobs:
   e2e-tests:
-    # Parent workflow (unit tests) must succeed or it must be a tag push
+    # Parent workflow (unit tests) must succeed
     if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }} || 
-      ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
+      ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: production
 
