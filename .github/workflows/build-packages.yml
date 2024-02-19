@@ -1,10 +1,10 @@
 name: Build packages
-# Start build process only on E2E completion
 # Big chunk of the build process logic is in the mage build targets
 on:
-  workflow_run:
-    workflows: [E2E tests]
-    types: [completed]
+  workflow_call:
+  push:
+    branches: [master]
+    tags:
 
 # Mage's `GenerateEnvFile` talks to GH API to setup tags, versions, etc.
 env:
@@ -15,10 +15,7 @@ env:
 
 jobs:
   build-packages:
-    if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    environment: production
 
     strategy:
       max-parallel: 4
@@ -62,10 +59,7 @@ jobs:
           go run mage.go -v ${{ matrix.platform }}
 
   build-swagger:
-    if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    environment: production
     needs: [build-packages]
 
     steps:
