@@ -31,7 +31,22 @@ type linuxShaper struct {
 	listenTopic string
 }
 
-func create(listener eventListener) *linuxShaper {
+type linuxShaperNoop struct{}
+
+func (s *linuxShaperNoop) Start(interfaceName string) error {
+	return nil
+}
+
+func (s *linuxShaperNoop) Clear(interfaceName string) {
+	return
+}
+
+func create(listener eventListener) Shaper {
+	// return a noop filter if userspace flag is set
+	if config.GetBool(config.FlagUserspace) {
+		return &linuxShaperNoop{}
+	}
+
 	ws := wondershaper.New()
 	ws.Stdout = log.Logger
 	ws.Stderr = log.Logger
@@ -48,12 +63,12 @@ func (s *linuxShaper) Start(interfaceName string) error {
 		s.ws.Clear(interfaceName)
 
 		if config.GetBool(config.FlagShaperEnabled) {
-			err := s.ws.LimitDownlink(interfaceName, int(config.GetUInt64(config.FlagShaperBandwidth)))
+			err := s.ws.LimitDownlink(interfaceName, int(config.GetUInt64(config.FlagShaperBandwidth))*8)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not limit download speed")
 				return err
 			}
-			err = s.ws.LimitUplink(interfaceName, int(config.GetUInt64(config.FlagShaperBandwidth)))
+			err = s.ws.LimitUplink(interfaceName, int(config.GetUInt64(config.FlagShaperBandwidth))*8)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not limit upload speed")
 				return err
