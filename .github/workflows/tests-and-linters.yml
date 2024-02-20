@@ -1,6 +1,7 @@
 name: Tests
-on: 
-  pull_request:
+on:
+  workflow_call:
+  # pull_request:
 
 env:
   GOFLAGS: "-count=1"
@@ -12,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21.x'
 
@@ -38,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21.x'
 
