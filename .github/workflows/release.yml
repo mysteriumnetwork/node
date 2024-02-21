@@ -9,6 +9,7 @@ env:
   GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_EC2_METADATA_DISABLED: true
 
 jobs:
   release-snapshot:
@@ -91,20 +92,14 @@ jobs:
           name: env.sh
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Remove bucket
-        env:
-          AWS_EC2_METADATA_DISABLED: true
+      - name: Notify UptimeRobot
+        if: github.ref == 'refs/heads/master'
+        run: |
+          if [ "$NIGHTLY_BUILD" = "1" -o "$NIGHTLY_BUILD" = "T" -o "$NIGHTLY_BUILD" = "true" -o "$NIGHTLY_BUILD" = "True" -o "$NIGHTLY_BUILD" = "TRUE" ]; then
+            curl -so /dev/null -I "$NIGHTLY_UPTIMEROBOT"
+          fi
+      - name: PR Avado
         run: |
           source env.sh
-          go run mage.go -v RemoveBucket
-      # - name: Notify UptimeRobot
-      #   if: github.ref == 'refs/heads/master'
-      #   run: |
-      #     if [ "$NIGHTLY_BUILD" = "1" -o "$NIGHTLY_BUILD" = "T" -o "$NIGHTLY_BUILD" = "true" -o "$NIGHTLY_BUILD" = "True" -o "$NIGHTLY_BUILD" = "TRUE" ]; then
-      #       curl -so /dev/null -I "$NIGHTLY_UPTIMEROBOT"
-      #     fi
-      # - name: PR Avado
-      #   run: |
-      #     source env.sh
-      #     go run mage.go -v CreateAvadoPR
+          go run mage.go -v CreateAvadoPR
 

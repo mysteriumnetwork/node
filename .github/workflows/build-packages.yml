@@ -13,6 +13,7 @@ env:
   GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_EC2_METADATA_DISABLED: true # disable AWS region lookup
 
 jobs:
   setup-env:
@@ -72,8 +73,6 @@ jobs:
         if: |
           github.ref == 'refs/heads/master' ||
           github.ref_type == 'tag'
-        env:
-          AWS_EC2_METADATA_DISABLED: true
         run: |
           source env.sh
           go run mage.go -v MakeBucket
@@ -108,8 +107,9 @@ jobs:
         with:
           name: env.sh
 
-      - name: Setup FPM
+      - name: Setup Debber and FPM
         run: |
+          go install github.com/debber/debber-v0.3/cmd/debber@latest
           sudo apt-get install ruby-dev build-essential
           sudo gem i fpm -f
       
@@ -152,3 +152,25 @@ jobs:
     if: |
       github.ref == 'refs/heads/master' ||
       github.ref_type == 'tag'
+
+  cleanup-env:
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: |
+      always() &&
+      (github.ref == 'refs/heads/master' || github.ref_type == 'tag')
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: env.sh
+
+      - name: Remove bucket
+        run: |
+          source env.sh
+          go run mage.go -v RemoveBucket || true # ignore if bucket was not available
