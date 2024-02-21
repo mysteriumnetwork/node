@@ -53,6 +53,7 @@ jobs:
           cat <<EOT >> env.sh
           export RELEASE_BUILD=$RELEASE_BUILD;
           export RC_BUILD=$RC_BUILD;
+          export PR_BUILD=$PR_BUILD;
           export SNAPSHOT_BUILD=$SNAPSHOT_BUILD;
           export BUILD_NUMBER=$BUILD_NUMBER;
           export BUILD_VERSION=$BUILD_VERSION;
@@ -68,7 +69,7 @@ jobs:
     needs: [setup-env]
 
     strategy:
-      max-parallel: 4
+      max-parallel: 6
       matrix:
         platform:
           - PackageLinuxRaspberryImage
