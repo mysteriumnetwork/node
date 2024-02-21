@@ -3,7 +3,7 @@ name: Build packages
 on:
   workflow_call:
   push:
-    branches: [master, ci-migration]
+    branches: [master]
     tags:
 
 env:
@@ -71,17 +71,17 @@ jobs:
       max-parallel: 4
       matrix:
         platform:
-          # - PackageLinuxRaspberryImage
+          - PackageLinuxRaspberryImage
           - PackageLinuxAmd64
-          # - PackageLinuxArm
-          # - PackageLinuxDebianAmd64
-          # - PackageLinuxDebianArm64
-          # - PackageLinuxDebianArm
-          # - PackageMacOSAmd64
-          # - PackageMacOSArm64
-          # - PackageWindowsAmd64
-          # - PackageAndroid
-          # - PackageAndroidProvider
+          - PackageLinuxArm
+          - PackageLinuxDebianAmd64
+          - PackageLinuxDebianArm64
+          - PackageLinuxDebianArm
+          - PackageMacOSAmd64
+          - PackageMacOSArm64
+          - PackageWindowsAmd64
+          - PackageAndroid
+          - PackageAndroidProvider
 
     steps:
       - uses: actions/checkout@v4
@@ -95,9 +95,8 @@ jobs:
 
       - name: Create bucket
         if: |
-          contains(github.ref, 'refs/tags') ||
           github.ref == 'refs/heads/master' ||
-          github.ref == 'refs/heads/ci-migration'
+          github.ref_type == 'tag'
         env:
           AWS_EC2_METADATA_DISABLED: true
         run: |
@@ -137,9 +136,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build docker
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           source env.sh
           go run mage.go -v PackageDockerSwaggerRedoc
+
+  release:
+    needs: [build-packages, build-swagger]
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
+    if: |
+      github.ref == 'refs/heads/master' ||
+      github.ref_type == 'tag'

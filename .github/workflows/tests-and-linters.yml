@@ -1,7 +1,6 @@
 name: Tests
 on:
-  workflow_call:
-  # pull_request:
+  pull_request:
 
 env:
   GOFLAGS: "-count=1"
