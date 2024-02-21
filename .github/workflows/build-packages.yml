@@ -59,7 +59,7 @@ jobs:
           export PR_BUILD=$PR_BUILD;
           export SNAPSHOT_BUILD=$SNAPSHOT_BUILD;
           export BUILD_VERSION=$BUILD_VERSION;
-          export BUILD_NUMBER="${{ github.run_id }}"-ghactions;
+          export BUILD_NUMBER="${{ github.run_id }}";
           export BUILD_COMMIT="$(echo ${GITHUB_SHA} | cut -c1-8)";
           export BUILD_BRANCH="${GITHUB_REF_NAME}";
           EOT
