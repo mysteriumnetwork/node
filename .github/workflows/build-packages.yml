@@ -43,8 +43,6 @@ jobs:
           PR_BUILD=false
           if [[ "${SNAPSHOT_BUILD}" == "false" && "${RELEASE_BUILD}" == "false" ]]; then PR_BUILD=true; fi
 
-          BUILD_NUMBER="${{ github.run_id }}"-ghactions
-
           if [[ "${RELEASE_BUILD}" == "true" ]]; then 
             BUILD_VERSION="${GITHUB_REF#/refs/tags/}";
           elif [[ "${SNAPSHOT_BUILD}" == "true" ]]; then
@@ -60,8 +58,10 @@ jobs:
           export RC_BUILD=$RC_BUILD;
           export PR_BUILD=$PR_BUILD;
           export SNAPSHOT_BUILD=$SNAPSHOT_BUILD;
-          export BUILD_NUMBER=$BUILD_NUMBER;
           export BUILD_VERSION=$BUILD_VERSION;
+          export BUILD_NUMBER="${{ github.run_id }}"-ghactions;
+          export BUILD_COMMIT="$(echo ${GITHUB_SHA} | cut -c1-8)";
+          export BUILD_BRANCH="${GITHUB_REF_NAME}";
           EOT
 
       - uses: actions/upload-artifact@v4
@@ -107,9 +107,8 @@ jobs:
         with:
           name: env.sh
 
-      - name: Setup Debber and FPM
+      - name: Setup FPM
         run: |
-          go install github.com/debber/debber-v0.3/cmd/debber@latest
           sudo apt-get install ruby-dev build-essential
           sudo gem i fpm -f
       
