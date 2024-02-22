@@ -55,6 +55,7 @@ jobs:
           # workaround for expired key until it gets updated
           gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
 
+          mkdir -p /home/runner/.ssh
           source env.sh
           sudo -E go run mage.go -v ${{ matrix.platform }}
 
@@ -105,6 +106,7 @@ jobs:
           # workaround for expired key until it gets updated
           gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
 
+          mkdir -p /home/runner/.ssh
           source build/env.sh
           sudo -E go run mage.go -v ${{ matrix.platform }}
 
