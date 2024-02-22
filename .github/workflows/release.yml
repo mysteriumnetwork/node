@@ -2,9 +2,6 @@ name: Release
 on:
   workflow_call:
 
-permissions:
-  contents: write
-
 env:
   GITHUB_OWNER: mysteriumnetwork
   GITHUB_REPO: node
@@ -17,6 +14,7 @@ env:
 
 jobs:
   release-snapshot:
+    permissions: write-all
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
 
@@ -61,6 +59,7 @@ jobs:
         run: bin/release_goreport
 
   release-tag:
+    permissions: write-all
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
 
