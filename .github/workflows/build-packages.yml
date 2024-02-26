@@ -5,6 +5,7 @@ on:
   push:
     branches: [master]
     tags:
+      - '*'
 
 env:
   GITHUB_OWNER: mysteriumnetwork
