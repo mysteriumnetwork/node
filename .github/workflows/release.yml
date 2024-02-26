@@ -10,6 +10,9 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_EC2_METADATA_DISABLED: true
+  MAVEN_USER: ${{ secrets.MAVEN_USER }}
+  MAVEN_PASS: ${{ secrets.MAVEN_PASS }}
+  MAVEN_TOKEN: ${{ secrets.MAVEN_TOKEN }}
 
 jobs:
   release-nightly:
@@ -131,6 +134,7 @@ jobs:
 
   post-release:
     runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
     needs: [release-tag]
 
     steps:
