@@ -43,24 +43,20 @@ jobs:
            password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Install Deb build scripts
-        run: sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_SIGNING_KEY }}
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Setup build environment
+        run: |
+          sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
+          echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
+          # workaround for expired key until it gets updated
+          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
+          mkdir -p ~/.ssh
+          echo -e "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 0600 ~/.ssh/id_rsa
 
       - name: Release snapshot
         run: |
-          # workaround for expired key until it gets updated
-          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
-
-          mkdir -p /home/runner/.ssh
           source env.sh
-          sudo -E go run mage.go -v ${{ matrix.platform }}
+          go run mage.go -v ${{ matrix.platform }}
 
       - name: Release Go report
         if: github.ref == 'refs/heads/master'
@@ -97,24 +93,20 @@ jobs:
            password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Install Deb build scripts
-        run: sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_SIGNING_KEY }}
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Setup build environment
+        run: |
+          sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
+          echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
+          # workaround for expired key until it gets updated
+          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
+          mkdir -p ~/.ssh
+          echo -e "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 0600 ~/.ssh/id_rsa
 
       - name: Release tag
         run: |
-          # workaround for expired key until it gets updated
-          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
-
-          mkdir -p /home/runner/.ssh
-          source build/env.sh
-          sudo -E go run mage.go -v ${{ matrix.platform }}
+          source env.sh
+          go run mage.go -v ${{ matrix.platform }}
 
   post-release:
     runs-on: ubuntu-latest
