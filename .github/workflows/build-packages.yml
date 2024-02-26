@@ -6,6 +6,8 @@ on:
     branches: [master]
     tags:
       - '*'
+  schedule:
+    - cron: '0 2 * * *'
 
 env:
   GITHUB_OWNER: mysteriumnetwork
@@ -33,10 +35,10 @@ jobs:
       - name: Prepare environment 
         run: |
           RELEASE_BUILD=false
-          if [[ "${GITHUB_REF}" == /refs/tags/* ]]; then RELEASE_BUILD=true; fi
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then RELEASE_BUILD=true; fi
           
           RC_BUILD=false
-          if [[ "${GITHUB_REF}" == /refs/tags/*-rc* ]]; then RC_BUILD=true; fi
+          if [[ "${GITHUB_REF}" == refs/tags/*-rc* ]]; then RC_BUILD=true; fi
 
           SNAPSHOT_BUILD=false
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then SNAPSHOT_BUILD=true; fi
@@ -45,7 +47,7 @@ jobs:
           if [[ "${SNAPSHOT_BUILD}" == "false" && "${RELEASE_BUILD}" == "false" ]]; then PR_BUILD=true; fi
 
           if [[ "${RELEASE_BUILD}" == "true" ]]; then 
-            BUILD_VERSION="${GITHUB_REF#/refs/tags/}";
+            BUILD_VERSION="${GITHUB_REF#refs/tags/}";
           elif [[ "${SNAPSHOT_BUILD}" == "true" ]]; then
             BUILD_VERSION="$(git describe --abbrev=0 --tags)"-1snapshot-"$(date '+%Y%m%dT%H%M')"-"$(echo ${GITHUB_SHA} | cut -c1-8)"; 
           elif [[ "${PR_BUILD}" == "true" ]]; then 
