@@ -37,7 +37,7 @@ require (
 	github.com/mysteriumnetwork/EventBus v0.0.0-20220415063055-d22cb121672c
 	github.com/mysteriumnetwork/feedback v1.3.2
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d
-	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.15.0
+	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.15.1
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.3.1
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
@@ -48,6 +48,7 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/oschwald/geoip2-golang v1.1.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pion/stun v0.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.31.0
@@ -210,7 +211,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.1 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.12.0 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
