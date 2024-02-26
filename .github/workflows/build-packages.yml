@@ -35,7 +35,7 @@ jobs:
           if [[ "${GITHUB_REF}" == /refs/tags/* ]]; then RELEASE_BUILD=true; fi
           
           RC_BUILD=false
-          if [[ "${GITHUB_REF}" == /refs/tags/*-rc ]]; then RC_BUILD=true; fi
+          if [[ "${GITHUB_REF}" == /refs/tags/*-rc* ]]; then RC_BUILD=true; fi
 
           SNAPSHOT_BUILD=false
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then SNAPSHOT_BUILD=true; fi
