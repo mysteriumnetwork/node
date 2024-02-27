@@ -17,7 +17,9 @@ env:
 jobs:
   release-nightly:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'schedule' }}
+    if: github.event_name == 'schedule'
+    env:
+      NIGHTLY_BUILD: true
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +42,9 @@ jobs:
 
   release-snapshot:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: |
+      github.ref == 'refs/heads/master' &&
+      github.event_name != 'schedule'
 
     strategy:
       max-parallel: 3
