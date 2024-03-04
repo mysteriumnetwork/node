@@ -336,7 +336,7 @@ func TestHermesChannelRepository_BeneficiaryReset(t *testing.T) {
 
 	// when
 	promise := HermesPromise{ChannelID: channelID.Hex(), Identity: id, HermesID: hermesID}
-	err := repo.updateChannelWithLatestPromise(1, channelID.Hex(), id, hermesID, promise)
+	err := repo.updateChannelWithLatestPromise(1, channelID.Hex(), id, hermesID, promise, false)
 	assert.NoError(t, err)
 	hermesChannel, exists := repo.Get(1, id, hermesID)
 
@@ -345,7 +345,7 @@ func TestHermesChannelRepository_BeneficiaryReset(t *testing.T) {
 	assert.Equal(t, beneficiary, hermesChannel.Beneficiary)
 
 	// when
-	err = repo.updateChannelWithLatestPromise(1, channelID.Hex(), id, hermesID, promise)
+	err = repo.updateChannelWithLatestPromise(1, channelID.Hex(), id, hermesID, promise, false)
 	assert.NoError(t, err)
 	hermesChannel, exists = repo.Get(1, id, hermesID)
 
