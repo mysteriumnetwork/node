@@ -21,13 +21,15 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jinzhu/copier"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/client"
 )
 
 // NewHermesChannel creates HermesChannel model.
 func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise HermesPromise, beneficiary common.Address) HermesChannel {
-	return HermesChannel{
+	hc := HermesChannel{
 		ChannelID:   channelID,
 		Identity:    id,
 		HermesID:    hermesID,
@@ -35,6 +37,16 @@ func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Ad
 		lastPromise: promise,
 		Beneficiary: beneficiary,
 	}
+	return hc.Copy()
+}
+
+// Copy returns a deep copy of channel
+func (hc *HermesChannel) Copy() HermesChannel {
+	var hcCopy HermesChannel
+	if err := copier.CopyWithOption(&hcCopy, *hc, copier.Option{DeepCopy: true}); err != nil {
+		panic(err)
+	}
+	return hcCopy
 }
 
 // HermesChannel represents opened payment channel between identity and hermes.

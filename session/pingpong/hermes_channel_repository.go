@@ -28,6 +28,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -35,7 +37,6 @@ import (
 	pingEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/rs/zerolog/log"
 )
 
 type promiseProvider interface {
@@ -126,7 +127,9 @@ func (hcr *HermesChannelRepository) Get(chainID int64, id identity.Identity, her
 
 	for _, channel := range v {
 		if channel.Identity == id && channel.HermesID == hermesID {
-			return channel, true
+
+			// return a copy!!!
+			return channel.Copy(), true
 		}
 	}
 
@@ -142,7 +145,13 @@ func (hcr *HermesChannelRepository) List(chainID int64) []HermesChannel {
 	if !ok {
 		return nil
 	}
-	return v
+
+	// make a copy of array, so it could be used in other goroutines
+	channelsCopy := make([]HermesChannel, 0)
+	for _, val := range v {
+		channelsCopy = append(channelsCopy, val.Copy())
+	}
+	return channelsCopy
 }
 
 // GetEarnings returns all channels earnings for given identity combined from all hermeses possible
@@ -261,7 +270,8 @@ func (hcr *HermesChannelRepository) handleHermesPromiseReceived(payload pingEven
 		return
 	}
 
-	err = hcr.updateChannelWithLatestPromise(payload.Promise.ChainID, promise.ChannelID, payload.ProviderID, payload.HermesID, promise)
+	// use parameter "protectChannels" to protect channels on update
+	err = hcr.updateChannelWithLatestPromise(payload.Promise.ChainID, promise.ChannelID, payload.ProviderID, payload.HermesID, promise, true)
 	if err != nil {
 		log.Err(err).Msg("could not update channel state with latest hermes promise")
 	}
@@ -438,7 +448,7 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 	return hermesChannel, nil
 }
 
-func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64, channelID string, id identity.Identity, hermesID common.Address, promise HermesPromise) error {
+func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64, channelID string, id identity.Identity, hermesID common.Address, promise HermesPromise, protectChannels bool) error {
 	gotten, ok := hcr.Get(chainID, id, hermesID)
 	if !ok {
 		// this actually performs the update, so no need to do anything
@@ -447,7 +457,14 @@ func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64
 	}
 
 	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise, gotten.Beneficiary)
+
+	// protect hcr.channels: handleHermesPromiseReceived -> updateChannelWithLatestPromise -> updateChannel
+	if protectChannels {
+		hcr.lock.Lock()
+		defer hcr.lock.Unlock()
+	}
 	hcr.updateChannel(chainID, hermesChannel)
+
 	return nil
 }
 
@@ -460,6 +477,7 @@ func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChann
 	for i, channel := range v {
 		if channel.Identity == new.Identity && channel.HermesID == new.HermesID {
 			updated = true
+			// rewrites element in array. to prevent data race on array elements - use its deep-copy in other goroutines
 			hcr.channels[chainID][i] = new
 			break
 		}
