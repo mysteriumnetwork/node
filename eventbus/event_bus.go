@@ -103,9 +103,11 @@ func (b *simplifiedEventBus) Publish(topic string, data interface{}) {
 
 	b.mu.RLock()
 	ids := b.sub[topic]
+	idsCopy := make([]string, len(ids))
+	copy(idsCopy, ids)
 	b.mu.RUnlock()
 
-	for _, id := range ids {
+	for _, id := range idsCopy {
 		b.bus.Publish(topic+id, data)
 	}
 }
