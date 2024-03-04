@@ -18,10 +18,13 @@ package pingpong
 
 import (
 	"math/big"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jinzhu/copier"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -33,7 +36,7 @@ import (
 func TestHermesChannelRepository_Fetch_returns_errors(t *testing.T) {
 	// given
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
-	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+	hermesID := common.HexToAddress("0x00000000000000000000000000000000000000002")
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
@@ -61,7 +64,7 @@ func TestHermesChannelRepository_Fetch_returns_errors(t *testing.T) {
 func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 	// given
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
-	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+	hermesID := common.HexToAddress("0x00000000000000000000000000000000000000002")
 
 	expectedPromise := HermesPromise{}
 	promiseProvider := &mockHermesPromiseStorage{
@@ -94,7 +97,7 @@ func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) {
 	// given
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
-	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+	hermesID := common.HexToAddress("0x00000000000000000000000000000000000000002")
 
 	expectedPromise := HermesPromise{
 		Promise: crypto.Promise{Amount: big.NewInt(7000000)},
@@ -129,7 +132,7 @@ func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) 
 func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	// given
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
-	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+	hermesID := common.HexToAddress("0x00000000000000000000000000000000000000002")
 	expectedPromise1 := HermesPromise{
 		ChannelID: "1",
 		Promise:   crypto.Promise{Amount: big.NewInt(7000000)},
@@ -249,10 +252,73 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
+func TestHermesChannelRepository_DataRace(t *testing.T) {
+	// given
+	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
+	hermesID := common.HexToAddress("0x00000000000000000000000000000000000000002")
+	channelID := common.HexToAddress("0x00000000000000000000000000000000000000003")
+	beneficiary := common.HexToAddress("0x144")
+	chainID_ := int64(1)
+
+	promiseProvider := &mockHermesPromiseStorage{}
+	channelStatusProvider := &mockProviderChannelStatusProvider{
+		channelToReturn: mockProviderChannel,
+	}
+	publisher := mocks.NewEventBus()
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{
+		b: beneficiary,
+	}
+	mockHermesCaller := &mockHermesCaller{}
+	addrProv := &mockAddressProvider{}
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, mockBeneficiaryProvider, mockHermesCaller, addrProv, signerFactory, &mockEncryptor{})
+
+	var wg sync.WaitGroup
+
+	channels := repo.List(chainID_)
+	active := new(atomic.Bool)
+	active.Store(true)
+
+	promise := HermesPromise{ChannelID: channelID.Hex(), Identity: id, HermesID: hermesID}
+	err := repo.updateChannelWithLatestPromise(chainID_, channelID.Hex(), id, hermesID, promise, true)
+	assert.NoError(t, err)
+
+	channels = repo.List(chainID_)
+
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 50; i++ {
+			promise := HermesPromise{ChannelID: channelID.Hex(), Identity: id, HermesID: hermesID}
+			err := repo.updateChannelWithLatestPromise(chainID_, channelID.Hex(), id, hermesID, promise, true)
+			assert.NoError(t, err)
+		}
+		active.Store(false)
+	}()
+	go func() {
+		defer wg.Done()
+
+		for active.Load() == true {
+			// race between Get() and updateChannel()
+			repo.Get(chainID_, id, hermesID)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+
+		var state []HermesChannel
+		for active.Load() == true {
+			if err := copier.CopyWithOption(&state, channels, copier.Option{DeepCopy: true}); err != nil {
+				panic(err)
+			}
+		}
+	}()
+	wg.Wait()
+}
+
 func TestHermesChannelRepository_BeneficiaryReset(t *testing.T) {
 	// given
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
-	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+	hermesID := common.HexToAddress("0x00000000000000000000000000000000000000002")
 	channelID := common.HexToAddress("0x00000000000000000000000000000000000000003")
 	beneficiary := common.HexToAddress("0x144")
 
