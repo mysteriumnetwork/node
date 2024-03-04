@@ -20,6 +20,7 @@ package service
 import (
 	"sync"
 
+	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -149,13 +150,15 @@ func NewInstance(
 
 // Instance represents a run service
 type Instance struct {
-	ID              ID
-	state           servicestate.State
-	stateLock       sync.RWMutex
-	ProviderID      identity.Identity
-	Type            string
-	Options         Options
-	service         Service
+	ID         ID
+	state      servicestate.State
+	stateLock  sync.RWMutex
+	ProviderID identity.Identity
+	Type       string
+	Options    Options
+	service    Service
+
+	muProposal      sync.Mutex
 	Proposal        market.ServiceProposal
 	policyProvider  policy.Provider
 	discovery       Discovery
@@ -189,7 +192,9 @@ func (i *Instance) proposalWithCurrentLocation() market.ServiceProposal {
 		return i.Proposal
 	}
 
+	i.muProposal.Lock()
 	i.Proposal.Location = *market.NewLocation(location)
+	i.muProposal.Unlock()
 
 	return i.Proposal
 }
@@ -236,4 +241,17 @@ func (i *Instance) toEvent() servicestate.AppEventServiceStatus {
 		Type:       i.Proposal.ServiceType,
 		Status:     string(i.state),
 	}
+}
+
+// CopyProposal returns a copy of Proposal
+func (i *Instance) CopyProposal() market.ServiceProposal {
+	i.muProposal.Lock()
+	defer i.muProposal.Unlock()
+
+	var proposal market.ServiceProposal
+	if err := copier.CopyWithOption(&proposal, i.Proposal, copier.Option{DeepCopy: true}); err != nil {
+		panic(err)
+	}
+
+	return proposal
 }

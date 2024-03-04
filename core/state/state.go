@@ -240,9 +240,10 @@ func (k *Keeper) updateServices() {
 		// merge in the connection statistics
 		match, _ := k.getServiceByID(string(v.ID))
 
-		priced, err := k.deps.ProposalPricer.EnrichProposalWithPrice(v.Proposal)
+		proposal := v.CopyProposal()
+		priced, err := k.deps.ProposalPricer.EnrichProposalWithPrice(proposal)
 		if err != nil {
-			log.Warn().Msgf("could not load price for proposal %v(%v)", v.Proposal.ProviderID, v.Proposal.ServiceType)
+			log.Warn().Msgf("could not load price for proposal %v(%v)", proposal.ProviderID, proposal.ServiceType)
 		}
 
 		prop := contract.NewProposalDTO(priced)
