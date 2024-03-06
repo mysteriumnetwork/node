@@ -528,6 +528,10 @@ func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Mes
 }
 
 func (m *MysteriumMORQA) doRequestAndCacheResponse(request *http.Request, ttl time.Duration, dto interface{}) error {
+	if err, ok := m.cache.Get("err" + request.URL.RequestURI()); ok {
+		return err.(error)
+	}
+
 	if resp, ok := m.cache.Get(request.URL.RequestURI()); ok {
 		serializedDTO, err := json.Marshal(resp)
 		if err != nil {
@@ -539,6 +543,7 @@ func (m *MysteriumMORQA) doRequestAndCacheResponse(request *http.Request, ttl ti
 
 	response, err := m.client.Do(request)
 	if err != nil {
+		m.cache.Set("err"+request.URL.RequestURI(), err, ttl)
 		log.Warn().Err(err).Msg("Failed to request proposals quality")
 
 		return nil
@@ -546,6 +551,7 @@ func (m *MysteriumMORQA) doRequestAndCacheResponse(request *http.Request, ttl ti
 	defer response.Body.Close()
 
 	if err := parseResponseJSON(response, dto); err != nil {
+		m.cache.Set("err"+request.URL.RequestURI(), err, ttl)
 		return err
 	}
 

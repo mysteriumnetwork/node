@@ -54,9 +54,9 @@ case "$script_type" in
     for NS in $NMSRVRS ; do
             R="${R}nameserver $NS\n"
     done
-    echo -e -n "$R" | sudo $RESOLVCONFBIN -a "tun.${dev}"
+    echo -e -n "$R" | sudo $RESOLVCONFBIN -a "${dev}"
     ;;
   down)
-    sudo $RESOLVCONFBIN -d "tun.${dev}"
+    sudo $RESOLVCONFBIN -d "${dev}"
     ;;
 esac

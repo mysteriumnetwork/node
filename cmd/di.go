@@ -20,12 +20,6 @@ package cmd
 import (
 	"fmt"
 	"net"
-
-	"github.com/mysteriumnetwork/node/core/monitoring"
-
-	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/core/policy/localcopy"
-
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -49,8 +43,11 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/monitoring"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -892,7 +889,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	}
 
 	di.QualityClient = quality.NewMorqaClient(
-		requests.NewHTTPClientWithTransport(di.HTTPTransport, 10*time.Second),
+		requests.NewHTTPClientWithTransport(di.HTTPTransport, 60*time.Second),
 		options.Address,
 		di.SignerFactory,
 	)

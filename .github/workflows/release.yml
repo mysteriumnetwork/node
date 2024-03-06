@@ -1,132 +1,158 @@
-name: Released
-
+name: Release
 on:
-  release:
-    types: [released]
+  workflow_call:
+
+env:
+  GITHUB_OWNER: mysteriumnetwork
+  GITHUB_REPO: node
+  GITHUB_SNAPSHOT_REPO: node-builds
+  GITHUB_API_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_EC2_METADATA_DISABLED: true
+  MAVEN_USER: ${{ secrets.MAVEN_USER }}
+  MAVEN_PASS: ${{ secrets.MAVEN_PASS }}
+  MAVEN_TOKEN: ${{ secrets.MAVEN_TOKEN }}
 
 jobs:
-  build:
+  release-nightly:
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    env:
+      NIGHTLY_BUILD: true
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
-      - name: Get Release
-        run: |
-          echo $RELEASE_VERSION
-          echo ${{ env.RELEASE_VERSION }}
-
-      - name: Checkout tools repo
-        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          repository: mysteriumnetwork/mysterium-mobile-provider
-          ref: 'master'
-          path: mobile-app
-          token: ${{ secrets.REPO_TOKEN }}
-
-      - name: Update version
-        run: |
-          APP_VERSION=$(echo "$(grep "versionName" "./mobile-app/android/app/build.gradle.kts" | awk -F '"' '{print $2}')" + 0.1 | bc)
-          sed -i -E "/versionName\s*=\s*\"[0-9]+\.[0-9]+\"/s/\"[0-9]+\.[0-9]+\"/\"$APP_VERSION\"/" "./mobile-app/android/app/build.gradle.kts"
-          sed -i -E "/node\s*=\s*\"[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?\"/s/\"[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?\"/\"${{ env.RELEASE_VERSION }}\"/" "./mobile-app/android/gradle/libs.versions.toml"
-
-      - name: Pushes to another repository
-        id: push_directory
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN }}
+          go-version: '1.21.x'
+      - uses: actions/download-artifact@v4
         with:
-          source-directory: mobile-app
-          destination-github-username: 'mysteriumnetwork'
-          destination-repository-name: 'mysterium-mobile-provider'
-          user-email: core-services@mysterium.network
-          commit-message: Create release version ${{ env.RELEASE_VERSION }}
-          target-branch: master
+          name: env.sh
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Send pull-request
-        env:
-          GH_TOKEN: ${{ secrets.REPO_TOKEN }}
+      - name: Release nightly snapshot
         run: |
-          LATEST_TAG=$(git describe --tags --always --abbrev=0)
-          REPOSITORY="mysteriumTeam/mysterium-mobile-provider"
-          FOLDER="bin/$REPOSITORY"
-          BRANCH_NAME="release-$LATEST_TAG"
+          source env.sh
+          go run mage.go -v ReleaseGithubNightly
 
-          # Clone the remote repository and change working directory to the
-          # folder it was cloned to.
-          git clone \
-            --depth=1 \
-            --branch=bitrise \
-            https://mpolubotko:${{ secrets.REPO_TOKEN }}@github.com/$REPOSITORY \
-            $FOLDER
+      - name: Notify UptimeRobot
+        run: curl -so /dev/null -I "${{ secrets.NIGHTLY_UPTIMEROBOT }}"
 
-          cd $FOLDER
+  release-snapshot:
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/master' &&
+      github.event_name != 'schedule'
 
-          # Setup the committers identity.
-          git config user.email "core-services@mysterium.network"
-          git config user.name "MysteriumTeam"
+    strategy:
+      max-parallel: 3
+      matrix:
+        platform:
+          - ReleaseGithubSnapshot
+          - ReleaseDockerSnapshot
+          - ReleaseDebianPPASnapshot
 
-          # Create a new feature branch for the changes.
-          git checkout -b $BRANCH_NAME
-
-          # Update the script files to the latest version.
-          cp -R ../../../mobile-app/android android
-
-          # Commit the changes and push the feature branch to origin
-          git add .
-          git commit -m "update files for new release version $LATEST_TAG"
-          git push origin $BRANCH_NAME
-
-          # Store the PAT in a file that can be accessed by the
-          # GitHub CLI.
-          echo "${{ secrets.REPO_TOKEN }}" > token.txt
-
-          # Authorize GitHub CLI for the current repository and
-          # create a pull-request containing the updates.
-          PR_URL=$(gh pr create \
-            --body "" \
-            --title "Release $LATEST_TAG" \
-            --head "$BRANCH_NAME" \
-            --base "master" \
-            | sed -n 's#https://github\.com/[^/]\+/[^/]\+/\pull/\([0-9]\+\).*#\1#p')
-          echo "PR_NUMBER=$PR_URL" >> $GITHUB_ENV
-
-      - name: Approve Pull Request
-        env:
-          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-          REPO_OWNER: "MysteriumTeam"
-          REPO_NAME: "mysterium-mobile-provider"
-          PR_NUMBER: ${{ env.PR_NUMBER }}
-        run: | 
-          response=$(curl -s -o /dev/null -w "%{http_code}" -L -X PUT \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls/$PR_NUMBER/merge \
-            -d '{"commit_title":"Release v${{ env.RELEASE_VERSION }}","commit_message":"${{ env.RELEASE_VERSION }}"}')
-          
-          # Check HTTP response
-          if [ "$response" == "204" ] || [ "$response" == "200" ] || [ "$response" == "201" ]; then
-            echo "PR was approved successfully"
-          else
-            echo "Couldn't approved PR, HTTP-status: $response"
-            exit 1  
-          fi
-      
-      - name: "Call Bitrise API"
-        uses: indiesdev/curl@v1.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          url: https://api.bitrise.io/v0.1/apps/${{ secrets.BITRISE_APP_ID }}/builds
-          method: "POST"
-          id: api
-          accept: 200, 201
-          headers: '{ "accept": "application/json", "Authorization": "${{ secrets.BITRISE_TOKEN }}", "Content-Type": "application/json" }'
-          body: '{ "hook_info": {"type": "bitrise"}, "build_params": {"branch":"master", "workflow_id":"build"}}'
-          timeout: 10000
-          log-response: true
+          go-version: '1.21.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: env.sh
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+           username: ${{ secrets.DOCKERHUB_USERNAME }}
+           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Setup build environment
+        run: |
+          sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
+          echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
+          # workaround for expired key until it gets updated
+          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
+          mkdir -p ~/.ssh
+          echo -e "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 0600 ~/.ssh/id_rsa
 
-      - name: "Bitrise response"
-        run: echo ${{ steps.api.outputs.response }}
+      - name: Release snapshot
+        run: |
+          source env.sh
+          go run mage.go -v ${{ matrix.platform }}
+
+      - name: Release Go report
+        if: github.ref == 'refs/heads/master'
+        run: bin/release_goreport
+
+  release-tag:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+
+    strategy:
+      max-parallel: 4
+      matrix:
+        platform:
+          - ReleaseGithubTag
+          - ReleaseDockerTag
+          - ReleaseDebianPPAPreRelease
+          - ReleaseAndroidSDK
+          - ReleaseAndroidProviderSDK
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: env.sh
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+           username: ${{ secrets.DOCKERHUB_USERNAME }}
+           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Setup build environment
+        run: |
+          sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
+          echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
+          # workaround for expired key until it gets updated
+          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
+          mkdir -p ~/.ssh
+          echo -e "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 0600 ~/.ssh/id_rsa
+
+      - name: Release tag
+        run: |
+          source env.sh
+          go run mage.go -v ${{ matrix.platform }}
+
+  post-release:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    needs: [release-tag]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: env.sh
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: PR Avado
+        run: |
+          source env.sh
+          go run mage.go -v CreateAvadoPR
