@@ -112,6 +112,7 @@ jobs:
 
       - name: Setup FPM
         run: |
+          sudo apt-get update
           sudo apt-get install ruby-dev build-essential
           sudo gem i fpm -f
       
