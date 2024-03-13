@@ -73,6 +73,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Setup build environment
         run: |
+          sudo apt-get update
           sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
           echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
           # workaround for expired key until it gets updated
@@ -123,6 +124,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Setup build environment
         run: |
+          sudo apt-get update
           sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
           echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
           # workaround for expired key until it gets updated
