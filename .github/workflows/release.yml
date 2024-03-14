@@ -76,8 +76,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
           echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
-          # workaround for expired key until it gets updated
-          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
           mkdir -p ~/.ssh
           echo -e "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 0600 ~/.ssh/id_rsa
@@ -127,8 +125,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install devscripts build-essential lintian dput dh-make python3-paramiko
           echo -e "${{ secrets.GPG_SIGNING_KEY }}" | gpg --import
-          # workaround for expired key until it gets updated
-          gpg --quick-set-expire F0AB06E81EEBCED6F69460F12B13D750E4ECCA9D 2025-02-05
           mkdir -p ~/.ssh
           echo -e "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 0600 ~/.ssh/id_rsa
