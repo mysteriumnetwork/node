@@ -69,7 +69,7 @@ override_dh_auto_test:
 ' > debian/rules; chmod +x debian/rules
 
 debuild -S -sa -us -uc -d
-debsign -k 2B13D750E4ECCA9D ../myst_${VERSION}+build${BUILD}+${DISTR}_source.changes
+debsign -k 09D3CD5598B65836 ../myst_${VERSION}+build${BUILD}+${DISTR}_source.changes
 
 # We have to add this configuration to enable SFTP since default FTP timeouts on Travis CI.
 echo "[myst-ppa]
