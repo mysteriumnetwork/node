@@ -94,6 +94,9 @@ func (cts *ConsumerTotalsStorage) Store(chainID int64, id identity.Identity, her
 // Get fetches the amount as promised for the given channel.
 func (cts *ConsumerTotalsStorage) Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	key := cts.makeKey(chainID, id, hermesID)
+	cts.createLock.Lock()
+	defer cts.createLock.Unlock()
+
 	element, ok := cts.data[key]
 	if !ok {
 		return nil, ErrNotFound
