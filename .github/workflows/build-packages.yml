@@ -93,6 +93,7 @@ jobs:
           - PackageLinuxArm
           - PackageLinuxDebianAmd64
           - PackageLinuxDebianArm64
+          - PackageLinuxDebianArmv6l
           - PackageLinuxDebianArm
           - PackageMacOSAmd64
           - PackageMacOSArm64
