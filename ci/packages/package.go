@@ -118,7 +118,7 @@ func PackageLinuxDebianArmv6l() error {
 	if err := sh.RunWith(envi, "bin/build"); err != nil {
 		return err
 	}
-	if err := packageDebian("build/myst/myst", "armhf"); err != nil {
+	if err := packageDebian("build/myst/myst", "armv6l"); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
