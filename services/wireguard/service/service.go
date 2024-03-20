@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"runtime"
 	"sync"
 	"time"
 
@@ -187,6 +188,9 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		log.Trace().Msg("Stopping connection endpoint")
 		if err := conn.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")
+		}
+		if runtime.GOOS == "windows" {
+			conn.ReleaseIP(config.Consumer.IPAddress)
 		}
 
 		if err := m.resourcesAllocator.ReleaseIPNet(providerConfig.Subnet); err != nil {
