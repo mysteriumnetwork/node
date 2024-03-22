@@ -22,8 +22,11 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -69,6 +72,46 @@ func Test_Pool_Add(t *testing.T) {
 	pool.Add(instance)
 
 	assert.Len(t, pool.instances, 1)
+}
+
+func Test_Pool_DataRace(t *testing.T) {
+	service := &Instance{
+		service:        &mockService{},
+		eventPublisher: mocks.NewEventBus(),
+		location:       mockLocationResolver{},
+	}
+
+	active := new(atomic.Bool)
+	active.Store(true)
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	go func() {
+		var location market.Location
+
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			p := service.proposalWithCurrentLocation()
+			location = p.Location
+
+			time.Sleep(1 * time.Millisecond)
+		}
+		active.Store(false)
+		_ = location
+	}()
+	go func() {
+		var proposal market.ServiceProposal
+
+		defer wg.Done()
+		for active.Load() == true {
+			proposal = service.CopyProposal()
+
+			time.Sleep(1 * time.Millisecond)
+		}
+		_ = proposal
+	}()
+	wg.Wait()
 }
 
 func Test_Pool_StopAllSuccess(t *testing.T) {
