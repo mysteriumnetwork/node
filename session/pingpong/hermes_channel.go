@@ -37,13 +37,13 @@ func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Ad
 		lastPromise: promise,
 		Beneficiary: beneficiary,
 	}
-	return hc.Copy()
+	return hc
 }
 
 // Copy returns a deep copy of channel
-func (hc *HermesChannel) Copy() HermesChannel {
+func (hc HermesChannel) Copy() HermesChannel {
 	var hcCopy HermesChannel
-	if err := copier.CopyWithOption(&hcCopy, *hc, copier.Option{DeepCopy: true}); err != nil {
+	if err := copier.CopyWithOption(&hcCopy, hc, copier.Option{DeepCopy: true}); err != nil {
 		panic(err)
 	}
 	return hcCopy

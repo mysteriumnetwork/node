@@ -441,7 +441,8 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 	if err != nil {
 		return HermesChannel{}, fmt.Errorf("could not get provider beneficiary for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
-	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise, benef)
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise, benef).
+		Copy()
 
 	hcr.updateChannel(chainID, hermesChannel)
 
@@ -456,7 +457,8 @@ func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64
 		return err
 	}
 
-	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise, gotten.Beneficiary)
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise, gotten.Beneficiary).
+		Copy()
 
 	// protect hcr.channels: handleHermesPromiseReceived -> updateChannelWithLatestPromise -> updateChannel
 	if protectChannels {
