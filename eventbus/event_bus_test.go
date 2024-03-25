@@ -18,7 +18,10 @@
 package eventbus
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -68,4 +71,35 @@ func TestUnsubscribeMethod(t *testing.T) {
 
 	assert.Equal(t, 1, h.val)
 	assert.Equal(t, 7, h2.val)
+}
+
+func Test_simplifiedEventBus_Publish_DataRace(t *testing.T) {
+	eventBus := New()
+
+	fn := func(data string) {}
+
+	active := new(atomic.Bool)
+	active.Store(true)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < 100; i++ {
+			eventBus.SubscribeWithUID("topic", "1", fn)
+			eventBus.Publish("topic", "test data")
+			time.Sleep(time.Millisecond)
+		}
+		active.Store(false)
+	}()
+	go func() {
+		defer wg.Done()
+		for active.Load() == true {
+			eventBus.UnsubscribeWithUID("topic", "1", fn)
+			time.Sleep(time.Millisecond)
+		}
+	}()
+	wg.Wait()
 }
