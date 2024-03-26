@@ -19,6 +19,7 @@ package service
 
 import (
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -66,6 +67,57 @@ func Test_Manager_Stop(t *testing.T) {
 	waitABit()
 	err := manager.Stop()
 	assert.NoError(t, err)
+}
+
+func Test_Manager_Stop_Datarace(t *testing.T) {
+	manager := newManagerStub(pubIP, outIP, country)
+
+	service := service.NewInstance(
+		identity.FromAddress("0x1"),
+		"",
+		nil,
+		market.ServiceProposal{},
+		servicestate.Running,
+		nil,
+		localcopy.NewRepository(),
+		nil,
+	)
+	manager.sessionCleanup = make(map[string]func())
+
+	destroyClosure := func(sessionID string) func() {
+		return func() {
+			manager.sessionCleanupMu.Lock()
+			defer manager.sessionCleanupMu.Unlock()
+
+			_, ok := manager.sessionCleanup[sessionID]
+			if !ok {
+				return
+			}
+			delete(manager.sessionCleanup, sessionID)
+		}
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		err := manager.Serve(service)
+		assert.NoError(t, err)
+	}()
+
+	// normally the ProvideConfig() sets a callback, but in unit test we have to do it ourselves
+	manager.sessionCleanupMu.Lock()
+	manager.sessionCleanup["1"] = destroyClosure("1")
+	manager.sessionCleanupMu.Unlock()
+
+	waitABit()
+	go func() {
+		defer wg.Done()
+		err := manager.Stop()
+		assert.NoError(t, err)
+	}()
+	wg.Wait()
 }
 
 func Test_Manager_ProviderConfig_FailsWhenSessionConfigIsInvalid(t *testing.T) {
