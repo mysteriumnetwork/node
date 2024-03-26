@@ -252,6 +252,10 @@ func (i *Instance) CopyProposal() market.ServiceProposal {
 	if err := copier.CopyWithOption(&proposal, i.Proposal, copier.Option{DeepCopy: true}); err != nil {
 		panic(err)
 	}
+	// workaround b/c of copier bug: it make empty slice instead of nil
+	if i.Proposal.Contacts == nil {
+		proposal.Contacts = nil
+	}
 
 	return proposal
 }
