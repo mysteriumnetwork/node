@@ -125,7 +125,7 @@ func NewSession(service *Instance, request *pb.SessionRequest, tracer *trace.Tra
 		ConsumerID:       identity.FromAddress(request.GetConsumer().GetId()),
 		ConsumerLocation: consumerLocation,
 		HermesID:         common.HexToAddress(request.GetConsumer().GetHermesID()),
-		Proposal:         service.Proposal,
+		Proposal:         service.CopyProposal(),
 		ServiceID:        string(service.ID),
 		CreatedAt:        time.Now().UTC(),
 		request:          request,
