@@ -364,34 +364,37 @@ func TestConsumerBalanceTracker_InprogressUnregisteredBalanceReturnedWhenNoBount
 }
 
 func TestConsumerBalanceTracker_RecoverGrandTotalPromisedSettledIsBiggerThanPromissedNotOffChain(t *testing.T) {
-	id1 := identity.FromAddress("0x000000001")
-	grandTotalPromised := big.NewInt(10)
-	settledAmount := big.NewInt(11)
-	bus := eventbus.New()
-	mcts := NewConsumerTotalsStorage(bus)
-	bc := mockConsumerBalanceChecker{}
-	cfg := defaultCfg
-	cfg.LongSync.Interval = time.Millisecond * 300
-	calc := newMockAddressProvider()
-	calc.addrToReturn = id1.ToCommonAddress()
-	mockBlockchainProvider := &mockBlockchainInfoProvider{}
+	// make data race more likely to happen
+	for i := 0; i < 10; i++ {
+		id1 := identity.FromAddress("0x000000001")
+		grandTotalPromised := big.NewInt(10)
+		settledAmount := big.NewInt(11)
+		bus := eventbus.New()
+		mcts := NewConsumerTotalsStorage(bus)
+		bc := mockConsumerBalanceChecker{}
+		cfg := defaultCfg
+		cfg.LongSync.Interval = time.Millisecond * 300
+		calc := newMockAddressProvider()
+		calc.addrToReturn = id1.ToCommonAddress()
+		mockBlockchainProvider := &mockBlockchainInfoProvider{}
 
-	mockBlockchainProvider.AddConsumerChannelsHermes(1, id1.ToCommonAddress(), client.ConsumersHermes{
-		Settled: big.NewInt(6),
-	})
+		mockBlockchainProvider.AddConsumerChannelsHermes(1, id1.ToCommonAddress(), client.ConsumersHermes{
+			Settled: big.NewInt(6),
+		})
 
-	cbt := NewConsumerBalanceTracker(bus, &bc, mcts, &mockconsumerInfoGetter{grandTotalPromised, settledAmount}, &mockTransactor{}, &mockRegistrationStatusProvider{}, calc, mockBlockchainProvider, defaultCfg)
+		cbt := NewConsumerBalanceTracker(bus, &bc, mcts, &mockconsumerInfoGetter{grandTotalPromised, settledAmount}, &mockTransactor{}, &mockRegistrationStatusProvider{}, calc, mockBlockchainProvider, defaultCfg)
 
-	err := cbt.Subscribe(bus)
-	assert.NoError(t, err)
-	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
-		ChainID: 1,
-		ID:      id1,
-	})
-	assert.Eventually(t, func() bool {
-		savedBalance, _ := mcts.Get(1, id1, common.BigToAddress(big.NewInt(0)))
-		return savedBalance.Cmp(big.NewInt(6)) == 0
-	}, defaultWaitTime, defaultWaitInterval)
+		err := cbt.Subscribe(bus)
+		assert.NoError(t, err)
+		bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+			ChainID: 1,
+			ID:      id1,
+		})
+		assert.Eventually(t, func() bool {
+			savedBalance, _ := mcts.Get(1, id1, common.BigToAddress(big.NewInt(0)))
+			return savedBalance.Cmp(big.NewInt(6)) == 0
+		}, defaultWaitTime, defaultWaitInterval)
+	}
 }
 
 type mockConsumerBalanceChecker struct {
