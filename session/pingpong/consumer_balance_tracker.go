@@ -28,6 +28,8 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -37,7 +39,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/units"
-	"github.com/rs/zerolog/log"
 )
 
 type balanceKey string
@@ -537,7 +538,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 		return fallback.BCBalance
 	}
 
-	var before = new(big.Int)
+	before := new(big.Int)
 	if v, ok := cbt.getBalance(chainID, id); ok {
 		before = v.GetBalance()
 	}
@@ -572,7 +573,7 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 		}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	go func() {
