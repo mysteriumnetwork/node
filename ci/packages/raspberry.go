@@ -20,6 +20,7 @@ package packages
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -57,10 +58,13 @@ func PackageLinuxRaspberryImage() error {
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
-	if err := shell.NewCmd("bin/build_xgo linux/arm").Run(); err != nil {
+	extraEnv := map[string]string{
+		"GOARM": "6",
+	}
+	if err := buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst_linux_arm", "linux", "arm", extraEnv, false); err != nil {
 		return err
 	}
-	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
+	if err := packageDebian("build/myst_linux_arm/myst_linux_arm", "armhf"); err != nil {
 		return err
 	}
 	if err := buildMystRaspbianImage(); err != nil {

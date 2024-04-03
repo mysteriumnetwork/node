@@ -54,7 +54,7 @@ func PackageLinuxArm() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
-// PackageLinuxArmv6l builds and stores linux armv6 package
+// PackageLinuxArmv6l builds and stores linux armv6l package
 func PackageLinuxArmv6l() error {
 	logconfig.Bootstrap()
 	extraEnv := map[string]string{
