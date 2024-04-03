@@ -145,23 +145,22 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			log.Warn().Err(err).Msgf("Could not get registration status for %s", id.Address)
 			status = registry.Unknown
 		}
-
 		hermesID, err := k.deps.IdentityChannelCalculator.GetActiveHermes(k.deps.ChainID)
 		if err != nil {
 			log.Warn().Err(err).Msgf("Could not retrieve hermesID for %s", id.Address)
 		}
-
 		channelAddress, err := k.deps.IdentityChannelCalculator.GetActiveChannelAddress(k.deps.ChainID, id.ToCommonAddress())
 		if err != nil {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
 		}
-
 		earnings := k.deps.EarningsProvider.GetEarningsDetailed(k.deps.ChainID, id)
+		balance := k.deps.BalanceProvider.GetBalance(k.deps.ChainID, id)
+
 		stateIdentity := stateEvent.Identity{
 			Address:            id.Address,
 			RegistrationStatus: status,
 			ChannelAddress:     channelAddress,
-			Balance:            k.deps.BalanceProvider.GetBalance(k.deps.ChainID, id),
+			Balance:            balance,
 			Earnings:           earnings.Total.UnsettledBalance,
 			EarningsTotal:      earnings.Total.LifetimeBalance,
 			HermesID:           hermesID,
@@ -241,9 +240,10 @@ func (k *Keeper) updateServices() {
 		// merge in the connection statistics
 		match, _ := k.getServiceByID(string(v.ID))
 
-		priced, err := k.deps.ProposalPricer.EnrichProposalWithPrice(v.Proposal)
+		proposal := v.CopyProposal()
+		priced, err := k.deps.ProposalPricer.EnrichProposalWithPrice(proposal)
 		if err != nil {
-			log.Warn().Msgf("could not load price for proposal %v(%v)", v.Proposal.ProviderID, v.Proposal.ServiceType)
+			log.Warn().Msgf("could not load price for proposal %v(%v)", proposal.ProviderID, proposal.ServiceType)
 		}
 
 		prop := contract.NewProposalDTO(priced)

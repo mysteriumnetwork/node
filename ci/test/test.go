@@ -30,7 +30,10 @@ func TestWithCoverage() error {
 		return err
 	}
 	args := append([]string{"test", "-race", "-timeout", "5m", "-cover", "-coverprofile", "coverage.txt", "-covermode", "atomic"}, packages...)
-	return sh.RunV("go", args...)
+
+	env := make(map[string]string)
+	env["GORACE"] = "halt_on_error=1"
+	return sh.RunWith(env, "go", args...)
 }
 
 // Test runs unit tests
@@ -39,8 +42,11 @@ func Test() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{"test", "-race", "-count=1", "-timeout", "5m"}, packages...)
-	return sh.RunV("go", args...)
+	args := append([]string{"test", "-race", "-timeout", "5m"}, packages...)
+
+	env := make(map[string]string)
+	env["GORACE"] = "halt_on_error=1"
+	return sh.RunWith(env, "go", args...)
 }
 
 func unitTestPackages() ([]string, error) {
