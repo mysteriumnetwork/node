@@ -348,7 +348,7 @@ func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Id
 	eback.InitialInterval = time.Second * 1
 
 	boff = backoff.WithMaxRetries(eback, 5)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	go func() {
@@ -634,7 +634,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 	eback.InitialInterval = time.Second * 2
 
 	boff = backoff.WithMaxRetries(eback, 10)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	go func() {
