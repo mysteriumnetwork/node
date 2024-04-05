@@ -32,6 +32,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -106,7 +107,7 @@ type HermesCaller struct {
 // hermesCallerCache represents the cache for call responses
 type hermesCallerCache struct {
 	data map[string]hermesCallerCacheData
-	lock sync.Mutex
+	lock sync.RWMutex
 }
 
 // hermesCallerCacheData represents the cache data
@@ -311,8 +312,6 @@ func (ac *HermesCaller) RefreshLatestProviderPromise(chainID int64, id string, h
 
 // GetConsumerData gets consumer data from hermes, use a negative cacheTime to force update
 func (ac *HermesCaller) GetConsumerData(chainID int64, id string, cacheTime time.Duration) (HermesUserInfo, error) {
-	ac.cache.lock.Lock()
-	defer ac.cache.lock.Unlock()
 	if cacheTime > 0 {
 		cachedResponse, cachedError, ok := ac.getResponseFromCache(chainID, id, cacheTime)
 		if ok {
@@ -327,12 +326,8 @@ func (ac *HermesCaller) GetConsumerData(chainID int64, id string, cacheTime time
 	err = ac.doRequest(req, &resp)
 	if err != nil {
 		if errors.Is(err, ErrHermesNotFound) {
-			//also save not found status
-			ac.cache.data[getCacheKey(chainID, id)] = hermesCallerCacheData{
-				updatedAt: time.Now(),
-				info:      nil,
-				err:       err,
-			}
+			// also save not found status
+			ac.setCacheData(chainID, id, nil, err)
 		}
 		return HermesUserInfo{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
 	}
@@ -347,13 +342,20 @@ func (ac *HermesCaller) GetConsumerData(chainID int64, id string, cacheTime time
 		return HermesUserInfo{}, fmt.Errorf("could not check promise validity: %w", err)
 	}
 
-	ac.cache.data[getCacheKey(chainID, id)] = hermesCallerCacheData{
-		updatedAt: time.Now(),
-		info:      &data,
-		err:       nil,
-	}
+	ac.setCacheData(chainID, id, &data, nil)
 
 	return data, nil
+}
+
+func (ac *HermesCaller) setCacheData(chainID int64, id string, data *HermesUserInfo, err error) {
+	ac.cache.lock.Lock()
+	defer ac.cache.lock.Unlock()
+
+	ac.cache.data[getCacheKey(chainID, id)] = hermesCallerCacheData{
+		updatedAt: time.Now(),
+		info:      data,
+		err:       err,
+	}
 }
 
 // GetProviderData gets provider data from hermes
@@ -431,6 +433,9 @@ func (ac *HermesCaller) doRequest(req *http.Request, to any) error {
 }
 
 func (ac *HermesCaller) getResponseFromCache(chainID int64, identity string, cacheDuration time.Duration) (HermesUserInfo, error, bool) {
+	ac.cache.lock.RLock()
+	defer ac.cache.lock.RUnlock()
+
 	cacheKey := getCacheKey(chainID, identity)
 	cachedResponse, ok := ac.cache.data[cacheKey]
 	if ok && cachedResponse.updatedAt.Add(cacheDuration).After(time.Now()) {
