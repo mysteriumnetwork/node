@@ -23,15 +23,16 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/rs/zerolog/log"
 )
 
 // ConsumerTotalsStorage allows to store total promised amounts for each channel.
 type ConsumerTotalsStorage struct {
-	createLock sync.Mutex
+	createLock sync.RWMutex
 	bus        eventbus.Publisher
 	data       map[string]*ConsumerTotalElement
 }
@@ -52,17 +53,18 @@ func NewConsumerTotalsStorage(bus eventbus.Publisher) *ConsumerTotalsStorage {
 
 // Store stores the given amount as promised for the given channel.
 func (cts *ConsumerTotalsStorage) Store(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
+	cts.createLock.Lock()
+	defer cts.createLock.Unlock()
+
 	key := cts.makeKey(chainID, id, hermesID)
 	_, ok := cts.data[key]
 	if !ok {
-		cts.createLock.Lock()
 		_, ok := cts.data[key]
 		if !ok {
 			cts.data[key] = &ConsumerTotalElement{
 				amount: nil,
 			}
 		}
-		cts.createLock.Unlock()
 	}
 	element, ok := cts.data[key]
 	if !ok {
@@ -94,8 +96,8 @@ func (cts *ConsumerTotalsStorage) Store(chainID int64, id identity.Identity, her
 // Get fetches the amount as promised for the given channel.
 func (cts *ConsumerTotalsStorage) Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	key := cts.makeKey(chainID, id, hermesID)
-	cts.createLock.Lock()
-	defer cts.createLock.Unlock()
+	cts.createLock.RLock()
+	defer cts.createLock.RUnlock()
 
 	element, ok := cts.data[key]
 	if !ok {
@@ -112,17 +114,18 @@ func (cts *ConsumerTotalsStorage) Get(chainID int64, id identity.Identity, herme
 
 // Add adds the given amount as promised for the given channel.
 func (cts *ConsumerTotalsStorage) Add(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
+	cts.createLock.Lock()
+	defer cts.createLock.Unlock()
+
 	key := cts.makeKey(chainID, id, hermesID)
 	_, ok := cts.data[key]
 	if !ok {
-		cts.createLock.Lock()
 		_, ok := cts.data[key]
 		if !ok {
 			cts.data[key] = &ConsumerTotalElement{
 				amount: nil,
 			}
 		}
-		cts.createLock.Unlock()
 	}
 	element, ok := cts.data[key]
 	if !ok {
