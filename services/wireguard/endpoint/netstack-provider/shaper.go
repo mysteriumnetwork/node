@@ -61,3 +61,28 @@ func (s *Reader) Read(p []byte) (int, error) {
 	}
 	return n, nil
 }
+
+// ReaderWrap
+type ReaderWrap struct {
+	r   io.Reader
+	log bool
+	dst string
+}
+
+// NewReaderWrap
+func NewReaderWrap(r io.Reader, log bool, dst string) *ReaderWrap {
+	return &ReaderWrap{
+		r:   r,
+		log: log,
+		dst: dst,
+	}
+}
+
+// Read - reads bytes into p.
+func (s *ReaderWrap) Read(p []byte) (int, error) {
+	n, err := s.r.Read(p)
+	if s.log {
+		logger.Error().Msgf("read dst=%s, %v", s.dst, string(p[:n]))
+	}
+	return n, err
+}

@@ -24,12 +24,14 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/config"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
@@ -66,6 +68,19 @@ type (
 	endpoint netTun
 	Net      netTun
 )
+
+var logger zerolog.Logger
+
+func init() {
+	home, _ := os.UserHomeDir()
+
+	runLogFile, _ := os.OpenFile(
+		filepath.Join(home, "myst_provider_netstack.log"),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+		0664,
+	)
+	logger = zerolog.New(runLogFile).With().Timestamp().Logger()
+}
 
 func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
 	refs.SetLeakMode(refs.NoLeakChecking)
@@ -253,15 +268,23 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
-	go tun.relay(&wg, server, client)
-	go tun.relay(&wg, client, server)
+	go tun.relay(&wg, server, client) // send
+	go tun.relay(&wg, client, server) // rcv
 	wg.Wait()
 }
 
 func (tun *netTun) relay(wg *sync.WaitGroup, dst, src net.Conn) {
 	defer wg.Done()
 
-	r := NewReader(src, tun.limiter)
+	dstAddr := dst.RemoteAddr().String()
+	srcAddr := src.RemoteAddr().String()
+
+	logg := dstAddr == "107.173.23.19:8080" || srcAddr == "107.173.23.19:8080"
+	if logg {
+		logger.Error().Msgf("relay %s <- %s", dstAddr, srcAddr)
+	}
+
+	r := NewReaderWrap(src, logg, dstAddr)
 	_, err := io.Copy(dst, r)
 	if err != nil {
 		log.Trace().Err(err).Msg("relay: data copy")
