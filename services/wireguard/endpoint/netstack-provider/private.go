@@ -39,7 +39,7 @@ func parseCIDR(cidrs []string) []*net.IPNet {
 func (tun *netTun) isPrivateIP(ip net.IP) bool {
 
 	// allow access to local address of Wireguard provider, like 10.182.0.1
-	if tun.isLocal(tcpip.Address(ip)) {
+	if tun.isLocal(tcpip.AddrFromSlice(ip)) {
 		return false
 	}
 
