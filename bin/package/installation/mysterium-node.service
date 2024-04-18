@@ -2,7 +2,7 @@
 
 [Unit]
 Description=Server for Mysterium - decentralised VPN Network
-Documentation=https://mysterium.network/
+Documentation=https://help.mystnodes.com/
 Requires=network-online.target
 After=network-online.target
 
