@@ -95,7 +95,7 @@ var MainnetDefinition = NetworkDefinition{
 		},
 	},
 	MMNAddress:      "https://my.mystnodes.com",
-	MMNAPIAddress:   "https://my.mystnodes.com/api/v1",
+	MMNAPIAddress:   "https://api.mystnodes.com/api/v1",
 	PilvytisAddress: "https://pilvytis.mysterium.network",
 	ObserverAddress: "https://observer.mysterium.network",
 	DNSMap: map[string][]string{
@@ -160,7 +160,7 @@ var TestnetDefinition = NetworkDefinition{
 		},
 	},
 	MMNAddress:      "https://my.mystnodes.com",
-	MMNAPIAddress:   "https://my.mystnodes.com/api/v1",
+	MMNAPIAddress:   "https://api.mystnodes.com/api/v1",
 	PilvytisAddress: "https://pilvytis-testnet.mysterium.network",
 	ObserverAddress: "https://observer-testnet.mysterium.network",
 	DNSMap: map[string][]string{
