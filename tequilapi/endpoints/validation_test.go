@@ -53,12 +53,12 @@ func Test_EthEndpoints(t *testing.T) {
 			expectedResponse: 500,
 		},
 		{
-			payload:          `["https://polygon-mumbai.infura.io/v3/e37e62a5c0c44334967779adf83415c4"]`,
-			configChainId:    80001,
+			payload:          `["https://polygon-amoy1.mysterium.network"]`,
+			configChainId:    80002,
 			expectedResponse: 200,
 		},
 		{
-			payload:          `["https://polygon-mumbai.infura.io/v3/e37e62a5c0c44334967779adf83415c4"]`,
+			payload:          `["https://polygon-amoy1.mysterium.network"]`,
 			configChainId:    1,
 			expectedResponse: 400,
 		},

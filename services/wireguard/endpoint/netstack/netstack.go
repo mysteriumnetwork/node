@@ -36,11 +36,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/dns/dnsmessage"
 	"golang.zx2c4.com/wireguard/tun"
-	"gvisor.dev/gvisor/pkg/bufferv2"
+
+	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/refs"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -64,7 +66,7 @@ type netTun struct {
 	stack          *stack.Stack
 	dispatcher     stack.NetworkDispatcher
 	events         chan tun.Event
-	incomingPacket chan *bufferv2.View
+	incomingPacket chan *buffer.View
 	mtu            int
 	dnsServers     []netip.Addr
 	hasV4, hasV6   bool
@@ -87,7 +89,7 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 		ep:             channel.New(1024, uint32(mtu), ""),
 		stack:          stack.New(opts),
 		events:         make(chan tun.Event, 10),
-		incomingPacket: make(chan *bufferv2.View),
+		incomingPacket: make(chan *buffer.View),
 		dnsServers:     dnsServers,
 		mtu:            mtu,
 	}
@@ -116,7 +118,7 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 		}
 		protoAddr := tcpip.ProtocolAddress{
 			Protocol:          protoNumber,
-			AddressWithPrefix: tcpip.Address(ip.AsSlice()).WithPrefix(),
+			AddressWithPrefix: tcpip.AddrFromSlice(ip.AsSlice()).WithPrefix(),
 		}
 		tcpipErr := dev.stack.AddProtocolAddress(1, protoAddr, stack.AddressProperties{})
 		if tcpipErr != nil {
@@ -139,6 +141,10 @@ func CreateNetTUN(localAddresses, dnsServers []netip.Addr, mtu int) (tun.Device,
 	return dev, (*Net)(dev), nil
 }
 
+func (tun *netTun) BatchSize() int {
+	return 1
+}
+
 func (tun *netTun) Name() (string, error) {
 	return "go", nil
 }
@@ -151,30 +157,37 @@ func (tun *netTun) Events() <-chan tun.Event {
 	return tun.events
 }
 
-func (tun *netTun) Read(buf []byte, offset int) (int, error) {
+func (tun *netTun) Read(buf [][]byte, sizes []int, offset int) (int, error) {
 	view, ok := <-tun.incomingPacket
 	if !ok {
 		return 0, os.ErrClosed
 	}
-	defer view.Release()
 
-	return view.Read(buf[offset:])
+	n, err := view.Read(buf[0][offset:])
+	if err != nil {
+		return 0, err
+	}
+	sizes[0] = n
+	return 1, nil
 }
 
-func (tun *netTun) Write(buf []byte, offset int) (int, error) {
-	packet := buf[offset:]
-	if len(packet) == 0 {
-		return 0, nil
-	}
+func (tun *netTun) Write(buf [][]byte, offset int) (int, error) {
+	for _, buf := range buf {
+		packet := buf[offset:]
+		if len(packet) == 0 {
+			continue
+		}
 
-	pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: bufferv2.MakeWithData(packet)})
-	switch packet[0] >> 4 {
-	case 4:
-		tun.ep.InjectInbound(header.IPv4ProtocolNumber, pkb)
-	case 6:
-		tun.ep.InjectInbound(header.IPv6ProtocolNumber, pkb)
+		pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: buffer.MakeWithData(packet)})
+		switch packet[0] >> 4 {
+		case 4:
+			tun.ep.InjectInbound(header.IPv4ProtocolNumber, pkb)
+		case 6:
+			tun.ep.InjectInbound(header.IPv6ProtocolNumber, pkb)
+		default:
+			return 0, syscall.EAFNOSUPPORT
+		}
 	}
-
 	return len(buf), nil
 }
 
@@ -222,7 +235,7 @@ func convertToFullAddr(endpoint netip.AddrPort) (tcpip.FullAddress, tcpip.Networ
 	}
 	return tcpip.FullAddress{
 		NIC:  1,
-		Addr: tcpip.Address(endpoint.Addr().AsSlice()),
+		Addr: tcpip.AddrFromSlice(endpoint.Addr().AsSlice()),
 		Port: endpoint.Port(),
 	}, protoNumber
 }
@@ -477,7 +490,7 @@ func (pc *PingConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 		return 0, nil, fmt.Errorf("ping read: %s", tcpipErr)
 	}
 
-	remoteAddr, _ := netip.AddrFromSlice([]byte(res.RemoteAddr.Addr))
+	remoteAddr, _ := netip.AddrFromSlice(res.RemoteAddr.Addr.AsSlice())
 	return res.Count, &PingAddr{remoteAddr}, nil
 }
 

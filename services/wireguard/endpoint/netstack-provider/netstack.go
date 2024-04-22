@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -33,7 +34,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
-	"gvisor.dev/gvisor/pkg/bufferv2"
+	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/refs"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -53,7 +54,7 @@ type netTun struct {
 	stack          *stack.Stack
 	dispatcher     stack.NetworkDispatcher
 	events         chan tun.Event
-	incomingPacket chan *bufferv2.View
+	incomingPacket chan *buffer.View
 	mtu            int
 	dnsPort        int
 	localAddresses []netip.Addr
@@ -80,7 +81,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		ep:                channel.New(1024, uint32(mtu), ""),
 		stack:             stack.New(opts),
 		events:            make(chan tun.Event, 10),
-		incomingPacket:    make(chan *bufferv2.View),
+		incomingPacket:    make(chan *buffer.View),
 		mtu:               mtu,
 		dnsPort:           dnsPort,
 		localAddresses:    localAddresses,
@@ -101,7 +102,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 	}
 
 	for _, ip := range localAddresses {
-		if err := dev.addAddress(tcpip.Address(ip.AsSlice())); err != nil {
+		if err := dev.addAddress(tcpip.AddrFromSlice(ip.AsSlice())); err != nil {
 			return nil, nil, fmt.Errorf("failed to add local address (%v): %v", ip, tcpipErr)
 		}
 	}
@@ -116,7 +117,7 @@ func CreateNetTUNWithStack(localAddresses []netip.Addr, dnsPort, mtu int) (tun.D
 	stack := t.(*netTun).stack
 	stack.SetPromiscuousMode(1, true)
 
-	defaultRoute, _ := tcpip.NewSubnet(tcpip.Address([]byte{0, 0, 0, 0}), tcpip.AddressMask([]byte{0, 0, 0, 0}))
+	defaultRoute, _ := tcpip.NewSubnet(tcpip.AddrFromSlice([]byte{0, 0, 0, 0}), tcpip.MaskFromBytes([]byte{0, 0, 0, 0}))
 	stack.SetRouteTable([]tcpip.Route{
 		{Destination: defaultRoute, NIC: 1},
 	})
@@ -136,29 +137,41 @@ func (tun *netTun) Events() <-chan tun.Event {
 	return tun.events
 }
 
-func (tun *netTun) Read(buf []byte, offset int) (int, error) {
+func (tun *netTun) BatchSize() int {
+	return 1
+}
+
+func (tun *netTun) Read(buf [][]byte, sizes []int, offset int) (int, error) {
 	view, ok := <-tun.incomingPacket
 	if !ok {
 		return 0, os.ErrClosed
 	}
 
-	return view.Read(buf[offset:])
+	n, err := view.Read(buf[0][offset:])
+	if err != nil {
+		return 0, err
+	}
+	sizes[0] = n
+	return 1, nil
 }
 
-func (tun *netTun) Write(buf []byte, offset int) (int, error) {
-	packet := buf[offset:]
-	if len(packet) == 0 {
-		return 0, nil
-	}
+func (tun *netTun) Write(buf [][]byte, offset int) (int, error) {
+	for _, buf := range buf {
+		packet := buf[offset:]
+		if len(packet) == 0 {
+			continue
+		}
 
-	pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: bufferv2.MakeWithData(packet)})
-	switch packet[0] >> 4 {
-	case 4:
-		tun.ep.InjectInbound(header.IPv4ProtocolNumber, pkb)
-	case 6:
-		tun.ep.InjectInbound(header.IPv6ProtocolNumber, pkb)
+		pkb := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: buffer.MakeWithData(packet)})
+		switch packet[0] >> 4 {
+		case 4:
+			tun.ep.InjectInbound(header.IPv4ProtocolNumber, pkb)
+		case 6:
+			tun.ep.InjectInbound(header.IPv6ProtocolNumber, pkb)
+		default:
+			return 0, syscall.EAFNOSUPPORT
+		}
 	}
-
 	return len(buf), nil
 }
 
@@ -216,7 +229,7 @@ func (tun *netTun) addAddress(ip tcpip.Address) error {
 func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 	reqDetails := r.ID()
 
-	if tun.isPrivateIP(net.IP(reqDetails.LocalAddress)) {
+	if tun.isPrivateIP(net.IP(reqDetails.LocalAddress.AsSlice())) {
 		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", r.ID().LocalAddress.String())
 		return
 	}
@@ -276,7 +289,7 @@ func (tun *netTun) relay(wg *sync.WaitGroup, dst, src net.Conn) {
 func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 	sess := req.ID()
 
-	if tun.isPrivateIP(net.IP(sess.LocalAddress)) {
+	if tun.isPrivateIP(net.IP(sess.LocalAddress.AsSlice())) {
 		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", req.ID().LocalAddress.String())
 		return
 	}
@@ -295,8 +308,8 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 	go func() {
 		defer client.Close()
 
-		clientAddr := &net.UDPAddr{IP: net.IP([]byte(sess.RemoteAddress)), Port: int(sess.RemotePort)}
-		remoteAddr := &net.UDPAddr{IP: net.IP([]byte(sess.LocalAddress)), Port: int(sess.LocalPort)}
+		clientAddr := &net.UDPAddr{IP: net.IP([]byte(sess.RemoteAddress.AsSlice())), Port: int(sess.RemotePort)}
+		remoteAddr := &net.UDPAddr{IP: net.IP([]byte(sess.LocalAddress.AsSlice())), Port: int(sess.LocalPort)}
 		proxyAddr := &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: int(sess.RemotePort)}
 
 		if remoteAddr.Port == 53 && tun.dnsPort > 0 && tun.isLocal(sess.LocalAddress) {
@@ -333,7 +346,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 func (tun *netTun) isLocal(remoteAddr tcpip.Address) bool {
 	for _, ip := range tun.localAddresses {
-		if tcpip.Address(ip.AsSlice()) == remoteAddr {
+		if tcpip.AddrFromSlice(ip.AsSlice()) == remoteAddr {
 			return true
 		}
 	}

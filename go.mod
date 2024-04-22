@@ -62,16 +62,16 @@ require (
 	github.com/vcraescu/go-paginator v0.0.0-20200304054438-86d84f27c0b3
 	github.com/xtaci/kcp-go/v5 v5.6.1
 	go.etcd.io/bbolt v1.3.5
-	golang.org/x/crypto v0.15.0
-	golang.org/x/net v0.18.0
+	golang.org/x/crypto v0.22.0
+	golang.org/x/net v0.24.0
 	golang.org/x/oauth2 v0.13.0
-	golang.org/x/sys v0.14.0
+	golang.org/x/sys v0.19.0
 	golang.org/x/time v0.4.0
 	golang.zx2c4.com/wireguard v0.0.0-20230223181233-21636207a675
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	golang.zx2c4.com/wireguard/windows v0.5.3
 	google.golang.org/protobuf v1.31.0
-	gvisor.dev/gvisor v0.0.0-20221203005347-703fd9b7fbc0
+	gvisor.dev/gvisor v0.0.0-20230927004350-cbd86285d259
 )
 
 require (
@@ -269,6 +269,6 @@ require (
 )
 
 replace (
-	golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20231211132832-8f7bf3c68307
-	gvisor.dev/gvisor => github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8
+	golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20231211153847-12269c276173
+	//gvisor.dev/gvisor => github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8
 )

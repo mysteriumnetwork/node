@@ -65,6 +65,10 @@ func CreateTUN(name string, subnet net.IPNet) (tun.Device, error) {
 	}, nil
 }
 
+func (tun *nativeTun) BatchSize() int {
+	return 1
+}
+
 func (tun *nativeTun) Name() (string, error) {
 	return tun.tun.Name(), nil
 }
@@ -77,12 +81,30 @@ func (tun *nativeTun) Events() <-chan tun.Event {
 	return tun.events
 }
 
-func (tun *nativeTun) Read(buff []byte, offset int) (int, error) {
-	return tun.tun.Read(buff[offset:])
+func (tun *nativeTun) Read(buffs [][]byte, sizes []int, offset int) (int, error) {
+	n, err := tun.tun.Read(buffs[0][offset:])
+	if err != nil {
+		return 0, err
+	}
+	sizes[0] = n
+	return 1, nil
 }
 
-func (tun *nativeTun) Write(buff []byte, offset int) (int, error) {
-	return tun.tun.Write(buff[offset:])
+func (tun *nativeTun) Write(buffs [][]byte, offset int) (int, error) {
+	written := 0
+	for _, buf := range buffs {
+		packet := buf[offset:]
+		if len(packet) == 0 {
+			continue
+		}
+
+		n, err := tun.tun.Write(packet)
+		written += n
+		if err != nil {
+			return written, err
+		}
+	}
+	return written, nil
 }
 
 func (tun *nativeTun) Close() error {
