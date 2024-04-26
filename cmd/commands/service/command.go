@@ -56,6 +56,11 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
 
+			if err := config.ValidateWireguardMTUFlag(); err != nil {
+				log.Error().Msg(err.Error())
+				return err
+			}
+
 			if err := hasAcceptedTOS(ctx); err != nil {
 				clio.PrintTOSError(err)
 				os.Exit(2)

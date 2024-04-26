@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -291,6 +292,12 @@ var (
 		Name:  "resident-country",
 		Usage: "set resident country. If not set initially a default country will be resolved.",
 	}
+
+	// FlagWireguardMTU sets Wireguard myst interface MTU.
+	FlagWireguardMTU = cli.IntFlag{
+		Name:  "wireguard.mtu",
+		Usage: "Wireguard interface MTU",
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -351,6 +358,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagDocsURL,
 		&FlagDNSResolutionHeadstart,
 		&FlagResidentCountry,
+		&FlagWireguardMTU,
 	)
 
 	return nil
@@ -411,6 +419,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
 	Current.ParseStringFlag(ctx, FlagDocsURL)
 	Current.ParseDurationFlag(ctx, FlagDNSResolutionHeadstart)
+	Current.ParseIntFlag(ctx, FlagWireguardMTU)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }
@@ -424,4 +433,20 @@ func ValidateAddressFlags(flags ...cli.StringFlag) {
 		log.Warn().Msgf("Possible security vulnerability by flag `%s`, `%s` might be reachable from outside! "+
 			"Ensure its set to localhost or protected by firewall.", flag.Name, flag.Value)
 	}
+}
+
+// ValidateAddressFlags validates given address flags for public exposure
+func ValidateWireguardMTUFlag() error {
+
+	v := Current.GetInt(FlagWireguardMTU.Name)
+	if v == 0 {
+		return nil
+	}
+	if v < 68 || v > 1500 {
+		msg := "Wireguard MTU value is out of possible range: 68..1500"
+		log.Error().Msg(msg)
+
+		return errors.New(fmt.Sprintf("Flag validation error: %s", msg))
+	}
+	return nil
 }
