@@ -39,6 +39,7 @@ type Stats struct {
 // DeviceConfig describes wireguard device configuration.
 type DeviceConfig struct {
 	IfaceName  string    `json:"iface_name"`
+	MTU        int       `json:"mtu"`
 	Subnet     net.IPNet `json:"subnet"`
 	PrivateKey string    `json:"private_key"`
 	ListenPort int       `json:"listen_port"`

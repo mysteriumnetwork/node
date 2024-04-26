@@ -42,6 +42,9 @@ func NewCommand() *cli.Command {
 			config.ParseFlagsServiceWireguard(ctx)
 			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
+			if err := config.ValidateWireguardMTUFlag(); err != nil {
+				return err
+			}
 
 			nodeOptions := node.GetOptions()
 			if err := di.Bootstrap(*nodeOptions); err != nil {
