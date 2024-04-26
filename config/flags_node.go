@@ -435,7 +435,7 @@ func ValidateAddressFlags(flags ...cli.StringFlag) {
 	}
 }
 
-// ValidateAddressFlags validates given address flags for public exposure
+// ValidateWireguardMTUFlag validates given mtu flag
 func ValidateWireguardMTUFlag() error {
 
 	v := Current.GetInt(FlagWireguardMTU.Name)
@@ -445,8 +445,7 @@ func ValidateWireguardMTUFlag() error {
 	if v < 68 || v > 1500 {
 		msg := "Wireguard MTU value is out of possible range: 68..1500"
 		log.Error().Msg(msg)
-
-		return errors.New(fmt.Sprintf("Flag validation error: %s", msg))
+		return errors.Errorf("Flag validation error: %s", msg)
 	}
 	return nil
 }

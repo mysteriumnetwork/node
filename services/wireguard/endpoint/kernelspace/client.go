@@ -94,8 +94,8 @@ func (c *client) configureDevice(config wgcfg.DeviceConfig) error {
 		return err
 	}
 
-	if config.WireguardMTU > 0 {
-		if err := cmdutil.SudoExec("ip", "link", "set", "dev", config.IfaceName, "mtu", strconv.Itoa(config.WireguardMTU)); err != nil {
+	if config.MTU > 0 {
+		if err := cmdutil.SudoExec("ip", "link", "set", "dev", config.IfaceName, "mtu", strconv.Itoa(config.MTU)); err != nil {
 			return err
 		}
 	}

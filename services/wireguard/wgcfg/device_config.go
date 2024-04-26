@@ -38,13 +38,13 @@ type Stats struct {
 
 // DeviceConfig describes wireguard device configuration.
 type DeviceConfig struct {
-	IfaceName    string `json:"iface_name"`
-	WireguardMTU int
-	Subnet       net.IPNet `json:"subnet"`
-	PrivateKey   string    `json:"private_key"`
-	ListenPort   int       `json:"listen_port"`
-	DNSPort      int       `json:"dns_port,omitempty"`
-	DNS          []string  `json:"dns"`
+	IfaceName  string    `json:"iface_name"`
+	MTU        int       `json:"mtu"`
+	Subnet     net.IPNet `json:"subnet"`
+	PrivateKey string    `json:"private_key"`
+	ListenPort int       `json:"listen_port"`
+	DNSPort    int       `json:"dns_port,omitempty"`
+	DNS        []string  `json:"dns"`
 	// Used only for unix.
 	DNSScriptDir string `json:"dns_script_dir"`
 
