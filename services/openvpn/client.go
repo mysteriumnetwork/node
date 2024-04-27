@@ -21,6 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,11 +53,37 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
+// openvpn version regex for major.minor.fix numbers
+var versionRE = regexp.MustCompile("(?i)openvpn\\s*(\\d+)\\.(\\d+)\\.(\\d+)")
+
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, scriptDir, runtimeDir string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
 ) (connection.Connection, error) {
+
+	// check openvpn version for possible issues
+	vOut, err := exec.Command(openvpnBinary, "--version").Output()
+	if err != nil {
+		return nil, err
+	} else {
+		vOutStr := string(vOut)
+
+		if vMatch := versionRE.FindStringSubmatch(vOutStr); len(vMatch) >= 3 {
+			major, mjerr := strconv.ParseInt((vMatch[1]), 10, 32)
+			minor, mnerr := strconv.ParseInt((vMatch[2]), 10, 32)
+			if mjerr == nil && mnerr == nil && major == 2 && minor < 4 { // no need to check version 1, is there ?
+				return nil, errors.New("OpenVPN versions prior to 2.4 do not support tls-crypt")
+			}
+		}
+
+		if runtime.GOOS == "linux" && os.Geteuid() != 0 {
+			if strings.Contains(vOutStr, "enable_iproute2=no") {
+				return nil, errors.New("OpenVPN is missing the required enable_iproute2 compile flag when running as non-root user.")
+			}
+		}
+	}
+
 	stateCh := make(chan connectionstate.State, 100)
 	client := &Client{
 		scriptDir:           scriptDir,
