@@ -1411,6 +1411,8 @@ func formTXUrl(txHash string, chainID int64) (string, error) {
 		return fmt.Sprintf("https://goerli.etherscan.io/tx/%v", txHash), nil
 	case 80001:
 		return fmt.Sprintf("https://mumbai.polygonscan.com/tx/%v", txHash), nil
+	case 80002:
+		return fmt.Sprintf("https://amoy.polygonscan.com/tx/%v", txHash), nil
 	case 137:
 		return fmt.Sprintf("https://polygonscan.com/tx/%v", txHash), nil
 	default:
