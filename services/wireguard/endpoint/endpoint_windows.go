@@ -16,17 +16,3 @@
  */
 
 package endpoint
-
-import (
-	"net"
-
-	"github.com/rs/zerolog/log"
-)
-
-func (ce *connectionEndpoint) consumerIP(subnet net.IPNet) net.IP {
-	ipnet, err := ce.resourceAllocator.AllocateIPNet()
-	if err != nil {
-		log.Error().Err(err).Msgf("Failed to allocate IPNet")
-	}
-	return ipnet.IP
-}
