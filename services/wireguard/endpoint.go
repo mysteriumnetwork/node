@@ -18,8 +18,6 @@
 package wireguard
 
 import (
-	"net"
-
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
 
@@ -36,5 +34,4 @@ type ConnectionEndpoint interface {
 	Config() (ServiceConfig, error)
 	InterfaceName() string
 	Stop() error
-	ReleaseIP(ip net.IPNet)
 }
