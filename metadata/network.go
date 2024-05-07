@@ -149,14 +149,14 @@ var TestnetDefinition = NetworkDefinition{
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x935305eBD48264E72067c242231b9c1638f8722c",
 		ChannelImplAddress: "0xA7D2b4834e059720b18EAfa56Fc076622a6d6275",
-		HermesID:           "0xf1e8f60009005cc760c8e96fb3cabd992f9004e6",
+		HermesID:           "0x9E75dE5594FDdbC641d4cD62C2Acad781b2A35d0",
 		ChainID:            80002,
 		MystAddress:        "0x5B75A099da7533CC800e77eeAEc3409c12420A15",
 		EtherClientRPC: []string{
 			"https://polygon-amoy1.mysterium.network",
 		},
 		KnownHermeses: []string{
-			"0xf1e8f60009005cc760c8e96fb3cabd992f9004e6",
+			"0x9E75dE5594FDdbC641d4cD62C2Acad781b2A35d0",
 		},
 	},
 	MMNAddress:      "https://my.mystnodes.com",
