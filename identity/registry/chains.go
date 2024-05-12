@@ -24,5 +24,6 @@ func Chains() map[int64]string {
 		5:     "Ethereum Testnet Görli",
 		137:   "Polygon Mainnet",
 		80001: "Polygon Testnet Mumbai",
+		80002: "Polygon Testnet Amoy",
 	}
 }

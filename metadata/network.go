@@ -147,16 +147,16 @@ var TestnetDefinition = NetworkDefinition{
 		},
 	},
 	Chain2: ChainDefinition{
-		RegistryAddress:    "0x1ba2DF26371E83D87Afee2F27a42f5A7FE9e5219",
-		ChannelImplAddress: "0x6FE3E5e5008e49821BF7282870eC831BA9694dDB",
-		HermesID:           "0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
-		ChainID:            80001,
-		MystAddress:        "0xB923b52b60E247E34f9afE6B3fa5aCcBAea829E8",
+		RegistryAddress:    "0x935305eBD48264E72067c242231b9c1638f8722c",
+		ChannelImplAddress: "0xA7D2b4834e059720b18EAfa56Fc076622a6d6275",
+		HermesID:           "0xf1e8f60009005cc760c8e96fb3cabd992f9004e6",
+		ChainID:            80002,
+		MystAddress:        "0x5B75A099da7533CC800e77eeAEc3409c12420A15",
 		EtherClientRPC: []string{
-			"https://polygon-mumbai1.mysterium.network",
+			"https://polygon-amoy1.mysterium.network",
 		},
 		KnownHermeses: []string{
-			"0xcAeF9A6E9C2d9C0Ee3333529922c280580365b51",
+			"0xf1e8f60009005cc760c8e96fb3cabd992f9004e6",
 		},
 	},
 	MMNAddress:      "https://my.mystnodes.com",
@@ -168,7 +168,7 @@ var TestnetDefinition = NetworkDefinition{
 		"broker.mysterium.network":     {"51.158.204.30", "51.158.204.75", "51.158.204.9", "51.158.204.23"},
 		"affiliator.mysterium.network": {"51.158.204.30", "51.158.204.75", "51.158.204.9", "51.158.204.23"},
 	},
-	DefaultChainID:  80001,
+	DefaultChainID:  80002,
 	DefaultCurrency: "MYST",
 	LocationAddress: "https://location.mysterium.network/api/v1/location",
 	Payments: Payments{
