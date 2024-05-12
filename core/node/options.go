@@ -81,8 +81,9 @@ type Options struct {
 
 	Payments OptionsPayments
 
-	Consumer bool
-	Mobile   bool
+	Consumer    bool
+	Mobile      bool
+	ProvChecker bool
 
 	SwarmDialerDNSHeadstart time.Duration
 	PilvytisAddress         string
@@ -205,6 +206,7 @@ func GetOptions() *Options {
 		SSE: OptionsSSE{
 			Enabled: config.GetBool(config.FlagSSEEnable),
 		},
+		ProvChecker: config.GetBool(config.FlagProvCheckerMode),
 	}
 }
 

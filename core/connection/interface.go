@@ -39,6 +39,11 @@ type Connection interface {
 	Statistics() (connectionstate.Statistics, error)
 }
 
+// ConnectionDiag is a specialised Connection interface for provider check
+type ConnectionDiag interface {
+	Diag() bool
+}
+
 // StateChannel is the channel we receive state change events on
 type StateChannel chan connectionstate.State
 

@@ -210,6 +210,8 @@ type Dependencies struct {
 	NodeStatusTracker         *monitoring.StatusTracker
 	NodeStatsTracker          *node.StatsTracker
 	uiVersionConfig           versionmanager.NodeUIVersionConfig
+
+	provPinger *connection.ProviderChecker
 }
 
 // Bootstrap initiates all container dependencies
@@ -287,7 +289,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality, nodeOptions); err != nil {
 		return err
 	}
 
@@ -299,6 +301,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err = di.handleConnStateChange(); err != nil {
 		return err
 	}
+
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
@@ -581,6 +584,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.ConnectionRegistry = connection.NewRegistry()
+
 	di.MultiConnectionManager = connection.NewMultiConnectionManager(func() connection.Manager {
 		return connection.NewManager(
 			pingpong.ExchangeFactoryFunc(
@@ -604,6 +608,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.P2PDialer,
 			di.allowTrustedDomainBypassTunnel,
 			di.disallowTrustedDomainBypassTunnel,
+			di.provPinger,
 		)
 	})
 
@@ -883,7 +888,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 	return nil
 }
 
-func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
+func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality, nodeOptions node.Options) (err error) {
 	if err := di.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
@@ -922,6 +927,10 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	natSender := event.NewSender(qualitySender, di.IPResolver.GetPublicIP, loader.HumanReadable)
 	if err := natSender.Subscribe(di.EventBus); err != nil {
 		return err
+	}
+
+	if nodeOptions.ProvChecker {
+		di.provPinger = connection.NewProviderChecker(di.EventBus)
 	}
 
 	return nil
@@ -1065,7 +1074,7 @@ func (di *Dependencies) handleConnStateChange() error {
 
 	latestState := connectionstate.NotConnected
 	return di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
-		if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
+		if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) || config.GetBool(config.FlagProvCheckerMode) {
 			return // Proxy mode doesn't establish system wide tunnels, no reconnect required.
 		}
 

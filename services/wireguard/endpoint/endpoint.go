@@ -52,6 +52,14 @@ type connectionEndpoint struct {
 	wgClient          WgClient
 }
 
+func (ce *connectionEndpoint) Diag() bool {
+	c, ok := ce.wgClient.(WgClientDiag)
+	if ok {
+		return c.Diag()
+	}
+	return false
+}
+
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.
 func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 	if err := ce.cleanAbandonedInterfaces(); err != nil {
@@ -80,6 +88,8 @@ func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 		}
 		return errors.Wrap(err, "could not configure device")
 	}
+
+	// ce.wgClient.Diag()
 	return nil
 }
 

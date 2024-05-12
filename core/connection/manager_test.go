@@ -61,6 +61,8 @@ type testContext struct {
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
 	mockTime              time.Time
+	provChecker           *ProviderChecker
+
 	sync.RWMutex
 }
 
@@ -140,6 +142,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.mockP2P = &mockP2PDialer{&mockP2PChannel{}}
 	tc.mockTime = time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC)
+	tc.provChecker = NewProviderChecker(tc.stubPublisher)
 
 	tc.connManager = NewManager(
 		func(senderUUID string, channel p2p.Channel,
@@ -159,6 +162,7 @@ func (tc *testContext) SetupTest() {
 		&mockValidator{},
 		tc.mockP2P,
 		func() {}, func() {},
+		tc.provChecker,
 	)
 	tc.connManager.timeGetter = func() time.Time {
 		return tc.mockTime

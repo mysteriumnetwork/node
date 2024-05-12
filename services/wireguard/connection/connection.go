@@ -86,6 +86,11 @@ func (c *Connection) State() <-chan connectionstate.State {
 	return c.stateCh
 }
 
+// Diag is used to start provider check
+func (c *Connection) Diag() bool {
+	return c.connectionEndpoint.Diag()
+}
+
 // Statistics returns connection statistics channel.
 func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 	stats, err := c.connectionEndpoint.PeerStats()
@@ -110,6 +115,8 @@ func (c *Connection) Reconnect(ctx context.Context, options connection.ConnectOp
 }
 
 func (c *Connection) start(ctx context.Context, start startConn, options connection.ConnectOptions) (err error) {
+	log.Info().Msg("+++++++++++++++++++++++++++++++++++++++++++++++++++++ *Connection) start")
+
 	var config wg.ServiceConfig
 	if err = json.Unmarshal(options.SessionConfig, &config); err != nil {
 		return errors.Wrap(err, "failed to unmarshal connection config")

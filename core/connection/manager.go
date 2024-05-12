@@ -170,6 +170,8 @@ type connectionManager struct {
 	statsTracker     statsTracker
 
 	uuid string
+
+	provChecker *ProviderChecker
 }
 
 // NewManager creates connection manager with given dependencies
@@ -184,6 +186,7 @@ func NewManager(
 	validator validator,
 	p2pDialer p2p.Dialer,
 	preReconnect, postReconnect func(),
+	provChecker *ProviderChecker,
 ) *connectionManager {
 	uuid, err := uuid.NewV4()
 	if err != nil {
@@ -207,6 +210,7 @@ func NewManager(
 		preReconnect:         preReconnect,
 		postReconnect:        postReconnect,
 		uuid:                 uuid.String(),
+		provChecker:          provChecker,
 	}
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
@@ -300,6 +304,10 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		m.statsTracker.stop()
 		return nil
 	})
+
+	if m.provChecker != nil {
+		go m.provChecker.Diag(m, proposal.ProviderID)
+	}
 
 	go m.consumeConnectionStates(m.activeConnection.State())
 	go m.checkSessionIP(m.channel, m.connectOptions.ConsumerID, m.connectOptions.SessionID, originalPublicIP)

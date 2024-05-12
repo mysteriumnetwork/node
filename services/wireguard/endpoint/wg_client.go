@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/diagclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/dvpnclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
@@ -43,6 +44,11 @@ type WgClient interface {
 	Close() error
 }
 
+// WgClientDiag is a specialised WgClient interface for provider check
+type WgClientDiag interface {
+	Diag() bool
+}
+
 // WgClientFactory represents WireGuard client factory.
 type WgClientFactory struct {
 	once                         sync.Once
@@ -56,6 +62,10 @@ func NewWGClientFactory() *WgClientFactory {
 
 // NewWGClient returns a new wireguard client.
 func (wcf *WgClientFactory) NewWGClient() (WgClient, error) {
+
+	if config.GetBool(config.FlagProvCheckerMode) {
+		return diagclient.New()
+	}
 	if config.GetBool(config.FlagDVPNMode) {
 		return dvpnclient.New()
 	}
