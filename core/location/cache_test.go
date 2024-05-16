@@ -46,7 +46,7 @@ func TestCache_needsRefresh(t *testing.T) {
 			name: "returns true if expired",
 			want: true,
 			fields: fields{
-				lastFetched: time.Now().Add(time.Second * -59),
+				lastFetched: time.Now().Add(time.Second * -69),
 				expiry:      time.Minute * 1,
 			},
 		},
@@ -54,7 +54,7 @@ func TestCache_needsRefresh(t *testing.T) {
 			name: "returns false if updated recently",
 			want: false,
 			fields: fields{
-				lastFetched: time.Now().Add(time.Second * -61),
+				lastFetched: time.Now().Add(time.Second * -50),
 				expiry:      time.Minute * 1,
 			},
 		},

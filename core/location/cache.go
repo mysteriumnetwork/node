@@ -56,7 +56,7 @@ func NewCache(resolver Resolver, pub publisher, expiry time.Duration) *Cache {
 }
 
 func (c *Cache) needsRefresh() bool {
-	return c.lastFetched.IsZero() || c.lastFetched.After(time.Now().Add(-c.expiry))
+	return c.lastFetched.IsZero() || c.lastFetched.Before(time.Now().Add(-c.expiry))
 }
 
 func (c *Cache) fetchAndSave() (locationstate.Location, error) {
@@ -72,6 +72,7 @@ func (c *Cache) fetchAndSave() (locationstate.Location, error) {
 		c.location = loc
 		c.lastFetched = time.Now()
 	}
+
 	return loc, err
 }
 
@@ -90,6 +91,7 @@ func (c *Cache) DetectLocation() (locationstate.Location, error) {
 	if !c.needsRefresh() {
 		return c.location, nil
 	}
+
 	return c.fetchAndSave()
 }
 
