@@ -19,32 +19,20 @@ package connection
 
 import (
 	"github.com/mysteriumnetwork/node/core/quality"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
 
-// ProviderChecker is a service for provider testing
-type ProviderChecker struct {
-	bus eventbus.Publisher
-}
-
-// NewProviderChecker is a ProviderChecker constructor
-func NewProviderChecker(bus eventbus.Publisher) *ProviderChecker {
-	return &ProviderChecker{
-		bus: bus,
-	}
-}
-
 // Diag is used to start provider check
-func (p *ProviderChecker) Diag(cm *connectionManager, providerID string) {
-	c, ok := cm.activeConnection.(ConnectionDiag)
+func Diag(cm *diagConnectionManager, con *conn, providerID string) {
+	c, ok := con.activeConnection.(ConnectionDiag)
 	res := false
 	if ok {
 		log.Debug().Msgf("Check provider> %v", providerID)
 
 		res = c.Diag()
-		cm.Disconnect()
+		cm.DisconnectSingle(con)
 	}
 	ev := quality.DiagEvent{ProviderID: providerID, Result: res}
-	p.bus.Publish(quality.AppTopicConnectionDiagRes, ev)
+	con.resChannel <- ev
+	close(con.resChannel)
 }

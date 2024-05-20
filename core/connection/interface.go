@@ -78,3 +78,15 @@ type MultiManager interface {
 	// Reconnect reconnects current session
 	Reconnect(n int)
 }
+
+// DiagManager interface provides methods to manage diagnotic connection
+type DiagManager interface {
+	// Connect creates new connection from given consumer to provider, reports error if connection already exists
+	Connect(consumerID identity.Identity, hermesID common.Address, proposal ProposalLookup, params ConnectParams) error
+	// Status queries current status of connection
+	Status() connectionstate.Status
+	// GetReadyChan returns a channel for getting a diagnostic result
+	GetReadyChan(providerID string) chan interface{}
+	// HasConnection returns true if a diagnostic connection is already established
+	HasConnection(providerID string) bool
+}

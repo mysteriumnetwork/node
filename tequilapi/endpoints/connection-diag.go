@@ -19,11 +19,9 @@ package endpoints
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -43,7 +41,7 @@ import (
 
 // ConnectionDiagEndpoint struct represents /connection resource and it's subresources
 type ConnectionDiagEndpoint struct {
-	manager    connection.MultiManager
+	manager    connection.DiagManager
 	publisher  eventbus.Publisher
 	subscriber eventbus.Subscriber
 
@@ -56,7 +54,7 @@ type ConnectionDiagEndpoint struct {
 }
 
 // NewConnectionDiagEndpoint creates and returns connection endpoint
-func NewConnectionDiagEndpoint(manager connection.MultiManager, stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, subscriber eventbus.Subscriber, addressProvider addressProvider, identitySelector selector.Handler) *ConnectionDiagEndpoint {
+func NewConnectionDiagEndpoint(manager connection.DiagManager, stateProvider stateProvider, proposalRepository proposalRepository, identityRegistry identityRegistry, publisher eventbus.Publisher, subscriber eventbus.Subscriber, addressProvider addressProvider, identitySelector selector.Handler) *ConnectionDiagEndpoint {
 	return &ConnectionDiagEndpoint{
 		manager:            manager,
 		publisher:          publisher,
@@ -69,44 +67,9 @@ func NewConnectionDiagEndpoint(manager connection.MultiManager, stateProvider st
 	}
 }
 
-// Status returns result of provider check
-// swagger:operation GET /prov-checker ConnectionDiagInfoDTO
-//
-//	---
-//	summary: Returns connection status
-//	description: Returns status of current connection
-//	responses:
-//	  200:
-//	    description: Status
-//	    schema:
-//	      "$ref": "#/definitions/ConnectionInfoDTO"
-//	  400:
-//	    description: Failed to parse or request validation failed
-//	    schema:
-//	      "$ref": "#/definitions/APIError"
-//	  500:
-//	    description: Internal server error
-//	    schema:
-//	      "$ref": "#/definitions/APIError"
-func (ce *ConnectionDiagEndpoint) Status(c *gin.Context) {
-	n := 0
-	id := c.Query("id")
-	if len(id) > 0 {
-		var err error
-		n, err = strconv.Atoi(id)
-		if err != nil {
-			c.Error(apierror.ParseFailed())
-			return
-		}
-	}
-	status := ce.manager.Status(n)
-	statusResponse := contract.NewConnectionInfoDTO(status)
-	utils.WriteAsJSON(statusResponse, c.Writer)
-}
-
 // Diag is used to start provider check
 func (ce *ConnectionDiagEndpoint) Diag(c *gin.Context) {
-	log.Error().Msgf("Diag >>>")
+	log.Debug().Msgf("Diag >>>")
 
 	chainID := config.GetInt64(config.FlagChainID)
 	consumerID_, err := ce.identitySelector.UseOrCreate(config.FlagIdentity.Value, config.FlagIdentityPassphrase.Value, chainID)
@@ -178,22 +141,11 @@ func (ce *ConnectionDiagEndpoint) Diag(c *gin.Context) {
 	}
 	proposalLookup := connection.FilteredProposals(f, cr.Filter.SortBy, ce.proposalRepository)
 
-	res := make(chan bool)
-	cb := func(r quality.DiagEvent) {
-		if r.ProviderID == prov {
-			res <- r.Result
-		}
-	}
-
-	uid, err := uuid.NewV4()
-	if err != nil {
-		log.Error().Msgf("Error > %v", err)
-		c.Error(err)
+	hasConnection := ce.manager.HasConnection(cr.ProviderID)
+	if hasConnection {
+		c.Error(apierror.Unprocessable("Connection already exists", contract.ErrCodeConnectionAlreadyExists))
 		return
 	}
-
-	ce.subscriber.SubscribeWithUID(quality.AppTopicConnectionDiagRes, uid.String(), cb)
-	defer ce.subscriber.UnsubscribeWithUID(quality.AppTopicConnectionDiagRes, uid.String(), cb)
 
 	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.HermesID), proposalLookup, getConnectOptions(cr))
 	if err != nil {
@@ -206,22 +158,23 @@ func (ce *ConnectionDiagEndpoint) Diag(c *gin.Context) {
 			log.Error().Err(err).Msg("Failed to connect")
 			c.Error(apierror.Internal("Failed to connect: "+err.Error(), contract.ErrCodeConnect))
 		}
-
 		return
 	}
 
-	r := <-res
-	log.Debug().Msgf("Result > %v", r)
+	resChannel := ce.manager.GetReadyChan(cr.ProviderID)
+	res := <-resChannel
+	log.Error().Msgf("Result > %v", res)
+
 	resp := contract.ConnectionDiagInfoDTO{
 		ProviderID: prov,
-		Status:     r,
+		Status:     res.(quality.DiagEvent).Result,
 	}
 	utils.WriteAsJSON(resp, c.Writer)
 }
 
 // AddRoutesForConnectionDiag adds proder check route to given router
 func AddRoutesForConnectionDiag(
-	manager connection.MultiManager,
+	manager connection.DiagManager,
 	stateProvider stateProvider,
 	proposalRepository proposalRepository,
 	identityRegistry identityRegistry,

@@ -150,8 +150,9 @@ type Dependencies struct {
 
 	EventBus eventbus.EventBus
 
-	MultiConnectionManager connection.MultiManager
-	ConnectionRegistry     *connection.Registry
+	MultiConnectionManager     connection.MultiManager
+	MultiConnectionDiagManager connection.DiagManager
+	ConnectionRegistry         *connection.Registry
 
 	ServicesManager *service.Manager
 	ServiceRegistry *service.Registry
@@ -210,8 +211,6 @@ type Dependencies struct {
 	NodeStatusTracker         *monitoring.StatusTracker
 	NodeStatsTracker          *node.StatsTracker
 	uiVersionConfig           versionmanager.NodeUIVersionConfig
-
-	provPinger *connection.ProviderChecker
 }
 
 // Bootstrap initiates all container dependencies
@@ -608,10 +607,34 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.P2PDialer,
 			di.allowTrustedDomainBypassTunnel,
 			di.disallowTrustedDomainBypassTunnel,
-			di.provPinger,
 		)
 	})
 
+	if nodeOptions.ProvChecker {
+		di.MultiConnectionDiagManager = connection.NewDiagManager(
+			pingpong.ExchangeFactoryFunc(
+				di.Keystore,
+				di.SignerFactory,
+				di.ConsumerTotalsStorage,
+				di.AddressProvider,
+				di.EventBus,
+				nodeOptions.Payments.ConsumerDataLeewayMegabytes,
+			),
+			di.ConnectionRegistry.CreateConnection,
+			di.EventBus,
+			di.IPResolver,
+			di.LocationResolver,
+			connection.DefaultConfig(),
+			config.GetDuration(config.FlagStatsReportInterval),
+			connection.NewValidator(
+				di.ConsumerBalanceTracker,
+				di.IdentityManager,
+			),
+			di.P2PDialer,
+			di.allowTrustedDomainBypassTunnel,
+			di.disallowTrustedDomainBypassTunnel,
+		)
+	}
 	di.NATProber = natprobe.NewNATProber(di.MultiConnectionManager, di.EventBus)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -660,7 +683,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	sleepNotifier := sleep.NewNotifier(di.MultiConnectionManager, di.EventBus)
 	sleepNotifier.Subscribe()
 
-	di.Node = NewNode(di.MultiConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
+	di.Node = NewNode(di.MultiConnectionManager, di.MultiConnectionDiagManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
 	return nil
 }
@@ -930,7 +953,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality, 
 	}
 
 	if nodeOptions.ProvChecker {
-		di.provPinger = connection.NewProviderChecker(di.EventBus)
+		// di.provPinger = connection.NewProviderChecker(di.EventBus)
 	}
 
 	return nil
