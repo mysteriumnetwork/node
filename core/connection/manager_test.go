@@ -61,7 +61,6 @@ type testContext struct {
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
 	mockTime              time.Time
-
 	sync.RWMutex
 }
 

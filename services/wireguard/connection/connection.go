@@ -115,8 +115,6 @@ func (c *Connection) Reconnect(ctx context.Context, options connection.ConnectOp
 }
 
 func (c *Connection) start(ctx context.Context, start startConn, options connection.ConnectOptions) (err error) {
-	log.Info().Msg("+++++++++++++++++++++++++++++++++++++++++++++++++++++ *Connection) start")
-
 	var config wg.ServiceConfig
 	if err = json.Unmarshal(options.SessionConfig, &config); err != nil {
 		return errors.Wrap(err, "failed to unmarshal connection config")

@@ -957,7 +957,6 @@ func (m *diagConnectionManager) sendKeepAlivePing(ctx context.Context, channel p
 		return err
 	}
 
-	_ = start
 	m.eventBus.Publish(quality.AppTopicConsumerPingP2P, quality.PingEvent{
 		SessionID: string(sessionID),
 		Duration:  time.Since(start),

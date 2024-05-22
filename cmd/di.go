@@ -952,10 +952,6 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality, 
 		return err
 	}
 
-	if nodeOptions.ProvChecker {
-		// di.provPinger = connection.NewProviderChecker(di.EventBus)
-	}
-
 	return nil
 }
 

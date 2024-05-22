@@ -88,8 +88,6 @@ func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 		}
 		return errors.Wrap(err, "could not configure device")
 	}
-
-	// ce.wgClient.Diag()
 	return nil
 }
 

@@ -117,7 +117,4 @@ const (
 
 	// AppTopicProviderPingP2P represents event bus topic for provider p2p pings to consumer.
 	AppTopicProviderPingP2P = "provider_ping_p2p"
-
-	// AppTopicConnectionDiagRes represents event bus topic for provider check result.
-	AppTopicConnectionDiagRes = "connection_diag"
 )
