@@ -65,6 +65,7 @@ func Install(options Options) error {
 	if err != nil {
 		return fmt.Errorf("could not create file %s: %w", plistPath, err)
 	}
+	defer fd.Close()
 	err = tpl.Execute(fd, map[string]string{
 		"DaemonID":       daemonID,
 		"SupervisorPath": options.SupervisorPath,
