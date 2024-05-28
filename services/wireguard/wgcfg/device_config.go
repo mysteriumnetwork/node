@@ -51,7 +51,8 @@ type DeviceConfig struct {
 	Peer         Peer `json:"peer"`
 	ReplacePeers bool `json:"replace_peers,omitempty"`
 
-	ProxyPort int `json:"proxy_port,omitempty"`
+	ForwardIPSelector string `json:"forward_ip_selector,omitempty"`
+	ProxyPort         int    `json:"proxy_port,omitempty"`
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
@@ -64,15 +65,16 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 	}
 
 	type deviceConfig struct {
-		IfaceName    string   `json:"iface_name"`
-		Subnet       string   `json:"subnet"`
-		PrivateKey   string   `json:"private_key"`
-		ListenPort   int      `json:"listen_port"`
-		DNS          []string `json:"dns"`
-		DNSScriptDir string   `json:"dns_script_dir"`
-		Peer         peer     `json:"peer"`
-		ReplacePeers bool     `json:"replace_peers,omitempty"`
-		ProxyPort    int      `json:"proxy_port,omitempty"`
+		IfaceName         string   `json:"iface_name"`
+		Subnet            string   `json:"subnet"`
+		PrivateKey        string   `json:"private_key"`
+		ListenPort        int      `json:"listen_port"`
+		DNS               []string `json:"dns"`
+		DNSScriptDir      string   `json:"dns_script_dir"`
+		Peer              peer     `json:"peer"`
+		ReplacePeers      bool     `json:"replace_peers,omitempty"`
+		ForwardIPSelector string   `json:"forward_ip_selector,omitempty"`
+		ProxyPort         int      `json:"proxy_port,omitempty"`
 	}
 
 	var peerEndpoint string
@@ -108,15 +110,16 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	type deviceConfig struct {
-		IfaceName    string   `json:"iface_name"`
-		Subnet       string   `json:"subnet"`
-		PrivateKey   string   `json:"private_key"`
-		ListenPort   int      `json:"listen_port"`
-		DNS          []string `json:"dns"`
-		DNSScriptDir string   `json:"dns_script_dir"`
-		Peer         peer     `json:"peer"`
-		ReplacePeers bool     `json:"replace_peers,omitempty"`
-		ProxyPort    int      `json:"proxy_port"`
+		IfaceName         string   `json:"iface_name"`
+		Subnet            string   `json:"subnet"`
+		PrivateKey        string   `json:"private_key"`
+		ListenPort        int      `json:"listen_port"`
+		DNS               []string `json:"dns"`
+		DNSScriptDir      string   `json:"dns_script_dir"`
+		Peer              peer     `json:"peer"`
+		ReplacePeers      bool     `json:"replace_peers,omitempty"`
+		ForwardIPSelector string   `json:"forward_ip_selector"`
+		ProxyPort         int      `json:"proxy_port"`
 	}
 
 	cfg := deviceConfig{}

@@ -82,6 +82,13 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 				return err
 			}
 		}
+		if config.ForwardIPSelector != "" {
+			selectorArgs := strings.Fields(config.ForwardIPSelector)
+			cmdArgs := append(append([]string{"ip", "rule", "add"}, selectorArgs...), "table", config.IfaceName)
+			if err := cmdutil.SudoExec(cmdArgs...); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -179,6 +186,14 @@ func (c *client) PeerStats(string) (wgcfg.Stats, error) {
 }
 
 func (c *client) DestroyDevice(name string) error {
+	for {
+		if err := cmdutil.SudoExec("ip", "rule", "delete", "table", name); err != nil {
+			if !strings.Contains(err.Error(), "No such file or directory") {
+				return err
+			}
+			break
+		}
+	}
 	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }
 

@@ -149,7 +149,7 @@ func (ce *ConnectionEndpoint) Create(c *gin.Context) {
 		return
 	}
 
-	cr, err := toConnectionRequest(c.Request, hermes.Hex())
+	cr, err := toConnectionRequest(c.Request, hermes.Hex(), "from "+c.ClientIP())
 	if err != nil {
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(quality.StagePraseRequest, err.Error()))
 		c.Error(apierror.ParseFailed())
@@ -360,11 +360,12 @@ func AddRoutesForConnection(
 	}
 }
 
-func toConnectionRequest(req *http.Request, defaultHermes string) (*contract.ConnectionCreateRequest, error) {
+func toConnectionRequest(req *http.Request, defaultHermes string, defaultForwardIPSelector string) (*contract.ConnectionCreateRequest, error) {
 	connectionRequest := contract.ConnectionCreateRequest{
 		ConnectOptions: contract.ConnectOptions{
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,
+			ForwardIPSelector: defaultForwardIPSelector,
 		},
 		HermesID: defaultHermes,
 	}
@@ -384,6 +385,7 @@ func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectP
 	return connection.ConnectParams{
 		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
 		DNS:               dns,
+		ForwardIPSelector: cr.ConnectOptions.ForwardIPSelector,
 		ProxyPort:         cr.ConnectOptions.ProxyPort,
 	}
 }

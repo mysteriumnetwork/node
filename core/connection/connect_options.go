@@ -33,6 +33,8 @@ type ConnectParams struct {
 	DisableKillSwitch bool
 	// DNS servers to use
 	DNS DNSOption
+	// selector for `ip rule` command
+	ForwardIPSelector string
 
 	ProxyPort int
 }

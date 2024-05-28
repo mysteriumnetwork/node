@@ -157,8 +157,9 @@ func (c *Connection) start(ctx context.Context, start startConn, options connect
 			AllowedIPs:             []string{"0.0.0.0/0", "::/0"},
 			KeepAlivePeriodSeconds: 18,
 		},
-		ReplacePeers: true,
-		ProxyPort:    options.Params.ProxyPort,
+		ReplacePeers:      true,
+		ForwardIPSelector: options.Params.ForwardIPSelector,
+		ProxyPort:         options.Params.ProxyPort,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not start new connection")

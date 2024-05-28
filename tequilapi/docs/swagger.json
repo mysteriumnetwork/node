@@ -3591,6 +3591,10 @@
           "x-go-name": "DisableKillSwitch",
           "example": true
         },
+        "forward_ip_selector": {
+          "type": "string",
+          "x-go-name": "ForwardIPSelector"
+        },
         "proxy_port": {
           "type": "integer",
           "format": "int64",

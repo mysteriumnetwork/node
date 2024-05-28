@@ -216,6 +216,11 @@ type ConnectOptions struct {
 	// default: auto
 	// example: auto, provider, system, "1.1.1.1,8.8.8.8"
 	DNS connection.DNSOption `json:"dns"`
+	// Selector to use in `ip rule` command to forward traffic
+	// required: false
+	// default: ClientIP
+	// example: "from 192.168.0.10", "iif eth1", "fwmark FWMARK"
+	ForwardIPSelector string `json:"forward_ip_selector"`
 
 	ProxyPort int `json:"proxy_port"`
 }
