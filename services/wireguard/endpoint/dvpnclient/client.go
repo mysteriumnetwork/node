@@ -21,8 +21,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -77,7 +79,19 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 
 		gw[3]--
 		if err := cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", config.IfaceName); err != nil {
-			if !strings.Contains(err.Error(), "File exists") {
+			if strings.Contains(err.Error(), "\"table\" value is invalid") {
+				file, fileErr := os.OpenFile("/etc/iproute2/rt_tables", os.O_APPEND|os.O_WRONLY, 0)
+				if fileErr == nil {
+					defer file.Close()
+					if digitStart := strings.IndexFunc(config.IfaceName, unicode.IsDigit); digitStart != -1 {
+						newLine := fmt.Sprintf("%s\t%s\n", config.IfaceName[digitStart:], config.IfaceName)
+						if _, fileErr = file.WriteString(newLine); fileErr == nil {
+							err = cmdutil.SudoExec("ip", "route", "add", "default", "via", gw.String(), "dev", config.IfaceName, "table", config.IfaceName)
+						}
+					}
+				}
+			}
+			if err != nil && !strings.Contains(err.Error(), "File exists") {
 				// Ignore error if the route already exist.
 				return err
 			}
