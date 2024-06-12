@@ -37,7 +37,7 @@ require (
 	github.com/mysteriumnetwork/EventBus v0.0.0-20220415063055-d22cb121672c
 	github.com/mysteriumnetwork/feedback v1.3.2
 	github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d
-	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.16.5
+	github.com/mysteriumnetwork/go-dvpn-web/v2 v2.17.0
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-rest v0.3.1
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
@@ -254,6 +254,7 @@ require (
 	golang.org/x/arch v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
+	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
@@ -268,7 +269,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace (
-	golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20240416113031-406b13e8996a
-	//gvisor.dev/gvisor => github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8
-)
+replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20240416113031-406b13e8996a
