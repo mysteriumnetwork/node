@@ -158,6 +158,9 @@ func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error       { retur
 func (mce *mockConnectionEndpoint) PeerStats() (wgcfg.Stats, error) {
 	return wgcfg.Stats{LastHandshake: time.Now(), BytesSent: 10, BytesReceived: 11}, nil
 }
+func (mce *mockConnectionEndpoint) Diag() bool {
+	return true
+}
 
 type mockHandshakeWaiter struct {
 	err error

@@ -86,6 +86,11 @@ func (c *Connection) State() <-chan connectionstate.State {
 	return c.stateCh
 }
 
+// Diag is used to start provider check
+func (c *Connection) Diag() bool {
+	return c.connectionEndpoint.Diag()
+}
+
 // Statistics returns connection statistics channel.
 func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 	stats, err := c.connectionEndpoint.PeerStats()

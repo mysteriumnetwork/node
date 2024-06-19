@@ -42,23 +42,27 @@ type SleepNotifier interface {
 }
 
 // NewNode function creates new Mysterium node by given options
-func NewNode(connectionManager connection.MultiManager, tequilapiServer tequilapi.APIServer, publisher Publisher, uiServer UIServer, notifier SleepNotifier) *Node {
+func NewNode(connectionManager connection.MultiManager, connectionDiagManager connection.DiagManager, tequilapiServer tequilapi.APIServer, publisher Publisher, uiServer UIServer, notifier SleepNotifier) *Node {
 	return &Node{
-		connectionManager: connectionManager,
-		httpAPIServer:     tequilapiServer,
-		publisher:         publisher,
-		uiServer:          uiServer,
-		sleepNotifier:     notifier,
+		connectionManager:     connectionManager,
+		connectionDiagManager: connectionDiagManager,
+
+		httpAPIServer: tequilapiServer,
+		publisher:     publisher,
+		uiServer:      uiServer,
+		sleepNotifier: notifier,
 	}
 }
 
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
-	connectionManager connection.MultiManager
-	httpAPIServer     tequilapi.APIServer
-	publisher         Publisher
-	uiServer          UIServer
-	sleepNotifier     SleepNotifier
+	connectionManager     connection.MultiManager
+	connectionDiagManager connection.DiagManager
+
+	httpAPIServer tequilapi.APIServer
+	publisher     Publisher
+	uiServer      UIServer
+	sleepNotifier SleepNotifier
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)

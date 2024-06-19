@@ -102,6 +102,12 @@ type PingEvent struct {
 	Duration  time.Duration `json:"duration"`
 }
 
+// DiagEvent represents provider check result event
+type DiagEvent struct {
+	ProviderID string
+	Result     bool
+}
+
 const (
 	// AppTopicConnectionEvents represents event bus topic for the connection events.
 	AppTopicConnectionEvents = "connection_events"

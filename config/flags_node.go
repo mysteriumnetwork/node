@@ -229,6 +229,13 @@ var (
 		Value: false,
 	}
 
+	// FlagProvCheckerMode allows running node under current user as a provider checker agent.
+	FlagProvCheckerMode = cli.BoolFlag{
+		Name:  "provchecker",
+		Usage: "",
+		Value: false,
+	}
+
 	// FlagUserspace allows running a node without privileged permissions.
 	FlagUserspace = cli.BoolFlag{
 		Name:  "userspace",
@@ -349,6 +356,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagUserMode,
 		&FlagDVPNMode,
 		&FlagProxyMode,
+		&FlagProvCheckerMode,
 		&FlagUserspace,
 		&FlagVendorID,
 		&FlagLauncherVersion,
@@ -411,6 +419,8 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseBoolFlag(ctx, FlagDVPNMode)
 	Current.ParseBoolFlag(ctx, FlagProxyMode)
+	Current.ParseBoolFlag(ctx, FlagProvCheckerMode)
+
 	Current.ParseBoolFlag(ctx, FlagUserspace)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagLauncherVersion)

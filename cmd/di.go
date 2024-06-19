@@ -150,8 +150,9 @@ type Dependencies struct {
 
 	EventBus eventbus.EventBus
 
-	MultiConnectionManager connection.MultiManager
-	ConnectionRegistry     *connection.Registry
+	MultiConnectionManager     connection.MultiManager
+	MultiConnectionDiagManager connection.DiagManager
+	ConnectionRegistry         *connection.Registry
 
 	ServicesManager *service.Manager
 	ServiceRegistry *service.Registry
@@ -287,7 +288,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality, nodeOptions); err != nil {
 		return err
 	}
 
@@ -299,6 +300,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err = di.handleConnStateChange(); err != nil {
 		return err
 	}
+
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
@@ -581,6 +583,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.ConnectionRegistry = connection.NewRegistry()
+
 	di.MultiConnectionManager = connection.NewMultiConnectionManager(func() connection.Manager {
 		return connection.NewManager(
 			pingpong.ExchangeFactoryFunc(
@@ -607,6 +610,31 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		)
 	})
 
+	if nodeOptions.ProvChecker {
+		di.MultiConnectionDiagManager = connection.NewDiagManager(
+			pingpong.ExchangeFactoryFunc(
+				di.Keystore,
+				di.SignerFactory,
+				di.ConsumerTotalsStorage,
+				di.AddressProvider,
+				di.EventBus,
+				nodeOptions.Payments.ConsumerDataLeewayMegabytes,
+			),
+			di.ConnectionRegistry.CreateConnection,
+			di.EventBus,
+			di.IPResolver,
+			di.LocationResolver,
+			connection.DefaultConfig(),
+			config.GetDuration(config.FlagStatsReportInterval),
+			connection.NewValidator(
+				di.ConsumerBalanceTracker,
+				di.IdentityManager,
+			),
+			di.P2PDialer,
+			di.allowTrustedDomainBypassTunnel,
+			di.disallowTrustedDomainBypassTunnel,
+		)
+	}
 	di.NATProber = natprobe.NewNATProber(di.MultiConnectionManager, di.EventBus)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -655,7 +683,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	sleepNotifier := sleep.NewNotifier(di.MultiConnectionManager, di.EventBus)
 	sleepNotifier.Subscribe()
 
-	di.Node = NewNode(di.MultiConnectionManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
+	di.Node = NewNode(di.MultiConnectionManager, di.MultiConnectionDiagManager, tequilapiHTTPServer, di.EventBus, di.UIServer, sleepNotifier)
 
 	return nil
 }
@@ -883,7 +911,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error 
 	return nil
 }
 
-func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
+func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality, nodeOptions node.Options) (err error) {
 	if err := di.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
@@ -1065,7 +1093,7 @@ func (di *Dependencies) handleConnStateChange() error {
 
 	latestState := connectionstate.NotConnected
 	return di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
-		if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) {
+		if config.GetBool(config.FlagProxyMode) || config.GetBool(config.FlagDVPNMode) || config.GetBool(config.FlagProvCheckerMode) {
 			return // Proxy mode doesn't establish system wide tunnels, no reconnect required.
 		}
 

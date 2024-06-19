@@ -153,6 +153,9 @@ func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error       { retur
 func (mce *mockConnectionEndpoint) PeerStats() (wgcfg.Stats, error) {
 	return wgcfg.Stats{LastHandshake: time.Now()}, nil
 }
+func (mce *mockConnectionEndpoint) Diag() bool {
+	return true
+}
 
 func newManagerStub(pub, out, country string) *Manager {
 	dnsHandler, _ := dns.ResolveViaSystem()
