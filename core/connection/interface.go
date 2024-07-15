@@ -41,7 +41,7 @@ type Connection interface {
 
 // ConnectionDiag is a specialised Connection interface for provider check
 type ConnectionDiag interface {
-	Diag() bool
+	Diag() error
 }
 
 // StateChannel is the channel we receive state change events on

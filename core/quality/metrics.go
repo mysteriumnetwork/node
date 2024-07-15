@@ -106,6 +106,7 @@ type PingEvent struct {
 type DiagEvent struct {
 	ProviderID string
 	Result     bool
+	Error      error
 }
 
 const (

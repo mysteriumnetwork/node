@@ -34,5 +34,6 @@ type ConnectionEndpoint interface {
 	Config() (ServiceConfig, error)
 	InterfaceName() string
 	Stop() error
-	Diag() bool
+	
+	Diag() error
 }

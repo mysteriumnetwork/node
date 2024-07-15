@@ -52,12 +52,12 @@ type connectionEndpoint struct {
 	wgClient          WgClient
 }
 
-func (ce *connectionEndpoint) Diag() bool {
+func (ce *connectionEndpoint) Diag() error {
 	c, ok := ce.wgClient.(WgClientDiag)
 	if ok {
 		return c.Diag()
 	}
-	return false
+	return nil
 }
 
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.

@@ -25,6 +25,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"gvisor.dev/gvisor/pkg/sync"
 
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -55,6 +58,8 @@ type ConnectionDiagEndpoint struct {
 	identitySelector   selector.Handler
 
 	consumerAddress string
+
+	db *gorm.DB
 }
 
 // NewConnectionDiagEndpoint creates and returns connection endpoint
@@ -77,6 +82,17 @@ func NewConnectionDiagEndpoint(manager connection.DiagManager, stateProvider sta
 	}
 	log.Error().Msgf("Unlocked identity: %v", consumerID_.Address)
 	ce.consumerAddress = consumerID_.Address
+
+	dsn := "host=____ user=mypguser password=___ dbname=myst_nodes port=5432 sslmode=disable"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	ce.db = db
+	if err != nil {
+		panic(err)
+	}
 
 	return ce
 }
@@ -139,7 +155,7 @@ func (ce *ConnectionDiagEndpoint) DiagBatch(c *gin.Context) {
 				ConnectOptions: contract.ConnectOptions{},
 			}
 			if err := cr.Validate(); err != nil {
-				result.Error = err
+				result.Error = err.Error()
 				return
 			}
 
@@ -147,13 +163,13 @@ func (ce *ConnectionDiagEndpoint) DiagBatch(c *gin.Context) {
 			status, err := ce.identityRegistry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), consumerID)
 			if err != nil {
 				log.Error().Err(err).Stack().Msg("Could not check registration status")
-				result.Error = contract.ErrCodeIDRegistrationCheck
+				result.Error = (contract.ErrCodeIDRegistrationCheck)
 				return
 			}
 			switch status {
 			case registry.Unregistered, registry.RegistrationError, registry.Unknown:
 				log.Error().Msgf("Identity %q is not registered, aborting...", cr.ConsumerID)
-				result.Error = contract.ErrCodeIDNotRegistered
+				result.Error = (contract.ErrCodeIDNotRegistered)
 				return
 			case registry.InProgress:
 				log.Info().Msgf("identity %q registration is in progress, continuing...", cr.ConsumerID)
@@ -161,7 +177,7 @@ func (ce *ConnectionDiagEndpoint) DiagBatch(c *gin.Context) {
 				log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 			default:
 				log.Error().Msgf("identity %q has unknown status, aborting...", cr.ConsumerID)
-				result.Error = contract.ErrCodeIDStatusUnknown
+				result.Error = (contract.ErrCodeIDStatusUnknown)
 				return
 			}
 
@@ -179,7 +195,7 @@ func (ce *ConnectionDiagEndpoint) DiagBatch(c *gin.Context) {
 			proposalLookup := connection.FilteredProposals(f, cr.Filter.SortBy, ce.proposalRepository)
 
 			if ce.manager.HasConnection(cr.ProviderID) {
-				result.Error = contract.ErrCodeConnectionAlreadyExists
+				result.Error = (contract.ErrCodeConnectionAlreadyExists)
 				return
 			}
 
@@ -187,12 +203,12 @@ func (ce *ConnectionDiagEndpoint) DiagBatch(c *gin.Context) {
 			if err != nil {
 				switch err {
 				case connection.ErrAlreadyExists:
-					result.Error = contract.ErrCodeConnectionAlreadyExists
+					result.Error = (contract.ErrCodeConnectionAlreadyExists)
 				case connection.ErrConnectionCancelled:
-					result.Error = contract.ErrCodeConnectionCancelled
+					result.Error = (contract.ErrCodeConnectionCancelled)
 				default:
 					log.Error().Err(err).Msgf("Failed to connect: %v", prov)
-					result.Error = contract.ErrCodeConnect
+					result.Error = (contract.ErrCodeConnect)
 				}
 				return
 			}
@@ -200,7 +216,6 @@ func (ce *ConnectionDiagEndpoint) DiagBatch(c *gin.Context) {
 			resChannel := ce.manager.GetReadyChan(cr.ProviderID)
 			res := <-resChannel
 			log.Error().Msgf("Result > %v", res)
-			result.Status = res.(quality.DiagEvent).Result
 
 		}(prov)
 	}
@@ -301,9 +316,172 @@ func (ce *ConnectionDiagEndpoint) Diag(c *gin.Context) {
 
 	resp := contract.ConnectionDiagInfoDTO{
 		ProviderID: prov,
-		Status:     res.(quality.DiagEvent).Result,
 	}
 	utils.WriteAsJSON(resp, c.Writer)
+}
+
+type proposalDB struct {
+	ID        string
+	Error     string
+	DiagError string `json:"diag_error"`
+	Country   string
+}
+
+func (proposalDB) TableName() string {
+	return "node"
+}
+
+// DiagBatch is used to start a given providers check (batch mode)
+func (ce *ConnectionDiagEndpoint) DiagBatch2(c *gin.Context) {
+
+	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
+	if err != nil {
+		c.Error(apierror.Internal("Failed to get active hermes", contract.ErrCodeActiveHermes))
+		return
+	}
+
+	country := c.Query("location")
+	f := &proposal.Filter{
+		ServiceType:             "wireguard",
+		LocationCountry:         country,
+		ExcludeUnsupported:      true,
+		IncludeMonitoringFailed: true,
+	}
+	pp, err := ce.proposalRepository.Proposals(f)
+	if err != nil {
+		log.Error().Err(err).Stack().Msg("Proposals>")
+	}
+	log.Error().Msgf("pp> %v", len(pp))
+
+	var (
+		wg sync.WaitGroup
+		mu sync.Mutex
+	)
+	resultMap := make(map[string]contract.ConnectionDiagInfoDTO, len(pp))
+	wg.Add(len(pp))
+
+	maxGoroutines := 15
+	guard := make(chan struct{}, maxGoroutines)
+
+	for _, pr := range pp {
+		guard <- struct{}{}
+
+		worker := func(provID string) (result contract.ConnectionDiagInfoDTO) {
+			result.ProviderID = provID
+
+			cr := &contract.ConnectionCreateRequest{
+				ConsumerID:     ce.consumerAddress,
+				ProviderID:     provID,
+				Filter:         contract.ConnectionCreateFilter{IncludeMonitoringFailed: true},
+				HermesID:       hermes.Hex(),
+				ServiceType:    "wireguard",
+				ConnectOptions: contract.ConnectOptions{},
+			}
+			if err := cr.Validate(); err != nil {
+				result.Error = err.Error()
+				return
+			}
+
+			consumerID := identity.FromAddress(cr.ConsumerID)
+			status, err := ce.identityRegistry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), consumerID)
+			if err != nil {
+				log.Error().Err(err).Stack().Msg("Could not check registration status")
+				result.Error = (contract.ErrCodeIDRegistrationCheck)
+				return
+			}
+			switch status {
+			case registry.Unregistered, registry.RegistrationError, registry.Unknown:
+				log.Error().Msgf("Identity %q is not registered, aborting...", cr.ConsumerID)
+				result.Error = (contract.ErrCodeIDNotRegistered)
+				return
+			case registry.InProgress:
+				log.Info().Msgf("identity %q registration is in progress, continuing...", cr.ConsumerID)
+			case registry.Registered:
+				log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
+			default:
+				log.Error().Msgf("identity %q has unknown status, aborting...", cr.ConsumerID)
+				result.Error = (contract.ErrCodeIDStatusUnknown)
+				return
+			}
+
+			if len(cr.ProviderID) > 0 {
+				cr.Filter.Providers = append(cr.Filter.Providers, cr.ProviderID)
+			}
+			f := &proposal.Filter{
+				ServiceType:             cr.ServiceType,
+				LocationCountry:         cr.Filter.CountryCode,
+				ProviderIDs:             cr.Filter.Providers,
+				IPType:                  cr.Filter.IPType,
+				IncludeMonitoringFailed: cr.Filter.IncludeMonitoringFailed,
+				AccessPolicy:            "all",
+			}
+			proposalLookup := connection.FilteredProposals(f, cr.Filter.SortBy, ce.proposalRepository)
+
+			if ce.manager.HasConnection(cr.ProviderID) {
+				result.Error = (contract.ErrCodeConnectionAlreadyExists)
+				return
+			}
+
+			err = ce.manager.Connect(consumerID, common.HexToAddress(cr.HermesID), proposalLookup, getConnectOptions(cr))
+			if err != nil {
+				switch err {
+				case connection.ErrAlreadyExists:
+					result.Error = (contract.ErrCodeConnectionAlreadyExists)
+				case connection.ErrConnectionCancelled:
+					result.Error = (contract.ErrCodeConnectionCancelled)
+				default:
+					log.Error().Err(err).Msgf("Failed to connect: %v", provID)
+					result.Error = (contract.ErrCodeConnect)
+				}
+				return
+			}
+
+			resChannel := ce.manager.GetReadyChan(cr.ProviderID)
+			res := <-resChannel
+			log.Error().Msgf("Result > %v", res)
+
+			ev := res.(quality.DiagEvent)
+			// result.Status = ev.Result
+			if ev.Error != nil {
+				result.DiagError = ev.Error.Error()
+			}
+
+			return
+		}
+		go func(pr proposal.PricedServiceProposal) {
+
+			result := worker(pr.ProviderID)
+
+			mu.Lock()
+			resultMap[pr.ProviderID] = result
+			mu.Unlock()
+
+			// update
+			provRec := proposalDB{ID: result.ProviderID, Country: pr.Location.Country}
+			provRec.Error = ""
+			provRec.DiagError = ""
+			provRec.Error = result.Error
+			provRec.DiagError = result.DiagError
+			if ce.db.Model(&provRec).Select("Error", "DiagError", "Country").Updates(provRec).RowsAffected == 0 {
+				ce.db.Create(&provRec)
+			}
+
+			wg.Done()
+			<-guard
+		}(pr)
+
+	}
+	wg.Wait()
+
+	out := make([]contract.ConnectionDiagInfoDTO, 0)
+	for _, prov := range pp {
+		res := resultMap[prov.ProviderID]
+		if res.Error != "" || res.DiagError != "" {
+			out = append(out, resultMap[prov.ProviderID])
+		}
+
+	}
+	utils.WriteAsJSON(out, c.Writer)
 }
 
 // AddRoutesForConnectionDiag adds proder check route to given router
@@ -324,6 +502,7 @@ func AddRoutesForConnectionDiag(
 		{
 			connGroup.GET("/prov-checker", ConnectionDiagEndpoint.Diag)
 			connGroup.POST("/prov-checker-batch", ConnectionDiagEndpoint.DiagBatch)
+			connGroup.GET("/prov-checker-batch2", ConnectionDiagEndpoint.DiagBatch2)
 		}
 		return nil
 	}

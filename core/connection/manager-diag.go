@@ -28,6 +28,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -91,6 +92,8 @@ type diagConnectionManager struct {
 	// populated by Connect at runtime.
 	connsMu sync.Mutex
 	conns   map[string]*conn
+
+	ratelimiter *rate.Limiter
 }
 
 // NewDiagManager creates connection manager with given dependencies
@@ -120,6 +123,8 @@ func NewDiagManager(
 		validator:            validator,
 		p2pDialer:            p2pDialer,
 		timeGetter:           time.Now,
+
+		ratelimiter: rate.NewLimiter(rate.Every(1000*time.Millisecond), 1),
 	}
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
@@ -153,6 +158,13 @@ func (m *diagConnectionManager) GetReadyChan(providerID string) chan interface{}
 func (m *diagConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposalLookup ProposalLookup, params ConnectParams) (err error) {
 	var sessionID session.ID
 
+	ctx := context.Background()
+	err = m.ratelimiter.Wait(ctx) // This is a blocking call. Honors the rate limit
+	if err != nil {
+		log.Error().Msgf("ratelimiter.Wait: %s", err)
+		return err
+	}
+
 	proposal, err := proposalLookup()
 	if err != nil {
 		return fmt.Errorf("failed to lookup proposal: %w", err)
@@ -164,8 +176,10 @@ func (m *diagConnectionManager) Connect(consumerID identity.Identity, hermesID c
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
-	fmt.Println("Connect>", proposal.ProviderID)
+	log.Error().Msgf("Connect > %v", proposal.ProviderID)
 	uuid := proposal.ProviderID
+
+	m.connsMu.Lock()
 	con, ok := m.conns[uuid]
 	if !ok {
 		con = new(conn)
@@ -173,6 +187,8 @@ func (m *diagConnectionManager) Connect(consumerID identity.Identity, hermesID c
 		con.uuid = uuid
 		m.conns[uuid] = con
 	}
+	m.connsMu.Unlock()
+
 	removeConnection := func() {
 		m.connsMu.Lock()
 		defer m.connsMu.Unlock()
@@ -933,7 +949,9 @@ func (m *diagConnectionManager) keepAliveLoop(con *conn, channel p2p.Channel, se
 					if config.GetBool(config.FlagKeepConnectedOnFail) {
 						m.statusOnHold(con)
 					} else {
-						m.Disconnect()
+						//m.Disconnect()
+						log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s >>>>>>>>>", sessionID)
+						m.DisconnectSingle(con)
 					}
 					cancel()
 					return

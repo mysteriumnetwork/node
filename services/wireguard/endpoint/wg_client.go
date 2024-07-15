@@ -46,7 +46,7 @@ type WgClient interface {
 
 // WgClientDiag is a specialised WgClient interface for provider check
 type WgClientDiag interface {
-	Diag() bool
+	Diag() error
 }
 
 // WgClientFactory represents WireGuard client factory.

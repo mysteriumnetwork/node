@@ -25,14 +25,17 @@ import (
 // Diag is used to start provider check
 func Diag(cm *diagConnectionManager, con *conn, providerID string) {
 	c, ok := con.activeConnection.(ConnectionDiag)
-	res := false
+	res := error(nil)
 	if ok {
 		log.Debug().Msgf("Check provider> %v", providerID)
 
 		res = c.Diag()
 		cm.DisconnectSingle(con)
 	}
-	ev := quality.DiagEvent{ProviderID: providerID, Result: res}
+	ev := quality.DiagEvent{ProviderID: providerID, Result: res == nil}
+	if res != nil {
+		ev.Error = res
+	}
 	con.resChannel <- ev
 	close(con.resChannel)
 }

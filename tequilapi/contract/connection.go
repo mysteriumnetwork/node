@@ -54,9 +54,9 @@ func NewConnectionInfoDTO(session connectionstate.Status) ConnectionInfoDTO {
 // ConnectionDiagInfoDTO holds provider check result
 // swagger:model ConnectionDiagInfoDTO
 type ConnectionDiagInfoDTO struct {
-	Status     bool        `json:"status"`
-	Error      interface{} `json:"error"`
-	ProviderID string      `json:"provider_id"`
+	ProviderID string `json:"provider_id"`
+	Error      string `json:"error"`
+	DiagError  string `json:"diag_err"`
 }
 
 // ConnectionInfoDTO holds partial consumer connection details.

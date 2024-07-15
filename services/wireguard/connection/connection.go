@@ -87,7 +87,7 @@ func (c *Connection) State() <-chan connectionstate.State {
 }
 
 // Diag is used to start provider check
-func (c *Connection) Diag() bool {
+func (c *Connection) Diag() error {
 	return c.connectionEndpoint.Diag()
 }
 

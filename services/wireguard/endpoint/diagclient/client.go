@@ -19,6 +19,7 @@ package diagclient
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -126,25 +127,29 @@ func (c *client) Close() (err error) {
 	return nil
 }
 
-func (c *client) Diag() bool {
+func (c *client) Diag() error {
 	client := http.Client{
 		Transport: &http.Transport{
 			DialContext: c.tnet.DialContext,
 		},
+		Timeout: 15 * time.Second,
 	}
-	resp, err := client.Get("http://1.1.1.1/")
+	resp, err := client.Get("http://107.173.23.19:8080/test")
 	if err != nil {
 		log.Error().Err(err).Msg("Get failed")
-		return false
+		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error().Err(err).Msg("Readall failed")
-		return false
+		return err
 	}
-	_ = body
+	if len(body) < 6 {
+		log.Error().Msg("Wrong length")
+		return errors.New("Wrong body length")
+	}
 
-	return true
+	return nil
 }
