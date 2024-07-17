@@ -25,7 +25,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gvisor.dev/gvisor/pkg/sync"
@@ -331,7 +330,7 @@ func (proposalDB) TableName() string {
 	return "node"
 }
 
-// DiagBatch is used to start a given providers check (batch mode)
+// DiagBatch2 is used to start a check of providers from a given country or all countries
 func (ce *ConnectionDiagEndpoint) DiagBatch2(c *gin.Context) {
 
 	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
