@@ -32,16 +32,31 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Build builds the project. Like go tool, it supports cross-platform build with env vars: GOOS, GOARCH.
-func Build() error {
+// BuildProvChecker builds myst binary with provider checker API. Like go tool, it supports cross-platform build with env vars: GOOS, GOARCH.
+func BuildProvChecker() error {
 	logconfig.Bootstrap()
-	if err := buildBinary(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst"); err != nil {
+	if err := buildBinary(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst", true); err != nil {
 		return err
 	}
 	if err := copyConfig("myst"); err != nil {
 		return err
 	}
-	if err := buildBinary(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor"); err != nil {
+	if err := buildBinary(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", false); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Build builds the project. Like go tool, it supports cross-platform build with env vars: GOOS, GOARCH.
+func Build() error {
+	logconfig.Bootstrap()
+	if err := buildBinary(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst", false); err != nil {
+		return err
+	}
+	if err := copyConfig("myst"); err != nil {
+		return err
+	}
+	if err := buildBinary(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", false); err != nil {
 		return err
 	}
 	return nil
@@ -67,7 +82,7 @@ func buildCrossBinary(os, arch string) error {
 	return sh.Run("bin/build_xgo", os+"/"+arch)
 }
 
-func buildBinary(source, target string) error {
+func buildBinary(source, target string, provChecker bool) error {
 	targetOS, ok := os.LookupEnv("GOOS")
 	if !ok {
 		targetOS = runtime.GOOS
@@ -76,10 +91,10 @@ func buildBinary(source, target string) error {
 	if !ok {
 		targetArch = runtime.GOARCH
 	}
-	return buildBinaryFor(source, target, targetOS, targetArch, nil, false)
+	return buildBinaryFor(source, target, targetOS, targetArch, nil, false, provChecker)
 }
 
-func buildBinaryFor(source, target, targetOS, targetArch string, extraEnvs map[string]string, buildStatic bool) error {
+func buildBinaryFor(source, target, targetOS, targetArch string, extraEnvs map[string]string, buildStatic, provChecker bool) error {
 	log.Info().Msgf("Building %s -> %s %s/%s", source, target, targetOS, targetArch)
 
 	buildDir, err := filepath.Abs(path.Join("build", target))
@@ -99,6 +114,9 @@ func buildBinaryFor(source, target, targetOS, targetArch string, extraEnvs map[s
 	flags = append(flags, fmt.Sprintf(`-ldflags=-w -s %s`, strings.Join(ldFlags, " ")))
 	if buildStatic {
 		flags = append(flags, "-a", "-tags", "netgo")
+	}
+	if provChecker {
+		flags = append(flags, "-tags", "prov_checker")
 	}
 
 	if targetOS == "windows" {

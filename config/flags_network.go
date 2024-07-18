@@ -154,6 +154,13 @@ var (
 		Usage: "DNS listen port for services",
 		Value: 11253,
 	}
+
+	// FlagProvCheckerDatabaseDSN sets DNS for checker API database
+	FlagProvCheckerDatabaseDSN = cli.StringFlag{
+		Name:  "checker.dsn",
+		Usage: "Database DSN for provider checker",
+		Value: "",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -179,6 +186,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagPortCheckServers,
 		&FlagStatsReportInterval,
 		&FlagDNSListenPort,
+		&FlagProvCheckerDatabaseDSN,
 	)
 }
 
@@ -203,6 +211,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPortCheckServers)
 	Current.ParseDurationFlag(ctx, FlagStatsReportInterval)
 	Current.ParseIntFlag(ctx, FlagDNSListenPort)
+	Current.ParseStringFlag(ctx, FlagProvCheckerDatabaseDSN)
 }
 
 // BlockchainNetwork defines a blockchain network

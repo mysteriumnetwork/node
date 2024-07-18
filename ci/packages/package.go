@@ -380,7 +380,7 @@ func packageStandalone(binaryPath, os, arch string, extraEnvs map[string]string)
 	if os == "linux" {
 		filename := path.Base(binaryPath)
 		binaryPath = path.Join("build", filename, filename)
-		err = buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), filename, os, arch, extraEnvs, true)
+		err = buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), filename, os, arch, extraEnvs, true, false)
 	} else {
 		err = buildCrossBinary(os, arch)
 	}
@@ -388,7 +388,7 @@ func packageStandalone(binaryPath, os, arch string, extraEnvs map[string]string)
 		return err
 	}
 
-	err = buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch, extraEnvs, true)
+	err = buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch, extraEnvs, true, false)
 	if err != nil {
 		return err
 	}
