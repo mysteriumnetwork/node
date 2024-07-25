@@ -34,7 +34,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
 
       - name: Prepare environment 
         run: |
@@ -114,7 +114,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
       - uses: actions/download-artifact@v4
         with:
           name: env.sh
@@ -144,7 +144,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
       - uses: actions/download-artifact@v4
         with:
           name: env.sh
@@ -185,7 +185,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
       - uses: actions/download-artifact@v4
         with:
           name: env.sh
