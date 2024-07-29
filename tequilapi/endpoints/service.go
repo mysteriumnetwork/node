@@ -346,7 +346,7 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *service.Instance) (contract.ServiceInfoDTO, error) {
-	priced, err := se.proposalRepository.EnrichProposalWithPrice(instance.Proposal)
+	priced, err := se.proposalRepository.EnrichProposalWithPrice(instance.CopyProposal())
 	if err != nil {
 		return contract.ServiceInfoDTO{}, err
 	}
