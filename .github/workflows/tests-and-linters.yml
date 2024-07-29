@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -37,6 +41,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -56,6 +64,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
