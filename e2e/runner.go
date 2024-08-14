@@ -42,8 +42,8 @@ func NewRunner(composeFiles []string, testEnv, services string) (runner *Runner,
 	args = append(args, "-p", testEnv)
 
 	runner = &Runner{
-		compose:    sh.RunCmd("docker-compose", args...),
-		composeOut: sh.OutCmd("docker-compose", args...),
+		compose:    sh.RunCmd("docker", append([]string{"compose"}, args...)...),
+		composeOut: sh.OutCmd("docker", append([]string{"compose"}, args...)...),
 		testEnv:    testEnv,
 		services:   services,
 	}
