@@ -471,7 +471,7 @@ func (m *MysteriumMORQA) ProviderQuality(id identity.Identity) (node.QualityInfo
 		return res, err
 	}
 
-	if err = m.doRequestAndCacheResponse(request, 10*time.Minute, &res); err != nil {
+	if err = m.doRequestAndCacheResponse(request, time.Minute, &res); err != nil {
 		log.Err(err).Msg("Failed to parse provider quality")
 		return res, err
 	}
