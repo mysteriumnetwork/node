@@ -21,9 +21,10 @@ import (
 	"time"
 
 	"github.com/magefile/mage/sh"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/logconfig"
 )
 
 const composeFile = "./docker-compose.localnet.yml"
@@ -61,7 +62,7 @@ func newRunner(composeFiles ...string) *runner {
 	args = append(args, "-p", envName)
 
 	return &runner{
-		compose: sh.RunCmd("docker-compose", args...),
+		compose: sh.RunCmd("docker", append([]string{"compose"}, args...)...),
 		envName: envName,
 	}
 }

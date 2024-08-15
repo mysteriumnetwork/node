@@ -38,7 +38,7 @@ func releaseDebianPPA(opts *releaseDebianOpts) error {
 		return err
 	}
 
-	for _, codename := range []string{"bionic", "focal", "jammy"} {
+	for _, codename := range []string{"bionic", "focal", "jammy", "noble"} {
 		err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, codename).Run()
 		if err != nil {
 			return err
