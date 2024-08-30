@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -43,6 +44,7 @@ type ServiceEndpoint struct {
 	optionsParser      map[string]services.ServiceOptionsParser
 	proposalRepository proposalRepository
 	tequilaApiClient   *tequilapi_client.Client
+	activeServicesMu   sync.Mutex
 }
 
 var (
@@ -249,6 +251,10 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 }
 
 func (se *ServiceEndpoint) updateActiveServicesInUserConfig() {
+	// restrict concurrent update of ActiveServices property, so that statuses of all services are written the last
+	se.activeServicesMu.Lock()
+	defer se.activeServicesMu.Unlock()
+
 	runningInstances := se.serviceManager.List(false)
 	activeServices := make([]string, len(runningInstances))
 	for i, service := range runningInstances {
