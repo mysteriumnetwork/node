@@ -23,6 +23,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -30,7 +34,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
 
       - name: Prepare environment 
         run: |
@@ -102,11 +106,15 @@ jobs:
           - PackageAndroidProvider
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
       - uses: actions/download-artifact@v4
         with:
           name: env.sh
@@ -121,18 +129,22 @@ jobs:
         run: |
           source env.sh
           unset CI # workaround for "PackageAndroid" target
-          sudo -E go run mage.go -v ${{ matrix.platform }}
+          go run mage.go -v ${{ matrix.platform }}
 
   build-swagger:
     runs-on: ubuntu-latest
     needs: [setup-env, build-packages]
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
       - uses: actions/download-artifact@v4
         with:
           name: env.sh
@@ -165,11 +177,15 @@ jobs:
       (github.ref == 'refs/heads/master' || github.ref_type == 'tag')
 
     steps:
+      - name: Clean previous go installation
+        run: |
+          rm -rf /opt/hostedtoolcache/go
+
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.x'
+          go-version: '1.22.x'
       - uses: actions/download-artifact@v4
         with:
           name: env.sh
