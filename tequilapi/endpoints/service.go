@@ -352,6 +352,12 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *service.Instance) (contract.ServiceInfoDTO, error) {
+
+	// Warning.
+	// Use only safely obtained copy of instance.Proposal field, otherwise concurrent
+	// access to that field from Instance.proposalWithCurrentLocation
+	// can trigger a data race
+
 	priced, err := se.proposalRepository.EnrichProposalWithPrice(instance.CopyProposal())
 	if err != nil {
 		return contract.ServiceInfoDTO{}, err
