@@ -1,36 +1,32 @@
-package main
+package netstack_provider
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/hex"
 	"io"
 	"log"
 	"net/http"
 	"net/netip"
-	"os"
 	"strings"
+	"testing"
 
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
+	"github.com/mysteriumnetwork/node/config"
 	netstack "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack"
-	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 )
 
-const (
-	mtu = 1420
-)
-
-func startClient(priv, pubServ wgtypes.Key) {
+func startClient(t *testing.T, priv, pubServ wgtypes.Key) {
 
 	tun, tnet, err := netstack.CreateNetTUN(
 		[]netip.Addr{netip.MustParseAddr("192.168.4.100")},
 		[]netip.Addr{netip.MustParseAddr("8.8.8.8")},
-		mtu)
+		device.DefaultMTU)
 	if err != nil {
-		log.Panic(err)
+		t.Error(err)
+		return
 	}
 
 	dev := device.NewDevice(tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelError, "C> "))
@@ -42,10 +38,12 @@ func startClient(priv, pubServ wgtypes.Key) {
 	wgConf.WriteString("endpoint=127.0.0.1:58120\n")
 
 	if err = dev.IpcSetOperation(wgConf); err != nil {
-		log.Panicln(err)
+		t.Error(err)
+		return
 	}
 	if err = dev.Up(); err != nil {
-		log.Panic(err)
+		t.Error(err)
+		return
 	}
 
 	client := http.Client{
@@ -56,11 +54,13 @@ func startClient(priv, pubServ wgtypes.Key) {
 
 	resp, err := client.Get("http://107.173.23.19:8080/test")
 	if err != nil {
-		log.Panic(err)
+		t.Error(err)
+		return
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Panic(err)
+		t.Error(err)
+		return
 	}
 	log.Println("Reply:", string(body))
 
@@ -70,20 +70,19 @@ func startClient(priv, pubServ wgtypes.Key) {
 		ok = "failed"
 	}
 	log.Println("Test result:", ok)
-
 	// dev.Down()
 	// tun.Close()
 }
 
-func server(privKey, pubClinet wgtypes.Key) {
-
-	tun, _, _, err := netstack_provider.CreateNetTUNWithStack(
+func startServer(t *testing.T, privKey, pubClinet wgtypes.Key) {
+	tun, _, _, err := CreateNetTUNWithStack(
 		[]netip.Addr{netip.MustParseAddr("192.168.4.1")},
 		53,
-		mtu,
+		device.DefaultMTU,
 	)
 	if err != nil {
-		log.Panic(err)
+		t.Error(err)
+		return
 	}
 	dev := device.NewDevice(tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelError, "S> "))
 
@@ -94,27 +93,32 @@ func server(privKey, pubClinet wgtypes.Key) {
 	wgConf.WriteString("allowed_ip=0.0.0.0/0\n")
 
 	if err = dev.IpcSetOperation(wgConf); err != nil {
-		log.Panicln(err)
+		t.Error(err)
+		return
 	}
 	if err = dev.Up(); err != nil {
-		log.Panicln(err)
+		t.Error(err)
+		return
 	}
 }
 
-func main() {
+func TestShaperEnabled(t *testing.T) {
 	log.Default().SetFlags(0)
-	log.Println("Test #6022/v1")
+
+	config.Current.SetDefault(config.FlagShaperBandwidth.Name, "6250")
+	config.Current.SetDefault(config.FlagShaperEnabled.Name, "true")
+	InitUserspaceShaper(nil)
 
 	privKey1, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
-		log.Panicf("generating private key: %v \n", err)
+		t.Error(err)
+		return
 	}
 	privKey2, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
-		log.Panicf("generating private key: %v \n", err)
+		t.Error(err)
+		return
 	}
-	server(privKey1, privKey2.PublicKey())
-	startClient(privKey2, privKey1.PublicKey())
-
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	startServer(t, privKey1, privKey2.PublicKey())
+	startClient(t, privKey2, privKey1.PublicKey())
 }
