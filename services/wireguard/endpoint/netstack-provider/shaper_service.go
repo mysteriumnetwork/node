@@ -18,13 +18,18 @@
 package netstack_provider
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 )
 
-const AppTopicConfigShaper = "config:shaper"
+const (
+	AppTopicConfigShaper = "config:shaper"
+	BurstLimit           = 1000 * 1000 * 1000
+)
 
 var rateLimiter *rate.Limiter
 
@@ -33,7 +38,7 @@ func getRateLimitter() *rate.Limiter {
 }
 
 func InitUserspaceShaper(eventBus eventbus.EventBus) {
-	applyLimits := func(e interface{}) {
+	applyLimits := func(_ interface{}) {
 		bandwidthBytes := config.GetUInt64(config.FlagShaperBandwidth) * 1024
 		bandwidth := rate.Limit(bandwidthBytes)
 		if !config.GetBool(config.FlagShaperEnabled) {
@@ -43,9 +48,14 @@ func InitUserspaceShaper(eventBus eventbus.EventBus) {
 		rateLimiter.SetLimit(bandwidth)
 	}
 
-	rateLimiter = rate.NewLimiter(rate.Inf, 0)
+	rateLimiter = rate.NewLimiter(rate.Inf, BurstLimit)
+	rateLimiter.AllowN(time.Now(), BurstLimit) // spend initial burst
+
 	applyLimits(nil)
 
+	if eventBus == nil {
+		return
+	}
 	err := eventBus.SubscribeAsync(AppTopicConfigShaper, applyLimits)
 	if err != nil {
 		log.Error().Msgf("could not subscribe to topic: %v", err)
