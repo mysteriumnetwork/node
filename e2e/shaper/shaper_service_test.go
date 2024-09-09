@@ -15,15 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package netstack_provider
+package shaper
 
 import (
 	"bytes"
 	"encoding/hex"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -33,10 +35,10 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	netstack "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack"
+	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
 )
 
 func startClient(t *testing.T, priv, pubServ wgtypes.Key) {
-
 	tun, tnet, err := netstack.CreateNetTUN(
 		[]netip.Addr{netip.MustParseAddr("192.168.4.100")},
 		[]netip.Addr{netip.MustParseAddr("8.8.8.8")},
@@ -69,14 +71,26 @@ func startClient(t *testing.T, priv, pubServ wgtypes.Key) {
 		},
 	}
 
-	resp, err := client.Get("http://107.173.23.19:8080/test")
+	// resolve docker container hostname
+	u, _ := url.Parse("http://shaper-websvc:8083/test")
+	address, err := net.LookupHost(u.Hostname())
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	u.Host = address[0] + ":" + u.Port()
+
+	resp, err := client.Get(u.String())
+	if err != nil {
+		t.Error(err)
+		log.Println(err)
+		return
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Error(err)
+		log.Println(err)
 		return
 	}
 	log.Println("Reply:", string(body))
@@ -87,12 +101,10 @@ func startClient(t *testing.T, priv, pubServ wgtypes.Key) {
 		ok = "failed"
 	}
 	log.Println("Test result:", ok)
-	// dev.Down()
-	// tun.Close()
 }
 
 func startServer(t *testing.T, privKey, pubClinet wgtypes.Key) {
-	tun, _, _, err := CreateNetTUNWithStack(
+	tun, _, _, err := netstack_provider.CreateNetTUNWithStack(
 		[]netip.Addr{netip.MustParseAddr("192.168.4.1")},
 		53,
 		device.DefaultMTU,
@@ -124,7 +136,9 @@ func TestShaperEnabled(t *testing.T) {
 
 	config.Current.SetDefault(config.FlagShaperBandwidth.Name, "6250")
 	config.Current.SetDefault(config.FlagShaperEnabled.Name, "true")
-	InitUserspaceShaper(nil)
+	config.FlagFirewallProtectedNetworks.Value = "10.0.0.0/8,127.0.0.0/8" // 192.168.0.0/16,
+
+	netstack_provider.InitUserspaceShaper(nil)
 
 	privKey1, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
@@ -136,6 +150,8 @@ func TestShaperEnabled(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	_, _ = privKey1, privKey2
+
 	startServer(t, privKey1, privKey2.PublicKey())
 	startClient(t, privKey2, privKey1.PublicKey())
 }

@@ -60,6 +60,9 @@ jobs:
       - name: E2E basic test
         run: go run mage.go -v TestE2EBasic
 
+      - name: E2E shaper test
+        run: go run mage.go -v TestE2EShaper
+
   e2e-nat:
     runs-on: ubuntu-latest
 

@@ -1,0 +1,6 @@
+FROM alpine:3.12
+
+RUN apk add --no-cache bash gcc musl-dev make linux-headers iptables ipset ca-certificates openvpn bash sudo openresolv
+RUN ln -s /sbin/iptables /usr/sbin/iptables
+
+COPY ./build/e2e/shaper.test /usr/local/bin/shaper.test
