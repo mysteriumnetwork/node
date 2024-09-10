@@ -24,6 +24,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/node/e2e"
+	e2e_shaper "github.com/mysteriumnetwork/node/e2e/shaper"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/rs/zerolog/log"
 )
@@ -50,6 +51,23 @@ func BuildE2eTestBinary() error {
 	return os.Rename("./e2e.test", "./build/e2e/test")
 }
 
+// BuildE2eShaperTestBinary builds the e2e test binary.
+func BuildE2eShaperTestBinary() error {
+	err := sh.RunWith(crossCompileFlags, "go", "test", "-c", "./e2e/shaper")
+	if err != nil {
+		return err
+	}
+	err = sh.RunWith(crossCompileFlags, "go", "build", "-o", "shaper.websvc", "./e2e/shaper/websvc")
+	if err != nil {
+		return err
+	}
+
+	_ = os.Mkdir("./build/e2e/", os.ModeDir)
+	os.Rename("./shaper.test", "./build/e2e/shaper.test")
+	os.Rename("./shaper.websvc", "./build/e2e/shaper.websvc")
+	return nil
+}
+
 // BuildE2eDeployerBinary builds the deployer binary for e2e tests.
 func BuildE2eDeployerBinary() error {
 	return sh.RunWith(crossCompileFlags, "go", "build", "-o", "./build/e2e/deployer", "./e2e/blockchain/deployer.go")
@@ -73,6 +91,24 @@ func TestE2EBasic() error {
 		return err
 	}
 	return runner.Test("myst-provider")
+}
+
+// TestE2EShaper runs end-to-end tests
+func TestE2EShaper() error {
+	logconfig.Bootstrap()
+
+	mg.Deps(BuildE2eShaperTestBinary)
+
+	composeFiles := []string{
+		"./docker-compose.e2e-shaper.yml",
+	}
+
+	runner, cleanup := e2e_shaper.NewRunner(composeFiles, "node_e2e_shaper_test", "")
+	defer cleanup()
+	if err := runner.Init(); err != nil {
+		return err
+	}
+	return runner.Test()
 }
 
 // TestE2ENAT runs end-to-end tests in NAT environment
