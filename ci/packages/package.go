@@ -370,8 +370,7 @@ func PackageDockerSwaggerRedoc() error {
 }
 
 func goGet(pkg string) error {
-	// don't use GO111MODULE=off with Go 1.22, as it's not supported
-	return sh.Run("go", "get", "-u", pkg)
+	return sh.RunWith(map[string]string{"GO111MODULE": "off"}, "go", "get", "-u", pkg)
 }
 
 func packageStandalone(binaryPath, os, arch string, extraEnvs map[string]string) error {

@@ -1,8 +1,6 @@
 module github.com/mysteriumnetwork/node
 
-go 1.22.0
-
-toolchain go1.22.2
+go 1.19
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -68,12 +66,12 @@ require (
 	golang.org/x/net v0.24.0
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sys v0.19.0
-	golang.org/x/time v0.5.0
+	golang.org/x/time v0.4.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	golang.zx2c4.com/wireguard/windows v0.5.3
-	google.golang.org/protobuf v1.32.0
-	gvisor.dev/gvisor v0.0.0-20240420021641-b12088a5ac74 // release-20240422.0 @go branch
+	google.golang.org/protobuf v1.31.0
+	gvisor.dev/gvisor v0.0.0-20230927004350-cbd86285d259
 )
 
 require (
@@ -142,7 +140,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
-	github.com/google/btree v1.1.2 // indirect
+	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
@@ -257,9 +255,9 @@ require (
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.16.1 // indirect
+	golang.org/x/tools v0.15.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	gopkg.in/intercom/intercom-go.v2 v2.0.0-20210504094731-2bd1af0ce4b2 // indirect
@@ -270,4 +268,7 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20240416113031-406b13e8996a
+replace (
+	golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20240416113031-406b13e8996a
+	//gvisor.dev/gvisor => github.com/mysteriumnetwork/gvisor v0.0.0-20240206094932-ff91e662b9e8
+)
