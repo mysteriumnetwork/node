@@ -177,7 +177,7 @@ func (tun *netTun) Write(buf [][]byte, offset int) (int, error) {
 
 func (tun *netTun) WriteNotify() {
 	pkt := tun.ep.Read()
-	if pkt == nil {
+	if pkt.IsNil() {
 		return
 	}
 
@@ -279,6 +279,11 @@ func (tun *netTun) relay(wg *sync.WaitGroup, dst, src net.Conn) {
 	if err != nil {
 		log.Trace().Err(err).Msg("relay: data copy")
 	}
+
+	err = dst.SetReadDeadline(time.Now().Add(-1)) // make another Copy exit
+	if err != nil {
+		log.Trace().Err(err).Msg("relay: setting read deadline")
+	}
 }
 
 func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
@@ -299,7 +304,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 		return
 	}
 
-	client := gonet.NewUDPConn(&wq, ep)
+	client := gonet.NewUDPConn(tun.stack, &wq, ep)
 	go func() {
 		defer client.Close()
 
