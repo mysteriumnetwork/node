@@ -129,7 +129,7 @@ jobs:
         run: |
           source env.sh
           unset CI # workaround for "PackageAndroid" target
-          go run mage.go -v ${{ matrix.platform }}
+          sudo -E go run mage.go -v ${{ matrix.platform }}
 
   build-swagger:
     runs-on: ubuntu-latest
