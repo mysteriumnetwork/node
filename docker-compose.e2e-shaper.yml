@@ -1,0 +1,25 @@
+version: '3.0'
+services:
+
+  shaper-websvc:
+    build:
+      context: .
+      dockerfile: ./e2e/shaper/websvc/Dockerfile
+    cap_add:
+      - NET_ADMIN
+    working_dir: /node
+    expose:
+      - 8083
+
+  #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
+  go-runner:
+    depends_on:
+      - shaper-websvc
+    build:
+      context: .
+      dockerfile: ./e2e/gorunner-shaper/Dockerfile.precompiled
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./e2e/blockchain/keystore:/node/keystore
+    working_dir: /node
