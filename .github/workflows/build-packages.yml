@@ -23,10 +23,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -106,10 +102,6 @@ jobs:
           - PackageAndroidProvider
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -136,10 +128,6 @@ jobs:
     needs: [setup-env, build-packages]
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -177,10 +165,6 @@ jobs:
       (github.ref == 'refs/heads/master' || github.ref_type == 'tag')
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5

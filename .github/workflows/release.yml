@@ -22,10 +22,6 @@ jobs:
       NIGHTLY_BUILD: true
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -59,10 +55,6 @@ jobs:
           - ReleaseDebianPPASnapshot
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -112,10 +104,6 @@ jobs:
           - ReleaseAndroidProviderSDK
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -152,10 +140,6 @@ jobs:
     needs: [release-tag]
 
     steps:
-      - name: Clean previous go installation
-        run: |
-          rm -rf /opt/hostedtoolcache/go
-
       - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v5
