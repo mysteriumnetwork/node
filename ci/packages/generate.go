@@ -54,7 +54,7 @@ func GenerateProtobuf() error {
 func GetProtobuf() error {
 	err := sh.RunV("go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.25.0")
 	if err != nil {
-		fmt.Println("could not go get 'protoc-gen-go'")
+		fmt.Println("could not go install 'protoc-gen-go'")
 		return err
 	}
 	return nil
@@ -88,7 +88,7 @@ func GenerateDocs() error {
 func GetSwagger() error {
 	err := sh.RunV("go", "install", "github.com/go-swagger/go-swagger/cmd/swagger@v0.31.0")
 	if err != nil {
-		fmt.Println("could not go get swagger")
+		fmt.Println("could not go install swagger")
 		return err
 	}
 	return nil

@@ -69,7 +69,7 @@ func PackageLinuxArmv6l() error {
 // PackageLinuxDebianAmd64 builds and stores debian amd64 package
 func PackageLinuxDebianAmd64() error {
 	logconfig.Bootstrap()
-	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+	if err := goInstall("github.com/debber/debber-v0.3/cmd/debber@latest"); err != nil {
 		return err
 	}
 	envi := map[string]string{
@@ -88,7 +88,7 @@ func PackageLinuxDebianAmd64() error {
 // PackageLinuxDebianArm builds and stores debian armv7l+ package
 func PackageLinuxDebianArm() error {
 	logconfig.Bootstrap()
-	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+	if err := goInstall("github.com/debber/debber-v0.3/cmd/debber@latest"); err != nil {
 		return err
 	}
 	envi := map[string]string{
@@ -107,7 +107,7 @@ func PackageLinuxDebianArm() error {
 // PackageLinuxDebianArmv6l builds and stores debian armv6l package
 func PackageLinuxDebianArmv6l() error {
 	logconfig.Bootstrap()
-	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+	if err := goInstall("github.com/debber/debber-v0.3/cmd/debber@latest"); err != nil {
 		return err
 	}
 	envi := map[string]string{
@@ -127,7 +127,7 @@ func PackageLinuxDebianArmv6l() error {
 // PackageLinuxDebianArm64 builds and stores debian arm64 package
 func PackageLinuxDebianArm64() error {
 	logconfig.Bootstrap()
-	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+	if err := goInstall("github.com/debber/debber-v0.3/cmd/debber@latest"); err != nil {
 		return err
 	}
 	envi := map[string]string{
@@ -369,8 +369,8 @@ func PackageDockerSwaggerRedoc() error {
 	})
 }
 
-func goGet(pkg string) error {
-	return sh.RunWith(map[string]string{"GO111MODULE": "off"}, "go", "get", "-u", pkg)
+func goInstall(pkg string) error {
+	return sh.Run("go", "install", pkg)
 }
 
 func packageStandalone(binaryPath, os, arch string, extraEnvs map[string]string) error {
