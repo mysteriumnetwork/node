@@ -8,11 +8,11 @@ RUN apt-get update \
     && gem install fpm -v 1.12.0
 
 # Install development dependencies
-RUN GO111MODULE=off go get \
-    github.com/debber/debber-v0.3/cmd/debber \
-    golang.org/x/lint/golint \
-    golang.org/x/tools/cmd/goimports \
-    github.com/go-swagger/go-swagger/cmd/swagger
+RUN go install \
+    github.com/debber/debber-v0.3/cmd/debber@latest \
+    golang.org/x/lint/golint@latest \
+    golang.org/x/tools/cmd/goimports@latest \
+    github.com/go-swagger/go-swagger/cmd/swagger@latest
 
 WORKDIR /go/src/github.com/mysteriumnetwork/node
 

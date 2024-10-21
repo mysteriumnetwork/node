@@ -54,7 +54,7 @@ func PackageLinuxRaspberryImage() error {
 	})
 	logconfig.Bootstrap()
 
-	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+	if err := goInstall("github.com/debber/debber-v0.3/cmd/debber@latest"); err != nil {
 		return err
 	}
 	if err := shell.NewCmd("bin/build_xgo linux/arm").Run(); err != nil {
