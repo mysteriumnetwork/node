@@ -19,8 +19,9 @@ package market
 
 // Quality represents service quality.
 type Quality struct {
-	Quality   float64 `json:"quality"`
-	Latency   float64 `json:"latency"`
-	Bandwidth float64 `json:"bandwidth"`
-	Uptime    float64 `json:"uptime"`
+	Quality    float64 `json:"quality"`
+	Latency    float64 `json:"latency"`
+	Bandwidth  float64 `json:"bandwidth"`
+	Uptime     float64 `json:"uptime"`
+	PacketLoss float64 `json:"packetLoss"`
 }
