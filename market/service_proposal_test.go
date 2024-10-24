@@ -39,10 +39,11 @@ func Test_ServiceProposal_Serialize(t *testing.T) {
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, "MYSTT")
 	sp := NewProposal("node", "mock_service", NewProposalOpts{
 		Quality: &Quality{
-			Quality:   2.0,
-			Latency:   5,
-			Bandwidth: 100,
-			Uptime:    20,
+			Quality:    2.0,
+			Latency:    5,
+			Bandwidth:  100,
+			Uptime:     20,
+			PacketLoss: 0.5,
 		},
 		Contacts: ContactList{},
 	})
@@ -61,7 +62,8 @@ func Test_ServiceProposal_Serialize(t *testing.T) {
         "quality": 2.0,
         "latency": 5,
         "bandwidth": 100,
-        "uptime": 20
+        "uptime": 20,
+		"packetLoss": 0.5
       },
       "contacts": []
 	}`
