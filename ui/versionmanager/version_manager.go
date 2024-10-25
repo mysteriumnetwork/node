@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"time"
 
-	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web/v2"
+	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web/v3"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
