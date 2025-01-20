@@ -1145,14 +1145,8 @@ github.com/mysteriumnetwork/feedback v1.3.2/go.mod h1:g8PD0Gl5UVIFt3N159ohJUmBnG
 github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d h1:IejX10D2zdFwidh09Gy7L37BHfvc2ckgLrHXadLvzTA=
 github.com/mysteriumnetwork/go-ci v0.0.0-20220711082519-1245471bae0d/go.mod h1:FdrIqN3Z27igwo8A4aKZcmds7q894iGcdUIPz0+vOXY=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.0.2 h1:W/S9iVYggufZLVFXF8QltD8FVMfaTBxOtILra5jTLx0=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.0.2/go.mod h1:wQbtTbbo5Lby6PSoe1u7oiqX2JUIhECa18RCN6kTBBY=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.0.3 h1:bfTUZ/x7Zs3aeie4GNIcdIcM2ib6f4qwsysBUirlNzE=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.0.3/go.mod h1:wQbtTbbo5Lby6PSoe1u7oiqX2JUIhECa18RCN6kTBBY=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.0.4 h1:9qIIqHUj+AIkPxWiraJiv19Lb9tka2bSoQVfAKjUrus=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.0.4/go.mod h1:wQbtTbbo5Lby6PSoe1u7oiqX2JUIhECa18RCN6kTBBY=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.1.0 h1:+HEQE1dqwwAC/Z0i35UwsW9tLz6dDDV0qDh9CvJYcZs=
-github.com/mysteriumnetwork/go-dvpn-web/v3 v3.1.0/go.mod h1:wQbtTbbo5Lby6PSoe1u7oiqX2JUIhECa18RCN6kTBBY=
+github.com/mysteriumnetwork/go-dvpn-web/v3 v3.1.1 h1:JevI8+9bR5fm770bZmGoa8+eyw+AzUTa1dozmji1BwM=
+github.com/mysteriumnetwork/go-dvpn-web/v3 v3.1.1/go.mod h1:wQbtTbbo5Lby6PSoe1u7oiqX2JUIhECa18RCN6kTBBY=
 github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/XZPDpElfzFjxM=
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-rest v0.3.1 h1:zWyeW08ZVm9pWfjBrnq6SYZxoqc8kqzkr3eAbgZqr50=
