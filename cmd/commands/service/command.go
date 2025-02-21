@@ -33,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/control"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
@@ -80,7 +81,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				errorChannel: quit,
 			}
 			go func() {
-				quit <- cmdService.Run(ctx)
+				cp := control.NewControlPlane(di.BrokerConnection, cmdService.tequilapi)
+				quit <- cmdService.Run(ctx, cp)
+				cp.Stop()
 			}()
 
 			return describeQuit(<-quit)
@@ -114,7 +117,7 @@ type serviceCommand struct {
 }
 
 // Run runs a command
-func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
+func (sc *serviceCommand) Run(ctx *cli.Context, cp *control.ControlPlane) (err error) {
 	serviceTypes := make([]string, 0)
 
 	activeServices := config.Current.GetString(config.FlagActiveServices.Name)
@@ -160,6 +163,9 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		go sc.runService(startRequest)
 	}
 
+	if err := cp.Start(providerID); err != nil {
+		return err
+	}
 	return <-sc.errorChannel
 }
 
