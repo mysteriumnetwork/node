@@ -61,18 +61,17 @@ func init() {
 	}
 }
 
-// NewClient returns *s3.Client, configured to work with https://s3.mysterium.network storage
+// NewClient returns *s3.Client, configured to work with s3 storage
 func NewClient() (*Storage, error) {
 	customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
 		return aws.Endpoint{
-			URL:           "https://s3.mysterium.network",
+			URL:           "https://hel1.your-objectstorage.com",
 			SigningRegion: region,
 		}, nil
 	})
 
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
-		config.WithRegion("eu-central-1"),
 		config.WithEndpointResolver(customResolver),
 	)
 

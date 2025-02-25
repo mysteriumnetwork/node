@@ -7,4 +7,4 @@ if ! [ -x "$(command -v aws)" ]; then
     pip install --user awscli
 fi
 
-aws --endpoint-url https://s3.mysterium.network s3 "$@"
+aws --region hel1 --endpoint-url https://hel1.your-objectstorage.com s3 "$@"
