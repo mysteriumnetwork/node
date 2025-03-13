@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/terms/terms-go"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -39,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/terms/terms-go"
 )
 
 // NewCommand function creates service command
@@ -54,6 +53,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			config.ParseFlagsServiceStart(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
+			config.ParseFlagsServiceQuic(ctx)
 			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
 
@@ -96,6 +96,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	config.RegisterFlagsServiceStart(&command.Flags)
 	config.RegisterFlagsServiceOpenvpn(&command.Flags)
 	config.RegisterFlagsServiceWireguard(&command.Flags)
+	config.RegisterFlagsServiceQuic(&command.Flags)
 	config.RegisterFlagsServiceNoop(&command.Flags)
 
 	return command
