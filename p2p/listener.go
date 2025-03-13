@@ -169,11 +169,13 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			conns, err := config.start(ctx, config.peerIP(), config.peerPorts, config.localPorts)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
+				cancel()
 				return
 			}
 
 			if len(conns) != requiredConnCount {
 				log.Err(err).Msg("Could not get required number of connections")
+				cancel()
 				return
 			}
 
@@ -188,11 +190,13 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 				conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
 				if err != nil {
 					log.Err(err).Msg("Could not create UDP conn for p2p channel")
+					cancel()
 					return
 				}
 				conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
 				if err != nil {
 					log.Err(err).Msg("Could not create UDP conn for service")
+					cancel()
 					return
 				}
 			} else {
@@ -202,12 +206,14 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 				conn1, err = client.DialCommunication(ctx)
 				if err != nil {
 					log.Err(err).Msg("Could not dial myst-communication")
+					cancel()
 					return
 				}
 
 				conn2, err = client.DialTransport(ctx)
 				if err != nil {
 					log.Err(err).Msg("Could not dial myst-transport")
+					cancel()
 					return
 				}
 			}
@@ -226,6 +232,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 
 		if err != nil {
 			log.Err(err).Msg("Could not create channel")
+			cancel()
 			return
 		}
 		channel.setTracer(config.tracer)
