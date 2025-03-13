@@ -21,8 +21,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/go-rest/apierror"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
+	"github.com/mysteriumnetwork/node/services/quic"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -300,6 +301,7 @@ func (pe *proposalsEndpoint) CurrentPrice(c *gin.Context) {
 	allowedServiceTypes := map[string]struct{}{
 		wireguard.ServiceType:    {},
 		scraping.ServiceType:     {},
+		quic.ServiceType:         {},
 		datatransfer.ServiceType: {},
 		dvpn.ServiceType:         {},
 	}
@@ -358,7 +360,7 @@ func (pe *proposalsEndpoint) CurrentPrices(c *gin.Context) {
 		return
 	}
 
-	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}
+	serviceTypes := []string{wireguard.ServiceType, scraping.ServiceType, quic.ServiceType, datatransfer.ServiceType, dvpn.ServiceType}
 	result := make([]contract.CurrentPriceResponse, len(serviceTypes))
 
 	for i, serviceType := range serviceTypes {

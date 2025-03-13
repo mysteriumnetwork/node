@@ -26,8 +26,9 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mysteriumnetwork/go-rest/apierror"
+	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
@@ -35,7 +36,6 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/rs/zerolog/log"
 )
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
@@ -196,6 +196,21 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		c.Error(apierror.Internal("Cannot start service: "+err.Error(), contract.ErrCodeServiceStart))
 		return
 	}
+	if sr.Type == "scraping" {
+		_, err := se.serviceManager.Start(
+			identity.FromAddress(sr.ProviderID),
+			"quic_scraping",
+			sr.AccessPolicies.IDs,
+			sr.Options,
+		)
+		if err == service.ErrorLocation {
+			c.Error(apierror.Unprocessable("Cannot detect location", contract.ErrCodeServiceLocation))
+			return
+		} else if err != nil {
+			c.Error(apierror.Internal("Cannot start service: "+err.Error(), contract.ErrCodeServiceStart))
+			return
+		}
+	}
 
 	instance := se.serviceManager.Service(id)
 
@@ -243,6 +258,17 @@ func (se *ServiceEndpoint) ServiceStop(c *gin.Context) {
 		return
 	}
 
+	if instance.Type == "scraping" {
+		for _, instance := range se.serviceManager.List(false) {
+			if instance.Type == "quic_scraping" {
+				if err := se.serviceManager.Stop(instance.ID); err != nil {
+					c.Error(apierror.Internal("Cannot stop service: "+err.Error(), contract.ErrCodeServiceStop))
+					return
+				}
+			}
+		}
+	}
+
 	if ignoreUserConfig, _ := strconv.ParseBool(c.Query("ignore_user_config")); !ignoreUserConfig {
 		se.updateActiveServicesInUserConfig()
 	}
@@ -256,9 +282,12 @@ func (se *ServiceEndpoint) updateActiveServicesInUserConfig() {
 	defer se.activeServicesMu.Unlock()
 
 	runningInstances := se.serviceManager.List(false)
-	activeServices := make([]string, len(runningInstances))
-	for i, service := range runningInstances {
-		activeServices[i] = service.Type
+	activeServices := make([]string, 0)
+
+	for _, service := range runningInstances {
+		if service.Type != "quic_scraping" {
+			activeServices = append(activeServices, service.Type)
+		}
 	}
 	config := map[string]interface{}{
 		config.FlagActiveServices.Name: strings.Join(activeServices, ","),
@@ -352,7 +381,6 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func (se *ServiceEndpoint) toServiceInfoResponse(id service.ID, instance *service.Instance) (contract.ServiceInfoDTO, error) {
-
 	// Warning.
 	// Use only safely obtained copy of instance.Proposal field, otherwise concurrent
 	// access to that field from Instance.proposalWithCurrentLocation
