@@ -30,6 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
+	node_config "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -39,6 +40,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/router"
+	"github.com/mysteriumnetwork/node/services/quic/connection/server"
 	"github.com/mysteriumnetwork/node/trace"
 )
 
@@ -73,6 +75,8 @@ type dialer struct {
 	verifierFactory identity.VerifierFactory
 	ipResolver      ip.Resolver
 	eventBus        eventbus.EventBus
+
+	quicServer *server.QuicServer
 }
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
@@ -109,22 +113,39 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("peer using compatibility version lower than 2: %d", config.compatibility)
 	}
 
-	if serviceType != "openvpn" { // OpenVPN does this automatically, we don't need to perform it manually.
+	if serviceType != "openvpn" && serviceType != "quic_scraping" { // OpenVPN does this automatically, we don't need to perform it manually, QUIC don't need this.
 		if err := router.ExcludeIP(net.ParseIP(config.peerIP())); err != nil {
 			return nil, fmt.Errorf("failed to exclude peer IP from default routes: %w", err)
 		}
 	}
 
-	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
-		return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
-	}
+	if serviceType == "quic_scraping" {
+		m.quicServer, err = server.NewQuicServer()
+		if err != nil {
+			return nil, fmt.Errorf("could not create QUIC server: %w", err)
+		}
 
-	config.publicIP, config.localPorts, err = m.prepareLocalPorts(config)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare ports: %w", err)
-	}
+		go m.quicServer.Start(ctx)
 
-	config.publicPorts = stunPorts(consumerID, m.eventBus, config.localPorts...)
+		port, err := m.quicServer.WaitForListenPort(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not wait for listen addr: %w", err)
+		}
+
+		config.peerURL = net.JoinHostPort(node_config.GetString(node_config.FlagQUICDomain), port)
+		log.Info().Msgf("Consumer expecting provider at %s", config.peerURL)
+	} else {
+		if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
+			return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
+		}
+
+		config.publicIP, config.localPorts, err = m.prepareLocalPorts(config)
+		if err != nil {
+			return nil, fmt.Errorf("could not prepare ports: %w", err)
+		}
+
+		config.publicPorts = stunPorts(consumerID, m.eventBus, config.localPorts...)
+	}
 
 	// Finally send consumer encrypted and signed connect config in ack message.
 	err = m.ackConfigExchange(config, ctx, brokerConn, providerID, serviceType, consumerID)
@@ -133,7 +154,9 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 	}
 
 	dial := m.dialPinger
-	if len(config.peerPorts) == requiredConnCount {
+	if len(config.peerURL) > 0 {
+		dial = m.dialQUIC
+	} else if len(config.peerPorts) == requiredConnCount {
 		dial = m.dialDirect
 	}
 	conn1, conn2, err := dial(ctx, providerID, config)
@@ -147,20 +170,39 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 	case <-peerReady:
 		log.Debug().Msg("Received handlers ready message from provider")
 	case <-ctx.Done():
-		return nil, errors.New("timeout while performing configuration exchange")
+		return nil, fmt.Errorf("timeout while performing configuration exchange: %w", ctx.Err())
 	}
 
-	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
-	if err != nil {
-		return nil, fmt.Errorf("could not create p2p channel during dial: %w", err)
+	var channel communicationChannel
+	if serviceType == "quic_scraping" {
+		channel = newChannelQuic(conn1, config.peerID, config.compatibility)
+	} else {
+		channel, err = newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
+		if err != nil {
+			return nil, fmt.Errorf("could not create p2p channel during dial: %w", err)
+		}
 	}
+
 	channel.setTracer(tracer)
 	channel.setServiceConn(conn2)
 	channel.setPeerID(providerID)
-	channel.launchReadSendLoops()
+
+	if err := channel.launchReadSendLoops(); err != nil {
+		return nil, fmt.Errorf("could not launch read send loops: %w", err)
+	}
+
 	config.tracer.EndStage(traceAck)
 
 	return channel, nil
+}
+
+type communicationChannel interface {
+	Channel
+	setTracer(tracer *trace.Tracer)
+	setServiceConn(conn ServiceConn)
+	setPeerID(id identity.Identity)
+	setUpnpPortsRelease(release func())
+	launchReadSendLoops() error
 }
 
 func (m *dialer) connect(contactDef ContactDefinition, tracer *trace.Tracer) (conn nats.Connection, err error) {
@@ -231,6 +273,7 @@ func (m *dialer) startConfigExchange(config *p2pConnectConfig, ctx context.Conte
 	config.peerPubKey = peerPubKey
 	config.peerPublicIP = peerConnConfig.PublicIP
 	config.peerPorts = int32ToIntSlice(peerConnConfig.Ports)
+	config.peerURL = peerConnConfig.Url
 	return config, nil
 }
 
@@ -241,6 +284,7 @@ func (m *dialer) ackConfigExchange(config *p2pConnectConfig, ctx context.Context
 	connConfig := &pb.P2PConnectConfig{
 		PublicIP:      config.publicIP,
 		Ports:         intToInt32Slice(config.publicPorts),
+		Url:           config.peerURL,
 		Compatibility: compat.Compatibility,
 	}
 	connConfigCiphertext, err := encryptConnConfigMsg(connConfig, config.privateKey, config.peerPubKey)
@@ -262,7 +306,6 @@ func (m *dialer) ackConfigExchange(config *p2pConnectConfig, ctx context.Context
 	// This is why we use broker Request method to be sure that Provider processed our given configuration.
 	// To improve speed here investigate options to reduce broker communication round trip.
 	_, err = m.sendSignedMsg(ctx, configExchangeACKSubject(providerID, serviceType), packedMsg, brokerConn)
-
 	if err != nil {
 		return fmt.Errorf("could not send signed msg: %v", err)
 	}
@@ -288,7 +331,7 @@ func (m *dialer) prepareLocalPorts(config *p2pConnectConfig) (string, []int, err
 	return publicIP, localPorts, nil
 }
 
-func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (*net.UDPConn, *net.UDPConn, error) {
+func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
 	trace := config.tracer.StartStage("Consumer P2P dial (upnp)")
 	defer config.tracer.EndStage(trace)
 
@@ -315,7 +358,11 @@ func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, c
 	return conn1, conn2, err
 }
 
-func (m *dialer) dialPinger(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (*net.UDPConn, *net.UDPConn, error) {
+func (m *dialer) dialQUIC(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
+	return m.quicServer.CommunicationConn(ctx), m.quicServer.TransportConn(ctx), nil
+}
+
+func (m *dialer) dialPinger(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
 	trace := config.tracer.StartStage("Consumer P2P dial (pinger)")
 	defer config.tracer.EndStage(trace)
 
