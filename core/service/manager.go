@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
+	"github.com/mysteriumnetwork/node/services/quic"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -248,6 +249,7 @@ func (manager *Manager) List(includeAll bool) []*Instance {
 	added := map[string]bool{
 		wireguard.ServiceType:    false,
 		scraping.ServiceType:     false,
+		quic.ServiceType:         false,
 		datatransfer.ServiceType: false,
 		dvpn.ServiceType:         false,
 	}

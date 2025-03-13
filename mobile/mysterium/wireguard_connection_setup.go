@@ -36,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
@@ -179,7 +180,7 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 }
 
 type wireguardDevice interface {
-	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn, dns connection.DNSOption) error
+	Start(privateKey string, config wireguard.ServiceConfig, channelConn p2p.ServiceConn, dns connection.DNSOption) error
 	Stop()
 	Stats() (wgcfg.Stats, error)
 }
@@ -194,7 +195,7 @@ type wireguardDeviceImpl struct {
 	device *device.Device
 }
 
-func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn, dns connection.DNSOption) error {
+func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, channelConn p2p.ServiceConn, dns connection.DNSOption) error {
 	log.Debug().Msg("Creating tunnel device")
 	tunDevice, err := w.newTunnDevice(w.tunnelSetup, config, dns)
 	if err != nil {

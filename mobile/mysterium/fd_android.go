@@ -25,6 +25,8 @@ import (
 
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
+
+	"github.com/mysteriumnetwork/node/p2p"
 )
 
 func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
@@ -36,7 +38,12 @@ func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
 	return bind.PeekLookAtSocketFd4()
 }
 
-func peekLookAtSocketFd4From(conn *net.UDPConn) (fd int, err error) {
+func peekLookAtSocketFd4From(c p2p.ServiceConn) (fd int, err error) {
+	conn, ok := c.(*net.UDPConn)
+	if !ok {
+		return 0, fmt.Errorf("failed to peek socket fd")
+	}
+
 	sysconn, err := conn.SyscallConn()
 	if err != nil {
 		return

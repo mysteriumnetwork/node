@@ -23,9 +23,11 @@ import (
 	"net"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/p2p"
 )
 
-func proxyOpenVPN(conn *net.UDPConn, serverPort int) error {
+func proxyOpenVPN(conn p2p.ServiceConn, serverPort int) error {
 	localPort, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", serverPort))
 	if err != nil {
 		return err
@@ -42,14 +44,26 @@ func proxyOpenVPN(conn *net.UDPConn, serverPort int) error {
 	return nil
 }
 
-func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
+func copyStreams(dstConn p2p.ServiceConn, srcConn p2p.ServiceConn) {
 	const bufferLen = 2048 * 1024
 	buf := make([]byte, bufferLen)
 
 	defer dstConn.Close()
 	defer srcConn.Close()
 
-	_, err := io.CopyBuffer(dstConn, srcConn, buf)
+	dc, ok := dstConn.(*net.UDPConn)
+	if !ok {
+		log.Error().Msg("Failed to cast dstConn to *net.UDPConn")
+		return
+	}
+
+	sc, ok := srcConn.(*net.UDPConn)
+	if !ok {
+		log.Error().Msg("Failed to cast srcConn to *net.UDPConn")
+		return
+	}
+
+	_, err := io.CopyBuffer(dc, sc, buf)
 	if err != nil {
 		log.Error().Msg("Failed to write/read a stream to/from service natProxy")
 	}
