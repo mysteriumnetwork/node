@@ -22,17 +22,15 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/policy/localcopy"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/core/policy/localcopy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -97,9 +95,9 @@ func (m *mockP2PChannel) Tracer() *trace.Tracer {
 	return m.tracer
 }
 
-func (m *mockP2PChannel) ServiceConn() *net.UDPConn { return nil }
+func (m *mockP2PChannel) ServiceConn() p2p.ServiceConn { return nil }
 
-func (m *mockP2PChannel) Conn() *net.UDPConn { return nil }
+func (m *mockP2PChannel) Conn() p2p.ServiceConn { return nil }
 
 func (m *mockP2PChannel) Close() error { return nil }
 
