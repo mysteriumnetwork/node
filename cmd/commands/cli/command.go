@@ -688,6 +688,7 @@ func parseStartFlags(serviceType string, args ...string) (services.StartOptions,
 	config.RegisterFlagsServiceStart(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
 	config.RegisterFlagsServiceWireguard(&flags)
+	config.RegisterFlagsServiceQuic(&flags)
 	config.RegisterFlagsServiceNoop(&flags)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
@@ -702,6 +703,7 @@ func parseStartFlags(serviceType string, args ...string) (services.StartOptions,
 	config.ParseFlagsServiceStart(ctx)
 	config.ParseFlagsServiceOpenvpn(ctx)
 	config.ParseFlagsServiceWireguard(ctx)
+	config.ParseFlagsServiceQuic(ctx)
 	config.ParseFlagsServiceNoop(ctx)
 
 	return services.GetStartOptions(serviceType)
