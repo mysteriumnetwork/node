@@ -60,19 +60,19 @@ const (
 
 func newCompatibleWireReader(c io.Reader, peerCompatibility int) wireReader {
 	if compat.FeaturePBP2P(peerCompatibility) {
-		log.Debug().Msg("Using protobufWireReader")
+		log.Trace().Msg("Using protobufWireReader")
 		return newProtobufWireReader(c)
 	}
-	log.Debug().Msg("Using textWireReader")
+	log.Trace().Msg("Using textWireReader")
 	return newTextWireReader(c)
 }
 
 func newCompatibleWireWriter(c io.Writer, peerCompatibility int) wireWriter {
 	if compat.FeaturePBP2P(peerCompatibility) {
-		log.Debug().Msg("Using protobufWireWriter")
+		log.Trace().Msg("Using protobufWireWriter")
 		return newProtobufWireWriter(c)
 	}
-	log.Debug().Msg("Using textWireWriter")
+	log.Trace().Msg("Using textWireWriter")
 	return newTextWireWriter(c)
 }
 

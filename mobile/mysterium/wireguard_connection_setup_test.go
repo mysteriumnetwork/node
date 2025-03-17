@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/p2p"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
@@ -129,7 +130,7 @@ func newServiceConfig() wg.ServiceConfig {
 
 type mockWireGuardDevice struct{}
 
-func (m mockWireGuardDevice) Start(_ string, _ wg.ServiceConfig, _ *net.UDPConn, _ connection.DNSOption) error {
+func (m mockWireGuardDevice) Start(_ string, _ wg.ServiceConfig, _ p2p.ServiceConn, _ connection.DNSOption) error {
 	return nil
 }
 

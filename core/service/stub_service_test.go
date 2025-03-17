@@ -19,11 +19,11 @@ package service
 
 import (
 	"encoding/json"
-	"net"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/p2p"
 )
 
 var _ Service = &serviceFake{}
@@ -52,7 +52,7 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*ConfigParams, error) {
+func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ p2p.ServiceConn) (*ConfigParams, error) {
 	return &ConfigParams{}, nil
 }
 

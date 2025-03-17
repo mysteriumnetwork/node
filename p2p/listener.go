@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p/compat"
 	"github.com/mysteriumnetwork/node/p2p/nat"
 	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/services/quic/service/client"
 	"github.com/mysteriumnetwork/node/trace"
 )
 
@@ -80,6 +81,7 @@ type listener struct {
 type p2pConnectConfig struct {
 	publicIP         string
 	peerPublicIP     string
+	peerURL          string
 	compatibility    int
 	peerPorts        []int
 	localPorts       []int
@@ -117,7 +119,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	}
 
 	configSub, err := m.brokerConn.Subscribe(configSignedSubject, func(msg *nats_lib.Msg) {
-		if err := m.providerStartConfigExchange(providerID, msg); err != nil {
+		if err := m.providerStartConfigExchange(providerID, serviceType, msg); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
@@ -157,19 +159,23 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			config.tracer.EndStage(trace)
 		}(msg.Reply)
 
-		var conn1, conn2 *net.UDPConn
+		ctx, cancel := context.WithCancel(context.Background())
+
+		var conn1, conn2 ServiceConn
 		if config.start != nil {
 			traceDial := config.tracer.StartStage("Provider P2P dial (preparation)")
 			log.Debug().Msgf("Pinging consumer using ports %v:%v initial ttl: %v", config.localPorts, config.peerPorts, 1)
 
-			conns, err := config.start(context.Background(), config.peerIP(), config.peerPorts, config.localPorts)
+			conns, err := config.start(ctx, config.peerIP(), config.peerPorts, config.localPorts)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
+				cancel()
 				return
 			}
 
 			if len(conns) != requiredConnCount {
 				log.Err(err).Msg("Could not get required number of connections")
+				cancel()
 				return
 			}
 
@@ -179,29 +185,65 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		} else {
 			traceDial := config.tracer.StartStage("Provider P2P dial (direct)")
 			log.Debug().Msg("Skipping consumer ping")
-			conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
-			if err != nil {
-				log.Err(err).Msg("Could not create UDP conn for p2p channel")
-				return
+
+			if config.peerURL == "" {
+				conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
+				if err != nil {
+					log.Err(err).Msg("Could not create UDP conn for p2p channel")
+					cancel()
+					return
+				}
+				conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
+				if err != nil {
+					log.Err(err).Msg("Could not create UDP conn for service")
+					cancel()
+					return
+				}
+			} else {
+				log.Info().Str("url", config.peerURL).Msg("Consumer provided URL, skipping p2p connection establishment")
+
+				client := client.NewClient(config.peerURL)
+				conn1, err = client.DialCommunication(ctx)
+				if err != nil {
+					log.Err(err).Msg("Could not dial myst-communication")
+					cancel()
+					return
+				}
+
+				conn2, err = client.DialTransport(ctx)
+				if err != nil {
+					log.Err(err).Msg("Could not dial myst-transport")
+					cancel()
+					return
+				}
 			}
-			conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
-			if err != nil {
-				log.Err(err).Msg("Could not create UDP conn for service")
-				return
-			}
+
 			config.tracer.EndStage(traceDial)
 		}
 
 		traceAck := config.tracer.StartStage("Provider P2P dial ack")
-		channel, err := newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
+
+		var channel communicationChannel
+		if serviceType == "quic_scraping" {
+			channel = newChannelQuic(conn1, config.peerID, config.compatibility)
+		} else {
+			channel, err = newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
+		}
+
 		if err != nil {
 			log.Err(err).Msg("Could not create channel")
+			cancel()
 			return
 		}
 		channel.setTracer(config.tracer)
 		channel.setServiceConn(conn2)
 		channel.setPeerID(config.peerID)
-		channel.setUpnpPortsRelease(config.upnpPortsRelease)
+		channel.setUpnpPortsRelease(func() {
+			cancel()
+			if config.upnpPortsRelease != nil {
+				config.upnpPortsRelease()
+			}
+		})
 
 		channelHandlers(channel)
 
@@ -219,6 +261,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		if err := configSub.Unsubscribe(); err != nil {
 			log.Err(err).Msg("Failed to unsubscribe from config exchange topic")
 		}
+
 		return func() {}, fmt.Errorf("could not get subscribe to config exchange acknowledge topic: %w", err)
 	}
 
@@ -232,7 +275,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	}, nil
 }
 
-func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg *nats_lib.Msg) error {
+func (m *listener) providerStartConfigExchange(providerID identity.Identity, serviceType string, msg *nats_lib.Msg) error {
 	tracer := trace.NewTracer("Provider whole Connect")
 
 	trace := tracer.StartStage("Provider P2P exchange")
@@ -258,32 +301,39 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	}
 	log.Debug().Msgf("Received consumer public key %s", peerPubKey.Hex())
 
-	publicIP, localPorts, portsRelease, start, err := m.prepareLocalPorts(providerID.Address, tracer)
-	if err != nil {
-		return fmt.Errorf("could not prepare ports: %w", err)
-	}
-
 	p2pConnConfig := p2pConnectConfig{
-		publicIP:         publicIP,
-		localPorts:       localPorts,
-		publicPorts:      stunPorts(providerID, m.eventBus, localPorts...),
-		publicKey:        pubKey,
-		privateKey:       privateKey,
-		peerPubKey:       peerPubKey,
-		tracer:           tracer,
-		upnpPortsRelease: portsRelease,
-		peerPublicIP:     "",
-		peerPorts:        nil,
-		start:            start,
-		peerID:           peerID,
+		publicKey:    pubKey,
+		privateKey:   privateKey,
+		peerPubKey:   peerPubKey,
+		tracer:       tracer,
+		peerPublicIP: "",
+		peerPorts:    nil,
+		peerID:       peerID,
 	}
-	m.setPendingConfig(p2pConnConfig)
 
 	config := pb.P2PConnectConfig{
-		PublicIP:      publicIP,
 		Ports:         intToInt32Slice(p2pConnConfig.publicPorts),
 		Compatibility: compat.Compatibility,
 	}
+
+	if serviceType != "quic_scraping" {
+		publicIP, localPorts, portsRelease, start, err := m.prepareLocalPorts(providerID.Address, tracer)
+		if err != nil {
+			return fmt.Errorf("could not prepare ports: %w", err)
+		}
+
+		p2pConnConfig.publicIP = publicIP
+		p2pConnConfig.localPorts = localPorts
+		p2pConnConfig.publicPorts = stunPorts(providerID, m.eventBus, localPorts...)
+		p2pConnConfig.upnpPortsRelease = portsRelease
+		p2pConnConfig.start = start
+
+		config.PublicIP = publicIP
+		config.Ports = intToInt32Slice(p2pConnConfig.publicPorts)
+	}
+
+	m.setPendingConfig(p2pConnConfig)
+
 	configCiphertext, err := encryptConnConfigMsg(&config, privateKey, peerPubKey)
 	if err != nil {
 		return fmt.Errorf("could not encrypt config msg: %w", err)
@@ -367,9 +417,10 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	}
 
 	return &p2pConnectConfig{
-		peerPublicIP:     peerConfig.PublicIP,
-		peerPorts:        int32ToIntSlice(peerConfig.Ports),
-		compatibility:    int(peerConfig.Compatibility),
+		peerPublicIP:     peerConfig.GetPublicIP(),
+		peerPorts:        int32ToIntSlice(peerConfig.GetPorts()),
+		peerURL:          peerConfig.GetUrl(),
+		compatibility:    int(peerConfig.GetCompatibility()),
 		localPorts:       config.localPorts,
 		publicKey:        config.publicKey,
 		privateKey:       config.privateKey,

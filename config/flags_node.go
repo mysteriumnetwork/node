@@ -318,6 +318,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsUI(flags)
 	RegisterFlagsBlockchainNetwork(flags)
 	RegisterFlagsSSE(flags)
+	RegisterFlagsServiceQuic(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -379,7 +380,8 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsChains(ctx)
 	ParseFlagsUI(ctx)
 	ParseFlagsSSE(ctx)
-	//it is important to have this one at the end so it overwrites defaults correctly
+	// it is important to have this one at the end so it overwrites defaults correctly
+	ParseFlagsServiceQuic(ctx)
 	ParseFlagsBlockchainNetwork(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
@@ -437,7 +439,6 @@ func ValidateAddressFlags(flags ...cli.StringFlag) {
 
 // ValidateWireguardMTUFlag validates given mtu flag
 func ValidateWireguardMTUFlag() error {
-
 	v := Current.GetInt(FlagWireguardMTU.Name)
 	if v == 0 {
 		return nil

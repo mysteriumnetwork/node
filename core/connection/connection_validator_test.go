@@ -21,9 +21,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestValidator_Validate(t *testing.T) {

@@ -1,7 +1,5 @@
-//go:build !android
-
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2025 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package mysterium
+package quic
 
-import (
-	"errors"
+import "github.com/mysteriumnetwork/node/market"
 
-	"golang.zx2c4.com/wireguard/device"
-
-	"github.com/mysteriumnetwork/node/p2p"
-)
-
-func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
-	return 0, errors.New("not implemented")
-}
-
-func peekLookAtSocketFd4From(conn p2p.ServiceConn) (fd int, err error) {
-	return 0, errors.New("not implemented")
+// Bootstrap is called on program initialization time and registers various deserializers related to quic service
+func Bootstrap() {
+	market.RegisterServiceType(ServiceType)
 }

@@ -631,7 +631,7 @@ type mockP2PChannel struct {
 	lock   sync.Mutex
 }
 
-func (m *mockP2PChannel) Conn() *net.UDPConn {
+func (m *mockP2PChannel) Conn() p2p.ServiceConn {
 	return &net.UDPConn{}
 }
 
@@ -669,7 +669,7 @@ func (m *mockP2PChannel) Tracer() *trace.Tracer {
 	return nil
 }
 
-func (m *mockP2PChannel) ServiceConn() *net.UDPConn {
+func (m *mockP2PChannel) ServiceConn() p2p.ServiceConn {
 	raddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12345")
 	conn, _ := net.DialUDP("udp", nil, raddr)
 	return conn

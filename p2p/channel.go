@@ -74,10 +74,10 @@ type Channel interface {
 	Tracer() *trace.Tracer
 
 	// ServiceConn returns UDP connection which can be used for services.
-	ServiceConn() *net.UDPConn
+	ServiceConn() ServiceConn
 
 	// Conn returns underlying channel's UDP connection.
-	Conn() *net.UDPConn
+	Conn() ServiceConn
 
 	// Close closes p2p communication channel.
 	Close() error
@@ -128,13 +128,13 @@ type transport struct {
 
 	// remoteConn is initial conn which should be created from NAT hole punching or manually. It contains
 	// initial local and remote peer addresses.
-	remoteConn *net.UDPConn
-	localConn  *net.UDPConn
+	remoteConn ServiceConn
+	localConn  ServiceConn
 
 	// proxyConn is used for KCP session as a remote. Since KCP doesn't expose it's data read loop
 	// this is needed to detect remote peer address changes as we can simply use conn.ReadFromUDP and
 	// get updated peer address.
-	proxyConn *net.UDPConn
+	proxyConn ServiceConn
 }
 
 // channel implements Channel interface.
@@ -150,7 +150,7 @@ type channel struct {
 	// serviceConn is separate connection which is created outside of p2p channel when
 	// performing initial NAT hole punching or manual conn. It is here just because it's more easy
 	// to pass it to services as p2p channel will be available anyway.
-	serviceConn *net.UDPConn
+	serviceConn ServiceConn
 
 	// peer identity authenticated by its signature in initial exchange
 	peerID identity.Identity
@@ -185,7 +185,7 @@ type channel struct {
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
 // and starts listening for connections.
-func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey, peerCompatibility int) (*channel, error) {
+func newChannel(remoteConn ServiceConn, privateKey PrivateKey, peerPubKey PublicKey, peerCompatibility int) (*channel, error) {
 	peerAddr := remoteConn.RemoteAddr().(*net.UDPAddr)
 	localAddr := remoteConn.LocalAddr().(*net.UDPAddr)
 	remoteConn, err := reopenConn(remoteConn)
@@ -244,19 +244,31 @@ func (c *channel) ID() string {
 	return fmt.Sprintf("%p", c)
 }
 
-func (c *channel) launchReadSendLoops() {
+func (c *channel) launchReadSendLoops() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	go c.remoteReadLoop(c.tr)
-	go c.remoteSendLoop(c.tr)
+	rc, ok := c.tr.remoteConn.(*net.UDPConn)
+	if !ok {
+		return errors.New("could not cast remote conn to UDPConn")
+	}
+
+	pc, ok := c.tr.proxyConn.(*net.UDPConn)
+	if !ok {
+		return errors.New("could not cast proxy conn to UDPConn")
+	}
+
+	go c.remoteReadLoop(rc, pc)
+	go c.remoteSendLoop(rc, pc)
 	go c.localReadLoop(c.tr)
 	go c.localSendLoop(c.tr)
+
+	return nil
 }
 
 // remoteReadLoop reads from remote conn and writes to local KCP UDP conn.
 // If remote peer addr changes it will be updated and next send will use new addr.
-func (c *channel) remoteReadLoop(tr *transport) {
+func (c *channel) remoteReadLoop(rc, pc *net.UDPConn) {
 	buf := make([]byte, mtuLimit)
 	latestPeerAddr := c.peer.addr()
 
@@ -267,7 +279,7 @@ func (c *channel) remoteReadLoop(tr *transport) {
 		default:
 		}
 
-		n, addr, err := tr.remoteConn.ReadFrom(buf)
+		n, addr, err := rc.ReadFrom(buf)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Read from remote conn failed")
@@ -285,7 +297,7 @@ func (c *channel) remoteReadLoop(tr *transport) {
 			}
 		}
 
-		_, err = tr.proxyConn.WriteToUDP(buf[:n], c.localSessionAddr)
+		_, err = pc.WriteToUDP(buf[:n], c.localSessionAddr)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Write to local udp session failed")
@@ -298,7 +310,7 @@ func (c *channel) remoteReadLoop(tr *transport) {
 
 // remoteSendLoop reads from proxy conn and writes to remote conn.
 // Packets to proxy conn are written by local KCP UDP session from localSendLoop.
-func (c *channel) remoteSendLoop(tr *transport) {
+func (c *channel) remoteSendLoop(rc, pc *net.UDPConn) {
 	buf := make([]byte, mtuLimit)
 
 	for {
@@ -308,7 +320,7 @@ func (c *channel) remoteSendLoop(tr *transport) {
 		default:
 		}
 
-		n, err := tr.proxyConn.Read(buf)
+		n, err := pc.Read(buf)
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msg("Read from proxy conn failed")
@@ -317,7 +329,7 @@ func (c *channel) remoteSendLoop(tr *transport) {
 			return
 		}
 
-		_, err = tr.remoteConn.WriteToUDP(buf[:n], c.peer.addr())
+		_, err = rc.WriteToUDP(buf[:n], c.peer.addr())
 		if err != nil {
 			if !errNetClose(err) {
 				log.Error().Err(err).Msgf("Write to remote peer conn failed")
@@ -444,7 +456,7 @@ func (c *channel) Tracer() *trace.Tracer {
 }
 
 // ServiceConn returns UDP connection which can be used for services.
-func (c *channel) ServiceConn() *net.UDPConn {
+func (c *channel) ServiceConn() ServiceConn {
 	return c.serviceConn
 }
 
@@ -496,7 +508,7 @@ func (c *channel) Close() error {
 }
 
 // Conn returns underlying channel's UDP connection.
-func (c *channel) Conn() *net.UDPConn {
+func (c *channel) Conn() ServiceConn {
 	return c.tr.remoteConn
 }
 
@@ -567,7 +579,7 @@ func (c *channel) setTracer(tracer *trace.Tracer) {
 	c.tracer = tracer
 }
 
-func (c *channel) setServiceConn(conn *net.UDPConn) {
+func (c *channel) setServiceConn(conn ServiceConn) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -589,7 +601,7 @@ func (c *channel) setUpnpPortsRelease(release func()) {
 	c.upnpPortsRelease = release
 }
 
-func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
+func reopenConn(conn ServiceConn) (ServiceConn, error) {
 	// conn first must be closed to prevent use of WriteTo with pre-connected connection error.
 	conn.Close()
 	conn, err := net.ListenUDP("udp4", conn.LocalAddr().(*net.UDPAddr))
@@ -597,7 +609,12 @@ func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
 		return nil, fmt.Errorf("could not listen UDP: %w", err)
 	}
 
-	if err := router.ProtectUDPConn(conn); err != nil {
+	c, ok := conn.(*net.UDPConn)
+	if !ok {
+		return nil, fmt.Errorf("could not cast conn to UDPConn")
+	}
+
+	if err := router.ProtectUDPConn(c); err != nil {
 		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
 	}
 

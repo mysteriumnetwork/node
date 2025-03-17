@@ -19,12 +19,13 @@ package noop
 
 import (
 	"encoding/json"
-	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/p2p"
 )
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times
@@ -41,7 +42,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the session configuration
-func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*service.ConfigParams, error) {
+func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ p2p.ServiceConn) (*service.ConfigParams, error) {
 	return &service.ConfigParams{}, nil
 }
 

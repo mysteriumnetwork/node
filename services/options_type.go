@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/quic"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
@@ -39,6 +40,7 @@ var JSONParsersByType = map[string]ServiceOptionsParser{
 	openvpn.ServiceType:      openvpn_service.ParseJSONOptions,
 	wireguard.ServiceType:    wireguard_service.ParseJSONOptions,
 	scraping.ServiceType:     wireguard_service.ParseJSONOptions,
+	quic.ServiceType:         wireguard_service.ParseJSONOptions,
 	datatransfer.ServiceType: wireguard_service.ParseJSONOptions,
 	dvpn.ServiceType:         wireguard_service.ParseJSONOptions,
 }
@@ -53,6 +55,7 @@ func Types() []string {
 		wireguard.ServiceType,
 		noop.ServiceType,
 		scraping.ServiceType,
+		quic.ServiceType,
 		datatransfer.ServiceType,
 		dvpn.ServiceType,
 	}
@@ -68,6 +71,8 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 	case noop.ServiceType:
 		return noop.GetOptions(), nil
 	case scraping.ServiceType:
+		return wireguard_service.GetOptions(), nil
+	case quic.ServiceType:
 		return wireguard_service.GetOptions(), nil
 	case datatransfer.ServiceType:
 		return wireguard_service.GetOptions(), nil

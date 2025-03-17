@@ -18,12 +18,13 @@
 package daemon
 
 import (
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
 )
 
 // NewCommand function creates run command
@@ -40,6 +41,7 @@ func NewCommand() *cli.Command {
 			config.ParseFlagsServiceStart(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
+			config.ParseFlagsServiceQuic(ctx)
 			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
 			if err := config.ValidateWireguardMTUFlag(); err != nil {

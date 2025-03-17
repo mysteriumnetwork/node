@@ -20,8 +20,6 @@ package cmd
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/policy/requested"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -29,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/policy/localcopy"
+	"github.com/mysteriumnetwork/node/core/policy/requested"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/dns"
@@ -40,6 +39,9 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/quic"
+	quic_connection "github.com/mysteriumnetwork/node/services/quic/connection"
+	quic_service "github.com/mysteriumnetwork/node/services/quic/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -81,6 +83,7 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	if !nodeOptions.Mobile {
 		di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	}
+	di.bootstrapServiceQuic()
 	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDVPN(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
@@ -108,6 +111,20 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options, reso
 				di.dnsProxy,
 			)
 			return svc, nil
+		},
+	)
+}
+
+func (di *Dependencies) bootstrapServiceQuic() {
+	di.ServiceRegistry.Register(
+		quic.ServiceType,
+		func(serviceOptions service.Options) (service.Service, error) {
+			loc, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, err
+			}
+
+			return quic_service.NewManager(loc.Country, di.EventBus), nil
 		},
 	)
 }
@@ -353,6 +370,7 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 
 	di.registerWireguardConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerScrapingConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
+	di.registerQuicConnection()
 	di.registerDataTransferConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerDVPNConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 }
@@ -371,6 +389,14 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options, re
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
+}
+
+func (di *Dependencies) registerQuicConnection() {
+	quic.Bootstrap()
+	connFactory := func() (connection.Connection, error) {
+		return quic_connection.NewConnection(quic_connection.Options{})
+	}
+	di.ConnectionRegistry.Register(quic.ServiceType, connFactory)
 }
 
 func (di *Dependencies) registerScrapingConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {

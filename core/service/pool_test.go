@@ -20,15 +20,16 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/stretchr/testify/assert"
+	"github.com/mysteriumnetwork/node/p2p"
 )
 
 type mockService struct {
@@ -56,7 +57,7 @@ func (mr *mockService) Stop() error {
 	return mr.killErr
 }
 
-func (mr *mockService) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*ConfigParams, error) {
+func (mr *mockService) ProvideConfig(_ string, _ json.RawMessage, _ p2p.ServiceConn) (*ConfigParams, error) {
 	return &ConfigParams{}, nil
 }
 

@@ -1,7 +1,5 @@
-//go:build !android
-
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2025 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package mysterium
+package connection
 
 import (
-	"errors"
-
-	"golang.zx2c4.com/wireguard/device"
-
-	"github.com/mysteriumnetwork/node/p2p"
+	"encoding/base64"
+	"net/http"
+	"strings"
 )
 
-func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
-	return 0, errors.New("not implemented")
-}
+func (s *Server) validateCredentials(r *http.Request) bool {
+	proxyAuth := r.Header.Get("Proxy-Authorization")
+	if proxyAuth == "" {
+		return false
+	}
 
-func peekLookAtSocketFd4From(conn p2p.ServiceConn) (fd int, err error) {
-	return 0, errors.New("not implemented")
+	authType, authValue, ok := strings.Cut(proxyAuth, " ")
+	if !ok || authType != "Basic" {
+		return false
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(authValue)
+	if err != nil {
+		return false
+	}
+
+	credentials := strings.SplitN(string(decoded), ":", 2)
+	if len(credentials) != 2 {
+		return false
+	}
+
+	return s.basicUser == credentials[0] && s.basicPassword == credentials[1]
 }

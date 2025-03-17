@@ -18,12 +18,11 @@
 package connection
 
 import (
-	"net"
-
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -45,7 +44,7 @@ type ConnectOptions struct {
 	SessionID       session.ID
 	Params          ConnectParams
 	SessionConfig   []byte
-	ProviderNATConn *net.UDPConn
-	ChannelConn     *net.UDPConn
+	ProviderNATConn p2p.ServiceConn
+	ChannelConn     p2p.ServiceConn
 	HermesID        common.Address
 }

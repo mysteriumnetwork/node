@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
 	"sync"
 	"time"
 
@@ -94,7 +93,7 @@ func DefaultConfig() Config {
 
 // ConfigProvider is able to handle config negotiations
 type ConfigProvider interface {
-	ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*ConfigParams, error)
+	ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn p2p.ServiceConn) (*ConfigParams, error)
 }
 
 // DestroyCallback cleanups session
