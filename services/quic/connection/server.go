@@ -78,18 +78,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
-		return
-	}
-
 	src, _, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to hijack connection")
 		return
 	}
 
+	if _, err := src.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
+		return
+	}
+
 	stream, err := s.transportConn.OpenStream()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to open stream")
 		return
 	}
 
@@ -116,7 +117,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := stream.SetDeadline(time.Time{}); err != nil {
 		log.Error().Err(err).Msg("failed to reset deadline to 0")
-		log.Error().Msgf("failed to reset deadline to 0: %s", err)
 		return
 	}
 

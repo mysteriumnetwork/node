@@ -94,14 +94,15 @@ func (c *connectServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := w.Write(c.connectResponse); err != nil {
-		return
-	}
-
 	src, _, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
+		return
+	}
+
+	if _, err := src.Write(c.connectResponse); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
