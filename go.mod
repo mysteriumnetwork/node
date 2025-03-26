@@ -20,7 +20,7 @@ require (
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-github/v28 v28.1.1
 	github.com/google/go-github/v35 v35.2.0
