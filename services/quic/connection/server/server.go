@@ -75,34 +75,34 @@ func (s *QuicServer) Start(ctx context.Context) error {
 }
 
 // CommunicationConn returns communication connection.
-func (s *QuicServer) CommunicationConn(ctx context.Context) *streams.QuicConnection {
+func (s *QuicServer) CommunicationConn(ctx context.Context) (*streams.QuicConnection, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, fmt.Errorf("context done: %w", ctx.Err())
 		default:
 			if s.communicationConn != nil {
-				return &streams.QuicConnection{Connection: s.communicationConn}
+				return &streams.QuicConnection{Connection: s.communicationConn}, nil
 			}
 
-			log.Info().Msg("Waiting for communication connection")
+			log.Debug().Msg("Waiting for communication connection")
 			time.Sleep(200 * time.Millisecond)
 		}
 	}
 }
 
 // TransportConn returns transport connection.
-func (s *QuicServer) TransportConn(ctx context.Context) *streams.QuicConnection {
+func (s *QuicServer) TransportConn(ctx context.Context) (*streams.QuicConnection, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, fmt.Errorf("context done: %w", ctx.Err())
 		default:
 			if s.transportConn != nil {
-				return &streams.QuicConnection{Connection: s.transportConn}
+				return &streams.QuicConnection{Connection: s.transportConn}, nil
 			}
 
-			log.Info().Msg("Waiting for transport connection")
+			log.Debug().Msg("Waiting for transport connection")
 			time.Sleep(200 * time.Millisecond)
 		}
 	}

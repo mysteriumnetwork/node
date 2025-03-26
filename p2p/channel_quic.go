@@ -19,6 +19,7 @@ package p2p
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -110,6 +111,16 @@ func (c *channelQuic) Send(ctx context.Context, topic string, msg *Message) (*Me
 	readMsg := transportMsg{}
 	if err := readMsg.readFrom(newCompatibleWireReader(s, c.compatibility)); err != nil {
 		return nil, err
+	}
+
+	if readMsg.statusCode != statusCodeOK {
+		if readMsg.statusCode == statusCodePublicErr {
+			return nil, fmt.Errorf("public peer error: %s", string(readMsg.data))
+		}
+		if readMsg.statusCode == statusCodeHandlerNotFoundErr {
+			return nil, fmt.Errorf("%s: %w", string(readMsg.data), ErrHandlerNotFound)
+		}
+		return nil, fmt.Errorf("peer error: %w", errors.New(readMsg.msg))
 	}
 
 	return &Message{
