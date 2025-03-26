@@ -29,8 +29,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mysteriumnetwork/node/config"
-
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
@@ -47,6 +45,8 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 type netTun struct {
@@ -239,7 +239,7 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 	var wq waiter.Queue
 	ep, tcpErr := r.CreateEndpoint(&wq)
 	if tcpErr != nil {
-		log.Error().Err(fmt.Errorf(tcpErr.String())).Msg("Failed to create TCP endpoint for forwarding request")
+		log.Error().Err(fmt.Errorf("%s", tcpErr.String())).Msg("Failed to create TCP endpoint for forwarding request")
 		r.Complete(true)
 		return
 	}
@@ -300,7 +300,7 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 	ep, udpErr := req.CreateEndpoint(&wq)
 	if udpErr != nil {
-		log.Error().Err(fmt.Errorf(udpErr.String())).Msg("Failed to create UDP endpoint for forwarding request")
+		log.Error().Err(fmt.Errorf("%s", udpErr.String())).Msg("Failed to create UDP endpoint for forwarding request")
 		return
 	}
 
