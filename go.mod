@@ -1,6 +1,6 @@
 module github.com/mysteriumnetwork/node
 
-go 1.24.1
+go 1.24
 
 require (
 	github.com/BurntSushi/toml v1.3.2
