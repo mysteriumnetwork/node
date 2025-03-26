@@ -75,8 +75,6 @@ type dialer struct {
 	verifierFactory identity.VerifierFactory
 	ipResolver      ip.Resolver
 	eventBus        eventbus.EventBus
-
-	quicServer *server.QuicServer
 }
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
@@ -119,15 +117,16 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		}
 	}
 
+	var quicServer *server.QuicServer
 	if serviceType == "quic_scraping" {
-		m.quicServer, err = server.NewQuicServer()
+		quicServer, err = server.NewQuicServer()
 		if err != nil {
 			return nil, fmt.Errorf("could not create QUIC server: %w", err)
 		}
 
-		go m.quicServer.Start(ctx)
+		go quicServer.Start(ctx)
 
-		port, err := m.quicServer.WaitForListenPort(ctx)
+		port, err := quicServer.WaitForListenPort(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not wait for listen addr: %w", err)
 		}
@@ -155,7 +154,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 
 	dial := m.dialPinger
 	if len(config.peerURL) > 0 {
-		dial = m.dialQUIC
+		dial = m.dialQUIC(quicServer)
 	} else if len(config.peerPorts) == requiredConnCount {
 		dial = m.dialDirect
 	}
@@ -175,7 +174,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 
 	var channel communicationChannel
 	if serviceType == "quic_scraping" {
-		channel = newChannelQuic(conn1, config.peerID, config.compatibility)
+		channel = newChannelQuic(conn1, providerID, config.compatibility)
 	} else {
 		channel, err = newChannel(conn1, config.privateKey, config.peerPubKey, config.compatibility)
 		if err != nil {
@@ -358,8 +357,19 @@ func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, c
 	return conn1, conn2, err
 }
 
-func (m *dialer) dialQUIC(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
-	return m.quicServer.CommunicationConn(ctx), m.quicServer.TransportConn(ctx), nil
+func (m *dialer) dialQUIC(quicServer *server.QuicServer) func(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
+	return func(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
+		conn1, err := quicServer.CommunicationConn(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get QUIC communication connection: %w", err)
+		}
+		conn2, err := quicServer.TransportConn(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get QUIC transport connection: %w", err)
+		}
+
+		return conn1, conn2, nil
+	}
 }
 
 func (m *dialer) dialPinger(ctx context.Context, providerID identity.Identity, config *p2pConnectConfig) (ServiceConn, ServiceConn, error) {
