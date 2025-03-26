@@ -49,6 +49,12 @@ var (
 		Usage: "Proxy port",
 	}
 
+	flagServiceType = cli.StringFlag{
+		Name:  "service-type",
+		Usage: "Service type to connect to.",
+		Value: serviceWireguard,
+	}
+
 	flagCountry = cli.StringFlag{
 		Name:  "country",
 		Usage: "Two letter (ISO 3166-1 alpha-2) country code to filter proposals.",
@@ -114,7 +120,7 @@ func NewCommand() *cli.Command {
 				Name:      "up",
 				ArgsUsage: "[ProviderIdentityAddress]",
 				Usage:     "Create a new connection",
-				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions, &flagCountry, &flagLocationType, &flagSortType, &flagIncludeFailed, &flagProxyPort},
+				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions, &flagCountry, &flagLocationType, &flagSortType, &flagIncludeFailed, &flagProxyPort, &flagServiceType},
 				Action: func(ctx *cli.Context) error {
 					cmd.up(ctx)
 					return nil
@@ -155,7 +161,7 @@ func (c *command) proposals(ctx *cli.Context) {
 		return
 	}
 
-	proposals, err := c.tequilapi.ProposalsByLocationAndService(serviceWireguard, locationType, locationCountry)
+	proposals, err := c.tequilapi.ProposalsByLocationAndService(ctx.String(flagServiceType.Name), locationType, locationCountry)
 	if err != nil {
 		clio.Warn("Failed to fetch proposal list")
 		return
@@ -291,7 +297,7 @@ func (c *command) up(ctx *cli.Context) {
 		IncludeMonitoringFailed: ctx.Bool(flagIncludeFailed.Name),
 	}
 
-	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, serviceWireguard, filter, connectOptions)
+	_, err = c.tequilapi.SmartConnectionCreate(id.Address, hermesID, ctx.String(flagServiceType.Name), filter, connectOptions)
 	if err != nil {
 		clio.Error("Failed to create a new connection: ", err)
 		return
