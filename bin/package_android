@@ -26,14 +26,14 @@ docker run --rm \
     -e FLAG_V=false \
     -e FLAG_X=false \
     -e FLAG_RACE=false \
-    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
+    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags) -checklinkname=0" \
     -e FLAG_BUILDMODE=default \
     -e FLAG_TAGS="android" \
     -e TARGETS=android/. \
     -e EXT_GOPATH=/ext-go/1 \
     -e GO111MODULE=on \
     -e GOFLAGS=-mod=mod \
-    mysteriumnetwork/xgomobile:1.20.2 ./mobile/mysterium
+    mysteriumnetwork/xgomobile:1.24.1 ./mobile/mysterium
 
 if [[ -f $OUT_FILENAME_AAR ]]; then
     print_success "Android package ${OUT_FILENAME_AAR} build complete!"
