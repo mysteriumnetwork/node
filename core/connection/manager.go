@@ -115,10 +115,10 @@ type PaymentIssuer interface {
 	Stop()
 }
 
-// PriceGetter fetches the current price.
-type PriceGetter interface {
-	GetCurrentPrice(nodeType string, country string) (market.Price, error)
-}
+// // PriceGetter fetches the current price.
+// type PriceGetter interface {
+// 	GetCurrentPrice(nodeType string, country string) (market.Price, error)
+// }
 
 type validator interface {
 	Validate(chainID int64, consumerID identity.Identity, p market.Price) error
@@ -303,6 +303,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	go m.consumeConnectionStates(m.activeConnection.State())
 	go m.checkSessionIP(m.channel, m.connectOptions.ConsumerID, m.connectOptions.SessionID, originalPublicIP)
+	go m.monitorPrice(prc, proposalLookup)
 
 	return nil
 }
@@ -384,7 +385,7 @@ func (m *connectionManager) initSession(tracer *trace.Tracer, prc market.Price) 
 	m.setStatus(func(status *connectionstate.Status) {
 		status.SessionID = sessionID
 	})
-	m.publishSessionCreate(sessionID)
+	m.publishSessionCreate()
 	paymentSession.SetSessionID(string(sessionID))
 	tracer.EndStage(traceStart)
 
@@ -662,7 +663,7 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 	return &sessionResponse, nil
 }
 
-func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
+func (m *connectionManager) publishSessionCreate() {
 	sessionInfo := m.Status()
 	// avoid printing IP address in logs
 	sessionInfo.ConsumerLocation.IP = ""
@@ -1029,5 +1030,31 @@ func (m *connectionManager) Reconnect() {
 func logDisconnectError(err error) {
 	if err != nil && err != ErrNoConnection {
 		log.Error().Err(err).Msg("Disconnect error")
+	}
+}
+
+func (m *connectionManager) monitorPrice(currentPrice market.Price, proposalLookup ProposalLookup) {
+	t := time.NewTicker(30 * time.Second)
+	for {
+		select {
+		case <-m.currentCtx().Done():
+			return
+		case <-t.C:
+			proposal, err := proposalLookup()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to lookup proposal")
+				continue
+			}
+			newPrice := m.priceFromProposal(*proposal)
+
+			// Check if both GiB and Hourly prices dropped by at least 10%
+			giBDrop := float64(currentPrice.PricePerGiB.Int64()-newPrice.PricePerGiB.Int64()) / float64(currentPrice.PricePerGiB.Int64())
+			hourDrop := float64(currentPrice.PricePerHour.Int64()-newPrice.PricePerHour.Int64()) / float64(currentPrice.PricePerHour.Int64())
+
+			if giBDrop >= 0.10 || hourDrop >= 0.10 {
+				log.Info().Msgf("Price dropped significantly from %q to %q, reconnecting", currentPrice.String(), newPrice.String())
+				m.Reconnect()
+			}
+		}
 	}
 }
