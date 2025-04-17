@@ -145,6 +145,7 @@ type connectionManager struct {
 	validator            validator
 	p2pDialer            p2p.Dialer
 	timeGetter           TimeGetter
+	priceCheckInterval   time.Duration
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -207,6 +208,7 @@ func NewManager(
 		preReconnect:         preReconnect,
 		postReconnect:        postReconnect,
 		uuid:                 uuid.String(),
+		priceCheckInterval:   30 * time.Second,
 	}
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
@@ -1034,7 +1036,7 @@ func logDisconnectError(err error) {
 }
 
 func (m *connectionManager) monitorPrice(currentPrice market.Price, proposalLookup ProposalLookup) {
-	t := time.NewTicker(30 * time.Second)
+	t := time.NewTicker(m.priceCheckInterval)
 	for {
 		select {
 		case <-m.currentCtx().Done():
@@ -1054,6 +1056,7 @@ func (m *connectionManager) monitorPrice(currentPrice market.Price, proposalLook
 			if giBDrop >= 0.10 || hourDrop >= 0.10 {
 				log.Info().Msgf("Price dropped significantly from %q to %q, reconnecting", currentPrice.String(), newPrice.String())
 				m.Reconnect()
+				return
 			}
 		}
 	}

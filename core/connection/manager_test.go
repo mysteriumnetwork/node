@@ -392,6 +392,38 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 	assert.Equal(tc.T(), ErrConnectionFailed, err)
 }
 
+func (tc *testContext) TestReconnectDueToPriceDrop() {
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{
+		connectedState,
+	}
+	tc.connManager.priceCheckInterval = time.Millisecond
+
+	err := tc.connManager.Connect(consumerID, hermesID, activeProposalLookup, ConnectParams{})
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), connectionstate.Connected, tc.connManager.Status().State)
+
+	newPrice := market.Price{
+		PricePerHour: big.NewInt(1),
+		PricePerGiB:  big.NewInt(1),
+	}
+
+	activeProposal.Price = newPrice
+
+	waitABit()
+
+	disconnect := false
+	for _, event := range tc.stubPublisher.GetEventHistory() {
+		if event.Topic == connectionstate.AppTopicConnectionState &&
+			event.Event.(connectionstate.AppEventConnectionState).State == connectionstate.Disconnecting {
+			disconnect = true
+			break
+		}
+	}
+	assert.True(tc.T(), disconnect)
+	assert.Equal(tc.T(), connectionstate.Connected, tc.connManager.Status().State)
+	assert.Equal(tc.T(), newPrice, tc.connManager.Status().Proposal.Price)
+}
+
 func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() {
 	err := tc.connManager.Connect(consumerID, hermesID, activeProposalLookup, ConnectParams{})
 	waitABit()
