@@ -115,10 +115,10 @@ type PaymentIssuer interface {
 	Stop()
 }
 
-// // PriceGetter fetches the current price.
-// type PriceGetter interface {
-// 	GetCurrentPrice(nodeType string, country string) (market.Price, error)
-// }
+// PriceGetter fetches the current price.
+type PriceGetter interface {
+	GetCurrentPrice(nodeType string, country string) (market.Price, error)
+}
 
 type validator interface {
 	Validate(chainID int64, consumerID identity.Identity, p market.Price) error
@@ -146,6 +146,7 @@ type connectionManager struct {
 	p2pDialer            p2p.Dialer
 	timeGetter           TimeGetter
 	priceCheckInterval   time.Duration
+	priceDropPercent     float64
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -208,6 +209,7 @@ func NewManager(
 		preReconnect:         preReconnect,
 		postReconnect:        postReconnect,
 		uuid:                 uuid.String(),
+		priceDropPercent:     10, // reconnect if price dropped 10% or more
 		priceCheckInterval:   30 * time.Second,
 	}
 
@@ -1053,7 +1055,7 @@ func (m *connectionManager) monitorPrice(currentPrice market.Price, proposalLook
 			giBDrop := float64(currentPrice.PricePerGiB.Int64()-newPrice.PricePerGiB.Int64()) / float64(currentPrice.PricePerGiB.Int64())
 			hourDrop := float64(currentPrice.PricePerHour.Int64()-newPrice.PricePerHour.Int64()) / float64(currentPrice.PricePerHour.Int64())
 
-			if giBDrop >= 0.10 || hourDrop >= 0.10 {
+			if giBDrop*100 >= m.priceDropPercent || hourDrop*100 >= m.priceDropPercent {
 				log.Info().Msgf("Price dropped significantly from %q to %q, reconnecting", currentPrice.String(), newPrice.String())
 				m.Reconnect()
 				return
