@@ -398,7 +398,14 @@ func (tc *testContext) TestReconnectDueToPriceDrop() {
 	}
 	tc.connManager.priceCheckInterval = time.Millisecond
 
-	err := tc.connManager.Connect(consumerID, hermesID, activeProposalLookup, ConnectParams{})
+	mux := sync.RWMutex{}
+	proposalLookup := func() (proposal *proposal.PricedServiceProposal, err error) {
+		mux.RLock()
+		defer mux.RUnlock()
+		return &activeProposal, nil
+	}
+
+	err := tc.connManager.Connect(consumerID, hermesID, proposalLookup, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), connectionstate.Connected, tc.connManager.Status().State)
 
@@ -406,8 +413,9 @@ func (tc *testContext) TestReconnectDueToPriceDrop() {
 		PricePerHour: big.NewInt(1),
 		PricePerGiB:  big.NewInt(1),
 	}
-
+	mux.Lock()
 	activeProposal.Price = newPrice
+	mux.Unlock()
 
 	waitABit()
 
