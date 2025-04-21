@@ -392,7 +392,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 	assert.Equal(tc.T(), ErrConnectionFailed, err)
 }
 
-func (tc *testContext) TestReconnectDueToPriceDrop() {
+func (tc *testContext) TestDisconnectDueToPriceDrop() {
 	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{
 		connectedState,
 	}
@@ -419,17 +419,7 @@ func (tc *testContext) TestReconnectDueToPriceDrop() {
 
 	waitABit()
 
-	disconnect := false
-	for _, event := range tc.stubPublisher.GetEventHistory() {
-		if event.Topic == connectionstate.AppTopicConnectionState &&
-			event.Event.(connectionstate.AppEventConnectionState).State == connectionstate.Disconnecting {
-			disconnect = true
-			break
-		}
-	}
-	assert.True(tc.T(), disconnect)
-	assert.Equal(tc.T(), connectionstate.Connected, tc.connManager.Status().State)
-	assert.Equal(tc.T(), newPrice, tc.connManager.Status().Proposal.Price)
+	assert.Equal(tc.T(), connectionstate.NotConnected, tc.connManager.Status().State)
 }
 
 func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() {

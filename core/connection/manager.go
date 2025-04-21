@@ -1056,8 +1056,8 @@ func (m *connectionManager) monitorPrice(currentPrice market.Price, proposalLook
 			hourDrop := float64(currentPrice.PricePerHour.Int64()-newPrice.PricePerHour.Int64()) / float64(currentPrice.PricePerHour.Int64())
 
 			if giBDrop*100 >= m.priceDropPercent || hourDrop*100 >= m.priceDropPercent {
-				log.Info().Msgf("Price dropped significantly from %q to %q, reconnecting", currentPrice.String(), newPrice.String())
-				m.Reconnect()
+				log.Info().Msgf("Price dropped significantly from %q to %q, disconnecting", currentPrice.String(), newPrice.String())
+				m.Disconnect()
 				return
 			}
 		}
