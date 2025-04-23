@@ -1047,7 +1047,7 @@ func (m *connectionManager) monitorPrice(currentPrice market.Price) {
 		case <-m.currentCtx().Done():
 			return
 		case <-t.C:
-			newPrice, err := m.pricer.GetCurrentPrice(m.status.ConsumerLocation.IPType, m.status.Proposal.Location.Country, m.status.Proposal.ServiceType)
+			newPrice, err := m.pricer.GetCurrentPrice(m.status.Proposal.Location.IPType, m.status.Proposal.Location.Country, m.status.Proposal.ServiceType)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to lookup proposal")
 				continue
