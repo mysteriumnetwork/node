@@ -159,6 +159,7 @@ func (tc *testContext) SetupTest() {
 		&mockValidator{},
 		tc.mockP2P,
 		func() {}, func() {},
+		&mockPricer{},
 	)
 	tc.connManager.timeGetter = func() time.Time {
 		return tc.mockTime
@@ -725,4 +726,13 @@ type mockLocationResolver struct{}
 
 func (mlr *mockLocationResolver) GetOrigin() locationstate.Location {
 	return consumerLocation
+}
+
+type mockPricer struct{}
+
+func (mp *mockPricer) GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error) {
+	return market.Price{
+		PricePerHour: big.NewInt(1),
+		PricePerGiB:  big.NewInt(1),
+	}, nil
 }

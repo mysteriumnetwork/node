@@ -604,6 +604,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.P2PDialer,
 			di.allowTrustedDomainBypassTunnel,
 			di.disallowTrustedDomainBypassTunnel,
+			di.PricingHelper,
 		)
 	})
 

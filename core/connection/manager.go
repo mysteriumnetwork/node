@@ -117,7 +117,7 @@ type PaymentIssuer interface {
 
 // PriceGetter fetches the current price.
 type PriceGetter interface {
-	GetCurrentPrice(nodeType string, country string) (market.Price, error)
+	GetCurrentPrice(nodeType string, country string, serviceType string) (market.Price, error)
 }
 
 type validator interface {
@@ -145,6 +145,7 @@ type connectionManager struct {
 	validator            validator
 	p2pDialer            p2p.Dialer
 	timeGetter           TimeGetter
+	pricer               PriceGetter
 	priceCheckInterval   time.Duration
 	priceDropPercent     float64
 
@@ -186,6 +187,7 @@ func NewManager(
 	validator validator,
 	p2pDialer p2p.Dialer,
 	preReconnect, postReconnect func(),
+	pricer PriceGetter,
 ) *connectionManager {
 	uuid, err := uuid.NewV4()
 	if err != nil {
@@ -209,8 +211,9 @@ func NewManager(
 		preReconnect:         preReconnect,
 		postReconnect:        postReconnect,
 		uuid:                 uuid.String(),
+		pricer:               pricer,
 		priceDropPercent:     10, // reconnect if price dropped 10% or more
-		priceCheckInterval:   30 * time.Second,
+		priceCheckInterval:   5 * time.Minute,
 	}
 
 	m.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, m.reconnectOnHold)
@@ -307,7 +310,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	go m.consumeConnectionStates(m.activeConnection.State())
 	go m.checkSessionIP(m.channel, m.connectOptions.ConsumerID, m.connectOptions.SessionID, originalPublicIP)
-	go m.monitorPrice(prc, proposalLookup)
+	go m.monitorPrice(prc)
 
 	return nil
 }
@@ -1037,20 +1040,18 @@ func logDisconnectError(err error) {
 	}
 }
 
-func (m *connectionManager) monitorPrice(currentPrice market.Price, proposalLookup ProposalLookup) {
+func (m *connectionManager) monitorPrice(currentPrice market.Price) {
 	t := time.NewTicker(m.priceCheckInterval)
 	for {
 		select {
 		case <-m.currentCtx().Done():
 			return
 		case <-t.C:
-			proposal, err := proposalLookup()
+			newPrice, err := m.pricer.GetCurrentPrice(m.status.Proposal.Location.IPType, m.status.Proposal.Location.Country, m.status.Proposal.ServiceType)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to lookup proposal")
 				continue
 			}
-			newPrice := m.priceFromProposal(*proposal)
-
 			// Check if both GiB and Hourly prices dropped by at least 10%
 			giBDrop := float64(currentPrice.PricePerGiB.Int64()-newPrice.PricePerGiB.Int64()) / float64(currentPrice.PricePerGiB.Int64())
 			hourDrop := float64(currentPrice.PricePerHour.Int64()-newPrice.PricePerHour.Int64()) / float64(currentPrice.PricePerHour.Int64())
