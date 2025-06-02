@@ -3969,6 +3969,9 @@
         "dvpn_tokens": {
           "$ref": "#/definitions/Tokens"
         },
+        "monitoring_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
         "public_tokens": {
           "$ref": "#/definitions/Tokens"
         },
@@ -3979,6 +3982,9 @@
           "$ref": "#/definitions/Tokens"
         },
         "total_dvpn_tokens": {
+          "$ref": "#/definitions/Tokens"
+        },
+        "total_monitoring_tokens": {
           "$ref": "#/definitions/Tokens"
         },
         "total_public_tokens": {

@@ -71,6 +71,10 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 							PricePerHour: defaultPrice.PricePerHour,
 							PricePerGiB:  defaultPrice.PricePerGiB,
 						},
+						Monitoring: &market.Price{
+							PricePerHour: defaultPrice.PricePerHour,
+							PricePerGiB:  defaultPrice.PricePerGiB,
+						},
 					},
 					Other: &market.PriceByServiceType{
 						Wireguard: &market.Price{
@@ -86,6 +90,10 @@ func NewPricer(discoAPI discoAPI) *Pricer {
 							PricePerGiB:  defaultPrice.PricePerGiB,
 						},
 						DVPN: &market.Price{
+							PricePerHour: defaultPrice.PricePerHour,
+							PricePerGiB:  defaultPrice.PricePerGiB,
+						},
+						Monitoring: &market.Price{
 							PricePerHour: defaultPrice.PricePerHour,
 							PricePerGiB:  defaultPrice.PricePerGiB,
 						},
@@ -135,6 +143,8 @@ func (p *Pricer) getCurrentByServiceType(pricingByServiceType *market.PriceBySer
 		return pricingByServiceType.Scraping
 	case "dvpn":
 		return pricingByServiceType.DVPN
+	case "monitoring":
+		return pricingByServiceType.Monitoring
 	default:
 		return pricingByServiceType.DataTransfer
 	}
