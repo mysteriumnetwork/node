@@ -36,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
+	"github.com/mysteriumnetwork/node/services/monitoring"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -87,6 +88,7 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDVPN(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
+	di.bootstrapServiceMonitoring(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 
 	return nil
 }
@@ -180,6 +182,30 @@ func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options, r
 func (di *Dependencies) bootstrapServiceDVPN(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	di.ServiceRegistry.Register(
 		dvpn.ServiceType,
+		func(serviceOptions service.Options) (service.Service, error) {
+			loc, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, err
+			}
+
+			svc := wireguard_service.NewManager(
+				di.IPResolver,
+				loc.Country,
+				di.NATService,
+				di.EventBus,
+				di.ServiceFirewall,
+				resourcesAllocator,
+				wgClientFactory,
+				di.dnsProxy,
+			)
+			return svc, nil
+		},
+	)
+}
+
+func (di *Dependencies) bootstrapServiceMonitoring(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+	di.ServiceRegistry.Register(
+		monitoring.ServiceType,
 		func(serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
@@ -373,6 +399,7 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerQuicConnection()
 	di.registerDataTransferConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerDVPNConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
+	di.registerMonitoringConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 }
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
@@ -445,6 +472,22 @@ func (di *Dependencies) registerDVPNConnection(nodeOptions node.Options, resourc
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(dvpn.ServiceType, connFactory)
+}
+
+func (di *Dependencies) registerMonitoringConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+	monitoring.Bootstrap()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		return endpoint.NewConnectionEndpoint(resourceAllocator, wgClientFactory)
+	}
+	connFactory := func() (connection.Connection, error) {
+		opts := wireguard_connection.Options{
+			DNSScriptDir:     nodeOptions.Directories.Script,
+			HandshakeTimeout: 1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
+	}
+	di.ConnectionRegistry.Register(monitoring.ServiceType, connFactory)
 }
 
 func (di *Dependencies) bootstrapMMN() error {

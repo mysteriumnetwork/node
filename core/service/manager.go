@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
+	"github.com/mysteriumnetwork/node/services/monitoring"
 	"github.com/mysteriumnetwork/node/services/quic"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
@@ -252,6 +253,7 @@ func (manager *Manager) List(includeAll bool) []*Instance {
 		quic.ServiceType:         false,
 		datatransfer.ServiceType: false,
 		dvpn.ServiceType:         false,
+		monitoring.ServiceType:   false,
 	}
 
 	result := make([]*Instance, 0, len(added))

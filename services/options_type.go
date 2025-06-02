@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
+	"github.com/mysteriumnetwork/node/services/monitoring"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -43,6 +44,7 @@ var JSONParsersByType = map[string]ServiceOptionsParser{
 	quic.ServiceType:         wireguard_service.ParseJSONOptions,
 	datatransfer.ServiceType: wireguard_service.ParseJSONOptions,
 	dvpn.ServiceType:         wireguard_service.ParseJSONOptions,
+	monitoring.ServiceType:   wireguard_service.ParseJSONOptions,
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -58,6 +60,7 @@ func Types() []string {
 		quic.ServiceType,
 		datatransfer.ServiceType,
 		dvpn.ServiceType,
+		monitoring.ServiceType,
 	}
 }
 
@@ -77,6 +80,8 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 	case datatransfer.ServiceType:
 		return wireguard_service.GetOptions(), nil
 	case dvpn.ServiceType:
+		return wireguard_service.GetOptions(), nil
+	case monitoring.ServiceType:
 		return wireguard_service.GetOptions(), nil
 	default:
 		return nil, errors.Errorf("unknown service type: %q", serviceType)

@@ -515,37 +515,43 @@ func (ne *NodeEndpoint) GetProviderServiceEarnings(c *gin.Context) {
 	vpn, _ := strconv.ParseFloat(res.EarningsVPN, 64)
 	scraping, _ := strconv.ParseFloat(res.EarningsScraping, 64)
 	dvpn, _ := strconv.ParseFloat(res.EarningsDVPN, 64)
+	monitoring, _ := strconv.ParseFloat(res.EarningsMonitoring, 64)
 
 	totalPublic, _ := strconv.ParseFloat(res.TotalEarningsPublic, 64)
 	totalVPN, _ := strconv.ParseFloat(res.TotalEarningsVPN, 64)
 	totalScraping, _ := strconv.ParseFloat(res.TotalEarningsScraping, 64)
 	totalDVPN, _ := strconv.ParseFloat(res.TotalEarningsDVPN, 64)
+	totalMonitoring, _ := strconv.ParseFloat(res.TotalEarningsMonitoring, 64)
 
 	publicTokens := units.FloatEthToBigIntWei(public)
 	vpnTokens := units.FloatEthToBigIntWei(vpn)
 	scrapingTokens := units.FloatEthToBigIntWei(scraping)
 	dvpnTokens := units.FloatEthToBigIntWei(dvpn)
+	monitoringTokens := units.FloatEthToBigIntWei(monitoring)
 
 	totalPublicTokens := units.FloatEthToBigIntWei(totalPublic)
 	totalVPNTokens := units.FloatEthToBigIntWei(totalVPN)
 	totalScrapingTokens := units.FloatEthToBigIntWei(totalScraping)
 	totalDVPNTokens := units.FloatEthToBigIntWei(totalDVPN)
+	totalMonitoringTokens := units.FloatEthToBigIntWei(totalMonitoring)
 
 	totalTokens := new(big.Int)
 	totalTokens.Add(publicTokens, vpnTokens)
 	totalTokens.Add(totalTokens, scrapingTokens)
 	totalTokens.Add(totalTokens, dvpnTokens)
+	totalTokens.Add(totalTokens, monitoringTokens)
 
 	data := contract.EarningsPerServiceResponse{
-		EarningsPublic:        contract.NewTokens(publicTokens),
-		EarningsVPN:           contract.NewTokens(vpnTokens),
-		EarningsScraping:      contract.NewTokens(scrapingTokens),
-		EarningsDVPN:          contract.NewTokens(dvpnTokens),
-		EarningsTotal:         contract.NewTokens(totalTokens),
-		TotalEarningsPublic:   contract.NewTokens(totalPublicTokens),
-		TotalEarningsVPN:      contract.NewTokens(totalVPNTokens),
-		TotalEarningsScraping: contract.NewTokens(totalScrapingTokens),
-		TotalEarningsDVPN:     contract.NewTokens(totalDVPNTokens),
+		EarningsPublic:          contract.NewTokens(publicTokens),
+		EarningsVPN:             contract.NewTokens(vpnTokens),
+		EarningsScraping:        contract.NewTokens(scrapingTokens),
+		EarningsDVPN:            contract.NewTokens(dvpnTokens),
+		EarningsTotal:           contract.NewTokens(totalTokens),
+		TotalEarningsPublic:     contract.NewTokens(totalPublicTokens),
+		TotalEarningsVPN:        contract.NewTokens(totalVPNTokens),
+		TotalEarningsScraping:   contract.NewTokens(totalScrapingTokens),
+		TotalEarningsDVPN:       contract.NewTokens(totalDVPNTokens),
+		TotalEarningsMonitoring: contract.NewTokens(totalMonitoringTokens),
 	}
 
 	utils.WriteAsJSON(data, c.Writer)
