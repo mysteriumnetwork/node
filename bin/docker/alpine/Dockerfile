@@ -17,7 +17,7 @@ ARG TARGETOS TARGETARCH
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH BUILD_STATIC=1 bin/build
 
 
-FROM alpine:3.14
+FROM alpine:3.22
 
 # Install packages
 RUN apk add --no-cache iptables ipset ca-certificates openvpn bash sudo openresolv
