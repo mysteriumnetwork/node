@@ -164,8 +164,8 @@ var TestnetDefinition = NetworkDefinition{
 	PilvytisAddress: "https://pilvytis-testnet.mysterium.network",
 	ObserverAddress: "https://observer-testnet.mysterium.network",
 	DNSMap: map[string][]string{
-		"trust.mysterium.network":      {"51.158.204.30", "51.158.204.75", "51.158.204.9", "51.158.204.23"},
-		"broker.mysterium.network":     {"51.158.204.30", "51.158.204.75", "51.158.204.9", "51.158.204.23"},
+		"trust.mysterium.network":      {"159.69.15.34", "159.69.244.241"},
+		"broker.mysterium.network":     {"159.69.15.34", "159.69.244.241", "49.12.244.81", "116.203.130.98"},
 		"affiliator.mysterium.network": {"51.158.204.30", "51.158.204.75", "51.158.204.9", "51.158.204.23"},
 	},
 	DefaultChainID:  80002,
