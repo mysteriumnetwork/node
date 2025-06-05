@@ -67,7 +67,7 @@ var (
 	FlagActiveServices = cli.StringFlag{
 		Name:  "active-services",
 		Usage: "Comma separated list of active services.",
-		Value: strings.Join([]string{"scraping", "data_transfer", "dvpn"}, ","),
+		Value: strings.Join([]string{"scraping", "data_transfer", "dvpn", "monitoring"}, ","),
 	}
 
 	// FlagStoppedServices a comma-separated list of stopped services.
