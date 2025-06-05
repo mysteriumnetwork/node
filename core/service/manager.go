@@ -283,6 +283,9 @@ func (manager *Manager) Kill() error {
 
 // Stop stops the service.
 func (manager *Manager) Stop(id ID) error {
+	if manager.servicePool.Instance(id).Type == monitoring.ServiceType {
+		return fmt.Errorf("%s service cannot be stopped", monitoring.ServiceType)
+	}
 	err := manager.servicePool.Stop(id)
 	if err != nil {
 		return err
