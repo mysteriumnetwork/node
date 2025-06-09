@@ -99,13 +99,15 @@ var MainnetDefinition = NetworkDefinition{
 	PilvytisAddress: "https://pilvytis.mysterium.network",
 	ObserverAddress: "https://observer.mysterium.network",
 	DNSMap: map[string][]string{
-		"discovery.mysterium.network":  {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"trust.mysterium.network":      {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"broker.mysterium.network":     {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"transactor.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+		"discovery.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+		"trust.mysterium.network":     {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+		"broker.mysterium.network":    {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+		"transactor.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81",
+			"51.158.204.23", "51.158.204.75", "51.158.204.9", "51.158.204.30"}, // remove after the migration is complete
 		"affiliator.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"pilvytis.mysterium.network":   {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"observer.mysterium.network":   {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+		"pilvytis.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81",
+			"51.158.204.23", "51.158.204.75", "51.158.204.9", "51.158.204.30"}, // remove after the migration is complete
+		"observer.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
 	},
 	DefaultChainID:  137,
 	DefaultCurrency: "MYST",
