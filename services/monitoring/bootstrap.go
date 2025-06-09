@@ -19,6 +19,7 @@ package monitoring
 
 import "github.com/mysteriumnetwork/node/market"
 
+// ServiceType indicates "monitoring" service type
 const ServiceType = "monitoring"
 
 // Bootstrap is called on program initialization time and registers various deserializers related to monitoring service
