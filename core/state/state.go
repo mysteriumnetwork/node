@@ -18,7 +18,6 @@
 package state
 
 import (
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -235,7 +234,6 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 func (k *Keeper) updateServices() {
 	services := k.deps.ServiceLister.List(false)
 	result := make([]contract.ServiceInfoDTO, len(services))
-	fmt.Printf(">>>> Services %+v\n", services)
 
 	i := 0
 	for _, v := range services {
@@ -247,8 +245,6 @@ func (k *Keeper) updateServices() {
 		if err != nil {
 			log.Warn().Msgf("could not load price for proposal %v(%v)", proposal.ProviderID, proposal.ServiceType)
 		}
-
-		fmt.Printf(">>>> Proposal %+v\npriced: %v\n", proposal, priced)
 
 		prop := contract.NewProposalDTO(priced)
 		if match.ConnectionStatistics == nil {
