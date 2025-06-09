@@ -17,8 +17,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -51,8 +49,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -69,8 +65,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -91,8 +85,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -144,8 +136,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -167,8 +157,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -200,8 +188,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
       public0:
@@ -220,8 +206,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     networks:
       public0:
         ipv4_address: 172.30.0.202
@@ -238,8 +222,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     networks:
       public0:
         ipv4_address: 172.30.0.209
@@ -255,8 +237,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     networks:
       public0:
         ipv4_address: 172.30.0.207
@@ -269,8 +249,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     ports:
       - 9999:1080
     networks:
@@ -305,8 +283,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - transactordatabase
       - redis
@@ -332,8 +308,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
       - redis
@@ -362,8 +336,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
       - redis
@@ -527,8 +499,6 @@ services:
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     environment:
       LOG_LEVEL: trace
     expose:
