@@ -45,7 +45,7 @@ func (options *NodeOptions) Check() error {
 	}
 	// openvpn returns exit code 1 in case of --version parameter, if anything else is returned - treat as error
 	// with newer versions openvpn seems to have fixed the exit code 1 mistake, they now return a zero as they should.
-	if exitCode != 1 || exitCode == 0 {
+	if exitCode != 0 {
 		log.Error().Msg("Check failed. Output of executed command: " + string(outputBuffer))
 		return errors.New("unexpected openvpn exit code: " + strconv.Itoa(exitCode))
 	}

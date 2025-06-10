@@ -39,6 +39,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/services/monitoring"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -276,6 +277,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		for _, service := range services {
 			err := tequilapiProvider.ServiceStop(service.ID)
+			if service.Type == monitoring.ServiceType {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "monitoring service cannot be stopped")
+				continue
+			}
 			assert.NoError(t, err)
 		}
 	})
