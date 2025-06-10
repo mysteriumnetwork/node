@@ -49,6 +49,7 @@ type PriceByServiceType struct {
 	Scraping     *Price `json:"scraping"`
 	DataTransfer *Price `json:"data_transfer"`
 	DVPN         *Price `json:"dvpn"`
+	Monitoring   *Price `json:"monitoring"`
 }
 
 // Price represents the price.

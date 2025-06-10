@@ -144,13 +144,15 @@ type LatestReleaseResponse struct {
 // EarningsPerServiceResponse contains information about earnings per service
 // swagger:model EarningsPerServiceResponse
 type EarningsPerServiceResponse struct {
-	EarningsPublic        Tokens `json:"public_tokens"`
-	EarningsVPN           Tokens `json:"data_transfer_tokens"`
-	EarningsScraping      Tokens `json:"scraping_tokens"`
-	EarningsDVPN          Tokens `json:"dvpn_tokens"`
-	EarningsTotal         Tokens `json:"total_tokens"`
-	TotalEarningsPublic   Tokens `json:"total_public_tokens"`
-	TotalEarningsVPN      Tokens `json:"total_data_transfer_tokens"`
-	TotalEarningsScraping Tokens `json:"total_scraping_tokens"`
-	TotalEarningsDVPN     Tokens `json:"total_dvpn_tokens"`
+	EarningsPublic          Tokens `json:"public_tokens"`
+	EarningsVPN             Tokens `json:"data_transfer_tokens"`
+	EarningsScraping        Tokens `json:"scraping_tokens"`
+	EarningsDVPN            Tokens `json:"dvpn_tokens"`
+	EarningsMonitoring      Tokens `json:"monitoring_tokens"`
+	EarningsTotal           Tokens `json:"total_tokens"`
+	TotalEarningsPublic     Tokens `json:"total_public_tokens"`
+	TotalEarningsVPN        Tokens `json:"total_data_transfer_tokens"`
+	TotalEarningsScraping   Tokens `json:"total_scraping_tokens"`
+	TotalEarningsDVPN       Tokens `json:"total_dvpn_tokens"`
+	TotalEarningsMonitoring Tokens `json:"total_monitoring_tokens"`
 }
