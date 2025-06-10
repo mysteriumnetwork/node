@@ -2,7 +2,7 @@ version: '3.0'
 
 services:
   morqa:
-    image: mysteriumnetwork/quality-oracle:latest
+    image: mysteriumnetwork/quality-oracle:2.23.0
     command: >
       --bind-addr=:8085
       --prometheus=http://prometheus:9090
@@ -114,14 +114,14 @@ services:
         ipv4_address: 172.31.0.201
 
   discovery-service:
-    image: mysteriumnetwork/discovery:2.18.3
+    image: mysteriumnetwork/discovery:2.27.0
     expose:
       - 8081
     environment:
       - PORT=8081
       - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
       - QUALITY_ORACLE_URL=http://morqa:8085
-      - BROKER_URL=broker
+      - BROKER_URL=broker-real:4222
       - UNIVERSE_JWT_SECRET=suchsecret
       - REDIS_ADDRESS=redis:6379
       - BADGER_ADDRESS=http://badger:1234
@@ -165,14 +165,14 @@ services:
         ipv4_address: 172.31.0.215
 
   discovery-pricer:
-    image: mysteriumnetwork/discovery-pricer:2.18.3
+    image: mysteriumnetwork/discovery-pricer:2.27.0
     expose:
       - 8091
     environment:
       - PORT=8091
       - DB_DSN=postgresql://discovery:discovery@db:5432/discovery
       - QUALITY_ORACLE_URL=http://morqa:8085
-      - BROKER_URL=broker
+      - BROKER_URL=broker-real:4222
       - REDIS_ADDRESS=redis:6379
       - UNIVERSE_JWT_SECRET=suchsecret
       - BADGER_ADDRESS=http://badger:1234

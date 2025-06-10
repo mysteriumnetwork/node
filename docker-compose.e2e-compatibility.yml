@@ -1,11 +1,10 @@
 version: '3.0'
 services:
   morqa:
-    image: mysteriumnetwork/quality-oracle:latest
+    image: mysteriumnetwork/quality-oracle:2.23.0
     command: >
       --bind-addr=:8085
       --prometheus=http://prometheus:9090
-      --metrics-addr=:8080
     depends_on:
       - prometheus
     expose:
@@ -58,7 +57,7 @@ services:
       retries: 5
 
   discovery:
-    image: mysteriumnetwork/discovery:2.18.3
+    image: mysteriumnetwork/discovery:2.27.0
     depends_on:
       - db
       - http-mock

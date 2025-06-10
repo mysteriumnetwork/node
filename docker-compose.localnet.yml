@@ -2,11 +2,10 @@ version: '3.0'
 
 services:
   morqa:
-    image: mysteriumnetwork/quality-oracle:latest
+    image: mysteriumnetwork/quality-oracle:2.23.0
     command: >
       --bind-addr=:8085
       --prometheus=http://prometheus:9090
-      --metrics-addr=:8080
     depends_on:
       - prometheus
     expose:
