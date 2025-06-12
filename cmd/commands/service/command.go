@@ -20,6 +20,7 @@ package service
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -144,10 +145,12 @@ func (sc *serviceCommand) Run(ctx *cli.Context, cp *control.ControlPlane) (err e
 		if mapServices["wireguard"] && !mapServices["dvpn"] {
 			serviceTypes = append(serviceTypes, "dvpn")
 		}
-		if !mapServices["monitoring"] {
-			serviceTypes = append(serviceTypes, "monitoring")
-		}
 	}
+
+	if !slices.Contains(serviceTypes, "monitoring") {
+		serviceTypes = append(serviceTypes, "monitoring")
+	}
+
 	// save the version
 	config.Current.SetUser(config.FlagNodeVersion.Name, metadata.BuildNumber)
 	config.Current.SaveUserConfig()
