@@ -35,7 +35,7 @@ func parseCIDR(cidrs []string) []*net.IPNet {
 	return ipnets
 }
 
-// isPublicAddr retruns true if the IP is private / restricted
+// isPrivateIP returns true if the IP is private / restricted
 func (tun *netTun) isPrivateIP(ip net.IP) bool {
 
 	// allow access to local address of Wireguard provider, like 10.182.0.1
