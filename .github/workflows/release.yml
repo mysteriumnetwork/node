@@ -100,8 +100,8 @@ jobs:
           - ReleaseGithubTag
           - ReleaseDockerTag
           - ReleaseDebianPPAPreRelease
-          - ReleaseAndroidSDK
-          - ReleaseAndroidProviderSDK
+          # - ReleaseAndroidSDK
+          # - ReleaseAndroidProviderSDK
 
     steps:
       - uses: actions/checkout@v4
