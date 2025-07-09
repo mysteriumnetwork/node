@@ -82,7 +82,10 @@ func (s *QuicServer) CommunicationConn(ctx context.Context) (*streams.QuicConnec
 			return nil, fmt.Errorf("context done: %w", ctx.Err())
 		default:
 			if s.communicationConn != nil {
-				return &streams.QuicConnection{Connection: s.communicationConn}, nil
+				return &streams.QuicConnection{
+					Connection: s.communicationConn,
+					Listener:   s.listener,
+				}, nil
 			}
 
 			log.Debug().Msg("Waiting for communication connection")
@@ -99,7 +102,10 @@ func (s *QuicServer) TransportConn(ctx context.Context) (*streams.QuicConnection
 			return nil, fmt.Errorf("context done: %w", ctx.Err())
 		default:
 			if s.transportConn != nil {
-				return &streams.QuicConnection{Connection: s.transportConn}, nil
+				return &streams.QuicConnection{
+					Connection: s.transportConn,
+					Listener:   s.listener,
+				}, nil
 			}
 
 			log.Debug().Msg("Waiting for transport connection")
