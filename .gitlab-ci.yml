@@ -203,15 +203,15 @@ release-tag:debian-ppa:
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPAPreRelease
 
-release-tag:android-sdk:
-  stage: release-tag
-  tags: [go]
-  script: go run mage.go -v ReleaseAndroidSDK
+# release-tag:android-sdk:
+#   stage: release-tag
+#   tags: [go]
+#   script: go run mage.go -v ReleaseAndroidSDK
 
-release-tag:android-provider-sdk:
-  stage: release-tag
-  tags: [go]
-  script: go run mage.go -v ReleaseAndroidProviderSDK
+# release-tag:android-provider-sdk:
+#   stage: release-tag
+#   tags: [go]
+#   script: go run mage.go -v ReleaseAndroidProviderSDK
 
 remove-bucket:
   stage: post-release
