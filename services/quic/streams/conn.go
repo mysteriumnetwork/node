@@ -17,14 +17,24 @@
 
 package streams
 
-import "github.com/quic-go/quic-go"
+import (
+	"github.com/quic-go/quic-go"
+	"github.com/rs/zerolog/log"
+)
 
 // QuicConnection represents QUIC connection.
 type QuicConnection struct {
 	quic.Connection
+	Listener *quic.Listener
 }
 
-// Close closes connection.
+// Close closes connection and listener.
 func (c QuicConnection) Close() error {
+	if c.Listener != nil {
+		if err := c.Listener.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close QUIC listener")
+		}
+	}
+
 	return c.CloseWithError(0, "")
 }
