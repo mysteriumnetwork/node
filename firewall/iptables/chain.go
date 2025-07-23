@@ -17,7 +17,10 @@
 
 package iptables
 
-import "strconv"
+import (
+	"slices"
+	"strconv"
+)
 
 // Rule is a packet filter rule for IPTables.
 type Rule struct {
@@ -61,17 +64,5 @@ func (r Rule) RemoveArgs() []string {
 // Equals checks if two Rules are equal.
 func (r Rule) Equals(another Rule) bool {
 	return r.chainName == another.chainName &&
-		equalStringSlice(r.ruleSpec, another.ruleSpec)
-}
-
-func equalStringSlice(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+		slices.Equal(r.ruleSpec, another.ruleSpec)
 }
