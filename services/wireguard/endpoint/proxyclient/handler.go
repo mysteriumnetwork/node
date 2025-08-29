@@ -37,7 +37,8 @@ type proxyHandler struct {
 	dialer        proxy.ContextDialer
 }
 
-func newProxyHandler(timeout time.Duration, dialer proxy.ContextDialer) *proxyHandler {
+// NewProxyHandler returns an HTTP proxy handler that uses the provided dialer.
+func NewProxyHandler(timeout time.Duration, dialer proxy.ContextDialer) *proxyHandler {
 	httptransport := &http.Transport{
 		DialContext: dialer.DialContext,
 	}

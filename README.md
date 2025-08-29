@@ -10,6 +10,9 @@ client API (tequila API) and client-cli (console client) for Mysterium Network.
 
 Currently node supports WireGuard as its underlying VPN transport.
 
+See also:
+- SOCKS5 + HTTP proxy mode and functional tests: see README_SOCKS5.md
+
 ## Getting Started
 
 - [Homepage](https://mysterium.network)

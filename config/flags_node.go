@@ -229,6 +229,13 @@ var (
 		Value: false,
 	}
 
+	// FlagProxySOCKS5 selects SOCKS5 protocol for proxy mode instead of HTTP.
+	FlagProxySOCKS5 = cli.BoolFlag{
+		Name:  "proxymode.socks5",
+		Usage: "Use SOCKS5 protocol in proxy mode (instead of HTTP)",
+		Value: false,
+	}
+
 	// FlagUserspace allows running a node without privileged permissions.
 	FlagUserspace = cli.BoolFlag{
 		Name:  "userspace",
@@ -350,6 +357,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagUserMode,
 		&FlagDVPNMode,
 		&FlagProxyMode,
+		&FlagProxySOCKS5,
 		&FlagUserspace,
 		&FlagVendorID,
 		&FlagLauncherVersion,
@@ -413,6 +421,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseBoolFlag(ctx, FlagDVPNMode)
 	Current.ParseBoolFlag(ctx, FlagProxyMode)
+	Current.ParseBoolFlag(ctx, FlagProxySOCKS5)
 	Current.ParseBoolFlag(ctx, FlagUserspace)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagLauncherVersion)

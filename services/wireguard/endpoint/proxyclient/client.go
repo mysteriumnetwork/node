@@ -135,14 +135,14 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	server := http.Server{
-		Addr:              fmt.Sprintf(":%d", proxyPort),
-		Handler:           newProxyHandler(60*time.Second, tnet),
-		ReadTimeout:       0,
-		ReadHeaderTimeout: 0,
-		WriteTimeout:      0,
-		IdleTimeout:       0,
-	}
+    server := http.Server{
+        Addr:              fmt.Sprintf(":%d", proxyPort),
+        Handler:           NewProxyHandler(60*time.Second, tnet),
+        ReadTimeout:       0,
+        ReadHeaderTimeout: 0,
+        WriteTimeout:      0,
+        IdleTimeout:       0,
+    }
 
 	log.Info().Msgf("Starting proxy server at :%d ...", proxyPort)
 	c.proxyClose = func() error {

@@ -18,20 +18,14 @@
 package endpoint
 
 import (
-	"runtime"
-	"sync"
+    "runtime"
+    "sync"
 
-	"github.com/rs/zerolog/log"
+    "github.com/rs/zerolog/log"
 
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/dvpnclient"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
-	netstack_provider "github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack-provider"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/proxyclient"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
-	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
+    "github.com/mysteriumnetwork/node/services/wireguard/endpoint/smartclient"
+    "github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+    "github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
 // WgClient represents WireGuard client.
@@ -55,35 +49,7 @@ func NewWGClientFactory() *WgClientFactory {
 }
 
 // NewWGClient returns a new wireguard client.
-func (wcf *WgClientFactory) NewWGClient() (WgClient, error) {
-	if config.GetBool(config.FlagDVPNMode) {
-		return dvpnclient.New()
-	}
-
-	if config.GetBool(config.FlagProxyMode) {
-		return proxyclient.New()
-	}
-
-	if config.GetBool(config.FlagUserspace) {
-		return netstack_provider.New()
-	}
-
-	if config.GetBool(config.FlagUserMode) {
-		return remoteclient.New()
-	}
-
-	wcf.once.Do(func() {
-		wcf.isKernelSpaceSupportedResult = wcf.isKernelSpaceSupported()
-	})
-
-	if wcf.isKernelSpaceSupportedResult {
-		return kernelspace.NewWireguardClient()
-	}
-
-	log.Info().Msg("Wireguard kernel space is not supported. Switching to user space implementation.")
-
-	return userspace.NewWireguardClient()
-}
+func (wcf *WgClientFactory) NewWGClient() (WgClient, error) { return smartclient.New(), nil }
 
 func (wcf *WgClientFactory) isKernelSpaceSupported() bool {
 	if runtime.GOOS != "linux" {
