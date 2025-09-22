@@ -1332,7 +1332,14 @@ type settlementState struct {
 	settleInProgress map[common.Address]struct{}
 }
 
-func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThreshold float64, feeThreshold float64, minSettleAmount, maxUnSettledAmount float64, channel HermesChannel, chainID int64) (bool, *big.Int) {
+func (aps *hermesPromiseSettler) needsSettling(
+	ss settlementState,
+	balanceThreshold float64,
+	feeThreshold float64,
+	minSettleAmount, maxUnSettledAmount float64,
+	channel HermesChannel,
+	chainID int64,
+) (bool, *big.Int) {
 	if !ss.registered {
 		return false, nil
 	}
@@ -1345,6 +1352,21 @@ func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThresh
 		// no stake mode
 		unsettledAmount := channel.UnsettledBalance()
 		if unsettledAmount.Cmp(units.FloatEthToBigIntWei(maxUnSettledAmount)) > 0 {
+			log.Info().
+				Float64("balanceThreshold", balanceThreshold).
+				Float64("feeThreshold", feeThreshold).
+				Float64("minSettleAmount", minSettleAmount).
+				Float64("maxUnSettledAmount", maxUnSettledAmount).
+				Str("channel.ChannelID", channel.ChannelID).
+				Str("channel.Identity", channel.Identity.ToCommonAddress().String()).
+				Str("channel.HermesID", channel.HermesID.String()).
+				Any("channel.Channel.Settled", channel.Channel.Settled).
+				Any("channel.Channel.Stake", channel.Channel.Stake).
+				Any("channel.Channel.LastUsedNonce", channel.Channel.LastUsedNonce).
+				Any("channel.Beneficiary", channel.Beneficiary.String()).
+				Int64("chainID", chainID).
+				Bool("needsSettling", true).
+				Msg("needsSettling - decision reached")
 			return true, nil
 		}
 		if unsettledAmount.Cmp(units.FloatEthToBigIntWei(minSettleAmount)) >= 0 {
@@ -1358,7 +1380,27 @@ func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThresh
 			unsettledBalance := new(big.Float).SetInt(channel.UnsettledBalance())
 			calculatedFeesThreshold := new(big.Float).Mul(big.NewFloat(feeThreshold), unsettledBalance)
 			calculatedFeesThresholdInt, _ := calculatedFeesThreshold.Int(nil)
-			return settleFees.Fee.Cmp(calculatedFeesThresholdInt) < 0, maxFee
+
+			needsSettling := settleFees.Fee.Cmp(calculatedFeesThresholdInt) < 0
+			log.Info().
+				Str("maxFee", maxFee.String()).
+				Str("unsettledBalance", unsettledBalance.String()).
+				Str("calculatedFeesThreshold", calculatedFeesThreshold.String()).
+				Float64("balanceThreshold", balanceThreshold).
+				Float64("feeThreshold", feeThreshold).
+				Float64("minSettleAmount", minSettleAmount).
+				Float64("maxUnSettledAmount", maxUnSettledAmount).
+				Str("channel.ChannelID", channel.ChannelID).
+				Str("channel.Identity", channel.Identity.ToCommonAddress().String()).
+				Str("channel.HermesID", channel.HermesID.String()).
+				Any("channel.Channel.Settled", channel.Channel.Settled).
+				Any("channel.Channel.Stake", channel.Channel.Stake).
+				Any("channel.Channel.LastUsedNonce", channel.Channel.LastUsedNonce).
+				Any("channel.Beneficiary", channel.Beneficiary.String()).
+				Int64("chainID", chainID).
+				Bool("needsSettling", needsSettling).
+				Msg("needsSettling - decision reached")
+			return needsSettling, maxFee
 		}
 		return false, nil
 	}
@@ -1372,6 +1414,21 @@ func (aps *hermesPromiseSettler) needsSettling(ss settlementState, balanceThresh
 	}
 
 	if channel.balance().Cmp(i) <= 0 {
+		log.Info().
+			Float64("balanceThreshold", balanceThreshold).
+			Float64("feeThreshold", feeThreshold).
+			Float64("minSettleAmount", minSettleAmount).
+			Float64("maxUnSettledAmount", maxUnSettledAmount).
+			Str("channel.ChannelID", channel.ChannelID).
+			Str("channel.Identity", channel.Identity.ToCommonAddress().String()).
+			Str("channel.HermesID", channel.HermesID.String()).
+			Any("channel.Channel.Settled", channel.Channel.Settled).
+			Any("channel.Channel.Stake", channel.Channel.Stake).
+			Any("channel.Channel.LastUsedNonce", channel.Channel.LastUsedNonce).
+			Any("channel.Beneficiary", channel.Beneficiary.String()).
+			Int64("chainID", chainID).
+			Bool("needsSettling", true).
+			Msg("needsSettling - decision reached")
 		return true, nil
 	}
 
