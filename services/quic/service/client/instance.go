@@ -79,7 +79,9 @@ func (c *client) DialCommunication(ctx context.Context) (*streams.QuicConnection
 				if err != nil {
 					select {
 					case <-ctx.Done():
-						conn.CloseWithError(100, "stopped")
+						if conn != nil {
+							conn.CloseWithError(100, "stopped")
+						}
 
 						return
 					default:
