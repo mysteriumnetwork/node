@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/supervisor/client"
 )
 
-// RoutingTableRemote implements a set of commands for supervisor deamon for creating,
+// RoutingTableRemote implements a set of commands for supervisor daemon for creating,
 // deleting and observe routing tables rules for a different needs.
 type RoutingTableRemote struct{}
 

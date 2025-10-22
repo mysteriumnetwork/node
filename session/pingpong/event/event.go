@@ -39,7 +39,7 @@ const (
 	AppTopicSettlementRequest = "settlement_request"
 	// AppTopicSettlementComplete topic for events related to completed settlement.
 	AppTopicSettlementComplete = "provider_settlement_complete"
-	// AppTopicWithdrawalRequested topic for succesfull withdrawal requests.
+	// AppTopicWithdrawalRequested topic for successful withdrawal requests.
 	AppTopicWithdrawalRequested = "provider_withdrawal_requested"
 )
 

@@ -385,7 +385,7 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 		// 6) The promise is incremented but never issued as the session is aborted. This can happen due to promise not being sent, or provider not listening for further promises on the given topic.
 		// 7) Hermes is not aware of the last promise, therefore the consumer and hermes reportings are different.
 		// I do not believe this will cause issues in reality, as such situations occur in e2e test regularly due to the rapid exchange of promises.
-		// Under normal circumstances, such occurences should be VERY, VERY rare and the amount of myst involved is rather small. They should have no impact on the payment system as a whole.
+		// Under normal circumstances, such occurrences should be VERY, VERY rare and the amount of myst involved is rather small. They should have no impact on the payment system as a whole.
 		// Therefore, for these tests to be stable, the following solution is proposed:
 		// Make sure that the hermes and consumer reported spendings differ by no more than 1/100000 of a myst.
 		absDiffFloat := getDiffFloat(consumerSpending, promised)

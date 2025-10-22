@@ -669,7 +669,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 
 	expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr.Hex(), "0x"))
 	if err != nil {
-		return errors.Wrap(err, "could not decode expected chanel")
+		return errors.Wrap(err, "could not decode expected channel")
 	}
 
 	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {

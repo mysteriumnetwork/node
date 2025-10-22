@@ -26,7 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 )
 
-// NewConnection creates a new noop connnection
+// NewConnection creates a new noop connection
 func NewConnection() (connection.Connection, error) {
 	return &Connection{
 		stateCh: make(chan connectionstate.State, 100),

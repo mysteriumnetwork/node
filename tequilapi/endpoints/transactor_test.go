@@ -451,7 +451,7 @@ func Test_Withdrawal(t *testing.T) {
 		{fromChainID: 0, toChainID: -1},
 		{fromChainID: -1, toChainID: -1},
 	} {
-		t.Run(fmt.Sprintf("fail withdrawal with unsuported fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
+		t.Run(fmt.Sprintf("fail withdrawal with unsupported fromChainID: %d, toChainID: %d", data.fromChainID, data.toChainID), func(t *testing.T) {
 			// when
 			body, err := json.Marshal(contract.WithdrawRequest{
 				HermesID:    "0xe948dae2ce1faf719ba1091d8c6664a46bab073d",
