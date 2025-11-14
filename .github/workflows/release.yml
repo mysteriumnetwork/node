@@ -16,7 +16,7 @@ env:
 
 jobs:
   release-nightly:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     if: github.event_name == 'schedule'
     env:
       NIGHTLY_BUILD: true
@@ -41,7 +41,7 @@ jobs:
         run: curl -so /dev/null -I "${{ secrets.NIGHTLY_UPTIMEROBOT }}"
 
   release-snapshot:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     if: |
       github.ref == 'refs/heads/master' &&
       github.event_name != 'schedule'
@@ -90,7 +90,7 @@ jobs:
         run: bin/release_goreport
 
   release-tag:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     if: github.ref_type == 'tag'
 
     strategy:
@@ -135,7 +135,7 @@ jobs:
           go run mage.go -v ${{ matrix.platform }}
 
   post-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     if: github.ref_type == 'tag'
     needs: [release-tag]
 

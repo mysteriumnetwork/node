@@ -20,7 +20,7 @@ env:
 
 jobs:
   setup-env:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
 
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
           sudo -E go run mage.go -v ${{ matrix.platform }}
 
   build-swagger:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     needs: [setup-env, build-packages]
 
     steps:
@@ -158,7 +158,7 @@ jobs:
       github.ref_type == 'tag'
 
   cleanup-env:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     needs: [release]
     if: |
       always() &&
