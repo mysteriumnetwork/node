@@ -81,7 +81,7 @@ jobs:
           go run mage.go -v MakeBucket
 
   build-packages:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest-m
     needs: [setup-env]
 
     strategy:
