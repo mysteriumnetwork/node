@@ -1,4 +1,4 @@
-FROM redocly/redoc AS docs
+FROM redocly/redoc:v2.5.1 AS docs
 
 COPY tequilapi/docs/swagger.json /usr/share/nginx/html/tequilapi.json
 
