@@ -7,7 +7,7 @@ env:
 
 jobs:
   unit-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   e2e-basic:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
 
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
         run: go run mage.go -v TestE2EShaper
 
   e2e-nat:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
 
     steps:
       - uses: actions/checkout@v4
