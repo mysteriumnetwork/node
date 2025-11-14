@@ -73,7 +73,7 @@ func (options *NodeOptions) Check() error {
 }
 
 // given error value from cmd.Wait() extract exit code if possible, otherwise returns error itself
-// this is ugly but there is no standart and os independent way to extract exit status in golang
+// this is ugly but there is no standard and os independent way to extract exit status in golang
 func extractExitCodeFromCmdResult(cmdResult error) (int, error) {
 	exitError, ok := cmdResult.(*exec.ExitError)
 	if !ok {
