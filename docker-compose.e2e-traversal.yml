@@ -1,4 +1,4 @@
-version: '3.0'
+version: '3.8'
 
 services:
   morqa:
@@ -394,7 +394,7 @@ services:
         ipv4_address: 172.31.0.213
 
   redis:
-    image: bitnami/redis:6.2.14
+    image: bitnamilegacy/redis:6.2.14
     container_name: 'hermes_redis'
     expose:
       - 6379
