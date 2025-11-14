@@ -182,7 +182,7 @@ services:
       - ./e2e/transactor:/transactor
 
   redis:
-    image: bitnami/redis:6.2.14
+    image: redis:6.2.14
     container_name: 'hermes_redis'
     expose:
       - 6379
