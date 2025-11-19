@@ -35,7 +35,7 @@ func NewPaymentChannelDTO(channel pingpong.HermesChannel) PaymentChannelDTO {
 	}
 }
 
-// PaymentChannelDTO represents represents opened payment channel between identity and hermes.
+// PaymentChannelDTO represents opened payment channel between identity and hermes.
 // swagger:model PaymentChannelDTO
 type PaymentChannelDTO struct {
 	// Unique identifier of payment channel

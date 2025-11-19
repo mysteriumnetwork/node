@@ -4742,7 +4742,7 @@
     },
     "PaymentChannelDTO": {
       "type": "object",
-      "title": "PaymentChannelDTO represents represents opened payment channel between identity and hermes.",
+      "title": "PaymentChannelDTO represents opened payment channel between identity and hermes.",
       "properties": {
         "beneficiary": {
           "description": "Beneficiary - eth wallet address",
