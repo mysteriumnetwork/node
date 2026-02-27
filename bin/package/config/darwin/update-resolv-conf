@@ -1,24 +1,18 @@
 #!/bin/bash
-
 # Mac name-resolution updater based on @cl's script here:
 # https://blog.netnerds.net/2011/10/openvpn-update-client-dns-on-mac-os-x-using-from-the-command-line/
 # Openvpn envar parsing taken from the script in debian's openvpn package.
 # Smushed together and improved by @andrewgdotcom.
-
 # Parses DHCP options from openvpn to update resolv.conf
 # To use set as 'up' and 'down' script in your openvpn *.conf:
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
-
 [ "$script_type" ] || exit 0
 [ "$dev" ] || exit 0
-
 NMSRVRS=()
 SRCHS=()
 adapters=()
-
 NETWORKSETUP=/usr/sbin/networksetup
-
 # Set bash delimeter to be line break (temporarily)
 IFSSAVE=$IFS
 IFS=$'\n'
@@ -27,14 +21,12 @@ for i in `$NETWORKSETUP -listallnetworkservices | grep -v denotes`; do
     adapters=(${adapters[@]} "$i")
 done
 IFS=$IFSSAVE
-
 split_into_parts()
 {
     part1="$1"
     part2="$2"
     part3="$3"
 }
-
 update_all_dns()
 {
     for adapter in "${adapters[@]}"
@@ -45,46 +37,41 @@ update_all_dns()
             if [ ! -f "/tmp/myst.$adapter.searchdomains" ]; then
                 $NETWORKSETUP -getsearchdomains "$adapter" | grep -v "There aren't any" > "/tmp/myst.$adapter.searchdomains"
             fi
-            $NETWORKSETUP -setsearchdomains "$adapter" "${SRCHS[@]}"
+            $NETWORKSETUP -setsearchdomains "$adapter" "${SRCHS[@]}" || echo "skipping $adapter (search domains)"
         fi
         if [[ "${NMSRVRS[@]}" ]]; then
             if [ ! -f "/tmp/myst.$adapter.dnsservers" ]; then
                 $NETWORKSETUP -getdnsservers "$adapter" | grep -v "There aren't any" > "/tmp/myst.$adapter.dnsservers"
             fi
-            $NETWORKSETUP -setdnsservers "$adapter" "${NMSRVRS[@]}"
+            $NETWORKSETUP -setdnsservers "$adapter" "${NMSRVRS[@]}" || echo "skipping $adapter (dns servers)"
         fi
     done
 }
-
 clear_all_dns()
 {
     for adapter in "${adapters[@]}"
     do
         echo updating dns for $adapter
-
         dnsservers=""
         searchdomains=""
         dnsservers=`echo $(cat "/tmp/myst.$adapter.dnsservers")`
         searchdomains=`echo $(cat "/tmp/myst.$adapter.searchdomains")`
-
         if [ -z "$dnsservers" ]; then
             dnsservers="empty"
         fi
         if [ -z "$searchdomains" ]; then
             searchdomains="empty"
         fi
-
         if [ -f "/tmp/myst.$adapter.dnsservers" ]; then
-            $NETWORKSETUP -setdnsservers "$adapter" $dnsservers
+            $NETWORKSETUP -setdnsservers "$adapter" $dnsservers || echo "skipping $adapter (dns servers)"
             rm "/tmp/myst.$adapter.dnsservers"
         fi
         if [ -f "/tmp/myst.$adapter.searchdomains" ]; then
-            $NETWORKSETUP -setsearchdomains "$adapter" $searchdomains
+            $NETWORKSETUP -setsearchdomains "$adapter" $searchdomains || echo "skipping $adapter (search domains)"
             rm "/tmp/myst.$adapter.searchdomains"
         fi
     done
 }
-
 case "$script_type" in
     up)
         for optionvarname in ${!foreign_option_*} ; do
