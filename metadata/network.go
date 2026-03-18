@@ -87,7 +87,7 @@ var MainnetDefinition = NetworkDefinition{
 		MystAddress:        "0x1379e8886a944d2d9d440b3d88df536aea08d9f3",
 		EtherClientRPC: []string{
 			"https://polygon1.mysterium.network/",
-			"https://polygon-rpc.com/",
+			"https://polygon.drpc.org",
 		},
 		KnownHermeses: []string{
 			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
