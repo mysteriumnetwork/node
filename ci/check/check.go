@@ -27,7 +27,6 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-
 	"github.com/mysteriumnetwork/go-ci/commands"
 	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/packages"
@@ -60,7 +59,7 @@ func CheckGoVet() error {
 
 // CheckGoImports checks for issues with go imports.
 func CheckGoImports() error {
-	return commands.GoImportsD(".", "pb", "tequilapi/endpoints/assets")
+	return GoImportsD(".", "pb", "tequilapi/endpoints/assets")
 }
 
 // CheckSwagger checks whether swagger spec at "tequilapi/docs/swagger.json" is valid against swagger specification 2.0.

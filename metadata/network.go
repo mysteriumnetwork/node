@@ -87,7 +87,7 @@ var MainnetDefinition = NetworkDefinition{
 		MystAddress:        "0x1379e8886a944d2d9d440b3d88df536aea08d9f3",
 		EtherClientRPC: []string{
 			"https://polygon1.mysterium.network/",
-			"https://polygon-rpc.com/",
+			"https://polygon.drpc.org",
 		},
 		KnownHermeses: []string{
 			"0xa62a2a75949d25e17c6f08a7818e7be97c18a8d2",
@@ -99,15 +99,15 @@ var MainnetDefinition = NetworkDefinition{
 	PilvytisAddress: "https://pilvytis.mysterium.network",
 	ObserverAddress: "https://observer.mysterium.network",
 	DNSMap: map[string][]string{
-		"discovery.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"trust.mysterium.network":     {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
-		"broker.mysterium.network":    {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+		"discovery.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81", "46.224.211.253", "188.245.149.150"},
+		"trust.mysterium.network":     {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81", "46.224.211.253", "188.245.149.150"},
+		"broker.mysterium.network":    {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81", "46.224.211.253", "188.245.149.150"},
 		"transactor.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81",
-			"51.158.204.23", "51.158.204.75", "51.158.204.9", "51.158.204.30"}, // remove after the migration is complete
-		"affiliator.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+			"51.158.204.23", "51.158.204.75", "51.158.204.9", "51.158.204.30", "46.224.211.253", "188.245.149.150"}, // remove after the migration is complete
+		"affiliator.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81", "46.224.211.253", "188.245.149.150"},
 		"pilvytis.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81",
-			"51.158.204.23", "51.158.204.75", "51.158.204.9", "51.158.204.30"}, // remove after the migration is complete
-		"observer.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81"},
+			"51.158.204.23", "51.158.204.75", "51.158.204.9", "51.158.204.30", "46.224.211.253", "188.245.149.150"}, // remove after the migration is complete
+		"observer.mysterium.network": {"159.69.15.34", "159.69.244.241", "116.203.130.98", "49.12.244.81", "46.224.211.253", "188.245.149.150"},
 	},
 	DefaultChainID:  137,
 	DefaultCurrency: "MYST",
