@@ -251,7 +251,8 @@ func (c *Connection) Stop() {
 		default:
 		}
 
-		close(c.stateCh)
+		// Close done first so sendState calls will bail out instead of sending on closed stateCh
 		close(c.done)
+		close(c.stateCh)
 	})
 }
