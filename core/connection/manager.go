@@ -48,7 +48,7 @@ import (
 )
 
 const (
-	p2pDialTimeout = 60 * time.Second
+	p2pDialTimeout = 20 * time.Second
 )
 
 var (
@@ -809,11 +809,22 @@ func (m *connectionManager) Cancel() {
 }
 
 func (m *connectionManager) Disconnect() error {
-	if m.Status().State == connectionstate.NotConnected {
+	m.statusLock.Lock()
+	stateWas := m.status.State
+	if stateWas == connectionstate.NotConnected {
+		m.statusLock.Unlock()
 		return ErrNoConnection
 	}
+	if stateWas == connectionstate.Disconnecting {
+		m.statusLock.Unlock()
+		return nil
+	}
+	m.status.State = connectionstate.Disconnecting
+	m.statusLock.Unlock()
 
-	m.statusDisconnecting()
+	log.Info().Msgf("Connection state: %v -> %v", stateWas, connectionstate.Disconnecting)
+	m.publishStateEvent(connectionstate.Disconnecting)
+
 	m.disconnect()
 
 	return nil
@@ -1025,9 +1036,13 @@ func (m *connectionManager) Reconnect() {
 	}
 	log.Info().Msg("Waiting for previous session to cleanup")
 
+	// Capture the channel reference while holding the lock, then release the lock
+	// before waiting. This prevents a deadlock where Connect() fails and its deferred
+	// disconnect() tries to re-acquire cleanupFinishedLock.
 	m.cleanupFinishedLock.Lock()
-	defer m.cleanupFinishedLock.Unlock()
-	<-m.cleanupFinished
+	ch := m.cleanupFinished
+	m.cleanupFinishedLock.Unlock()
+	<-ch
 	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.ProposalLookup, m.connectOptions.Params)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to reconnect")

@@ -41,7 +41,7 @@ var ErrNotFound = errors.New("no info for provided identity available in storage
 
 // RegistrationStatusStorage allows for storing of registration statuses.
 type RegistrationStatusStorage struct {
-	lock sync.Mutex
+	lock sync.RWMutex
 	bolt persistentStorage
 }
 
@@ -105,15 +105,15 @@ func (rss *RegistrationStatusStorage) get(chainID int64, identity identity.Ident
 
 // Get fetches the promise for the given hermes.
 func (rss *RegistrationStatusStorage) Get(chainID int64, identity identity.Identity) (StoredRegistrationStatus, error) {
-	rss.lock.Lock()
-	defer rss.lock.Unlock()
+	rss.lock.RLock()
+	defer rss.lock.RUnlock()
 	return rss.get(chainID, identity)
 }
 
 // GetAll fetches all the registration statuses
 func (rss *RegistrationStatusStorage) GetAll() ([]StoredRegistrationStatus, error) {
-	rss.lock.Lock()
-	defer rss.lock.Unlock()
+	rss.lock.RLock()
+	defer rss.lock.RUnlock()
 
 	list := []storedRegistrationStatus{}
 	err := rss.bolt.GetAllFrom(registrationStatusBucket, &list)

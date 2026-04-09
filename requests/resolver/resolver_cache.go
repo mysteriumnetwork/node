@@ -24,7 +24,7 @@ import (
 var defaultResolveCache = NewResolverCache()
 
 type resolverCache struct {
-	mu    sync.Mutex
+	mu    sync.RWMutex
 	cache map[string][]string
 }
 
@@ -46,8 +46,8 @@ func FetchDNSFromCache(name string) (addrs []string) {
 }
 
 func (rc *resolverCache) Fetch(name string) []string {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
+	rc.mu.RLock()
+	defer rc.mu.RUnlock()
 
 	return rc.cache[name]
 }

@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -33,7 +35,6 @@ import (
 	session_event "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -265,6 +266,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		Status:  session_event.CreatedStatus,
 		Session: serviceSessionMock,
 	})
+	storage.waitForQueue()
 	// then
 	sessions, err := storage.GetAll()
 	assert.Nil(t, err)
@@ -301,6 +303,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		Status:  session_event.RemovedStatus,
 		Session: serviceSessionMock,
 	})
+	storage.waitForQueue()
 	// then
 	sessions, err = storage.GetAll()
 	assert.Nil(t, err)
@@ -348,6 +351,7 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 		Status:      connectionstate.SessionEndedStatus,
 		SessionInfo: connectionSessionMock,
 	})
+	storage.waitForQueue()
 
 	// then
 	sessions, err := storage.GetAll()
@@ -385,6 +389,7 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 		Status:      connectionstate.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
 	})
+	storage.waitForQueue()
 
 	// then
 	sessions, err := storage.GetAll()
@@ -428,6 +433,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		SessionID:  "unknown",
 		Invoice:    connectionInvoiceMock,
 	})
+	storage.waitForQueue()
 	// then
 	sessions, err := storage.GetAll()
 	assert.Nil(t, err)
@@ -457,6 +463,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		SessionID:  "sessionID",
 		Invoice:    connectionInvoiceMock,
 	})
+	storage.waitForQueue()
 	// then
 	sessions, err = storage.GetAll()
 	assert.Nil(t, err)

@@ -60,7 +60,6 @@ func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPor
 			resp := multiServerSTUN(serverList, p, 2)
 
 			mu.Lock()
-			defer mu.Unlock()
 
 			natType := "unknown"
 
@@ -84,6 +83,8 @@ func stunPorts(identity identity.Identity, eventBus eventbus.Publisher, localPor
 			if natType == "fail" {
 				delete(m, p)
 			}
+
+			mu.Unlock()
 
 			if eventBus != nil {
 				eventBus.Publish(AppTopicSTUN, STUNDetectionStatus{
