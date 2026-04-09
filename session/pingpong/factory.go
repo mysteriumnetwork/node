@@ -107,7 +107,8 @@ func ExchangeFactoryFunc(
 	dataLeewayMegabytes uint64,
 ) func(senderUUID string, channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
 	return func(senderUUID string, channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal proposal.PricedServiceProposal, price market.Price) (connection.PaymentIssuer, error) {
-		invoices, err := invoiceReceiver(channel)
+		receiverStop := make(chan struct{})
+		invoices, err := invoiceReceiver(channel, receiverStop)
 		if err != nil {
 			return nil, err
 		}
@@ -115,6 +116,7 @@ func ExchangeFactoryFunc(
 		deps := InvoicePayerDeps{
 			SenderUUID:                senderUUID,
 			InvoiceChan:               invoices,
+			ReceiverStop:              receiverStop,
 			PeerExchangeMessageSender: NewExchangeSender(channel),
 			ConsumerTotalsStorage:     totalStorage,
 			TimeTracker:               &timeTracker,
@@ -132,8 +134,8 @@ func ExchangeFactoryFunc(
 	}
 }
 
-func invoiceReceiver(channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
-	invoices := make(chan crypto.Invoice)
+func invoiceReceiver(channel p2p.ChannelHandler, stop <-chan struct{}) (chan crypto.Invoice, error) {
+	invoices := make(chan crypto.Invoice, 1)
 
 	channel.Handle(p2p.TopicPaymentInvoice, func(c p2p.Context) error {
 		var msg pb.Invoice
@@ -162,13 +164,17 @@ func invoiceReceiver(channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
 			return fmt.Errorf("could not unmarshal field transactorFee of value %v", transactorFee)
 		}
 
-		invoices <- crypto.Invoice{
+		select {
+		case invoices <- crypto.Invoice{
 			AgreementID:    agreementID,
 			AgreementTotal: agreementTotal,
 			TransactorFee:  transactorFee,
 			Hashlock:       msg.GetHashlock(),
 			Provider:       msg.GetProvider(),
 			ChainID:        msg.GetChainID(),
+		}:
+		case <-stop:
+			return fmt.Errorf("invoice receiver stopped")
 		}
 
 		return nil

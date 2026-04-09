@@ -94,6 +94,7 @@ type hashSigner interface {
 // InvoicePayerDeps contains all the dependencies for the exchange message tracker.
 type InvoicePayerDeps struct {
 	InvoiceChan               chan crypto.Invoice
+	ReceiverStop              chan struct{}
 	PeerExchangeMessageSender PeerExchangeMessageSender
 	ConsumerTotalsStorage     consumerTotalsStorage
 	TimeTracker               timeTracker
@@ -294,6 +295,9 @@ func (ip *InvoicePayer) Stop() {
 	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
 		close(ip.stop)
+		if ip.deps.ReceiverStop != nil {
+			close(ip.deps.ReceiverStop)
+		}
 	})
 }
 
