@@ -81,6 +81,13 @@ func (repo *Storage) Close() {
 	close(repo.stopQueue)
 }
 
+// waitForQueue blocks until all queued writes have been processed.
+func (repo *Storage) waitForQueue() {
+	done := make(chan struct{})
+	repo.writeQueue <- func() { close(done) }
+	<-done
+}
+
 // Subscribe subscribes to relevant events of event bus.
 func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.Subscribe(session_event.AppTopicSession, repo.consumeServiceSessionEvent); err != nil {
