@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
-	session_event "github.com/mysteriumnetwork/nession/pingpong/event"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -35,6 +34,7 @@ import (
 	session_node "github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
+	session_event "github.com/mysteriumnetwork/session/pingpong/event"
 )
 
 var (
