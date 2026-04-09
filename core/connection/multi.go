@@ -46,14 +46,19 @@ func NewMultiConnectionManager(newConnectionManager func() Manager) *multiConnec
 
 // Connect creates new connection from given consumer to provider, reports error if connection already exists.
 func (mcm *multiConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposalLookup ProposalLookup, params ConnectParams) error {
-	mcm.mu.Lock()
-
+	mcm.mu.RLock()
 	m, ok := mcm.cms[params.ProxyPort]
+	mcm.mu.RUnlock()
+
 	if !ok {
-		m = mcm.newConnectionManager()
-		mcm.cms[params.ProxyPort] = m
+		mcm.mu.Lock()
+		m, ok = mcm.cms[params.ProxyPort]
+		if !ok {
+			m = mcm.newConnectionManager()
+			mcm.cms[params.ProxyPort] = m
+		}
+		mcm.mu.Unlock()
 	}
-	mcm.mu.Unlock()
 
 	return m.Connect(consumerID, hermesID, proposalLookup, params)
 }
@@ -97,9 +102,13 @@ func (mcm *multiConnectionManager) Disconnect(id int) error {
 
 	if id < 0 {
 		mcm.mu.RLock()
-		defer mcm.mu.RUnlock()
-
+		managers := make([]Manager, 0, len(mcm.cms))
 		for _, m := range mcm.cms {
+			managers = append(managers, m)
+		}
+		mcm.mu.RUnlock()
+
+		for _, m := range managers {
 			if err := m.Disconnect(); err != nil {
 				log.Error().Err(err).Msg("Failed to disconnect active connection")
 			}
