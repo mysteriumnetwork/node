@@ -46,16 +46,39 @@ type Storage struct {
 
 	mu             sync.RWMutex
 	sessionsActive map[session_node.ID]History
+
+	writeQueue chan func()
+	stopQueue  chan struct{}
 }
 
 // NewSessionStorage creates session repository with given dependencies.
 func NewSessionStorage(storage *boltdb.Bolt) *Storage {
-	return &Storage{
+	s := &Storage{
 		storage:    storage,
 		timeGetter: time.Now,
 
 		sessionsActive: make(map[session_node.ID]History),
+		writeQueue:     make(chan func(), 100),
+		stopQueue:      make(chan struct{}),
 	}
+	go s.writeWorker()
+	return s
+}
+
+func (repo *Storage) writeWorker() {
+	for {
+		select {
+		case fn := <-repo.writeQueue:
+			fn()
+		case <-repo.stopQueue:
+			return
+		}
+	}
+}
+
+// Close stops the background write worker.
+func (repo *Storage) Close() {
+	close(repo.stopQueue)
 }
 
 // Subscribe subscribes to relevant events of event bus.
@@ -69,13 +92,13 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(session_event.AppTopicTokensEarned, repo.consumeServiceSessionEarningsEvent); err != nil {
 		return err
 	}
-	if err := bus.Subscribe(connectionstate.AppTopicConnectionSession, repo.consumeConnectionSessionEvent); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionSession, repo.consumeConnectionSessionEvent); err != nil {
 		return err
 	}
 	if err := bus.Subscribe(connectionstate.AppTopicConnectionStatistics, repo.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
-	return bus.Subscribe(pingpong_event.AppTopicInvoicePaid, repo.consumeConnectionSpendingEvent)
+	return bus.SubscribeAsync(pingpong_event.AppTopicInvoicePaid, repo.consumeConnectionSpendingEvent)
 }
 
 // GetAll returns array of all sessions.
@@ -274,65 +297,103 @@ func (repo *Storage) consumeConnectionStatisticsEvent(e connectionstate.AppEvent
 
 func (repo *Storage) consumeConnectionSpendingEvent(e pingpong_event.AppEventInvoicePaid) {
 	repo.mu.Lock()
-	defer repo.mu.Unlock()
-
 	sessionID := session_node.ID(e.SessionID)
+
 	row, ok := repo.activeSession(sessionID)
 	if !ok {
+		repo.mu.Unlock()
 		return
 	}
 	row.Updated = repo.timeGetter().UTC()
 	row.Tokens = e.Invoice.AgreementTotal
+	repo.mu.Unlock()
 
-	err := repo.storage.Update(sessionStorageBucketName, &row)
-	if err != nil {
-		log.Error().Err(err).Msgf("Session %v update failed", sessionID)
-		return
+	fn := func() {
+		err := repo.storage.Update(sessionStorageBucketName, &row)
+		if err != nil {
+			log.Error().Err(err).Msgf("Session %v update failed", sessionID)
+			return
+		}
+
+		repo.mu.Lock()
+		repo.sessionsActive[sessionID] = row
+		repo.mu.Unlock()
+		log.Debug().Msgf("Session %v updated", sessionID)
 	}
-
-	repo.sessionsActive[sessionID] = row
-	log.Debug().Msgf("Session %v updated", sessionID)
+	select {
+	case repo.writeQueue <- fn:
+	case <-repo.stopQueue:
+		log.Warn().Msgf("Session storage closed, dropping spending update for %v", sessionID)
+	default:
+		log.Warn().Msgf("Session write queue full, dropping spending update for %v", sessionID)
+	}
 }
 
 func (repo *Storage) handleEndedEvent(sessionID session_node.ID) {
 	repo.mu.Lock()
-	defer repo.mu.Unlock()
 
 	row, ok := repo.sessionsActive[sessionID]
 	if !ok {
+		repo.mu.Unlock()
 		log.Warn().Msgf("Can't find session %v to update", sessionID)
 		return
 	}
+
 	row.Updated = repo.timeGetter().UTC()
 	row.Status = StatusCompleted
+	repo.mu.Unlock()
 
-	err := repo.storage.Update(sessionStorageBucketName, &row)
-	if err != nil {
-		log.Error().Err(err).Msgf("Session %v update failed", sessionID)
-		return
+	fn := func() {
+		err := repo.storage.Update(sessionStorageBucketName, &row)
+		if err != nil {
+			log.Error().Err(err).Msgf("Session %v update failed", sessionID)
+			return
+		}
+
+		repo.mu.Lock()
+		delete(repo.sessionsActive, sessionID)
+		repo.mu.Unlock()
+		log.Debug().Msgf("Session %v updated with final data", sessionID)
 	}
-
-	delete(repo.sessionsActive, sessionID)
-	log.Debug().Msgf("Session %v updated with final data", sessionID)
+	select {
+	case repo.writeQueue <- fn:
+	case <-repo.stopQueue:
+		log.Warn().Msgf("Session storage closed, dropping end-event update for %v", sessionID)
+	default:
+		log.Warn().Msgf("Session write queue full, dropping end-event update for %v", sessionID)
+	}
 }
 
 func (repo *Storage) handleCreatedEvent(sessionID session_node.ID) {
 	repo.mu.Lock()
-	defer repo.mu.Unlock()
 
 	row, ok := repo.sessionsActive[sessionID]
 	if !ok {
+		repo.mu.Unlock()
 		log.Warn().Msgf("Can't find session %v to store", sessionID)
 		return
 	}
+
 	row.Status = StatusNew
+	repo.mu.Unlock()
 
-	err := repo.storage.Store(sessionStorageBucketName, &row)
-	if err != nil {
-		log.Error().Err(err).Msgf("Session %v insert failed", row.SessionID)
-		return
+	fn := func() {
+		err := repo.storage.Store(sessionStorageBucketName, &row)
+		if err != nil {
+			log.Error().Err(err).Msgf("Session %v insert failed", row.SessionID)
+			return
+		}
+
+		repo.mu.Lock()
+		repo.sessionsActive[sessionID] = row
+		repo.mu.Unlock()
+		log.Debug().Msgf("Session %v saved", row.SessionID)
 	}
-
-	repo.sessionsActive[sessionID] = row
-	log.Debug().Msgf("Session %v saved", row.SessionID)
+	select {
+	case repo.writeQueue <- fn:
+	case <-repo.stopQueue:
+		log.Warn().Msgf("Session storage closed, dropping create-event for %v", sessionID)
+	default:
+		log.Warn().Msgf("Session write queue full, dropping create-event for %v", sessionID)
+	}
 }
