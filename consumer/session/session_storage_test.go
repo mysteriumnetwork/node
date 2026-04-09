@@ -32,9 +32,9 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	session_node "github.com/mysteriumnetwork/node/session"
+	session_event "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
-	session_event "github.com/mysteriumnetwork/session/pingpong/event"
 )
 
 var (
