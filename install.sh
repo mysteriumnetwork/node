@@ -16,16 +16,13 @@ export DEBIAN_FRONTEND="noninteractive"
 
 if [[ "$SNAPSHOT" == "true" ]]; then
     PPA="ppa:mysteriumnetwork/node-dev"
-    PPA_URL="http://ppa.launchpad.net/mysteriumnetwork/node-dev/ubuntu"
-    PPA_FINGER="ECCB6A56B22C536D"
+    PPA_URL="https://ppa.mysterium.network/mysteriumnetwork/node-dev/ubuntu"
 elif [[ "$NETWORK" == "testnet3" ]]; then
     PPA="ppa:mysteriumnetwork/node-testnet3"
-    PPA_URL="http://ppa.launchpad.net/mysteriumnetwork/node-testnet3/ubuntu"
-    PPA_FINGER="ECCB6A56B22C536D"
+    PPA_URL="https://ppa.mysterium.network/mysteriumnetwork/node-testnet3/ubuntu"
 else
     PPA="ppa:mysteriumnetwork/node"
-    PPA_URL="http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu"
-    PPA_FINGER="ECCB6A56B22C536D"
+    PPA_URL="https://ppa.mysterium.network/mysteriumnetwork/node/ubuntu"
 fi
 
 get_os() {
@@ -98,6 +95,11 @@ install_debian() {
     # Wireguard
     prepare_sources_list
 
+    # myst - set up key and repo before any apt update to avoid stale list issues
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://ppa.mysterium.network/public-key | gpg --dearmor -o /etc/apt/keyrings/mysterium.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/mysterium.gpg] $PPA_URL focal main" > /etc/apt/sources.list.d/mysterium.list
+
     if [[ "$container" != "docker" ]]; then
         apt update
         if [[ "$DISTRO" == "raspbian" ]]; then
@@ -106,10 +108,6 @@ install_debian() {
             apt install -y "linux-headers-$(uname -r)"
         fi
     fi
-
-    # myst
-    echo "deb $PPA_URL focal main" > /etc/apt/sources.list.d/mysterium.list
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
 
     apt update
     apt install -y wireguard myst
