@@ -1,8 +1,6 @@
 module github.com/mysteriumnetwork/node
 
-go 1.24.6
-
-toolchain go1.24.11
+go 1.25.7
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -31,7 +29,7 @@ require (
 	github.com/jinzhu/copier v0.3.5
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/koron/go-ssdp v0.0.6
-	github.com/libp2p/go-libp2p v0.46.0
+	github.com/libp2p/go-libp2p v0.48.0
 	github.com/magefile/mage v1.15.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/miekg/dns v1.1.66
@@ -53,7 +51,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pion/stun v0.6.1
 	github.com/pkg/errors v0.9.1
-	github.com/quic-go/quic-go v0.58.0
+	github.com/quic-go/quic-go v0.59.0
 	github.com/rs/zerolog v1.31.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
@@ -65,10 +63,10 @@ require (
 	github.com/vcraescu/go-paginator v0.0.0-20200304054438-86d84f27c0b3
 	github.com/xtaci/kcp-go/v5 v5.6.1
 	go.etcd.io/bbolt v1.3.5
-	golang.org/x/crypto v0.41.0
-	golang.org/x/net v0.43.0
+	golang.org/x/crypto v0.48.0
+	golang.org/x/net v0.50.0
 	golang.org/x/oauth2 v0.30.0
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.41.0
 	golang.org/x/time v0.12.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
@@ -78,6 +76,8 @@ require (
 )
 
 require (
+	filippo.io/bigmod v0.1.1-0.20260103110540-f8a47775ebe5 // indirect
+	filippo.io/keygen v0.0.0-20260114151900-8e2790ea4c5b // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
@@ -116,6 +116,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.12.3 // indirect
 	github.com/didip/tollbooth/v5 v5.2.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
+	github.com/dunglas/httpsfv v1.1.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
 	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
@@ -164,7 +165,7 @@ require (
 	github.com/libp2p/go-flow-metrics v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.4.1 // indirect
 	github.com/libp2p/go-msgio v0.3.0 // indirect
-	github.com/libp2p/go-netroute v0.3.0 // indirect
+	github.com/libp2p/go-netroute v0.4.0 // indirect
 	github.com/libp2p/go-reuseport v0.4.0 // indirect
 	github.com/libp2p/go-yamux/v5 v5.0.1 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
@@ -204,20 +205,21 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/pion/datachannel v1.5.10 // indirect
 	github.com/pion/dtls/v2 v2.2.12 // indirect
-	github.com/pion/dtls/v3 v3.0.6 // indirect
+	github.com/pion/dtls/v3 v3.1.2 // indirect
 	github.com/pion/ice/v4 v4.0.10 // indirect
 	github.com/pion/interceptor v0.1.40 // indirect
-	github.com/pion/logging v0.2.3 // indirect
+	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
-	github.com/pion/rtcp v1.2.15 // indirect
+	github.com/pion/rtcp v1.2.16 // indirect
 	github.com/pion/rtp v1.8.19 // indirect
 	github.com/pion/sctp v1.8.39 // indirect
-	github.com/pion/sdp/v3 v3.0.13 // indirect
+	github.com/pion/sdp/v3 v3.0.18 // indirect
 	github.com/pion/srtp/v3 v3.0.6 // indirect
-	github.com/pion/stun/v3 v3.0.0 // indirect
+	github.com/pion/stun/v3 v3.1.1 // indirect
 	github.com/pion/transport/v2 v2.2.10 // indirect
 	github.com/pion/transport/v3 v3.0.7 // indirect
+	github.com/pion/transport/v4 v4.0.1 // indirect
 	github.com/pion/turn/v4 v4.0.2 // indirect
 	github.com/pion/webrtc/v4 v4.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -226,7 +228,7 @@ require (
 	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/webtransport-go v0.9.0 // indirect
+	github.com/quic-go/webtransport-go v0.10.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
@@ -255,10 +257,11 @@ require (
 	golang.org/x/arch v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
-	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/mod v0.32.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260109210033-bd525da824e2 // indirect
+	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	gopkg.in/intercom/intercom-go.v2 v2.0.0-20210504094731-2bd1af0ce4b2 // indirect
