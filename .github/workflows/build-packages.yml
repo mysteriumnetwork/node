@@ -120,7 +120,7 @@ jobs:
       - name: Build package
         run: |
           unset CI # workaround for "PackageAndroid" target
-          sudo env "PATH=$PATH" bash -lc 'source env.sh && go run mage.go -v ${{ matrix.platform }}'
+          sudo -E env "PATH=$PATH" bash -lc 'source env.sh && go run mage.go -v ${{ matrix.platform }}'
 
   build-swagger:
     runs-on: ubuntu-latest-m
