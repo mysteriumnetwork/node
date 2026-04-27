@@ -3447,7 +3447,8 @@
       "properties": {
         "balance": {
           "type": "string",
-          "x-go-name": "Balance"
+          "x-go-name": "Balance",
+          "x-go-type": "math/big.Int"
         },
         "balance_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3779,6 +3780,7 @@
         "tokens_spent": {
           "type": "string",
           "x-go-name": "TokensSpent",
+          "x-go-type": "math/big.Int",
           "example": "500000"
         }
       },
@@ -3871,7 +3873,8 @@
         "price_per_gib": {
           "description": "deprecated",
           "type": "string",
-          "x-go-name": "PricePerGiB"
+          "x-go-name": "PricePerGiB",
+          "x-go-type": "math/big.Int"
         },
         "price_per_gib_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3879,7 +3882,8 @@
         "price_per_hour": {
           "description": "deprecated",
           "type": "string",
-          "x-go-name": "PricePerHour"
+          "x-go-name": "PricePerHour",
+          "x-go-type": "math/big.Int"
         },
         "price_per_hour_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -3902,7 +3906,8 @@
       "properties": {
         "amount": {
           "type": "string",
-          "x-go-name": "Amount"
+          "x-go-name": "Amount",
+          "x-go-type": "math/big.Int"
         },
         "id": {
           "type": "string",
@@ -3928,7 +3933,8 @@
       "properties": {
         "error": {
           "type": "string",
-          "x-go-name": "Err"
+          "x-go-name": "Err",
+          "x-go-type": "error"
         },
         "progress_percent": {
           "type": "integer",
@@ -4079,7 +4085,8 @@
       "properties": {
         "decreaseStake": {
           "type": "string",
-          "x-go-name": "DecreaseStake"
+          "x-go-name": "DecreaseStake",
+          "x-go-type": "math/big.Int"
         },
         "decrease_stake_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -4096,14 +4103,16 @@
         },
         "registration": {
           "type": "string",
-          "x-go-name": "Registration"
+          "x-go-name": "Registration",
+          "x-go-type": "math/big.Int"
         },
         "registration_tokens": {
           "$ref": "#/definitions/Tokens"
         },
         "settlement": {
           "type": "string",
-          "x-go-name": "Settlement"
+          "x-go-name": "Settlement",
+          "x-go-type": "math/big.Int"
         },
         "settlement_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -4261,7 +4270,8 @@
         "balance": {
           "description": "deprecated",
           "type": "string",
-          "x-go-name": "Balance"
+          "x-go-name": "Balance",
+          "x-go-type": "math/big.Int"
         },
         "balance_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -4272,7 +4282,8 @@
         },
         "earnings": {
           "type": "string",
-          "x-go-name": "Earnings"
+          "x-go-name": "Earnings",
+          "x-go-type": "math/big.Int"
         },
         "earnings_per_hermes": {
           "type": "object",
@@ -4286,7 +4297,8 @@
         },
         "earnings_total": {
           "type": "string",
-          "x-go-name": "EarningsTotal"
+          "x-go-name": "EarningsTotal",
+          "x-go-type": "math/big.Int"
         },
         "earnings_total_tokens": {
           "$ref": "#/definitions/Tokens"
@@ -4307,7 +4319,8 @@
         },
         "stake": {
           "type": "string",
-          "x-go-name": "Stake"
+          "x-go-name": "Stake",
+          "x-go-type": "math/big.Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4408,7 +4421,8 @@
         "fee": {
           "description": "Fee: an agreed amount to pay for registration",
           "type": "string",
-          "x-go-name": "Fee"
+          "x-go-name": "Fee",
+          "x-go-type": "math/big.Int"
         },
         "referral_token": {
           "description": "Token: referral token, if the user has one",
@@ -4632,13 +4646,17 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "MigrationStatus": {
+      "description": "MigrationStatus status of the migration",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "MigrationStatusResponse": {
       "description": "MigrationStatusResponse represents status of the migration",
       "type": "object",
       "properties": {
         "status": {
-          "type": "string",
-          "x-go-name": "Status"
+          "$ref": "#/definitions/MigrationStatus"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -4753,12 +4771,14 @@
           "description": "Current unsettled earnings",
           "type": "string",
           "x-go-name": "Earnings",
+          "x-go-type": "math/big.Int",
           "example": "19449034049997187"
         },
         "earnings_total": {
           "description": "Earnings of all history",
           "type": "string",
           "x-go-name": "EarningsTotal",
+          "x-go-type": "math/big.Int",
           "example": "19449034049997187"
         },
         "hermes_id": {
@@ -5481,6 +5501,7 @@
         "tokens": {
           "type": "string",
           "x-go-name": "Tokens",
+          "x-go-type": "math/big.Int",
           "example": "500000"
         }
       },
@@ -5565,7 +5586,8 @@
         },
         "sum_tokens": {
           "type": "string",
-          "x-go-name": "SumTokens"
+          "x-go-name": "SumTokens",
+          "x-go-type": "math/big.Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -5599,7 +5621,8 @@
         "hermes_ids": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "x-go-type": "github.com/ethereum/go-ethereum/common.Address"
           },
           "x-go-name": "HermesIDs"
         },
@@ -5623,6 +5646,7 @@
         "amount": {
           "type": "string",
           "x-go-name": "Amount",
+          "x-go-type": "math/big.Int",
           "example": "500000"
         },
         "beneficiary": {
@@ -5648,6 +5672,7 @@
         "fees": {
           "type": "string",
           "x-go-name": "Fees",
+          "x-go-type": "math/big.Int",
           "example": "500000"
         },
         "hermes_id": {
@@ -5791,7 +5816,8 @@
       "properties": {
         "amount": {
           "type": "string",
-          "x-go-name": "Amount"
+          "x-go-name": "Amount",
+          "x-go-type": "math/big.Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
