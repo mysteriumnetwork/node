@@ -191,10 +191,10 @@ func (dp *deviceParser) peerParse(key, value string) {
 		dp.hsNano = dp.parseInt(value)
 
 		// Assume that we've seen both seconds and nanoseconds and populate this
-		// field now. However, if both fields were set to 0, assume we have never
-		// had a successful handshake with this peer, and return a zero-value
-		// time.Time to our callers.
-		if dp.hsSec > 0 && dp.hsNano > 0 {
+		// field now. Only skip if BOTH are 0 (no handshake ever occurred).
+		// Note: either field alone can be 0 for a valid handshake (e.g. nsec=0
+		// when the handshake happened at an exact second boundary).
+		if dp.hsSec > 0 || dp.hsNano > 0 {
 			p.LastHandshakeTime = time.Unix(int64(dp.hsSec), int64(dp.hsNano))
 		}
 	case "tx_bytes":
