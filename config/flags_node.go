@@ -83,6 +83,12 @@ var (
 		Usage: "IP address to bind provided services to",
 		Value: "0.0.0.0",
 	}
+	// FlagProxyBindAddress IP address to bind proxy listener to in proxy mode.
+	FlagProxyBindAddress = cli.StringFlag{
+		Name:  "proxy.bind.address",
+		Usage: "IP address to bind proxy listener to in proxy mode",
+		Value: "0.0.0.0",
+	}
 	// FlagFeedbackURL URL of Feedback API.
 	FlagFeedbackURL = cli.StringFlag{
 		Name:  "feedback.url",
@@ -322,6 +328,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 
 	*flags = append(*flags,
 		&FlagBindAddress,
+		&FlagProxyBindAddress,
 		&FlagDiscoveryType,
 		&FlagDiscoveryPingInterval,
 		&FlagDiscoveryFetchInterval,
@@ -385,6 +392,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsBlockchainNetwork(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
+	Current.ParseStringFlag(ctx, FlagProxyBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryPingInterval)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryFetchInterval)
@@ -423,7 +431,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagDNSResolutionHeadstart)
 	Current.ParseIntFlag(ctx, FlagWireguardMTU)
 
-	ValidateAddressFlags(FlagTequilapiAddress)
+	ValidateAddressFlags(FlagTequilapiAddress, FlagProxyBindAddress)
 }
 
 // ValidateAddressFlags validates given address flags for public exposure

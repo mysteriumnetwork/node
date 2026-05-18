@@ -31,6 +31,7 @@ import (
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
@@ -104,7 +105,7 @@ func (c *client) PeerStats(iface string) (wgcfg.Stats, error) {
 	}
 
 	stats, statErr := userspace.ParseDevicePeerStats(deviceState)
-	if err != nil {
+	if statErr != nil {
 		err = statErr
 		log.Warn().Err(err).Msg("Failed to parse device stats, will try again")
 	} else {
@@ -135,8 +136,13 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	bind := fmt.Sprintf(":%d", proxyPort)
+	if addr := config.GetString(config.FlagProxyBindAddress); addr != "" {
+		bind = addr + bind
+	}
+
 	server := http.Server{
-		Addr:              fmt.Sprintf(":%d", proxyPort),
+		Addr:              bind,
 		Handler:           newProxyHandler(60*time.Second, tnet),
 		ReadTimeout:       0,
 		ReadHeaderTimeout: 0,
@@ -144,7 +150,7 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 		IdleTimeout:       0,
 	}
 
-	log.Info().Msgf("Starting proxy server at :%d ...", proxyPort)
+	log.Info().Msgf("Starting proxy server at %s ...", bind)
 	c.proxyClose = func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
