@@ -28,6 +28,7 @@ import (
 	"golang.zx2c4.com/wireguard/tun"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/actionstack"
 	"github.com/mysteriumnetwork/node/utils/netutil"
@@ -52,7 +53,7 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 		return errors.Wrap(err, "failed to create TUN device")
 	}
 
-	devAPI := device.NewDevice(c.tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelVerbose, "[userspace-wg]"))
+	devAPI := device.NewDevice(c.tun, conn.NewDefaultBind(), device.NewLogger(logconfig.WireGuardLogLevel(), "[userspace-wg]"))
 	c.devAPI = devAPI
 	rollback.Push(func() {
 		devAPI.Close()

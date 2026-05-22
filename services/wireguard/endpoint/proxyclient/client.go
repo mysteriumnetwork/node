@@ -32,6 +32,7 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/netstack"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
@@ -70,7 +71,7 @@ func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
 		return fmt.Errorf("failed to create netstack device %s: %w", cfg.IfaceName, err)
 	}
 
-	logger := device.NewLogger(device.LogLevelVerbose, fmt.Sprintf("(%s) ", cfg.IfaceName))
+	logger := device.NewLogger(logconfig.WireGuardLogLevel(), fmt.Sprintf("(%s) ", cfg.IfaceName))
 	wgDevice := device.NewDevice(tunnel, conn.NewDefaultBind(), logger)
 
 	log.Info().Msg("Applying interface configuration")
