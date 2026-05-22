@@ -34,6 +34,7 @@ import (
 	"golang.zx2c4.com/wireguard/tun"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/p2p"
@@ -209,7 +210,7 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 		}
 	}()
 
-	w.device = device.NewDevice(tunDevice, conn.NewStdNetBind(), device.NewLogger(device.LogLevelVerbose, "[userspace-wg]"))
+	w.device = device.NewDevice(tunDevice, conn.NewStdNetBind(), device.NewLogger(logconfig.WireGuardLogLevel(), "[userspace-wg]"))
 
 	err = w.applyConfig(w.device, privateKey, config)
 	if err != nil {

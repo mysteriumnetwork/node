@@ -28,6 +28,7 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 )
@@ -47,7 +48,7 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("failed to create TUN device %s: %w", cfg.IfaceName, err)
 	}
 
-	logger := device.NewLogger(device.LogLevelVerbose, fmt.Sprintf("(%s) ", interfaceName))
+	logger := device.NewLogger(logconfig.WireGuardLogLevel(), fmt.Sprintf("(%s) ", interfaceName))
 	logger.Verbosef("Starting wireguard-go")
 
 	logger.Verbosef("Starting device")
