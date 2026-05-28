@@ -20,7 +20,9 @@ package proxyclient
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/netip"
 	"strings"
@@ -54,6 +56,23 @@ func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
 }
 
 func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
+	// Close old resources before creating new ones.
+	// Without this, ReConfigureDevice leaks the old device, netstack, and
+	// proxy server — the old proxy keeps holding the port so the new one
+	// silently fails to bind.
+	c.mu.Lock()
+	oldProxyClose := c.proxyClose
+	c.proxyClose = nil
+	oldDevice := c.Device
+	c.Device = nil
+	c.mu.Unlock()
+	if oldProxyClose != nil {
+		oldProxyClose()
+	}
+	if oldDevice != nil {
+		oldDevice.Close()
+	}
+
 	localAddr, err := netip.ParseAddr(cfg.Subnet.IP.String())
 	if err != nil {
 		return fmt.Errorf("could not parse local addr: %w", err)
@@ -99,20 +118,23 @@ func (c *client) DestroyDevice(iface string) error {
 }
 
 func (c *client) PeerStats(iface string) (wgcfg.Stats, error) {
-	deviceState, err := userspace.ParseUserspaceDevice(c.Device.IpcGetOperation)
+	c.mu.Lock()
+	dev := c.Device
+	c.mu.Unlock()
+	if dev == nil {
+		return wgcfg.Stats{}, fmt.Errorf("device is closed")
+	}
+
+	deviceState, err := userspace.ParseUserspaceDevice(dev.IpcGetOperation)
 	if err != nil {
 		return wgcfg.Stats{}, fmt.Errorf("could not parse device state: %w", err)
 	}
 
 	stats, statErr := userspace.ParseDevicePeerStats(deviceState)
 	if statErr != nil {
-		err = statErr
-		log.Warn().Err(err).Msg("Failed to parse device stats, will try again")
-	} else {
-		return stats, nil
+		return wgcfg.Stats{}, fmt.Errorf("could not parse device state: %w", statErr)
 	}
-
-	return wgcfg.Stats{}, fmt.Errorf("could not parse device state: %w", err)
+	return stats, nil
 }
 
 func (c *client) Close() (err error) {
@@ -121,13 +143,12 @@ func (c *client) Close() (err error) {
 
 	if c.proxyClose != nil {
 		c.proxyClose()
+		c.proxyClose = nil
 	}
 
 	if c.Device != nil {
-		go func() {
-			time.Sleep(2 * time.Minute)
-			c.Device.Close()
-		}()
+		c.Device.Close()
+		c.Device = nil
 	}
 	return nil
 }
@@ -141,8 +162,14 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 		bind = addr + bind
 	}
 
+	// Bind synchronously so port conflicts fail ConfigureDevice immediately
+	// instead of silently failing in a background goroutine.
+	ln, err := net.Listen("tcp", bind)
+	if err != nil {
+		return fmt.Errorf("proxy listen on %s failed: %w", bind, err)
+	}
+
 	server := http.Server{
-		Addr:              bind,
 		Handler:           newProxyHandler(60*time.Second, tnet),
 		ReadTimeout:       0,
 		ReadHeaderTimeout: 0,
@@ -155,13 +182,13 @@ func (c *client) Proxy(tnet *netstack.Net, proxyPort int) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		server.Shutdown(ctx)
-
 		return server.Close()
 	}
 
 	go func() {
-		err := server.ListenAndServe()
-		log.Error().Err(err).Msg("Shutting down proxy server...")
+		if err := server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error().Err(err).Msg("Proxy server error")
+		}
 	}()
 
 	return nil
