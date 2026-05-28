@@ -75,8 +75,11 @@ func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 	ce.cfg = cfg
 
 	if err := ce.wgClient.ConfigureDevice(cfg); err != nil {
-		if err1 := ce.resourceAllocator.ReleaseInterface(iface); err1 != nil {
-			log.Error().Err(err1).Msg("Can't release allocated interface " + iface)
+		// Only release interface if it was allocated (not in proxymode)
+		if cfg.ProxyPort == 0 {
+			if err1 := ce.resourceAllocator.ReleaseInterface(iface); err1 != nil {
+				log.Error().Err(err1).Msg("Can't release allocated interface " + iface)
+			}
 		}
 		return errors.Wrap(err, "could not configure device")
 	}
@@ -156,12 +159,18 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
+	// In proxymode, interface name is derived from ProxyPort (e.g. "myst13276")
+	// and was never allocated through the resourceAllocator, so skip release.
+	if ce.cfg.ProxyPort > 0 {
+		return nil
+	}
+
 	return ce.resourceAllocator.ReleaseInterface(ce.cfg.IfaceName)
 }
 
 func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
-	if config.GetBool(config.FlagDVPNMode) {
-		// Do not clean up unknown interfaces in dVPN mode.
+	if config.GetBool(config.FlagDVPNMode) || config.GetBool(config.FlagProxyMode) {
+		// Do not clean up unknown interfaces in dVPN or proxy mode.
 		// There could be several connections at the same time and we should not kill them.
 		return nil
 	}
