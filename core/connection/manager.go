@@ -986,6 +986,15 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
 				if errCount == m.config.KeepAlive.MaxSendErrCount {
+					// In proxymode, the gateway manages connection health via its own
+					// sentinel and probe mechanisms. Don't kill the WireGuard tunnel —
+					// the P2P channel failure might be transient while the tunnel is fine.
+					if config.GetBool(config.FlagProxyMode) {
+						log.Warn().Msgf("P2P keepalive failed %d times for SessionID=%s (proxymode: keeping alive)", errCount, sessionID)
+						errCount = 0
+						cancel()
+						continue
+					}
 					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
 					if config.GetBool(config.FlagKeepConnectedOnFail) {
 						m.statusOnHold()
