@@ -51,7 +51,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pion/stun v0.6.1
 	github.com/pkg/errors v0.9.1
-	github.com/quic-go/quic-go v0.59.0
+	github.com/quic-go/quic-go v0.59.1
 	github.com/rs/zerolog v1.31.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
@@ -263,6 +263,7 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
+	golang.org/x/tools/godoc v0.1.0-deprecated // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	gopkg.in/intercom/intercom-go.v2 v2.0.0-20210504094731-2bd1af0ce4b2 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
