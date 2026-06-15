@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mysteriumnetwork/go-rest/apierror"
@@ -150,6 +151,22 @@ func (api *configAPI) GetUserConfig(c *gin.Context) {
 //	    description: Internal server error
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
+var allowedConfigKeys = []string{
+	"terms.",
+	"active-services",
+	"ui.",
+	"node.ui.",
+}
+
+func isAllowedConfigKey(key string) bool {
+	for _, allowed := range allowedConfigKeys {
+		if key == allowed || strings.HasPrefix(key, allowed) {
+			return true
+		}
+	}
+	return false
+}
+
 func (api *configAPI) SetUserConfig(c *gin.Context) {
 	var req configPayload
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -158,6 +175,10 @@ func (api *configAPI) SetUserConfig(c *gin.Context) {
 		return
 	}
 	for k, v := range req.Data {
+		if !isAllowedConfigKey(k) {
+			c.Error(apierror.Forbidden("Config key not allowed: "+k, contract.ErrCodeConfigSave))
+			return
+		}
 		if isNil(v) {
 			log.Debug().Msgf("Clearing user config value: %q", v)
 			api.config.RemoveUser(k)

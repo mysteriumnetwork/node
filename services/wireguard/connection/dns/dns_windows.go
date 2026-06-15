@@ -1,30 +1,32 @@
-/*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//go:build windows
 
 package dns
 
 import (
 	"fmt"
+	"net"
 	"os/exec"
+	"strings"
 )
 
+func validateInterfaceName(name string) error {
+	if strings.ContainsAny(name, "\"&|;`$(){}[]<>#~!*?\\") {
+		return fmt.Errorf("invalid interface name: %s", name)
+	}
+	return nil
+}
+
 func setDNS(cfg Config) error {
-	cmd := fmt.Sprintf("netsh interface ipv4 set dnsservers name=%s source=static address=%s validate=no", cfg.IfaceName, cfg.DNS[0])
-	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
+	if err := validateInterfaceName(cfg.IfaceName); err != nil {
+		return fmt.Errorf("could not configure DNS: %w", err)
+	}
+	dnsIP := net.ParseIP(cfg.DNS[0])
+	if dnsIP == nil {
+		return fmt.Errorf("could not configure DNS: invalid DNS IP address: %s", cfg.DNS[0])
+	}
+	out, err := exec.Command("netsh", "interface", "ipv4", "set", "dnsservers",
+		fmt.Sprintf("name=%s", cfg.IfaceName), "source=static",
+		fmt.Sprintf("address=%s", dnsIP.String()), "validate=no").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not configure DNS, %s:%v", string(out), err)
 	}
@@ -32,8 +34,12 @@ func setDNS(cfg Config) error {
 }
 
 func cleanDNS(cfg Config) error {
-	cmd := fmt.Sprintf("netsh interface ipv4 set dnsservers name=%s source=static address=none validate=no register=both", cfg.IfaceName)
-	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
+	if err := validateInterfaceName(cfg.IfaceName); err != nil {
+		return fmt.Errorf("could not clean DNS: %w", err)
+	}
+	out, err := exec.Command("netsh", "interface", "ipv4", "set", "dnsservers",
+		fmt.Sprintf("name=%s", cfg.IfaceName), "source=static", "address=none",
+		"validate=no", "register=both").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not clean DNS, %s:%w", string(out), err)
 	}

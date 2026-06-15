@@ -1,115 +1,47 @@
 //go:build windows
 
-/*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package userspace
 
 import (
-	"net"
-	"os"
+	"fmt"
 	"os/exec"
+	"regexp"
+	"strings"
 
-	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/pkg/errors"
-	"github.com/songgao/water"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
+
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
+var validInterfaceName = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`)
+
 type nativeTun struct {
-	tun    *water.Interface
-	events chan tun.Event
+	*tun.NativeTun
 }
 
-// CreateTUN creates native TUN device for wireguard.
-func CreateTUN(name string, subnet net.IPNet) (tun.Device, error) {
-	tunDevice, err := water.New(water.Config{
-		DeviceType: water.TUN,
-		PlatformSpecificParams: water.PlatformSpecificParams{
-			ComponentID: "tap0901",
-			Network:     subnet.String(),
-		},
-	})
+func CreateTUN(name string, mtu int) (tun.Device, error) {
+	tunDevice, err := tun.CreateTUN(name, mtu)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create new TUN device")
+		return nil, err
 	}
-
-	if err := netutil.AssignIP(tunDevice.Name(), subnet); err != nil {
-		return nil, errors.Wrap(err, "failed to assign IP address")
-	}
+	native := &nativeTun{NativeTun: tunDevice.(*tun.NativeTun)}
 
 	if tunDevice.Name() != name {
 		if err := renameInterface(tunDevice.Name(), name); err != nil {
-			return nil, errors.Wrap(err, "failed to rename network interface")
+			native.Close()
+			return nil, fmt.Errorf("failed to rename interface: %w", err)
 		}
 	}
 
-	return &nativeTun{
-		tun:    tunDevice,
-		events: make(chan tun.Event, 10),
-	}, nil
-}
-
-func (tun *nativeTun) BatchSize() int {
-	return 1
-}
-
-func (tun *nativeTun) Name() (string, error) {
-	return tun.tun.Name(), nil
-}
-
-func (tun *nativeTun) File() *os.File {
-	return nil
-}
-
-func (tun *nativeTun) Events() <-chan tun.Event {
-	return tun.events
-}
-
-func (tun *nativeTun) Read(buffs [][]byte, sizes []int, offset int) (int, error) {
-	n, err := tun.tun.Read(buffs[0][offset:])
-	if err != nil {
-		return 0, err
-	}
-	sizes[0] = n
-	return 1, nil
-}
-
-func (tun *nativeTun) Write(buffs [][]byte, offset int) (int, error) {
-	written := 0
-	for _, buf := range buffs {
-		packet := buf[offset:]
-		if len(packet) == 0 {
-			continue
-		}
-
-		n, err := tun.tun.Write(packet)
-		written += n
-		if err != nil {
-			return written, err
+	if mtu != 0 {
+		if err := setMTU(name, mtu); err != nil {
+			native.Close()
+			return nil, fmt.Errorf("failed to set MTU: %w", err)
 		}
 	}
-	return written, nil
-}
 
-func (tun *nativeTun) Close() error {
-	close(tun.events)
-	return tun.tun.Close()
+	return native, nil
 }
 
 func (tun *nativeTun) Flush() error {
@@ -120,13 +52,35 @@ func (tun *nativeTun) MTU() (int, error) {
 	return device.DefaultMTU, nil
 }
 
+func validateInterfaceName(name string) error {
+	if !validInterfaceName.MatchString(name) {
+		return fmt.Errorf("invalid interface name: %q", name)
+	}
+	if strings.ContainsAny(name, "\"&|;`$(){}[]<>#~!*?\\ ") {
+		return fmt.Errorf("invalid interface name: %q", name)
+	}
+	return nil
+}
+
 func renameInterface(name, newname string) error {
-	out, err := exec.Command("powershell", "-Command", "netsh interface set interface name=\""+name+"\" newname=\""+newname+"\"").CombinedOutput()
-	return errors.Wrap(err, string(out))
+	if err := validateInterfaceName(name); err != nil {
+		return fmt.Errorf("cannot rename interface: %w", err)
+	}
+	if err := validateInterfaceName(newname); err != nil {
+		return fmt.Errorf("cannot rename interface: %w", err)
+	}
+	return cmdutil.Exec("netsh", "interface", "set", "interface",
+		fmt.Sprintf("name=%s", name), fmt.Sprintf("newname=%s", newname))
+}
+
+func setMTU(name string, mtu int) error {
+	if err := validateInterfaceName(name); err != nil {
+		return fmt.Errorf("cannot set MTU: %w", err)
+	}
+	return cmdutil.Exec("netsh", "interface", "ipv4", "set", "subinterface",
+		name, fmt.Sprintf("mtu=%d", mtu), "store=persistent")
 }
 
 func destroyDevice(name string) error {
-	// Windows implementation is using single device that are reused for the future needs.
-	// Nothing to destroy here.
 	return nil
 }

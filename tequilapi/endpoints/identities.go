@@ -643,13 +643,18 @@ func (ia *identitiesAPI) GetBeneficiaryAddressAsync(c *gin.Context) {
 //	    schema:
 //	      "$ref": "#/definitions/APIError"
 func (ia *identitiesAPI) SaveBeneficiaryAddressAsync(c *gin.Context) {
+	id := c.Param("id")
+	if !ia.idm.IsUnlocked(id) {
+		c.Error(apierror.Forbidden("Identity is locked", contract.ErrCodeIDLocked))
+		return
+	}
+
 	var par contract.BeneficiaryAddressRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&par); err != nil {
 		c.Error(apierror.ParseFailed())
 		return
 	}
 
-	id := c.Param("id")
 	err := ia.beneficiaryStorage.Save(id, par.Address)
 	if err != nil {
 		c.Error(apierror.BadRequest("Invalid address", contract.ErrCodeIDSaveBeneficiaryAddress))

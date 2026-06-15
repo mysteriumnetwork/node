@@ -1,20 +1,3 @@
-/*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package auth
 
 import (
@@ -24,21 +7,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// JWTAuthenticator contains JWT handling methods
 type JWTAuthenticator struct {
 	encryptionKey []byte
 }
 
-// JWT contains token details
 type JWT struct {
 	Token          string
 	ExpirationTime time.Time
 }
 
-// JWTEncryptionKey contains the encryption key for JWT
 type JWTEncryptionKey []byte
 
-// JWTCookieName name of the cookie JWT token is stored in
 const JWTCookieName string = "token"
 
 type jwtClaims struct {
@@ -48,16 +27,13 @@ type jwtClaims struct {
 
 const expiresIn = 48 * time.Hour
 
-// NewJWTAuthenticator creates a new JWT authentication instance
 func NewJWTAuthenticator(encryptionKey JWTEncryptionKey) *JWTAuthenticator {
 	auth := &JWTAuthenticator{
 		encryptionKey,
 	}
-
 	return auth
 }
 
-// CreateToken creates a new JWT token
 func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWT, error) {
 	expirationTime := jwtAuth.getExpirationTime()
 	claims := &jwtClaims{
@@ -76,13 +52,15 @@ func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWT, error) {
 	return JWT{Token: tokenString, ExpirationTime: expirationTime}, nil
 }
 
-// ValidateToken validates a JWT token
 func (jwtAuth *JWTAuthenticator) ValidateToken(token string) (bool, error) {
 	claims := &jwtClaims{}
 
 	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return jwtAuth.encryptionKey, nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}))
 	if err != nil {
 		return false, err
 	}

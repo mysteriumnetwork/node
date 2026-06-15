@@ -18,8 +18,10 @@
 package firewall
 
 import (
+	"fmt"
 	"net"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -27,6 +29,12 @@ import (
 	"github.com/mysteriumnetwork/node/firewall/iptables"
 	"github.com/rs/zerolog/log"
 )
+
+var validDomain = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$`)
+
+func isValidDomain(hostname string) bool {
+	return len(hostname) <= 253 && validDomain.MatchString(hostname)
+}
 
 const (
 	incomingFirewallChain = "MYST_PROVIDER_FIREWALL"
@@ -93,8 +101,18 @@ func (ibi *incomingFirewallIptables) AllowURLAccess(rawURLs ...string) (Incoming
 			return nil, err
 		}
 
+		hostname := parsed.Hostname()
+		if strings.ContainsAny(hostname, " \t\n\r!@#$%^&*()=+[]{}|;:'\",.<>/?`~") {
+			removeAll()
+			return nil, fmt.Errorf("invalid hostname in URL: %s", rawURL)
+		}
+		if net.ParseIP(hostname) == nil && !isValidDomain(hostname) {
+			removeAll()
+			return nil, fmt.Errorf("invalid hostname in URL: %s", rawURL)
+		}
+
 		remover, err := iptables.AddRuleWithRemoval(
-			iptables.InsertAt(incomingFirewallChain, 1).RuleSpec("-d", parsed.Hostname(), "-j", "ACCEPT"),
+			iptables.InsertAt(incomingFirewallChain, 1).RuleSpec("-d", hostname, "-j", "ACCEPT"),
 		)
 		if err != nil {
 			removeAll()

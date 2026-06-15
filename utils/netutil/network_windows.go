@@ -1,22 +1,5 @@
 //go:build windows
 
-/*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package netutil
 
 import (
@@ -24,27 +7,45 @@ import (
 	"net"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
+func validateInterfaceName(name string) error {
+	if strings.ContainsAny(name, "\"&|;`$(){}[]<>#~!*?\\ ") {
+		return fmt.Errorf("invalid interface name: %s", name)
+	}
+	return nil
+}
+
 func assignIP(iface string, subnet net.IPNet) error {
-	out, err := exec.Command("powershell", "-Command", "netsh interface ip set address name=\""+iface+"\" source=static "+subnet.String()).CombinedOutput()
+	if err := validateInterfaceName(iface); err != nil {
+		return errors.Wrap(err, "invalid interface for assignIP")
+	}
+	out, err := exec.Command("netsh", "interface", "ip", "set", "address",
+		fmt.Sprintf("name=%s", iface), "source=static",
+		subnet.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
 }
 
 func excludeRoute(ip, gw net.IP) error {
-	out, err := exec.Command("powershell", "-Command", "route add "+ip.String()+"/32 "+gw.String()).CombinedOutput()
+	out, err := exec.Command("route", "add",
+		ip.String()+"/32", gw.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
 }
 
 func deleteRoute(ip, gw string) error {
-	out, err := exec.Command("powershell", "-Command", "route delete "+ip+"/32").CombinedOutput()
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return fmt.Errorf("invalid IP address for route deletion: %s", ip)
+	}
+	out, err := exec.Command("route", "delete",
+		parsedIP.String()+"/32").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to delete route: %w, %s", err, string(out))
 	}
-
 	return nil
 }
 
@@ -54,19 +55,19 @@ func addDefaultRoute(name string) error {
 		return errors.Wrap(err, "failed to get info of interface: "+name)
 	}
 
-	if out, err := exec.Command("powershell", "-Command", "route add 0.0.0.0/1 "+gw+" if "+id).CombinedOutput(); err != nil {
+	if out, err := exec.Command("route", "add", "0.0.0.0/1", gw, "if", id).CombinedOutput(); err != nil {
 		return errors.Wrap(err, string(out))
 	}
 
-	if out, err := exec.Command("powershell", "-Command", "route add 128.0.0.0/1 "+gw+" if "+id).CombinedOutput(); err != nil {
+	if out, err := exec.Command("route", "add", "128.0.0.0/1", gw, "if", id).CombinedOutput(); err != nil {
 		return errors.Wrap(err, string(out))
 	}
 
-	if out, err := exec.Command("powershell", "-Command", "route add ::/1 100::1 if "+id).CombinedOutput(); err != nil {
+	if out, err := exec.Command("route", "add", "::/1", "100::1", "if", id).CombinedOutput(); err != nil {
 		return errors.Wrap(err, string(out))
 	}
 
-	if out, err := exec.Command("powershell", "-Command", "route add 8000::/1 100::1 if "+id).CombinedOutput(); err != nil {
+	if out, err := exec.Command("route", "add", "8000::/1", "100::1", "if", id).CombinedOutput(); err != nil {
 		return errors.Wrap(err, string(out))
 	}
 
@@ -107,8 +108,12 @@ func interfaceInfo(name string) (id, gw string, err error) {
 }
 
 func logNetworkStats() {
-	for _, args := range []string{"ipconfig /all", "netstat -r"} {
-		out, err := exec.Command("powershell", "-Command", args).CombinedOutput()
+	for _, args := range []string{"ipconfig", "/all"} {
+		out, err := exec.Command("ipconfig", "/all").CombinedOutput()
 		logOutputToTrace(out, err, args)
+	}
+	{
+		out, err := exec.Command("netstat", "-r").CombinedOutput()
+		logOutputToTrace(out, err, "netstat -r")
 	}
 }
