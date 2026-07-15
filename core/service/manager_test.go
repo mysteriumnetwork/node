@@ -50,7 +50,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
 	mockCopy.onStartReturnError = errors.New("some error")
-	registry.Register(serviceType, func(options Options) (Service, error) {
+	registry.Register(serviceType, func(serviceType string, options Options) (Service, error) {
 		return &mockCopy, nil
 	})
 
@@ -75,7 +75,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
 	mockCopy.mockProcess = make(chan struct{})
-	registry.Register(serviceType, func(options Options) (Service, error) {
+	registry.Register(serviceType, func(serviceType string, options Options) (Service, error) {
 		return &mockCopy, nil
 	})
 
@@ -102,7 +102,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
 	mockCopy.mockProcess = make(chan struct{})
-	registry.Register(serviceType, func(options Options) (Service, error) {
+	registry.Register(serviceType, func(serviceType string, options Options) (Service, error) {
 		return &mockCopy, nil
 	})
 

@@ -17,8 +17,10 @@
 
 package service
 
+import "strings"
+
 // RegistryFactory initiates instance which is able to serve
-type RegistryFactory func(options Options) (Service, error)
+type RegistryFactory func(serviceType string, options Options) (Service, error)
 
 // Registry holds all pluggable services
 type Registry struct {
@@ -41,8 +43,13 @@ func (registry *Registry) Register(serviceType string, creator RegistryFactory) 
 func (registry *Registry) Create(serviceType string, options Options) (Service, error) {
 	createService, exists := registry.factories[serviceType]
 	if !exists {
-		return nil, ErrUnsupportedServiceType
+		if strings.HasPrefix(serviceType, "runtime.") {
+			createService, exists = registry.factories["runtime"]
+		}
+		if !exists {
+			return nil, ErrUnsupportedServiceType
+		}
 	}
 
-	return createService(options)
+	return createService(serviceType, options)
 }

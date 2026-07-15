@@ -18,30 +18,52 @@
 package control
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
+	runtime_service_options "github.com/mysteriumnetwork/node/services/runtime/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
-type controlMessage []struct {
-	Service string `json:"service"`
-	Command string `json:"command"`
+type controlMessage []controlMessageItem
+
+type controlMessageItem struct {
+	Service        string          `json:"service"`
+	Command        string          `json:"command"`
+	ProviderID     string          `json:"provider_id,omitempty"`
+	AccessPolicies []string        `json:"access_policies,omitempty"`
+	Options        json.RawMessage `json:"options,omitempty"`
+}
+
+type RuntimeServiceOptions struct {
+	Name           string         `json:"name,omitempty"`
+	Args           string         `json:"args,omitempty"`
+	OCIArtifact    string         `json:"oci_artifact,omitempty"`
+	ResourceLimits resourceLimits `json:"resource_limits,omitempty"`
+}
+
+type resourceLimits struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+	Disk   string `json:"disk,omitempty"`
 }
 
 // ControlPlane is a struct that represents the control plane of the node
 type ControlPlane struct {
-	nats     communication.Receiver
-	api      *client.Client
-	identity string
+	nats           communication.Receiver
+	api            *client.Client
+	identity       string
+	runtimeBackend runtime_service_options.Backend
 }
 
 // NewControlPlane creates a new control plane
-func NewControlPlane(connection nats.Connection, api *client.Client) *ControlPlane {
+func NewControlPlane(connection nats.Connection, api *client.Client, runtimeBackend runtime_service_options.Backend) *ControlPlane {
 	return &ControlPlane{
-		nats: nats.NewReceiver(connection, communication.NewCodecJSON(), ""),
-		api:  api,
+		nats:           nats.NewReceiver(connection, communication.NewCodecJSON(), ""),
+		api:            api,
+		runtimeBackend: runtimeBackend,
 	}
 }
 

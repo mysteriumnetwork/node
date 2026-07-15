@@ -358,18 +358,25 @@ func (se *ServiceEndpoint) toServiceType(value string) string {
 		return ""
 	}
 
-	_, ok := se.optionsParser[value]
-	if !ok {
-		return serviceTypeInvalid
+	if _, ok := se.optionsParser[value]; ok {
+		return value
 	}
 
-	return value
+	if strings.HasPrefix(value, "runtime.") {
+		return value
+	}
+
+	return serviceTypeInvalid
 }
 
 func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawMessage) service.Options {
 	optionsParser, ok := se.optionsParser[serviceType]
 	if !ok {
-		return nil
+		var err error
+		optionsParser, err = services.TypeJSONParser(serviceType)
+		if err != nil {
+			return nil
+		}
 	}
 
 	options, err := optionsParser(value)

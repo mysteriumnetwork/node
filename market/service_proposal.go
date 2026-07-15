@@ -19,6 +19,7 @@ package market
 
 import (
 	"encoding/json"
+	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/mysteriumnetwork/node/p2p/compat"
@@ -146,7 +147,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 // IsSupported returns true if this service proposal can be used for connections by service consumer
 // can be used as a filter to filter out all proposals which are unsupported for any reason
 func (proposal *ServiceProposal) IsSupported() bool {
-	if _, ok := supportedServices[proposal.ServiceType]; !ok {
+	if !isSupportedServiceType(proposal.ServiceType) {
 		return false
 	}
 
@@ -162,6 +163,19 @@ func (proposal *ServiceProposal) IsSupported() bool {
 }
 
 var supportedServices = make(map[string]struct{})
+
+func isSupportedServiceType(serviceType string) bool {
+	if _, ok := supportedServices[serviceType]; ok {
+		return true
+	}
+
+	if idx := strings.Index(serviceType, "."); idx > 0 {
+		_, ok := supportedServices[serviceType[:idx]]
+		return ok
+	}
+
+	return false
+}
 
 // RegisterServiceType registers a supported service type.
 func RegisterServiceType(serviceType string) {

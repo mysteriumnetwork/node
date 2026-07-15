@@ -19,6 +19,7 @@ package services
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -30,6 +31,8 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/quic"
+	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
+	runtime_service_options "github.com/mysteriumnetwork/node/services/runtime/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
@@ -37,14 +40,15 @@ import (
 
 // JSONParsersByType parsers of service specific options from JSON request.
 var JSONParsersByType = map[string]ServiceOptionsParser{
-	noop.ServiceType:         noop.ParseJSONOptions,
-	openvpn.ServiceType:      openvpn_service.ParseJSONOptions,
-	wireguard.ServiceType:    wireguard_service.ParseJSONOptions,
-	scraping.ServiceType:     wireguard_service.ParseJSONOptions,
-	quic.ServiceType:         wireguard_service.ParseJSONOptions,
-	datatransfer.ServiceType: wireguard_service.ParseJSONOptions,
-	dvpn.ServiceType:         wireguard_service.ParseJSONOptions,
-	monitoring.ServiceType:   wireguard_service.ParseJSONOptions,
+	noop.ServiceType:            noop.ParseJSONOptions,
+	openvpn.ServiceType:         openvpn_service.ParseJSONOptions,
+	wireguard.ServiceType:       wireguard_service.ParseJSONOptions,
+	scraping.ServiceType:        wireguard_service.ParseJSONOptions,
+	quic.ServiceType:            wireguard_service.ParseJSONOptions,
+	datatransfer.ServiceType:    wireguard_service.ParseJSONOptions,
+	dvpn.ServiceType:            wireguard_service.ParseJSONOptions,
+	monitoring.ServiceType:      wireguard_service.ParseJSONOptions,
+	runtime_service.ServiceType: runtime_service_options.ParseJSONOptions,
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -61,11 +65,16 @@ func Types() []string {
 		datatransfer.ServiceType,
 		dvpn.ServiceType,
 		monitoring.ServiceType,
+		runtime_service.ServiceType,
 	}
 }
 
 // TypeConfiguredOptions returns specific service options.
 func TypeConfiguredOptions(serviceType string) (service.Options, error) {
+	if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") {
+		return runtime_service_options.GetOptions(), nil
+	}
+
 	switch serviceType {
 	case openvpn.ServiceType:
 		return openvpn_service.GetOptions(), nil
@@ -92,6 +101,9 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 func TypeJSONParser(serviceType string) (ServiceOptionsParser, error) {
 	parser, exist := JSONParsersByType[serviceType]
 	if !exist {
+		if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") {
+			return runtime_service_options.ParseJSONOptions, nil
+		}
 		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}
 	return parser, nil
@@ -99,6 +111,10 @@ func TypeJSONParser(serviceType string) (ServiceOptionsParser, error) {
 
 // IsTypeValid returns true if a given string is valid service type.
 func IsTypeValid(s string) bool {
+	if strings.HasPrefix(s, runtime_service.ServiceType+".") {
+		return true
+	}
+
 	for _, v := range Types() {
 		if v == s {
 			return true

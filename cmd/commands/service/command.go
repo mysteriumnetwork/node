@@ -82,7 +82,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				errorChannel: quit,
 			}
 			go func() {
-				cp := control.NewControlPlane(di.BrokerConnection, cmdService.tequilapi)
+				cp := control.NewControlPlane(di.BrokerConnection, cmdService.tequilapi, di.RuntimeServiceBackend)
 				quit <- cmdService.Run(ctx, cp)
 				cp.Stop()
 			}()

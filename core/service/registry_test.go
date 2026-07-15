@@ -40,7 +40,7 @@ func TestRegistry_Register(t *testing.T) {
 
 	registry.Register(
 		"any",
-		func(options Options) (Service, error) {
+		func(serviceType string, options Options) (Service, error) {
 			return serviceMock, nil
 		},
 	)
@@ -58,7 +58,7 @@ func TestRegistry_Create_NonExisting(t *testing.T) {
 func TestRegistry_Create_Existing(t *testing.T) {
 	registry := mockRegistryWith(
 		"fake-service",
-		func(options Options) (Service, error) {
+		func(serviceType string, options Options) (Service, error) {
 			return serviceMock, nil
 		},
 	)
@@ -72,7 +72,7 @@ func TestRegistry_Create_BubblesErrors(t *testing.T) {
 	fakeErr := errors.New("I am broken")
 	registry := mockRegistryWith(
 		"broken-service",
-		func(options Options) (Service, error) {
+		func(serviceType string, options Options) (Service, error) {
 			return nil, fakeErr
 		},
 	)
@@ -94,4 +94,18 @@ func mockRegistryWith(serviceType string, serviceFactory RegistryFactory) *Regis
 			serviceType: serviceFactory,
 		},
 	}
+}
+
+func TestRegistry_Create_RuntimePrefixUsesBaseFactory(t *testing.T) {
+	registry := mockRegistryWith(
+		"runtime",
+		func(serviceType string, options Options) (Service, error) {
+			assert.Equal(t, "runtime.example", serviceType)
+			return serviceMock, nil
+		},
+	)
+
+	service, err := registry.Create("runtime.example", nil)
+	assert.Equal(t, serviceMock, service)
+	assert.NoError(t, err)
 }

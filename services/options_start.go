@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/monitoring"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
+	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/urfave/cli/v2"
@@ -56,6 +57,9 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	case dvpn.ServiceType:
 		opts.AccessPolicyList = []string{"mysterium"}
 	case monitoring.ServiceType:
+		opts.AccessPolicyList = []string{"mysterium"}
+	}
+	if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") {
 		opts.AccessPolicyList = []string{"mysterium"}
 	}
 	return opts, nil

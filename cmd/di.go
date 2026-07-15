@@ -78,6 +78,7 @@ import (
 	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	runtime_service_impl "github.com/mysteriumnetwork/node/services/runtime/service"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -153,10 +154,11 @@ type Dependencies struct {
 	MultiConnectionManager connection.MultiManager
 	ConnectionRegistry     *connection.Registry
 
-	ServicesManager *service.Manager
-	ServiceRegistry *service.Registry
-	ServiceSessions *service.SessionPool
-	ServiceFirewall firewall.IncomingTrafficFirewall
+	ServicesManager       *service.Manager
+	ServiceRegistry       *service.Registry
+	ServiceSessions       *service.SessionPool
+	ServiceFirewall       firewall.IncomingTrafficFirewall
+	RuntimeServiceBackend runtime_service_impl.Backend
 
 	WireguardClientFactory *endpoint.WgClientFactory
 

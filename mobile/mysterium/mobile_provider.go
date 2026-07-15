@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/monitoring"
+	"github.com/mysteriumnetwork/node/services/runtime"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 )
@@ -156,7 +157,7 @@ func SetFlagLauncherVersion(val string) {
 }
 
 func getAllServiceTypes() []string {
-	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType, monitoring.ServiceType}
+	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType, monitoring.ServiceType, runtime.ServiceType}
 }
 
 // GetServiceTypes returns all possible service types

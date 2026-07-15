@@ -43,6 +43,8 @@ import (
 	"github.com/mysteriumnetwork/node/services/quic"
 	quic_connection "github.com/mysteriumnetwork/node/services/quic/connection"
 	quic_service "github.com/mysteriumnetwork/node/services/quic/service"
+	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
+	runtime_service_impl "github.com/mysteriumnetwork/node/services/runtime/service"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -69,7 +71,8 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 		netstack_provider.InitUserspaceShaper(di.EventBus)
 	}
 	di.bootstrapServiceOpenvpn(nodeOptions)
-	di.bootstrapServiceNoop(nodeOptions)
+	di.bootstrapServiceNoop()
+	di.bootstrapServiceRuntime()
 	resourcesAllocator := resources.NewAllocator(di.PortPool, wireguard_service.GetOptions().Subnet)
 
 	dnsHandler, err := dns.ResolveViaSystem()
@@ -82,21 +85,21 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 
 	// disable for mobile
 	if !nodeOptions.Mobile {
-		di.bootstrapServiceWireguard(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
+		di.bootstrapServiceWireguard(resourcesAllocator, di.WireguardClientFactory)
 	}
 	di.bootstrapServiceQuic()
-	di.bootstrapServiceScraping(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
-	di.bootstrapServiceDataTransfer(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
-	di.bootstrapServiceDVPN(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
-	di.bootstrapServiceMonitoring(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
+	di.bootstrapServiceScraping(resourcesAllocator, di.WireguardClientFactory)
+	di.bootstrapServiceDataTransfer(resourcesAllocator, di.WireguardClientFactory)
+	di.bootstrapServiceDVPN(resourcesAllocator, di.WireguardClientFactory)
+	di.bootstrapServiceMonitoring(resourcesAllocator, di.WireguardClientFactory)
 
 	return nil
 }
 
-func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+func (di *Dependencies) bootstrapServiceWireguard(resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, err
@@ -120,7 +123,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options, reso
 func (di *Dependencies) bootstrapServiceQuic() {
 	di.ServiceRegistry.Register(
 		quic.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, err
@@ -131,10 +134,10 @@ func (di *Dependencies) bootstrapServiceQuic() {
 	)
 }
 
-func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+func (di *Dependencies) bootstrapServiceScraping(resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	di.ServiceRegistry.Register(
 		scraping.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, err
@@ -155,10 +158,10 @@ func (di *Dependencies) bootstrapServiceScraping(nodeOptions node.Options, resou
 	)
 }
 
-func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+func (di *Dependencies) bootstrapServiceDataTransfer(resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	di.ServiceRegistry.Register(
 		datatransfer.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, err
@@ -179,10 +182,10 @@ func (di *Dependencies) bootstrapServiceDataTransfer(nodeOptions node.Options, r
 	)
 }
 
-func (di *Dependencies) bootstrapServiceDVPN(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+func (di *Dependencies) bootstrapServiceDVPN(resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	di.ServiceRegistry.Register(
 		dvpn.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, err
@@ -203,10 +206,10 @@ func (di *Dependencies) bootstrapServiceDVPN(nodeOptions node.Options, resources
 	)
 }
 
-func (di *Dependencies) bootstrapServiceMonitoring(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+func (di *Dependencies) bootstrapServiceMonitoring(resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	di.ServiceRegistry.Register(
 		monitoring.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, err
@@ -228,7 +231,7 @@ func (di *Dependencies) bootstrapServiceMonitoring(nodeOptions node.Options, res
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	createService := func(serviceOptions service.Options) (service.Service, error) {
+	createService := func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 		if err := nodeOptions.Openvpn.Check(); err != nil {
 			return nil, err
 		}
@@ -256,11 +259,28 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }
 
-func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceNoop() {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
-		func(serviceOptions service.Options) (service.Service, error) {
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
 			return service_noop.NewManager(), nil
+		},
+	)
+}
+
+func (di *Dependencies) bootstrapServiceRuntime() {
+	runtime_service.Bootstrap()
+	if di.RuntimeServiceBackend == nil {
+		di.RuntimeServiceBackend = runtime_service_impl.NewMemoryBackend()
+	}
+	di.ServiceRegistry.Register(
+		runtime_service.ServiceType,
+		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
+			runtimeOptions, ok := serviceOptions.(runtime_service_impl.Options)
+			if !ok {
+				return nil, errors.Errorf("invalid runtime service options type: %T", serviceOptions)
+			}
+			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, runtimeOptions), nil
 		},
 	)
 }

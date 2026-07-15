@@ -25,7 +25,7 @@ type ServiceStartRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"provider_id"`
 
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// service type. Possible values are "openvpn", "wireguard", "noop", "runtime" and dynamically created runtime-backed types like "runtime.cdp"
 	// required: true
 	// example: openvpn
 	Type string `json:"type"`
@@ -60,7 +60,7 @@ type ServiceInfoDTO struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"provider_id,omitempty"`
 
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// service type. Possible values are "openvpn", "wireguard", "noop", "runtime" and dynamically created runtime-backed types like "runtime.cdp"
 	// example: openvpn
 	Type string `json:"type"`
 
