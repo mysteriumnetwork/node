@@ -211,6 +211,25 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 	)
 	rules = append(rules, rule)
 
+	if opts.ServicePort > 0 {
+		// Redirect service traffic targeted at tunnel gateway IP to the local runtime service port.
+		rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
+			"--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(opts.ServicePort),
+			"--jump", "REDIRECT",
+			"--to-ports", strconv.Itoa(opts.ServicePort),
+			"--table", "nat",
+		)
+		rules = append(rules, rule)
+
+		rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
+			"--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(opts.ServicePort),
+			"--jump", "REDIRECT",
+			"--to-ports", strconv.Itoa(opts.ServicePort),
+			"--table", "nat",
+		)
+		rules = append(rules, rule)
+	}
+
 	// NAT forwarding rule
 	rule = iptables.AppendTo(chainPostRouting).RuleSpec("--source", vpnNetwork, "!", "--destination", vpnNetwork,
 		"--jump", "SNAT", "--to", opts.ProviderExtIP.String(),

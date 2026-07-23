@@ -67,3 +67,18 @@ func TestRegistry_CreateConnection_Existing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, mock, connection)
 }
+
+func TestRegistry_CreateConnection_RuntimePrefixFallback(t *testing.T) {
+	mock := &connectionMock{}
+	registry := Registry{
+		creators: map[string]Factory{
+			"runtime": func() (connection Connection, err error) {
+				return mock, nil
+			},
+		},
+	}
+
+	connection, err := registry.CreateConnection("runtime.cdp")
+	assert.NoError(t, err)
+	assert.Equal(t, mock, connection)
+}

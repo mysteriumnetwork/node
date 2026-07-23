@@ -48,7 +48,12 @@ func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
 }
 
 func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
-	tunnel, _, _, err := CreateNetTUNWithStack([]netip.Addr{netip.MustParseAddr(cfg.Subnet.IP.String())}, cfg.DNSPort, device.DefaultMTU)
+	tunnel, _, _, err := CreateNetTUNWithStack(
+		[]netip.Addr{netip.MustParseAddr(cfg.Subnet.IP.String())},
+		cfg.DNSPort,
+		device.DefaultMTU,
+		cfg.ServicePorts,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create netstack device %s: %w", cfg.IfaceName, err)
 	}

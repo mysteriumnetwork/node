@@ -19,20 +19,22 @@ package service
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/p2p"
+	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
+	runtime_capabilities "github.com/mysteriumnetwork/runtime/capabilities"
+	runtime_lib_service "github.com/mysteriumnetwork/runtime/service"
 )
 
 // ServiceState represents whether a runtime-defined service is active or passive.
-type ServiceState string
+type ServiceState = runtime_lib_service.ServiceState
 
 const (
-	ServiceStateActive  ServiceState = "active"
-	ServiceStatePassive ServiceState = "passive"
+	ServiceStateActive  ServiceState = runtime_lib_service.ServiceStateActive
+	ServiceStatePassive ServiceState = runtime_lib_service.ServiceStatePassive
 )
 
 // ServiceInfo describes a runtime-defined service known to the backend.
@@ -46,42 +48,79 @@ type ServiceInfo struct {
 type Backend interface {
 	Create(options Options) error
 	Delete(name string) error
-	Start(instance *service.Instance, options Options) error
+	Start(options Options) error
 	Stop(options Options) error
 	List() ([]ServiceInfo, error)
+	Capabilities() (runtime_capabilities.RuntimeCapabilities, runtime_capabilities.DetailedCapabilities)
 }
 
 // Manager represents entrypoint for runtime-backed services.
 type Manager struct {
-	backend Backend
-	options Options
+	backend        Backend
+	options        Options
+	networkService service.Service
+
+	stateMu       sync.Mutex
+	activeOptions Options
+	isBaseRuntime bool
 
 	stopOnce sync.Once
 	done     chan struct{}
 }
 
 // NewManager creates a new runtime service manager.
-func NewManager(backend Backend, options Options) *Manager {
+func NewManager(backend Backend, options Options, networkService service.Service) *Manager {
 	return &Manager{
-		backend: backend,
-		options: options,
-		done:    make(chan struct{}),
+		backend:        backend,
+		options:        options,
+		networkService: networkService,
+		done:           make(chan struct{}),
 	}
 }
 
 // ProvideConfig provides the session configuration.
-func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ p2p.ServiceConn) (*service.ConfigParams, error) {
+func (manager *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn p2p.ServiceConn) (*service.ConfigParams, error) {
+	if manager.networkService != nil {
+		return manager.networkService.ProvideConfig(sessionID, sessionConfig, conn)
+	}
+
 	return &service.ConfigParams{}, nil
 }
 
 // Serve starts the service and blocks until Stop is called.
 func (manager *Manager) Serve(instance *service.Instance) error {
+	managedOptions := manager.options
+	isBaseRuntime := false
+	if instance != nil {
+		if instance.Type == runtime_service.ServiceType {
+			// Base runtime service is a control host and should not create a workload container.
+			isBaseRuntime = true
+			manager.stateMu.Lock()
+			manager.activeOptions = Options{}
+			manager.isBaseRuntime = true
+			manager.stateMu.Unlock()
+			<-manager.done
+			return nil
+		}
+
+		if managedOptions.Name == "" && strings.HasPrefix(instance.Type, runtime_service.ServiceType+".") {
+			managedOptions.Name = instance.Type
+		}
+	}
+
 	if manager.backend != nil {
-		if err := manager.backend.Start(instance, manager.options); err != nil {
+		if err := manager.backend.Start(managedOptions); err != nil {
 			return err
 		}
-	} else {
-		log.Info().Str("artifact_address", manager.options.RootFS).Str("service_type", instance.Type).Msg("Runtime service started without backend")
+	}
+
+	manager.stateMu.Lock()
+	manager.activeOptions = managedOptions
+	manager.isBaseRuntime = isBaseRuntime
+	manager.stateMu.Unlock()
+
+	if manager.networkService != nil {
+		return manager.networkService.Serve(instance)
 	}
 
 	<-manager.done
@@ -94,11 +133,27 @@ func (manager *Manager) Stop() error {
 		close(manager.done)
 	})
 
-	if manager.backend != nil {
-		return manager.backend.Stop(manager.options)
+	manager.stateMu.Lock()
+	activeOptions := manager.activeOptions
+	isBaseRuntime := manager.isBaseRuntime
+	manager.stateMu.Unlock()
+
+	var stopErr error
+	if manager.networkService != nil && !isBaseRuntime {
+		if err := manager.networkService.Stop(); err != nil && stopErr == nil {
+			stopErr = err
+		}
 	}
 
-	return nil
+	if manager.backend != nil {
+		if activeOptions.Name != "" {
+			if err := manager.backend.Stop(activeOptions); err != nil && stopErr == nil {
+				stopErr = err
+			}
+		}
+	}
+
+	return stopErr
 }
 
 // List returns runtime-defined services known to the backend, including active and passive ones.
@@ -108,4 +163,12 @@ func (manager *Manager) List() ([]ServiceInfo, error) {
 	}
 
 	return manager.backend.List()
+}
+
+// Capabilities returns the detected runtime capabilities of the underlying execution host.
+func (manager *Manager) Capabilities() (runtime_capabilities.RuntimeCapabilities, runtime_capabilities.DetailedCapabilities) {
+	if manager.backend == nil {
+		return runtime_capabilities.Detect()
+	}
+	return manager.backend.Capabilities()
 }

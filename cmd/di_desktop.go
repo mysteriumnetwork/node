@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -72,7 +73,6 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	}
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop()
-	di.bootstrapServiceRuntime()
 	resourcesAllocator := resources.NewAllocator(di.PortPool, wireguard_service.GetOptions().Subnet)
 
 	dnsHandler, err := dns.ResolveViaSystem()
@@ -87,6 +87,7 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	if !nodeOptions.Mobile {
 		di.bootstrapServiceWireguard(resourcesAllocator, di.WireguardClientFactory)
 	}
+	di.bootstrapServiceRuntime(nodeOptions, resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceQuic()
 	di.bootstrapServiceScraping(resourcesAllocator, di.WireguardClientFactory)
 	di.bootstrapServiceDataTransfer(resourcesAllocator, di.WireguardClientFactory)
@@ -268,10 +269,10 @@ func (di *Dependencies) bootstrapServiceNoop() {
 	)
 }
 
-func (di *Dependencies) bootstrapServiceRuntime() {
+func (di *Dependencies) bootstrapServiceRuntime(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	runtime_service.Bootstrap()
 	if di.RuntimeServiceBackend == nil {
-		di.RuntimeServiceBackend = runtime_service_impl.NewMemoryBackend()
+		di.RuntimeServiceBackend = runtime_service_impl.NewBackend(nodeOptions.Directories.Runtime)
 	}
 	di.ServiceRegistry.Register(
 		runtime_service.ServiceType,
@@ -280,7 +281,28 @@ func (di *Dependencies) bootstrapServiceRuntime() {
 			if !ok {
 				return nil, errors.Errorf("invalid runtime service options type: %T", serviceOptions)
 			}
-			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, runtimeOptions), nil
+
+			var networkService service.Service
+			if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") && !nodeOptions.Mobile {
+				loc, err := di.LocationResolver.DetectLocation()
+				if err != nil {
+					return nil, err
+				}
+
+				networkService = wireguard_service.NewManagerWithForwardPort(
+					di.IPResolver,
+					loc.Country,
+					di.NATService,
+					di.EventBus,
+					di.ServiceFirewall,
+					resourcesAllocator,
+					wgClientFactory,
+					di.dnsProxy,
+					runtimeOptions.ServicePort,
+				)
+			}
+
+			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, runtimeOptions, networkService), nil
 		},
 	)
 }
@@ -417,11 +439,28 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
 
 	di.registerWireguardConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
+	di.registerRuntimeConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerScrapingConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerQuicConnection()
 	di.registerDataTransferConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerDVPNConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
 	di.registerMonitoringConnection(nodeOptions, resourceAllocator, di.WireguardClientFactory)
+}
+
+func (di *Dependencies) registerRuntimeConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
+	runtime_service.Bootstrap()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		return endpoint.NewConnectionEndpoint(resourceAllocator, wgClientFactory)
+	}
+	connFactory := func() (connection.Connection, error) {
+		opts := wireguard_connection.Options{
+			DNSScriptDir:     nodeOptions.Directories.Script,
+			HandshakeTimeout: 1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
+	}
+	di.ConnectionRegistry.Register(runtime_service.ServiceType, connFactory)
 }
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options, resourceAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {

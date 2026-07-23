@@ -56,6 +56,31 @@ func NewManager(
 	wgClientFactory *endpoint.WgClientFactory,
 	dnsProxy *dns.Proxy,
 ) *Manager {
+	return NewManagerWithForwardPort(
+		ipResolver,
+		country,
+		natService,
+		eventBus,
+		trafficFirewall,
+		resourcesAllocator,
+		wgClientFactory,
+		dnsProxy,
+		0,
+	)
+}
+
+// NewManagerWithForwardPort creates new instance of Wireguard service with optional local service port forwarding.
+func NewManagerWithForwardPort(
+	ipResolver ip.Resolver,
+	country string,
+	natService nat.NATService,
+	eventBus eventbus.EventBus,
+	trafficFirewall firewall.IncomingTrafficFirewall,
+	resourcesAllocator *resources.Allocator,
+	wgClientFactory *endpoint.WgClientFactory,
+	dnsProxy *dns.Proxy,
+	forwardServicePort int,
+) *Manager {
 	return &Manager{
 		done:               make(chan struct{}),
 		resourcesAllocator: resourcesAllocator,
@@ -68,8 +93,9 @@ func NewManager(
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(resourcesAllocator, wgClientFactory)
 		},
-		country:        country,
-		sessionCleanup: map[string]func(){},
+		country:            country,
+		sessionCleanup:     map[string]func(){},
+		forwardServicePort: normalizeServicePort(forwardServicePort),
 	}
 }
 
@@ -96,6 +122,8 @@ type Manager struct {
 
 	country    string
 	outboundIP string
+
+	forwardServicePort int
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
@@ -145,6 +173,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		VPNNetwork:    config.Consumer.IPAddress,
 		DNSIP:         dnsIP,
 		ProviderExtIP: net.ParseIP(m.outboundIP),
+		ServicePort:   m.forwardServicePort,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup NAT/firewall rules")
@@ -222,6 +251,12 @@ func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg
 		ListenPort: listenPort,
 		DNSPort:    config.GetInt(config.FlagDNSListenPort),
 		DNS:        nil,
+		ServicePorts: func() []int {
+			if m.forwardServicePort <= 0 {
+				return nil
+			}
+			return []int{m.forwardServicePort}
+		}(),
 		Peer: wgcfg.Peer{
 			PublicKey: peerPublicKey,
 			// Peer endpoint is set automatically by wg once client does handshake.
@@ -243,6 +278,13 @@ func (m *Manager) startNewConnection(publicIP string, config wgcfg.DeviceConfig)
 		return nil, errors.Wrap(err, "could not start provider wg connection endpoint")
 	}
 	return connEndpoint, nil
+}
+
+func normalizeServicePort(port int) int {
+	if port <= 0 || port > 65535 {
+		return 0
+	}
+	return port
 }
 
 // Serve starts service - does block

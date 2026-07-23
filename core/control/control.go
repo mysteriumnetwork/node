@@ -39,8 +39,9 @@ type controlMessageItem struct {
 
 type RuntimeServiceOptions struct {
 	Name           string         `json:"name,omitempty"`
-	Args           string         `json:"args,omitempty"`
+	Exec           string         `json:"exec,omitempty"`
 	OCIArtifact    string         `json:"oci_artifact,omitempty"`
+	ServicePort    int            `json:"service_port,omitempty"`
 	ResourceLimits resourceLimits `json:"resource_limits,omitempty"`
 }
 
@@ -79,4 +80,33 @@ func (c *ControlPlane) Start(identity string) error {
 // Stop stops the control plane
 func (c *ControlPlane) Stop() {
 	c.nats.ReceiveUnsubscribe(communication.MessageEndpoint(fmt.Sprintf("%s.control-plane.v1", c.identity)))
+}
+
+// ExecuteJSON executes control-plane requests directly from JSON payload.
+// It reuses the same handler logic as broker-delivered messages.
+func (c *ControlPlane) ExecuteJSON(payload []byte) error {
+	var request controlMessage
+	if err := json.Unmarshal(payload, &request); err != nil {
+		return err
+	}
+
+	if c.identity == "" {
+		c.detectIdentityFromServices()
+	}
+
+	return c.handler(request)
+}
+
+func (c *ControlPlane) detectIdentityFromServices() {
+	services, err := c.api.Services()
+	if err != nil {
+		return
+	}
+
+	for _, svc := range services {
+		if svc.ProviderID != "" {
+			c.identity = svc.ProviderID
+			return
+		}
+	}
 }

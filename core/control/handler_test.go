@@ -102,3 +102,13 @@ func TestValidateRuntimeCommand_CreateRequiresRuntimeActive(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
+
+func TestToRuntimeServiceOptions_MapsServicePort(t *testing.T) {
+	options := toRuntimeServiceOptions("runtime.cdp", RuntimeServiceOptions{
+		ServicePort: 31337,
+	})
+
+	if options.ServicePort != 31337 {
+		t.Fatalf("expected service port 31337, got %d", options.ServicePort)
+	}
+}

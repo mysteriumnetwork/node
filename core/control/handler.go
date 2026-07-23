@@ -38,11 +38,16 @@ func (c *ControlPlane) handler(request controlMessage) error {
 		return err
 	}
 
+	var firstErr error
+
 	for _, r := range request {
 		log.Info().Str("command", r.Command).Str("service", r.Service).Msg("executing control request")
 
 		if err := validateRuntimeCommand(currentServices, r); err != nil {
 			log.Warn().AnErr("err", err).Msg("runtime control request rejected")
+			if firstErr == nil {
+				firstErr = err
+			}
 			continue
 		}
 
@@ -50,11 +55,17 @@ func (c *ControlPlane) handler(request controlMessage) error {
 		case "create":
 			if err := c.createRuntimeService(r); err != nil {
 				log.Warn().AnErr("err", err).Msg("failed to create runtime service")
+				if firstErr == nil {
+					firstErr = err
+				}
 			}
 		case "delete":
 			serviceType, err := c.deleteRuntimeService(r)
 			if err != nil {
 				log.Warn().AnErr("err", err).Msg("failed to delete runtime service")
+				if firstErr == nil {
+					firstErr = err
+				}
 				continue
 			}
 			for _, service := range currentServices {
@@ -63,11 +74,17 @@ func (c *ControlPlane) handler(request controlMessage) error {
 				}
 				if err := c.stopService(service.ID); err != nil {
 					log.Warn().AnErr("err", err).Msg("failed to stop runtime service on delete")
+					if firstErr == nil {
+						firstErr = err
+					}
 				}
 			}
 		case "start":
 			if err := c.startService(r); err != nil {
 				log.Warn().AnErr("err", err).Msg("failed to start service")
+				if firstErr == nil {
+					firstErr = err
+				}
 			}
 		case "stop":
 			for _, service := range currentServices {
@@ -76,13 +93,20 @@ func (c *ControlPlane) handler(request controlMessage) error {
 				}
 				if err := c.stopService(service.ID); err != nil {
 					log.Warn().AnErr("err", err).Msg("failed to stop service")
+					if firstErr == nil {
+						firstErr = err
+					}
 				}
 			}
 		default:
 			log.Warn().Str("command", r.Command).Msg("unknown control command")
+			if firstErr == nil {
+				firstErr = errors.Errorf("unknown control command %q", r.Command)
+			}
 		}
 	}
-	return nil
+
+	return firstErr
 }
 
 func (c *ControlPlane) startService(request controlMessageItem) error {
@@ -134,12 +158,11 @@ func (c *ControlPlane) startService(request controlMessageItem) error {
 				return err
 			}
 			overrides := toRuntimeServiceOptions(request.Service, runtimeInput)
-
-			if overrides.RootFS != "" {
-				runtimeOptions.RootFS = overrides.RootFS
+			if overrides.Exec != "" {
+				runtimeOptions.Exec = overrides.Exec
 			}
-			if overrides.Command != "" {
-				runtimeOptions.Command = overrides.Command
+			if overrides.ServicePort > 0 {
+				runtimeOptions.ServicePort = overrides.ServicePort
 			}
 			if len(overrides.Env) > 0 {
 				runtimeOptions.Env = overrides.Env
@@ -215,15 +238,19 @@ func (c *ControlPlane) parseRuntimeServiceOptions(request controlMessageItem) (R
 	if err := json.Unmarshal(request.Options, &options); err != nil {
 		return RuntimeServiceOptions{}, errors.Wrap(err, "failed to parse runtime service options")
 	}
+	if options.ServicePort < 0 || options.ServicePort > 65535 {
+		return RuntimeServiceOptions{}, errors.New("service_port must be between 0 and 65535")
+	}
 
 	return options, nil
 }
 
 func toRuntimeServiceOptions(serviceType string, options RuntimeServiceOptions) runtime_service_options.Options {
 	return runtime_service_options.Options{
-		Name:    serviceType,
-		RootFS:  options.OCIArtifact,
-		Command: options.Args,
+		Name:        serviceType,
+		OCIArtifact: options.OCIArtifact,
+		Exec:        options.Exec,
+		ServicePort: options.ServicePort,
 		ResourceLimits: runtime_service_options.ResourceLimits{
 			CPU:    options.ResourceLimits.CPU,
 			Memory: options.ResourceLimits.Memory,

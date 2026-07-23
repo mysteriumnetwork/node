@@ -164,7 +164,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context, cp *control.ControlPlane) (err e
 			ProviderID:     providerID,
 			Type:           serviceType,
 			AccessPolicies: &contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
-			Options:        serviceOpts,
+			Options:        serviceOpts.TypeOptions,
 		}
 
 		go sc.runService(startRequest)

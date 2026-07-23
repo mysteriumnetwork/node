@@ -17,6 +17,8 @@
 
 package connection
 
+import "strings"
+
 // Factory represents a connection constructor
 type Factory func() (Connection, error)
 
@@ -41,7 +43,12 @@ func (registry *Registry) Register(serviceType string, creator Factory) {
 func (registry *Registry) CreateConnection(serviceType string) (Connection, error) {
 	factory, exists := registry.creators[serviceType]
 	if !exists {
-		return nil, ErrUnsupportedServiceType
+		if strings.HasPrefix(serviceType, "runtime.") {
+			factory, exists = registry.creators["runtime"]
+		}
+		if !exists {
+			return nil, ErrUnsupportedServiceType
+		}
 	}
 
 	return factory()

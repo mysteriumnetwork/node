@@ -58,6 +58,7 @@ type netTun struct {
 	mtu            int
 	dnsPort        int
 	localAddresses []netip.Addr
+	servicePorts   map[int]struct{}
 
 	limiter           *rate.Limiter
 	privateIPv4Blocks []*net.IPNet
@@ -68,7 +69,7 @@ type (
 	Net      netTun
 )
 
-func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, error) {
+func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []int) (tun.Device, *Net, error) {
 	refs.SetLeakMode(refs.NoLeakChecking)
 
 	opts := stack.Options{
@@ -85,6 +86,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 		mtu:               mtu,
 		dnsPort:           dnsPort,
 		localAddresses:    localAddresses,
+		servicePorts:      toPortSet(servicePorts),
 		limiter:           getRateLimitter(),
 		privateIPv4Blocks: privateIPv4Blocks,
 	}
@@ -111,8 +113,8 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *N
 	return dev, (*Net)(dev), nil
 }
 
-func CreateNetTUNWithStack(localAddresses []netip.Addr, dnsPort, mtu int) (tun.Device, *Net, *stack.Stack, error) {
-	t, n, err := CreateNetTUN(localAddresses, dnsPort, mtu)
+func CreateNetTUNWithStack(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []int) (tun.Device, *Net, *stack.Stack, error) {
+	t, n, err := CreateNetTUN(localAddresses, dnsPort, mtu, servicePorts)
 
 	stack := t.(*netTun).stack
 	stack.SetPromiscuousMode(1, true)
@@ -251,6 +253,9 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 	defer client.Close()
 
 	dialAddrStr := fmt.Sprintf("%s:%d", reqDetails.LocalAddress, reqDetails.LocalPort)
+	if tun.isForwardedLocalPort(reqDetails.LocalAddress, reqDetails.LocalPort) {
+		dialAddrStr = fmt.Sprintf("127.0.0.1:%d", reqDetails.LocalPort)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -317,6 +322,11 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 			remoteAddr.IP = net.ParseIP("127.0.0.1")
 		}
 
+		if tun.isForwardedLocalPort(sess.LocalAddress, sess.LocalPort) {
+			remoteAddr.Port = int(sess.LocalPort)
+			remoteAddr.IP = net.ParseIP("127.0.0.1")
+		}
+
 		proxyConn, err := net.ListenUDP("udp", proxyAddr)
 		if err != nil {
 			log.Warn().Err(err).Msgf("Failed to bind local port %d, trying one more time with random port", proxyAddr.Port)
@@ -352,6 +362,30 @@ func (tun *netTun) isLocal(remoteAddr tcpip.Address) bool {
 	}
 
 	return false
+}
+
+func (tun *netTun) isForwardedLocalPort(remoteAddr tcpip.Address, port uint16) bool {
+	if !tun.isLocal(remoteAddr) {
+		return false
+	}
+
+	_, ok := tun.servicePorts[int(port)]
+	return ok
+}
+
+func toPortSet(ports []int) map[int]struct{} {
+	if len(ports) == 0 {
+		return map[int]struct{}{}
+	}
+
+	result := make(map[int]struct{}, len(ports))
+	for _, port := range ports {
+		if port > 0 {
+			result[port] = struct{}{}
+		}
+	}
+
+	return result
 }
 
 const (

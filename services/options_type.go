@@ -92,6 +92,8 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 		return wireguard_service.GetOptions(), nil
 	case monitoring.ServiceType:
 		return wireguard_service.GetOptions(), nil
+	case runtime_service.ServiceType:
+		return runtime_service_options.GetOptions(), nil
 	default:
 		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}

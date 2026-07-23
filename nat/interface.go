@@ -33,4 +33,5 @@ type Options struct {
 	VPNNetwork    net.IPNet
 	ProviderExtIP net.IP
 	DNSIP         net.IP
+	ServicePort   int
 }
