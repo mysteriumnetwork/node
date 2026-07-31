@@ -78,7 +78,7 @@ func TestRegistry_CreateConnection_RuntimePrefixFallback(t *testing.T) {
 		},
 	}
 
-	connection, err := registry.CreateConnection("runtime.cdp")
+	connection, err := registry.CreateConnection("runtime-cdp")
 	assert.NoError(t, err)
 	assert.Equal(t, mock, connection)
 }

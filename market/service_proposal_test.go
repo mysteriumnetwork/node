@@ -152,3 +152,18 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 	assert.Equal(t, expected, actual)
 	assert.True(t, actual.IsSupported())
 }
+
+func TestSupportedServiceType_DoesNotAllowSubtypesByDefault(t *testing.T) {
+	RegisterServiceType("fixed_service")
+
+	assert.True(t, isSupportedServiceType("fixed_service"))
+	assert.False(t, isSupportedServiceType("fixed_service-variant"))
+}
+
+func TestSupportedServiceType_AllowsSubtypesWhenRegistered(t *testing.T) {
+	RegisterServiceTypeWithSubtypes("dynamic_service")
+
+	assert.True(t, isSupportedServiceType("dynamic_service"))
+	assert.True(t, isSupportedServiceType("dynamic_service-variant"))
+	assert.False(t, isSupportedServiceType("dynamic_service.variant"))
+}

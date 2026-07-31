@@ -54,6 +54,11 @@ type DeviceConfig struct {
 	ProxyPort int `json:"proxy_port,omitempty"`
 
 	ServicePorts []int `json:"service_ports,omitempty"`
+
+	// LocalServiceDialer is intentionally process-local and is never encoded.
+	// Netstack uses it to connect tunnel TCP flows directly to the isolated
+	// workload without opening a host listener.
+	LocalServiceDialer func(port int) (net.Conn, error) `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.

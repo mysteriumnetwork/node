@@ -130,6 +130,15 @@ func (ce *connectionEndpoint) InterfaceName() string {
 	return ce.cfg.IfaceName
 }
 
+// HandlesLocalServiceForwarding reports whether the selected WireGuard client
+// consumes configured service ports inside its own network stack.
+func (ce *connectionEndpoint) HandlesLocalServiceForwarding() bool {
+	handler, ok := ce.wgClient.(interface {
+		HandlesLocalServiceForwarding() bool
+	})
+	return ok && handler.HandlesLocalServiceForwarding()
+}
+
 // PeerStats returns stats information about connected peer.
 func (ce *connectionEndpoint) PeerStats() (wgcfg.Stats, error) {
 	return ce.wgClient.PeerStats(ce.cfg.IfaceName)

@@ -239,6 +239,7 @@ func TestUserConfig_GetConfig(t *testing.T) {
 func TestHardcodedServicesNameFlagValues(t *testing.T) {
 	// importing these constants into config package create cyclic dependency
 	assert.Equal(t, strings.Join([]string{scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType, monitoring.ServiceType}, ","), FlagActiveServices.Value)
+	assert.NotContains(t, strings.Split(FlagActiveServices.Value, ","), "runtime", "runtime service must be disabled by default")
 }
 
 func must(t *testing.T, err error) {

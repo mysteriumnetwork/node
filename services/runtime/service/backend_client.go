@@ -5,6 +5,6 @@ import (
 )
 
 // NewBackend creates the default runtime backend implementation.
-func NewBackend(runtimeDir string) Backend {
-	return newBackendAdapter(runtime_service.NewBackend(runtimeDir), runtimeDir)
+func NewBackend(dataDir string) Backend {
+	return newBackendAdapter(runtime_service.NewBackend(dataDir))
 }

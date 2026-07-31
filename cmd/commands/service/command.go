@@ -36,6 +36,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
+	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
+	runtime_service_impl "github.com/mysteriumnetwork/node/services/runtime/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/terms/terms-go"
@@ -78,8 +80,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmd.RegisterSignalCallback(func() { quit <- nil })
 
 			cmdService := &serviceCommand{
-				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
-				errorChannel: quit,
+				tequilapi:      client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+				errorChannel:   quit,
+				runtimeBackend: di.RuntimeServiceBackend,
 			}
 			go func() {
 				cp := control.NewControlPlane(di.BrokerConnection, cmdService.tequilapi, di.RuntimeServiceBackend)
@@ -114,8 +117,9 @@ func describeQuit(err error) error {
 
 // serviceCommand represent entrypoint for service command with top level components
 type serviceCommand struct {
-	tequilapi    *client.Client
-	errorChannel chan error
+	tequilapi      *client.Client
+	errorChannel   chan error
+	runtimeBackend runtime_service_impl.Backend
 }
 
 // Run runs a command
@@ -156,6 +160,13 @@ func (sc *serviceCommand) Run(ctx *cli.Context, cp *control.ControlPlane) (err e
 	config.Current.SaveUserConfig()
 
 	for _, serviceType := range serviceTypes {
+		if skip, reason := shouldSkipRuntimeService(serviceType, sc.runtimeBackend); skip {
+			log.Warn().
+				Str("service", serviceType).
+				Str("reason", reason).
+				Msg("Skipping unavailable runtime service; other node services will continue")
+			continue
+		}
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
 			return err
@@ -174,6 +185,15 @@ func (sc *serviceCommand) Run(ctx *cli.Context, cp *control.ControlPlane) (err e
 		return err
 	}
 	return <-sc.errorChannel
+}
+
+func shouldSkipRuntimeService(serviceType string, backend runtime_service_impl.Backend) (bool, string) {
+	if serviceType != runtime_service.ServiceType &&
+		!strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
+		return false, ""
+	}
+	reason, unavailable := runtime_service_impl.UnavailableReason(backend)
+	return unavailable, reason
 }
 
 func (sc *serviceCommand) unlockIdentity(id, passphrase string) string {

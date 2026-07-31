@@ -19,10 +19,14 @@ package runtime
 
 import "github.com/mysteriumnetwork/node/market"
 
-// ServiceType indicates the runtime-backed service family.
-const ServiceType = "runtime"
+const (
+	// ServiceType indicates the runtime-backed service family.
+	ServiceType = "runtime"
+	// ServiceTypePrefix prefixes dynamically created runtime-backed service types.
+	ServiceTypePrefix = ServiceType + "-"
+)
 
 // Bootstrap is called on program initialization time and registers the runtime service family.
 func Bootstrap() {
-	market.RegisterServiceType(ServiceType)
+	market.RegisterServiceTypeWithSubtypes(ServiceType)
 }

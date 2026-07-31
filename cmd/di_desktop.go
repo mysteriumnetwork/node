@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"net"
 	"strings"
 	"time"
 
@@ -272,24 +273,38 @@ func (di *Dependencies) bootstrapServiceNoop() {
 func (di *Dependencies) bootstrapServiceRuntime(nodeOptions node.Options, resourcesAllocator *resources.Allocator, wgClientFactory *endpoint.WgClientFactory) {
 	runtime_service.Bootstrap()
 	if di.RuntimeServiceBackend == nil {
-		di.RuntimeServiceBackend = runtime_service_impl.NewBackend(nodeOptions.Directories.Runtime)
+		di.RuntimeServiceBackend = runtime_service_impl.NewBackend(nodeOptions.Directories.Data)
 	}
 	di.ServiceRegistry.Register(
 		runtime_service.ServiceType,
 		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
-			runtimeOptions, ok := serviceOptions.(runtime_service_impl.Options)
+			_, ok := serviceOptions.(runtime_service_impl.StartOptions)
 			if !ok {
 				return nil, errors.Errorf("invalid runtime service options type: %T", serviceOptions)
 			}
 
+			if reason, unavailable := runtime_service_impl.UnavailableReason(di.RuntimeServiceBackend); unavailable {
+				return nil, errors.Errorf("runtime service is unavailable: %s", reason)
+			}
+
 			var networkService service.Service
-			if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") && !nodeOptions.Mobile {
+			serviceName := ""
+			if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) && !nodeOptions.Mobile {
+				definition, exists, err := di.RuntimeServiceBackend.Get(serviceType)
+				if err != nil {
+					return nil, err
+				}
+				if !exists {
+					return nil, errors.Errorf("runtime service %q is not created", serviceType)
+				}
+				serviceName = serviceType
+
 				loc, err := di.LocationResolver.DetectLocation()
 				if err != nil {
 					return nil, err
 				}
 
-				networkService = wireguard_service.NewManagerWithForwardPort(
+				networkService = wireguard_service.NewManagerWithServiceForwarding(
 					di.IPResolver,
 					loc.Country,
 					di.NATService,
@@ -298,11 +313,16 @@ func (di *Dependencies) bootstrapServiceRuntime(nodeOptions node.Options, resour
 					resourcesAllocator,
 					wgClientFactory,
 					di.dnsProxy,
-					runtimeOptions.ServicePort,
+					definition.Options.ServicePort,
+					func(port int) (net.Conn, error) {
+						return di.RuntimeServiceBackend.DialTCP(serviceType, port)
+					},
 				)
+			} else if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
+				return nil, errors.New("runtime workloads are unavailable on mobile nodes")
 			}
 
-			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, runtimeOptions, networkService), nil
+			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, serviceName, networkService), nil
 		},
 	)
 }

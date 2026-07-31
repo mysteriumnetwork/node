@@ -37,19 +37,9 @@ type controlMessageItem struct {
 	Options        json.RawMessage `json:"options,omitempty"`
 }
 
-type RuntimeServiceOptions struct {
-	Name           string         `json:"name,omitempty"`
-	Exec           string         `json:"exec,omitempty"`
-	OCIArtifact    string         `json:"oci_artifact,omitempty"`
-	ServicePort    int            `json:"service_port,omitempty"`
-	ResourceLimits resourceLimits `json:"resource_limits,omitempty"`
-}
-
-type resourceLimits struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Disk   string `json:"disk,omitempty"`
-}
+// RuntimeServiceOptions aliases the immutable create contract to prevent
+// control-plane schema drift.
+type RuntimeServiceOptions = runtime_service_options.CreateOptions
 
 // ControlPlane is a struct that represents the control plane of the node
 type ControlPlane struct {
@@ -80,33 +70,4 @@ func (c *ControlPlane) Start(identity string) error {
 // Stop stops the control plane
 func (c *ControlPlane) Stop() {
 	c.nats.ReceiveUnsubscribe(communication.MessageEndpoint(fmt.Sprintf("%s.control-plane.v1", c.identity)))
-}
-
-// ExecuteJSON executes control-plane requests directly from JSON payload.
-// It reuses the same handler logic as broker-delivered messages.
-func (c *ControlPlane) ExecuteJSON(payload []byte) error {
-	var request controlMessage
-	if err := json.Unmarshal(payload, &request); err != nil {
-		return err
-	}
-
-	if c.identity == "" {
-		c.detectIdentityFromServices()
-	}
-
-	return c.handler(request)
-}
-
-func (c *ControlPlane) detectIdentityFromServices() {
-	services, err := c.api.Services()
-	if err != nil {
-		return
-	}
-
-	for _, svc := range services {
-		if svc.ProviderID != "" {
-			c.identity = svc.ProviderID
-			return
-		}
-	}
 }

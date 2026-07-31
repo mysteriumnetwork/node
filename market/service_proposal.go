@@ -163,15 +163,17 @@ func (proposal *ServiceProposal) IsSupported() bool {
 }
 
 var supportedServices = make(map[string]struct{})
+var supportedServiceTypesWithSubtypes = make(map[string]struct{})
 
 func isSupportedServiceType(serviceType string) bool {
 	if _, ok := supportedServices[serviceType]; ok {
 		return true
 	}
 
-	if idx := strings.Index(serviceType, "."); idx > 0 {
-		_, ok := supportedServices[serviceType[:idx]]
-		return ok
+	for baseType := range supportedServiceTypesWithSubtypes {
+		if strings.HasPrefix(serviceType, baseType+"-") {
+			return true
+		}
 	}
 
 	return false
@@ -180,4 +182,10 @@ func isSupportedServiceType(serviceType string) bool {
 // RegisterServiceType registers a supported service type.
 func RegisterServiceType(serviceType string) {
 	supportedServices[serviceType] = struct{}{}
+}
+
+// RegisterServiceTypeWithSubtypes registers a service type and allows dynamically named subtypes.
+func RegisterServiceTypeWithSubtypes(serviceType string) {
+	RegisterServiceType(serviceType)
+	supportedServiceTypesWithSubtypes[serviceType] = struct{}{}
 }

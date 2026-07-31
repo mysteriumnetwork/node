@@ -100,12 +100,12 @@ func TestRegistry_Create_RuntimePrefixUsesBaseFactory(t *testing.T) {
 	registry := mockRegistryWith(
 		"runtime",
 		func(serviceType string, options Options) (Service, error) {
-			assert.Equal(t, "runtime.example", serviceType)
+			assert.Equal(t, "runtime-example", serviceType)
 			return serviceMock, nil
 		},
 	)
 
-	service, err := registry.Create("runtime.example", nil)
+	service, err := registry.Create("runtime-example", nil)
 	assert.Equal(t, serviceMock, service)
 	assert.NoError(t, err)
 }

@@ -108,6 +108,8 @@ func startServer(t *testing.T, privKey, pubClinet wgtypes.Key) {
 		[]netip.Addr{netip.MustParseAddr("192.168.4.1")},
 		53,
 		device.DefaultMTU,
+		nil,
+		nil,
 	)
 	if err != nil {
 		t.Error(err)

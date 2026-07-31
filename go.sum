@@ -1161,6 +1161,10 @@ github.com/mysteriumnetwork/metrics v0.0.19 h1:sqmUVStDWQOSUUxKTrEnxOZs6dy9nKrlI
 github.com/mysteriumnetwork/metrics v0.0.19/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54 h1:mqdzogdLpkgAgP3svQxnxo4AbRSLNH9x51gGQKaXl1Y=
 github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54/go.mod h1:G194Qz0O5frVbzqep/e4uEmcnz1u8GPdr2d49R3A7qY=
+github.com/mysteriumnetwork/runtime v0.0.0-20260730152735-4d0892e9d6dd h1:D1szxeerOzm/n8g+fwdDC0YMMb+fZPesB7kq6t0OdcE=
+github.com/mysteriumnetwork/runtime v0.0.0-20260730152735-4d0892e9d6dd/go.mod h1:SxReXD8H2q74dQx3kW9ZmVcj6qm++zhsSt0pvQgBn+c=
+github.com/mysteriumnetwork/runtime v0.0.0-20260731142455-c7ac88f659b7 h1:Vx1STI7Xq6DZNh9E3E43Fki/tijqCtVmylKdgcfNSRs=
+github.com/mysteriumnetwork/runtime v0.0.0-20260731142455-c7ac88f659b7/go.mod h1:SxReXD8H2q74dQx3kW9ZmVcj6qm++zhsSt0pvQgBn+c=
 github.com/mysteriumnetwork/terms v0.0.53 h1:QI49mqts3MBdbusj7zXmgViLDt6AMyrMaXJyEZ2YY4c=
 github.com/mysteriumnetwork/terms v0.0.53/go.mod h1:xWwHA/G22cDBqaCT95KyZUTDzgScDIF7waiufaadD2o=
 github.com/mysteriumnetwork/wireguard-go v0.0.0-20240416113031-406b13e8996a h1:ywGIJr95r+O+GQCY2WVqIT80AWlD44jpkI5qMIaFfOI=

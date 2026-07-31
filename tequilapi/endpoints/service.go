@@ -362,7 +362,7 @@ func (se *ServiceEndpoint) toServiceType(value string) string {
 		return value
 	}
 
-	if strings.HasPrefix(value, "runtime.") {
+	if strings.HasPrefix(value, "runtime-") {
 		return value
 	}
 

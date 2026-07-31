@@ -28,7 +28,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
-	"github.com/mysteriumnetwork/node/core/control"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -45,7 +44,6 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 		return tequilapi.NewNoopAPIServer(), nil
 	}
 	tequilaApiClient := tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort)
-	controlPlane := control.NewControlPlane(di.BrokerConnection, tequilaApiClient, di.RuntimeServiceBackend)
 
 	return tequilapi.NewServer(
 		listener,
@@ -76,7 +74,6 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForConnectionLocation(di.IPResolver, di.LocationResolver, di.LocationResolver),
 			tequilapi_endpoints.AddRoutesForProposals(di.ProposalRepository, di.PricingHelper, di.LocationResolver, di.FilterPresetStorage, di.NATProber),
 			tequilapi_endpoints.AddRoutesForService(di.ServicesManager, services.JSONParsersByType, di.ProposalRepository, tequilaApiClient),
-			tequilapi_endpoints.AddRoutesForControl(controlPlane),
 			tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, config.GetString(config.FlagAccessPolicyAddress)),
 			tequilapi_endpoints.AddRoutesForNAT(di.StateKeeper, di.NATProber),
 			tequilapi_endpoints.AddRoutesForNodeUI(versionmanager.NewVersionManager(di.UIServer, di.HTTPClient, di.uiVersionConfig)),

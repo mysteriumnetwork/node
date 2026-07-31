@@ -71,7 +71,7 @@ func Types() []string {
 
 // TypeConfiguredOptions returns specific service options.
 func TypeConfiguredOptions(serviceType string) (service.Options, error) {
-	if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") {
+	if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
 		return runtime_service_options.GetOptions(), nil
 	}
 
@@ -103,8 +103,8 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 func TypeJSONParser(serviceType string) (ServiceOptionsParser, error) {
 	parser, exist := JSONParsersByType[serviceType]
 	if !exist {
-		if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") {
-			return runtime_service_options.ParseJSONOptions, nil
+		if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
+			return runtime_service_options.ParseJSONStartOptions, nil
 		}
 		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}
@@ -113,7 +113,7 @@ func TypeJSONParser(serviceType string) (ServiceOptionsParser, error) {
 
 // IsTypeValid returns true if a given string is valid service type.
 func IsTypeValid(s string) bool {
-	if strings.HasPrefix(s, runtime_service.ServiceType+".") {
+	if strings.HasPrefix(s, runtime_service.ServiceTypePrefix) {
 		return true
 	}
 

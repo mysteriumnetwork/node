@@ -59,7 +59,7 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	case monitoring.ServiceType:
 		opts.AccessPolicyList = []string{"mysterium"}
 	}
-	if strings.HasPrefix(serviceType, runtime_service.ServiceType+".") {
+	if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
 		opts.AccessPolicyList = []string{"mysterium"}
 	}
 	return opts, nil

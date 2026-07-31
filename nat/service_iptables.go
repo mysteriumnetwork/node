@@ -211,20 +211,15 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 	)
 	rules = append(rules, rule)
 
-	if opts.ServicePort > 0 {
-		// Redirect service traffic targeted at tunnel gateway IP to the local runtime service port.
+	if opts.TCPServicePort > 0 {
+		// Let TCP traffic for the tunnel gateway leave the MYST protection
+		// chain and follow normal local routing. The listener itself is bound
+		// to the exact gateway address and WireGuard interface.
 		rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
-			"--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(opts.ServicePort),
-			"--jump", "REDIRECT",
-			"--to-ports", strconv.Itoa(opts.ServicePort),
-			"--table", "nat",
-		)
-		rules = append(rules, rule)
-
-		rule = iptables.InsertAt(chainMyst, 1).RuleSpec(
-			"--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(opts.ServicePort),
-			"--jump", "REDIRECT",
-			"--to-ports", strconv.Itoa(opts.ServicePort),
+			"--destination", opts.DNSIP.String(),
+			"--protocol", "tcp",
+			"--dport", strconv.Itoa(opts.TCPServicePort),
+			"--jump", "RETURN",
 			"--table", "nat",
 		)
 		rules = append(rules, rule)

@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/reset"
+	command_runtime "github.com/mysteriumnetwork/node/cmd/commands/runtime"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
 	"github.com/mysteriumnetwork/node/config"
@@ -53,6 +54,7 @@ var (
 	accountCommand    = account.NewCommand()
 	connectionCommand = connection.NewCommand()
 	configCommand     = command_cfg.NewCommand()
+	runtimeCommand    = command_runtime.NewCommand()
 )
 
 func main() {
@@ -99,6 +101,7 @@ func NewCommand() (*cli.App, error) {
 		accountCommand,
 		connectionCommand,
 		configCommand,
+		runtimeCommand,
 	}
 
 	return app, nil
@@ -112,11 +115,12 @@ func newApp() (*cli.App, error) {
 // uiCommands is a map which consists of all
 // commands are used directly by a user.
 var uiCommands = map[string]struct{}{
-	command_cli.CommandName: {},
-	account.CommandName:     {},
-	connection.CommandName:  {},
-	command_cfg.CommandName: {},
-	reset.CommandName:       {},
+	command_cli.CommandName:     {},
+	account.CommandName:         {},
+	connection.CommandName:      {},
+	command_cfg.CommandName:     {},
+	reset.CommandName:           {},
+	command_runtime.CommandName: {},
 }
 
 // configureLogging returns a func which configures global

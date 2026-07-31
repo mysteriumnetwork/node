@@ -56,7 +56,7 @@ func NewManager(
 	wgClientFactory *endpoint.WgClientFactory,
 	dnsProxy *dns.Proxy,
 ) *Manager {
-	return NewManagerWithForwardPort(
+	return NewManagerWithServiceForwarding(
 		ipResolver,
 		country,
 		natService,
@@ -66,10 +66,12 @@ func NewManager(
 		wgClientFactory,
 		dnsProxy,
 		0,
+		nil,
 	)
 }
 
-// NewManagerWithForwardPort creates new instance of Wireguard service with optional local service port forwarding.
+// NewManagerWithForwardPort is retained for source compatibility. Without an
+// isolated dialer it cannot expose a local process as a runtime service.
 func NewManagerWithForwardPort(
 	ipResolver ip.Resolver,
 	country string,
@@ -80,6 +82,35 @@ func NewManagerWithForwardPort(
 	wgClientFactory *endpoint.WgClientFactory,
 	dnsProxy *dns.Proxy,
 	forwardServicePort int,
+) *Manager {
+	return NewManagerWithServiceForwarding(
+		ipResolver,
+		country,
+		natService,
+		eventBus,
+		trafficFirewall,
+		resourcesAllocator,
+		wgClientFactory,
+		dnsProxy,
+		forwardServicePort,
+		nil,
+	)
+}
+
+// NewManagerWithServiceForwarding creates a WireGuard service whose optional
+// TCP forwarding terminates only on the tunnel gateway and dials directly into
+// an isolated workload.
+func NewManagerWithServiceForwarding(
+	ipResolver ip.Resolver,
+	country string,
+	natService nat.NATService,
+	eventBus eventbus.EventBus,
+	trafficFirewall firewall.IncomingTrafficFirewall,
+	resourcesAllocator *resources.Allocator,
+	wgClientFactory *endpoint.WgClientFactory,
+	dnsProxy *dns.Proxy,
+	forwardServicePort int,
+	serviceDialer func(port int) (net.Conn, error),
 ) *Manager {
 	return &Manager{
 		done:               make(chan struct{}),
@@ -96,6 +127,7 @@ func NewManagerWithForwardPort(
 		country:            country,
 		sessionCleanup:     map[string]func(){},
 		forwardServicePort: normalizeServicePort(forwardServicePort),
+		serviceDialer:      serviceDialer,
 	}
 }
 
@@ -124,6 +156,7 @@ type Manager struct {
 	outboundIP string
 
 	forwardServicePort int
+	serviceDialer      func(port int) (net.Conn, error)
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
@@ -151,6 +184,26 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start new connection")
 	}
+	committed := false
+	var releaseTrafficFirewall firewall.IncomingRuleRemove
+	var natRules []interface{}
+	var serviceForwarder *tcpForwarder
+	defer func() {
+		if committed {
+			return
+		}
+		if serviceForwarder != nil {
+			_ = serviceForwarder.Close()
+		}
+		if len(natRules) > 0 {
+			_ = m.natService.Del(natRules)
+		}
+		if releaseTrafficFirewall != nil {
+			_ = releaseTrafficFirewall()
+		}
+		_ = conn.Stop()
+		_ = m.resourcesAllocator.ReleaseIPNet(providerConfig.Subnet)
+	}()
 
 	config, err := conn.Config()
 	if err != nil {
@@ -158,7 +211,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	}
 
 	var dnsIP net.IP
-	var releaseTrafficFirewall firewall.IncomingRuleRemove
 	if m.serviceInstance.PolicyProvider().HasDNSRules() {
 		releaseTrafficFirewall, err = m.trafficFirewall.BlockIncomingTraffic(providerConfig.Subnet)
 		if err != nil {
@@ -169,20 +221,35 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	dnsIP = netutil.FirstIP(config.Consumer.IPAddress)
 	config.Consumer.DNSIPs = dnsIP.String()
 
-	natRules, err := m.natService.Setup(nat.Options{
-		VPNNetwork:    config.Consumer.IPAddress,
-		DNSIP:         dnsIP,
-		ProviderExtIP: net.ParseIP(m.outboundIP),
-		ServicePort:   m.forwardServicePort,
+	natRules, err = m.natService.Setup(nat.Options{
+		VPNNetwork:     config.Consumer.IPAddress,
+		DNSIP:          dnsIP,
+		ProviderExtIP:  net.ParseIP(m.outboundIP),
+		TCPServicePort: m.forwardServicePort,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup NAT/firewall rules")
 	}
 
+	ifaceName := conn.InterfaceName()
+	if m.forwardServicePort > 0 {
+		if m.serviceDialer == nil {
+			return nil, errors.New("isolated runtime service dialer is not configured")
+		}
+		handler, handledInStack := conn.(interface {
+			HandlesLocalServiceForwarding() bool
+		})
+		if !handledInStack || !handler.HandlesLocalServiceForwarding() {
+			serviceForwarder, err = newTCPForwarder(dnsIP, ifaceName, m.forwardServicePort, m.serviceDialer)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to bind runtime service to WireGuard gateway")
+			}
+		}
+	}
+
 	statsPublisher := newStatsPublisher(m.eventBus, time.Second)
 	go statsPublisher.start(sessionID, conn)
 
-	ifaceName := conn.InterfaceName()
 	s := shaper.New(m.eventBus)
 	err = s.Start(ifaceName)
 	if err != nil {
@@ -203,6 +270,11 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		statsPublisher.stop()
 
 		s.Clear(ifaceName)
+		if serviceForwarder != nil {
+			if err := serviceForwarder.Close(); err != nil {
+				log.Warn().Err(err).Msg("failed to stop runtime TCP forwarder")
+			}
+		}
 
 		if releaseTrafficFirewall != nil {
 			if err := releaseTrafficFirewall(); err != nil {
@@ -228,6 +300,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	m.sessionCleanupMu.Lock()
 	m.sessionCleanup[sessionID] = destroy
 	m.sessionCleanupMu.Unlock()
+	committed = true
 
 	return &service.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy}, nil
 }
@@ -257,6 +330,7 @@ func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg
 			}
 			return []int{m.forwardServicePort}
 		}(),
+		LocalServiceDialer: m.serviceDialer,
 		Peer: wgcfg.Peer{
 			PublicKey: peerPublicKey,
 			// Peer endpoint is set automatically by wg once client does handshake.

@@ -43,7 +43,7 @@ func (registry *Registry) Register(serviceType string, creator RegistryFactory) 
 func (registry *Registry) Create(serviceType string, options Options) (Service, error) {
 	createService, exists := registry.factories[serviceType]
 	if !exists {
-		if strings.HasPrefix(serviceType, "runtime.") {
+		if strings.HasPrefix(serviceType, "runtime-") {
 			createService, exists = registry.factories["runtime"]
 		}
 		if !exists {

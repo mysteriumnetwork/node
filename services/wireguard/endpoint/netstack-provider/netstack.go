@@ -59,6 +59,7 @@ type netTun struct {
 	dnsPort        int
 	localAddresses []netip.Addr
 	servicePorts   map[int]struct{}
+	serviceDialer  func(port int) (net.Conn, error)
 
 	limiter           *rate.Limiter
 	privateIPv4Blocks []*net.IPNet
@@ -69,7 +70,7 @@ type (
 	Net      netTun
 )
 
-func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []int) (tun.Device, *Net, error) {
+func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []int, serviceDialer func(port int) (net.Conn, error)) (tun.Device, *Net, error) {
 	refs.SetLeakMode(refs.NoLeakChecking)
 
 	opts := stack.Options{
@@ -87,6 +88,7 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []
 		dnsPort:           dnsPort,
 		localAddresses:    localAddresses,
 		servicePorts:      toPortSet(servicePorts),
+		serviceDialer:     serviceDialer,
 		limiter:           getRateLimitter(),
 		privateIPv4Blocks: privateIPv4Blocks,
 	}
@@ -113,8 +115,8 @@ func CreateNetTUN(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []
 	return dev, (*Net)(dev), nil
 }
 
-func CreateNetTUNWithStack(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []int) (tun.Device, *Net, *stack.Stack, error) {
-	t, n, err := CreateNetTUN(localAddresses, dnsPort, mtu, servicePorts)
+func CreateNetTUNWithStack(localAddresses []netip.Addr, dnsPort, mtu int, servicePorts []int, serviceDialer func(port int) (net.Conn, error)) (tun.Device, *Net, *stack.Stack, error) {
+	t, n, err := CreateNetTUN(localAddresses, dnsPort, mtu, servicePorts, serviceDialer)
 
 	stack := t.(*netTun).stack
 	stack.SetPromiscuousMode(1, true)
@@ -231,7 +233,8 @@ func (tun *netTun) addAddress(ip tcpip.Address) error {
 func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 	reqDetails := r.ID()
 
-	if tun.isPrivateIP(net.IP(reqDetails.LocalAddress.AsSlice())) {
+	forwardedLocal := tun.isForwardedLocalPort(reqDetails.LocalAddress, reqDetails.LocalPort)
+	if !forwardedLocal && tun.isPrivateIP(net.IP(reqDetails.LocalAddress.AsSlice())) {
 		log.Warn().Msgf("Access to private IPv4 subnet is restricted: %s", r.ID().LocalAddress.String())
 		return
 	}
@@ -253,16 +256,20 @@ func (tun *netTun) acceptTCP(r *tcp.ForwarderRequest) {
 	defer client.Close()
 
 	dialAddrStr := fmt.Sprintf("%s:%d", reqDetails.LocalAddress, reqDetails.LocalPort)
-	if tun.isForwardedLocalPort(reqDetails.LocalAddress, reqDetails.LocalPort) {
-		dialAddrStr = fmt.Sprintf("127.0.0.1:%d", reqDetails.LocalPort)
+	var server net.Conn
+	var err error
+	if forwardedLocal {
+		if tun.serviceDialer == nil {
+			log.Error().Msgf("No isolated workload dialer configured for TCP port %d", reqDetails.LocalPort)
+			return
+		}
+		server, err = tun.serviceDialer(int(reqDetails.LocalPort))
+	} else {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		var stdDialer net.Dialer
+		server, err = stdDialer.DialContext(ctx, "tcp", dialAddrStr)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var stdDialer net.Dialer
-
-	server, err := stdDialer.DialContext(ctx, "tcp", dialAddrStr)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to connect to local server at %s", dialAddrStr)
 		return
@@ -319,11 +326,6 @@ func (tun *netTun) acceptUDP(req *udp.ForwarderRequest) {
 
 		if remoteAddr.Port == 53 && tun.dnsPort > 0 && tun.isLocal(sess.LocalAddress) {
 			remoteAddr.Port = tun.dnsPort
-			remoteAddr.IP = net.ParseIP("127.0.0.1")
-		}
-
-		if tun.isForwardedLocalPort(sess.LocalAddress, sess.LocalPort) {
-			remoteAddr.Port = int(sess.LocalPort)
 			remoteAddr.IP = net.ParseIP("127.0.0.1")
 		}
 

@@ -33,5 +33,7 @@ type Options struct {
 	VPNNetwork    net.IPNet
 	ProviderExtIP net.IP
 	DNSIP         net.IP
-	ServicePort   int
+	// TCPServicePort is routed to an exact gateway listener. It is never
+	// redirected to a wildcard host socket and never applies to UDP.
+	TCPServicePort int
 }

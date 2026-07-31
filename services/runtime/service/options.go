@@ -5,19 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package service
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -25,102 +18,103 @@ import (
 	runtime_service "github.com/mysteriumnetwork/runtime/service"
 )
 
-// Options describe the OCI artifact and runtime metadata needed to launch a runtime-backed service.
+// CreateOptions is the complete caller-controlled input for installing a
+// runtime service. Workload execution, networking, and resource policy are
+// read from the immutable manifest in the OCI artifact.
+type CreateOptions struct {
+	Name                string       `json:"name,omitempty"`
+	OCIArtifact         string       `json:"oci_artifact"`
+	MinimumRuntimeLevel RuntimeLevel `json:"minimum_runtime_level,omitempty"`
+}
+
+// StartOptions intentionally has no fields. A start request selects an
+// installed definition; it must never mutate that definition.
+type StartOptions struct{}
+
+// Options is the normalized, immutable service definition returned by the
+// runtime backend after the artifact manifest has been validated.
 type Options struct {
-	Name           string            `json:"name,omitempty"`
-	OCIArtifact    string            `json:"oci_artifact,omitempty"`
-	RootFS         string            `json:"rootfs,omitempty"`
-	Exec           string            `json:"exec,omitempty"`
-	ServicePort    int               `json:"service_port,omitempty"`
-	ResourceLimits ResourceLimits    `json:"resource_limits,omitempty"`
-	Env            map[string]string `json:"env,omitempty"`
+	Name                string            `json:"name"`
+	OCIArtifact         string            `json:"oci_artifact"`
+	ServicePort         int               `json:"service_port"`
+	Process             ProcessDefinition `json:"process"`
+	ResourceLimits      ResourceLimits    `json:"resource_limits"`
+	Isolation           IsolationProfile  `json:"isolation"`
+	MinimumRuntimeLevel RuntimeLevel      `json:"minimum_runtime_level"`
 }
 
-// ResourceLimits describe runtime resource constraints for spawned workloads.
+// ResourceLimits describe mandatory runtime resource constraints.
 type ResourceLimits = runtime_service.ResourceLimits
+type ProcessDefinition = runtime_service.ProcessDefinition
+type RuntimeLevel = runtime_service.RuntimeLevel
+type IsolationFeatures = runtime_service.IsolationFeatures
+type IsolationProfile = runtime_service.IsolationProfile
 
-// GetOptions returns empty runtime options by default.
-func GetOptions() Options {
-	return Options{}
+const (
+	RuntimeLevelUnavailable = runtime_service.RuntimeLevelUnavailable
+	RuntimeLevelUnisolated  = runtime_service.RuntimeLevelUnisolated
+	RuntimeLevelLimited     = runtime_service.RuntimeLevelLimited
+	RuntimeLevelFull        = runtime_service.RuntimeLevelFull
+)
+
+// GetOptions returns optionless start configuration.
+func GetOptions() StartOptions {
+	return StartOptions{}
 }
 
-// ParseJSONOptions parses runtime service options from JSON.
+// ParseJSONOptions parses start options and rejects every mutable field.
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	requestOptions := GetOptions()
-	if request == nil {
-		return requestOptions, nil
-	}
-
-	err := json.Unmarshal(*request, &requestOptions)
-	if err != nil {
-		return requestOptions, err
-	}
-
-	if requestOptions.ServicePort < 0 || requestOptions.ServicePort > 65535 {
-		return requestOptions, fmt.Errorf("service_port must be between 0 and 65535")
-	}
-
-	return requestOptions, nil
+	return ParseJSONStartOptions(request)
 }
 
-func (options Options) runtimeOptions() runtime_service.Options {
-	return runtime_service.Options{
-		Name:        options.Name,
-		OCIArtifact: options.OCIArtifact,
-		RootFS:      options.RootFS,
-		Exec:        options.Exec,
-		ResourceLimits: runtime_service.ResourceLimits{
-			CPU:    options.ResourceLimits.CPU,
-			Memory: options.ResourceLimits.Memory,
-			Disk:   options.ResourceLimits.Disk,
-		},
-		Env: options.Env,
+// ParseJSONStartOptions accepts only an absent, null, or empty JSON object.
+func ParseJSONStartOptions(request *json.RawMessage) (service.Options, error) {
+	if request == nil || len(bytes.TrimSpace(*request)) == 0 || bytes.Equal(bytes.TrimSpace(*request), []byte("null")) {
+		return StartOptions{}, nil
+	}
+
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(*request, &fields); err != nil {
+		return StartOptions{}, err
+	}
+	if len(fields) != 0 {
+		return StartOptions{}, fmt.Errorf("runtime start options are not supported; configure the workload in its OCI manifest")
+	}
+	return StartOptions{}, nil
+}
+
+// ParseJSONCreateOptions accepts only the artifact reference, optional name,
+// and minimum runtime policy. Unknown fields are rejected so unsafe older
+// contracts cannot silently regain effect.
+func ParseJSONCreateOptions(request json.RawMessage) (CreateOptions, error) {
+	var options CreateOptions
+	decoder := json.NewDecoder(bytes.NewReader(request))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&options); err != nil {
+		return options, err
+	}
+	if options.OCIArtifact == "" {
+		return options, fmt.Errorf("oci_artifact is required")
+	}
+	return options, nil
+}
+
+func (options CreateOptions) runtimeOptions() runtime_service.CreateOptions {
+	return runtime_service.CreateOptions{
+		Name:                options.Name,
+		OCIArtifact:         options.OCIArtifact,
+		MinimumRuntimeLevel: options.MinimumRuntimeLevel,
 	}
 }
 
 func optionsFromRuntime(options runtime_service.Options) Options {
 	return Options{
-		Name:        options.Name,
-		OCIArtifact: options.OCIArtifact,
-		RootFS:      options.RootFS,
-		Exec:        options.Exec,
-		ResourceLimits: ResourceLimits{
-			CPU:    options.ResourceLimits.CPU,
-			Memory: options.ResourceLimits.Memory,
-			Disk:   options.ResourceLimits.Disk,
-		},
-		Env: options.Env,
+		Name:                options.Name,
+		OCIArtifact:         options.OCIArtifact,
+		ServicePort:         options.ServicePort,
+		Process:             options.Process,
+		ResourceLimits:      options.ResourceLimits,
+		Isolation:           options.Isolation,
+		MinimumRuntimeLevel: options.MinimumRuntimeLevel,
 	}
-}
-
-func mergeOptions(base, override Options) Options {
-	result := base
-	if override.Name != "" {
-		result.Name = override.Name
-	}
-	if override.OCIArtifact != "" {
-		result.OCIArtifact = override.OCIArtifact
-	}
-	if override.RootFS != "" {
-		result.RootFS = override.RootFS
-	}
-	if override.Exec != "" {
-		result.Exec = override.Exec
-	}
-	if override.ServicePort > 0 {
-		result.ServicePort = override.ServicePort
-	}
-	if override.ResourceLimits.CPU != "" {
-		result.ResourceLimits.CPU = override.ResourceLimits.CPU
-	}
-	if override.ResourceLimits.Memory != "" {
-		result.ResourceLimits.Memory = override.ResourceLimits.Memory
-	}
-	if override.ResourceLimits.Disk != "" {
-		result.ResourceLimits.Disk = override.ResourceLimits.Disk
-	}
-	if len(override.Env) > 0 {
-		result.Env = override.Env
-	}
-	return result
 }

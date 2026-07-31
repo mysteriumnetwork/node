@@ -53,6 +53,7 @@ func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
 		cfg.DNSPort,
 		device.DefaultMTU,
 		cfg.ServicePorts,
+		cfg.LocalServiceDialer,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create netstack device %s: %w", cfg.IfaceName, err)
@@ -75,6 +76,12 @@ func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
 	c.mu.Unlock()
 
 	return nil
+}
+
+// HandlesLocalServiceForwarding reports that service traffic is terminated
+// inside netstack and does not require a host socket.
+func (c *client) HandlesLocalServiceForwarding() bool {
+	return true
 }
 
 func (c *client) DestroyDevice(iface string) error {

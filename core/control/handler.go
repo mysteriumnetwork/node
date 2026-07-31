@@ -19,7 +19,6 @@ package control
 
 import (
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -43,6 +42,23 @@ func (c *ControlPlane) handler(request controlMessage) error {
 	for _, r := range request {
 		log.Info().Str("command", r.Command).Str("service", r.Service).Msg("executing control request")
 
+		if requiresRuntimeAvailability(r) {
+			if err := c.ensureRuntimeAvailable(); err != nil {
+				log.Warn().AnErr("err", err).Msg("runtime control request rejected")
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+		}
+		if isRuntimeCommand(r) && (r.Command == "start" || r.Command == "stop" || r.Command == "restart") {
+			if err := rejectRuntimeCommandOptions(r); err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+		}
 		if err := validateRuntimeCommand(currentServices, r); err != nil {
 			log.Warn().AnErr("err", err).Msg("runtime control request rejected")
 			if firstErr == nil {
@@ -60,7 +76,7 @@ func (c *ControlPlane) handler(request controlMessage) error {
 				}
 			}
 		case "delete":
-			serviceType, err := c.deleteRuntimeService(r)
+			serviceType, err := c.resolveRuntimeServiceForDelete(r)
 			if err != nil {
 				log.Warn().AnErr("err", err).Msg("failed to delete runtime service")
 				if firstErr == nil {
@@ -79,6 +95,12 @@ func (c *ControlPlane) handler(request controlMessage) error {
 					}
 				}
 			}
+			if err := c.runtimeBackend.Delete(serviceType); err != nil {
+				log.Warn().AnErr("err", err).Msg("failed to delete runtime service definition")
+				if firstErr == nil {
+					firstErr = err
+				}
+			}
 		case "start":
 			if err := c.startService(r); err != nil {
 				log.Warn().AnErr("err", err).Msg("failed to start service")
@@ -93,6 +115,24 @@ func (c *ControlPlane) handler(request controlMessage) error {
 				}
 				if err := c.stopService(service.ID); err != nil {
 					log.Warn().AnErr("err", err).Msg("failed to stop service")
+					if firstErr == nil {
+						firstErr = err
+					}
+				}
+			}
+		case "restart":
+			for _, service := range currentServices {
+				if service.Type != r.Service {
+					continue
+				}
+				if err := c.stopService(service.ID); err != nil {
+					log.Warn().AnErr("err", err).Msg("failed to stop service")
+					if firstErr == nil {
+						firstErr = err
+					}
+				}
+				if err := c.startService(r); err != nil {
+					log.Warn().AnErr("err", err).Msg("failed to start service")
 					if firstErr == nil {
 						firstErr = err
 					}
@@ -137,48 +177,12 @@ func (c *ControlPlane) startService(request controlMessageItem) error {
 		startRequest.AccessPolicies = &contract.ServiceAccessPolicies{IDs: request.AccessPolicies}
 	}
 
-	if strings.HasPrefix(request.Service, "runtime.") {
-		runtimeOptions, exists := c.getRuntimeService(request.Service)
+	if strings.HasPrefix(request.Service, runtime_service.ServiceTypePrefix) {
+		_, exists := c.getRuntimeService(request.Service)
 		if !exists {
-			if len(request.Options) == 0 {
-				return errors.Errorf("runtime service %q is not created", request.Service)
-			}
-
-			runtimeInput, err := c.parseRuntimeServiceOptions(request)
-			if err != nil {
-				return err
-			}
-			runtimeOptions = toRuntimeServiceOptions(request.Service, runtimeInput)
+			return errors.Errorf("runtime service %q is not created", request.Service)
 		}
-
-		// Optional start-time override, create remains the source of truth.
-		if len(request.Options) > 0 {
-			runtimeInput, err := c.parseRuntimeServiceOptions(request)
-			if err != nil {
-				return err
-			}
-			overrides := toRuntimeServiceOptions(request.Service, runtimeInput)
-			if overrides.Exec != "" {
-				runtimeOptions.Exec = overrides.Exec
-			}
-			if overrides.ServicePort > 0 {
-				runtimeOptions.ServicePort = overrides.ServicePort
-			}
-			if len(overrides.Env) > 0 {
-				runtimeOptions.Env = overrides.Env
-			}
-			if overrides.ResourceLimits.CPU != "" {
-				runtimeOptions.ResourceLimits.CPU = overrides.ResourceLimits.CPU
-			}
-			if overrides.ResourceLimits.Memory != "" {
-				runtimeOptions.ResourceLimits.Memory = overrides.ResourceLimits.Memory
-			}
-			if overrides.ResourceLimits.Disk != "" {
-				runtimeOptions.ResourceLimits.Disk = overrides.ResourceLimits.Disk
-			}
-		}
-
-		startRequest.Options = runtimeOptions
+		startRequest.Options = runtime_service_options.StartOptions{}
 	} else if len(request.Options) > 0 {
 		startRequest.Options = json.RawMessage(request.Options)
 	} else {
@@ -198,7 +202,7 @@ func (c *ControlPlane) createRuntimeService(request controlMessageItem) error {
 		return errors.New("runtime backend is not configured")
 	}
 
-	runtimeInput, err := c.parseRuntimeServiceOptions(request)
+	runtimeInput, err := c.parseRuntimeCreateOptions(request)
 	if err != nil {
 		return err
 	}
@@ -211,52 +215,38 @@ func (c *ControlPlane) createRuntimeService(request controlMessageItem) error {
 	return c.runtimeBackend.Create(toRuntimeServiceOptions(serviceType, runtimeInput))
 }
 
-func (c *ControlPlane) deleteRuntimeService(request controlMessageItem) (string, error) {
+func (c *ControlPlane) resolveRuntimeServiceForDelete(request controlMessageItem) (string, error) {
 	if c.runtimeBackend == nil {
 		return "", errors.New("runtime backend is not configured")
 	}
 
-	runtimeInput, err := c.parseRuntimeServiceOptions(request)
+	name, err := parseRuntimeDeleteName(request)
+	if err != nil {
+		return "", err
+	}
+	serviceType, err := resolveRuntimeServiceType(request.Service, name)
 	if err != nil {
 		return "", err
 	}
 
-	serviceType, err := resolveRuntimeServiceType(request.Service, runtimeInput.Name)
-	if err != nil {
-		return "", err
-	}
-
-	return serviceType, c.runtimeBackend.Delete(serviceType)
+	return serviceType, nil
 }
 
-func (c *ControlPlane) parseRuntimeServiceOptions(request controlMessageItem) (RuntimeServiceOptions, error) {
+func (c *ControlPlane) parseRuntimeCreateOptions(request controlMessageItem) (RuntimeServiceOptions, error) {
 	if len(request.Options) == 0 {
-		return RuntimeServiceOptions{}, nil
+		return RuntimeServiceOptions{}, errors.New("runtime create options are required")
 	}
 
-	var options RuntimeServiceOptions
-	if err := json.Unmarshal(request.Options, &options); err != nil {
+	options, err := runtime_service_options.ParseJSONCreateOptions(request.Options)
+	if err != nil {
 		return RuntimeServiceOptions{}, errors.Wrap(err, "failed to parse runtime service options")
 	}
-	if options.ServicePort < 0 || options.ServicePort > 65535 {
-		return RuntimeServiceOptions{}, errors.New("service_port must be between 0 and 65535")
-	}
-
 	return options, nil
 }
 
-func toRuntimeServiceOptions(serviceType string, options RuntimeServiceOptions) runtime_service_options.Options {
-	return runtime_service_options.Options{
-		Name:        serviceType,
-		OCIArtifact: options.OCIArtifact,
-		Exec:        options.Exec,
-		ServicePort: options.ServicePort,
-		ResourceLimits: runtime_service_options.ResourceLimits{
-			CPU:    options.ResourceLimits.CPU,
-			Memory: options.ResourceLimits.Memory,
-			Disk:   options.ResourceLimits.Disk,
-		},
-	}
+func toRuntimeServiceOptions(serviceType string, options RuntimeServiceOptions) runtime_service_options.CreateOptions {
+	options.Name = serviceType
+	return options
 }
 
 func (c *ControlPlane) getRuntimeService(serviceType string) (runtime_service_options.Options, bool) {
@@ -282,12 +272,12 @@ func (c *ControlPlane) getRuntimeService(serviceType string) (runtime_service_op
 var runtimeNameSanitizer = regexp.MustCompile(`[^a-z0-9_-]+`)
 
 func resolveRuntimeServiceType(serviceType, name string) (string, error) {
-	if strings.HasPrefix(serviceType, "runtime.") {
+	if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
 		return serviceType, nil
 	}
 
-	if serviceType != "runtime" {
-		return "", errors.Errorf("runtime command requires service runtime or runtime.<name>, got %q", serviceType)
+	if serviceType != runtime_service.ServiceType {
+		return "", errors.Errorf("runtime command requires service runtime or runtime-<name>, got %q", serviceType)
 	}
 
 	normalized := normalizeRuntimeServiceName(name)
@@ -295,7 +285,7 @@ func resolveRuntimeServiceType(serviceType, name string) (string, error) {
 		return "", errors.New("runtime service name is required")
 	}
 
-	return fmt.Sprintf("runtime.%s", normalized), nil
+	return runtime_service.ServiceTypePrefix + normalized, nil
 }
 
 func normalizeRuntimeServiceName(name string) string {
@@ -314,13 +304,67 @@ func validateRuntimeCommand(currentServices []contract.ServiceInfoDTO, request c
 		return nil
 	}
 
-	return errors.New("runtime service must be active to manage runtime.* services")
+	return errors.New("runtime service must be active to manage runtime-* services")
+}
+
+func (c *ControlPlane) ensureRuntimeAvailable() error {
+	reason, unavailable := runtime_service_options.UnavailableReason(c.runtimeBackend)
+	if !unavailable {
+		return nil
+	}
+	return errors.Errorf("runtime service is unavailable: %s", reason)
+}
+
+func isRuntimeCommand(request controlMessageItem) bool {
+	return request.Service == runtime_service.ServiceType ||
+		strings.HasPrefix(request.Service, runtime_service.ServiceTypePrefix)
+}
+
+func requiresRuntimeAvailability(request controlMessageItem) bool {
+	if !isRuntimeCommand(request) {
+		return false
+	}
+	switch request.Command {
+	case "create", "start", "restart":
+		return true
+	default:
+		return false
+	}
+}
+
+func rejectRuntimeCommandOptions(request controlMessageItem) error {
+	if len(request.Options) == 0 {
+		return nil
+	}
+	_, err := runtime_service_options.ParseJSONStartOptions(&request.Options)
+	return err
+}
+
+func parseRuntimeDeleteName(request controlMessageItem) (string, error) {
+	if strings.HasPrefix(request.Service, runtime_service.ServiceTypePrefix) {
+		if err := rejectRuntimeCommandOptions(request); err != nil {
+			return "", err
+		}
+		return "", nil
+	}
+	if len(request.Options) == 0 {
+		return "", errors.New("runtime service name is required")
+	}
+	var selector struct {
+		Name string `json:"name"`
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(request.Options)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&selector); err != nil {
+		return "", errors.Wrap(err, "failed to parse runtime delete selector")
+	}
+	return selector.Name, nil
 }
 
 func isRuntimeScopedCommand(request controlMessageItem) bool {
 	switch request.Command {
-	case "create", "delete", "start", "stop":
-		if strings.HasPrefix(request.Service, runtime_service.ServiceType+".") {
+	case "create", "delete", "start", "stop", "restart":
+		if strings.HasPrefix(request.Service, runtime_service.ServiceTypePrefix) {
 			return true
 		}
 
