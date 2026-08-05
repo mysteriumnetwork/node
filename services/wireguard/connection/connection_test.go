@@ -47,6 +47,7 @@ func TestConnectionStartStop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, connectionstate.Connecting, <-conn.State())
 	assert.Equal(t, connectionstate.Connected, <-conn.State())
+	assert.Equal(t, "127.0.0.1", conn.ProviderTunnelIP())
 	stats, err := conn.Statistics()
 	assert.NoError(t, err)
 	assert.EqualValues(t, 10, stats.BytesSent)
@@ -132,7 +133,7 @@ func newServiceConfig() wg.ServiceConfig {
 			DNSIPs    string
 		}{
 			IPAddress: net.IPNet{
-				IP:   net.IPv4(127, 0, 0, 1),
+				IP:   net.IPv4(127, 0, 0, 2),
 				Mask: net.IPv4Mask(255, 255, 255, 128),
 			},
 			DNSIPs: "128.0.0.1",

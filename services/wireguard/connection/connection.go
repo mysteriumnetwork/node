@@ -73,17 +73,30 @@ type Connection struct {
 	privateKey          string
 	ipResolver          ip.Resolver
 	connectionEndpoint  wg.ConnectionEndpoint
+	providerTunnelIP    net.IP
 	removeAllowedIPRule func()
 	opts                Options
 	connEndpointFactory wg.EndpointFactory
 	handshakeWaiter     HandshakeWaiter
 }
 
-var _ connection.Connection = &Connection{}
+var (
+	_ connection.Connection             = &Connection{}
+	_ connection.ProviderTunnelIPSource = &Connection{}
+)
 
 // State returns connection state channel.
 func (c *Connection) State() <-chan connectionstate.State {
 	return c.stateCh
+}
+
+// ProviderTunnelIP returns the provider address inside the established
+// WireGuard tunnel.
+func (c *Connection) ProviderTunnelIP() string {
+	if c.providerTunnelIP == nil {
+		return ""
+	}
+	return c.providerTunnelIP.String()
 }
 
 // sendState safely sends a state to the state channel, preventing panics from sends on closed channel.
@@ -122,6 +135,11 @@ func (c *Connection) start(ctx context.Context, start startConn, options connect
 	var config wg.ServiceConfig
 	if err = json.Unmarshal(options.SessionConfig, &config); err != nil {
 		return errors.Wrap(err, "failed to unmarshal connection config")
+	}
+	c.providerTunnelIP = config.ProviderTunnelIP()
+	if c.providerTunnelIP == nil {
+		// Purely informational, not worth failing the connection over.
+		log.Warn().Msg("Could not determine provider tunnel IP")
 	}
 
 	var removeAllowedIPRule firewall.OutgoingRuleRemove

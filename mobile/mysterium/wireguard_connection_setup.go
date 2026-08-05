@@ -86,21 +86,33 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 }
 
 type wireguardConnection struct {
-	ports           []int
-	closeOnce       sync.Once
-	done            chan struct{}
-	stateCh         chan connectionstate.State
-	opts            wireGuardOptions
-	privateKey      string
-	device          wireguardDevice
-	ipResolver      ip.Resolver
-	handshakeWaiter wireguard_connection.HandshakeWaiter
+	ports            []int
+	closeOnce        sync.Once
+	done             chan struct{}
+	stateCh          chan connectionstate.State
+	opts             wireGuardOptions
+	privateKey       string
+	device           wireguardDevice
+	ipResolver       ip.Resolver
+	handshakeWaiter  wireguard_connection.HandshakeWaiter
+	providerTunnelIP net.IP
 }
 
-var _ connection.Connection = &wireguardConnection{}
+var (
+	_ connection.Connection             = &wireguardConnection{}
+	_ connection.ProviderTunnelIPSource = &wireguardConnection{}
+)
 
 func (c *wireguardConnection) State() <-chan connectionstate.State {
 	return c.stateCh
+}
+
+// ProviderTunnelIP returns the provider address inside the established WireGuard tunnel.
+func (c *wireguardConnection) ProviderTunnelIP() string {
+	if c.providerTunnelIP == nil {
+		return ""
+	}
+	return c.providerTunnelIP.String()
 }
 
 func (c *wireguardConnection) Statistics() (connectionstate.Statistics, error) {
@@ -124,6 +136,12 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 	err = json.Unmarshal(options.SessionConfig, &config)
 	if err != nil {
 		return errors.Wrap(err, "could not parse wireguard session config")
+	}
+
+	c.providerTunnelIP = config.ProviderTunnelIP()
+	if c.providerTunnelIP == nil {
+		// Purely informational, not worth failing the connection over.
+		log.Warn().Msg("Could not determine provider tunnel IP")
 	}
 
 	c.stateCh <- connectionstate.Connecting

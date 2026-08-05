@@ -20,6 +20,8 @@ package wireguard
 import (
 	"encoding/json"
 	"net"
+
+	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 // ServiceType indicates "wireguard" service type
@@ -40,6 +42,17 @@ type ServiceConfig struct {
 		IPAddress net.IPNet
 		DNSIPs    string
 	}
+}
+
+// ProviderTunnelIP returns the provider address inside the tunnel described by this configuration.
+// The provider always takes the first address of the subnet it assigns to the consumer - it is the
+// same derivation the provider itself does to place its DNS proxy. Returns nil if no subnet is
+// known.
+func (s ServiceConfig) ProviderTunnelIP() net.IP {
+	if s.Consumer.IPAddress.IP == nil {
+		return nil
+	}
+	return netutil.FirstIP(s.Consumer.IPAddress)
 }
 
 // ConsumerConfig is used for sending the public key and IP from consumer to provider.

@@ -80,6 +80,7 @@ type Status struct {
 	State            State
 	SessionID        session.ID
 	Proposal         proposal.PricedServiceProposal
+	ProviderTunnelIP string
 }
 
 // Duration returns elapsed time from marked session start

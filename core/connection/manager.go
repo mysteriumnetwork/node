@@ -770,6 +770,10 @@ func (m *connectionManager) statusConnecting(consumerID identity.Identity, accou
 func (m *connectionManager) statusConnected() {
 	m.setStatus(func(status *connectionstate.Status) {
 		status.State = connectionstate.Connected
+		status.ProviderTunnelIP = ""
+		if source, ok := m.activeConnection.(ProviderTunnelIPSource); ok {
+			status.ProviderTunnelIP = source.ProviderTunnelIP()
+		}
 	})
 }
 
@@ -782,6 +786,7 @@ func (m *connectionManager) statusReconnecting() {
 func (m *connectionManager) statusNotConnected() {
 	m.setStatus(func(status *connectionstate.Status) {
 		status.State = connectionstate.NotConnected
+		status.ProviderTunnelIP = ""
 	})
 }
 

@@ -77,6 +77,7 @@ func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection
 		onStopReportStates:  c.mockConnection.onStopReportStates,
 		stateCallback:       c.mockConnection.stateCallback,
 		onStartReportStats:  c.mockConnection.onStartReportStats,
+		providerTunnelIP:    c.mockConnection.providerTunnelIP,
 		fakeProcess:         sync.WaitGroup{},
 		stopBlock:           c.mockConnection.stopBlock,
 	}
@@ -91,6 +92,7 @@ type connectionMock struct {
 	onStopReportStates  []fakeState
 	stateCallback       func(state fakeState)
 	onStartReportStats  connectionstate.Statistics
+	providerTunnelIP    string
 	fakeProcess         sync.WaitGroup
 	stopBlock           chan struct{}
 	sync.RWMutex
@@ -98,6 +100,10 @@ type connectionMock struct {
 
 func (c *connectionMock) State() <-chan connectionstate.State {
 	return c.stateChannel
+}
+
+func (c *connectionMock) ProviderTunnelIP() string {
+	return c.providerTunnelIP
 }
 
 func (c *connectionMock) Statistics() (connectionstate.Statistics, error) {
