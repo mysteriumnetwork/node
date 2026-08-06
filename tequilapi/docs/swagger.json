@@ -3691,6 +3691,12 @@
         "proposal": {
           "$ref": "#/definitions/ProposalDTO"
         },
+        "provider_tunnel_ip": {
+          "description": "ProviderTunnelIP is the provider address inside this connection's tunnel.",
+          "type": "string",
+          "x-go-name": "ProviderTunnelIP",
+          "example": "10.182.7.1"
+        },
         "session_id": {
           "type": "string",
           "x-go-name": "SessionID",
@@ -3723,6 +3729,12 @@
         },
         "proposal": {
           "$ref": "#/definitions/ProposalDTO"
+        },
+        "provider_tunnel_ip": {
+          "description": "ProviderTunnelIP is the provider address inside this connection's tunnel.",
+          "type": "string",
+          "x-go-name": "ProviderTunnelIP",
+          "example": "10.182.7.1"
         },
         "session_id": {
           "type": "string",

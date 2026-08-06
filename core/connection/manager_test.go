@@ -206,6 +206,15 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 	)
 }
 
+func (tc *testContext) TestConnectedStatusIncludesProviderTunnelIP() {
+	tc.fakeConnectionFactory.mockConnection.providerTunnelIP = "10.90.7.1"
+
+	err := tc.connManager.Connect(consumerID, hermesID, activeProposalLookup, ConnectParams{})
+
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), "10.90.7.1", tc.connManager.Status().ProviderTunnelIP)
+}
+
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
 

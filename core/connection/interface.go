@@ -39,6 +39,13 @@ type Connection interface {
 	Statistics() (connectionstate.Statistics, error)
 }
 
+// ProviderTunnelIPSource is an optional interface for connections which establish an IP tunnel and
+// can tell the provider address inside it. Connections without such an address (e.g. proxy based
+// ones) don't implement it, their status simply reports no provider tunnel IP.
+type ProviderTunnelIPSource interface {
+	ProviderTunnelIP() string
+}
+
 // StateChannel is the channel we receive state change events on
 type StateChannel chan connectionstate.State
 

@@ -89,3 +89,16 @@ func TestServiceConfig_UnmarshalJSON(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expecteConfig, actualConfig)
 }
+
+func TestServiceConfig_ProviderTunnelIP(t *testing.T) {
+	var config ServiceConfig
+	config.Consumer.IPAddress = net.IPNet{IP: net.IPv4(10, 90, 7, 2), Mask: net.CIDRMask(24, 32)}
+
+	assert.Equal(t, "10.90.7.1", config.ProviderTunnelIP().String())
+}
+
+func TestServiceConfig_ProviderTunnelIPIsUnknownWithoutConsumerSubnet(t *testing.T) {
+	var config ServiceConfig
+
+	assert.Nil(t, config.ProviderTunnelIP())
+}

@@ -36,9 +36,10 @@ var emptyAddress = common.Address{}
 // NewConnectionInfoDTO maps to API connection status.
 func NewConnectionInfoDTO(session connectionstate.Status) ConnectionInfoDTO {
 	response := ConnectionInfoDTO{
-		Status:     string(session.State),
-		ConsumerID: session.ConsumerID.Address,
-		SessionID:  string(session.SessionID),
+		Status:           string(session.State),
+		ConsumerID:       session.ConsumerID.Address,
+		SessionID:        string(session.SessionID),
+		ProviderTunnelIP: session.ProviderTunnelIP,
 	}
 	if session.HermesID != emptyAddress {
 		response.HermesID = session.HermesID.Hex()
@@ -68,6 +69,10 @@ type ConnectionInfoDTO struct {
 
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	SessionID string `json:"session_id,omitempty"`
+
+	// ProviderTunnelIP is the provider address inside this connection's tunnel.
+	// example: 10.182.7.1
+	ProviderTunnelIP string `json:"provider_tunnel_ip,omitempty"`
 }
 
 // NewConnectionDTO maps to API connection.
