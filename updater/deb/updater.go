@@ -107,7 +107,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 		return err
 	}
 
-	packagePolicy, err := updater.runner.Output(commandContext, "apt-cache", "policy", PackageName)
+	packagePolicy, err := updater.runner.Output(commandContext, "apt-cache", "policy", packageName)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 		return err
 	}
 	if candidate == installed {
-		log.Printf("%s is current at version %s", PackageName, installed)
+		log.Printf("%s is current at version %s", packageName, installed)
 		return nil
 	}
 
@@ -141,7 +141,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 		return err
 	}
 	if held {
-		log.Printf("%s is held; leaving version %s installed", PackageName, installed)
+		log.Printf("%s is held; leaving version %s installed", packageName, installed)
 		return nil
 	}
 
@@ -150,7 +150,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 		return err
 	}
 	architecture = strings.TrimSpace(architecture)
-	metadataOutput, err := updater.runner.Output(commandContext, "apt-cache", "show", "--no-all-versions", PackageName+"="+candidate)
+	metadataOutput, err := updater.runner.Output(commandContext, "apt-cache", "show", "--no-all-versions", packageName+"="+candidate)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 	uriArguments := append([]string{}, aptSecurityOptions...)
 	// apt-get historically defaults --print-uris to MD5 for compatibility.
 	// Force the same strong hash that we validated in the signed Packages index.
-	uriArguments = append(uriArguments, "-o", "Acquire::ForceHash=sha256", "--print-uris", "download", PackageName+"="+candidate)
+	uriArguments = append(uriArguments, "-o", "Acquire::ForceHash=sha256", "--print-uris", "download", packageName+"="+candidate)
 	uriOutput, err := updater.runner.Output(commandContext, "apt-get", uriArguments...)
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 
 	wasActive := updater.serviceIsActive(commandContext)
 	log.Printf("installing authenticated update %s -> %s", installed, candidate)
-	if err := updater.aptGet(commandContext, "install", "--yes", "--only-upgrade", "--no-remove", PackageName+"="+candidate); err != nil {
+	if err := updater.aptGet(commandContext, "install", "--yes", "--only-upgrade", "--no-remove", packageName+"="+candidate); err != nil {
 		return fmt.Errorf("could not install %s: %w", candidate, err)
 	}
 
@@ -194,7 +194,7 @@ func (updater *Updater) Run(ctx context.Context) error {
 			return err
 		}
 	}
-	log.Printf("successfully updated %s to %s", PackageName, candidate)
+	log.Printf("successfully updated %s to %s", packageName, candidate)
 	return nil
 }
 
@@ -205,9 +205,9 @@ func (updater *Updater) aptGet(ctx context.Context, arguments ...string) error {
 }
 
 func (updater *Updater) installedVersion(ctx context.Context) (string, error) {
-	version, err := updater.runner.Output(ctx, "dpkg-query", "--show", "--showformat=${Version}", PackageName)
+	version, err := updater.runner.Output(ctx, "dpkg-query", "--show", "--showformat=${Version}", packageName)
 	if err != nil {
-		return "", fmt.Errorf("could not determine installed %s version: %w", PackageName, err)
+		return "", fmt.Errorf("could not determine installed %s version: %w", packageName, err)
 	}
 	version = strings.TrimSpace(version)
 	if !debianVersionPattern.MatchString(version) {
@@ -233,7 +233,7 @@ func (updater *Updater) packageIsHeld(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	for _, heldPackage := range strings.Fields(heldPackages) {
-		if heldPackage == PackageName {
+		if heldPackage == packageName {
 			return true, nil
 		}
 	}

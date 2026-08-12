@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	PackageName            = "myst"
-	RepositoryOrigin       = "LP-PPA-mysteriumnetwork-node"
+	packageName            = "myst"
+	repositoryOrigin       = "LP-PPA-mysteriumnetwork-node"
 	defaultHealthcheckURL  = "http://127.0.0.1:4050/healthcheck"
 	defaultCommandTimeout  = 20 * time.Minute
 	defaultHealthTimeout   = 2 * time.Minute

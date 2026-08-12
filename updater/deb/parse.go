@@ -40,7 +40,7 @@ func parseCandidate(policy string) (string, error) {
 		}
 		candidate := strings.TrimSpace(strings.TrimPrefix(line, "Candidate:"))
 		if candidate == "" || candidate == "(none)" {
-			return "", fmt.Errorf("APT has no candidate for package %s", PackageName)
+			return "", fmt.Errorf("APT has no candidate for package %s", packageName)
 		}
 		if !debianVersionPattern.MatchString(candidate) {
 			return "", fmt.Errorf("APT returned invalid candidate version %q", candidate)
@@ -89,12 +89,12 @@ func validateRepositoryPolicy(policy string) error {
 			end = len(lines)
 		}
 		for _, detail := range lines[index+1 : end] {
-			if strings.Contains(detail, "o="+RepositoryOrigin) {
+			if strings.Contains(detail, "o="+repositoryOrigin) {
 				return nil
 			}
 		}
 	}
-	return fmt.Errorf("authenticated APT metadata for origin %s was not found", RepositoryOrigin)
+	return fmt.Errorf("authenticated APT metadata for origin %s was not found", repositoryOrigin)
 }
 
 func parsePackageMetadata(output, candidate, architecture string) (packageMetadata, error) {
@@ -107,7 +107,7 @@ func parsePackageMetadata(output, candidate, architecture string) (packageMetada
 				values[strings.TrimSpace(key)] = strings.TrimSpace(value)
 			}
 		}
-		if values["Package"] != PackageName || values["Version"] != candidate {
+		if values["Package"] != packageName || values["Version"] != candidate {
 			continue
 		}
 		metadata := packageMetadata{

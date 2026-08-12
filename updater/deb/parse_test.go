@@ -57,7 +57,7 @@ func TestValidateRepositoryPolicy(t *testing.T) {
      origin ppa.mysterium.network
 `
 	assert.NoError(t, validateRepositoryPolicy(policy))
-	assert.Error(t, validateRepositoryPolicy(strings.Replace(policy, RepositoryOrigin, "spoofed-origin", 1)))
+	assert.Error(t, validateRepositoryPolicy(strings.Replace(policy, repositoryOrigin, "spoofed-origin", 1)))
 }
 
 func TestParsePackageMetadata(t *testing.T) {
@@ -70,7 +70,7 @@ Description: Mysterium Node
 `
 	metadata, err := parsePackageMetadata(output, "1.36.5+build2+jammy", "amd64")
 	require.NoError(t, err)
-	assert.Equal(t, PackageName, metadata.Package)
+	assert.Equal(t, packageName, metadata.Package)
 	assert.Equal(t, testSHA256, metadata.SHA256)
 }
 

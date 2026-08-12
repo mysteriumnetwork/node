@@ -40,13 +40,13 @@ func (runner *fakeRunner) Output(_ context.Context, name string, args ...string)
 	joined := strings.Join(args, " ")
 	switch {
 	case name == "apt-cache" && joined == "policy":
-		origin := RepositoryOrigin
+		origin := repositoryOrigin
 		if !runner.trusted {
 			origin = "untrusted-origin"
 		}
 		return "Package files:\n 500 https://ppa.launchpadcontent.net/mysteriumnetwork/node/ubuntu jammy/main amd64 Packages\n     release o=" + origin + ",a=jammy,n=jammy,c=main,b=amd64\n", nil
-	case name == "apt-cache" && joined == "policy "+PackageName:
-		return fmt.Sprintf("%s:\n  Installed: %s\n  Candidate: %s\n  Version table:\n     %s 500\n        500 https://ppa.launchpadcontent.net/mysteriumnetwork/node/ubuntu jammy/main amd64 Packages\n *** %s 100\n        100 /var/lib/dpkg/status\n", PackageName, runner.installed, runner.candidate, runner.candidate, runner.installed), nil
+	case name == "apt-cache" && joined == "policy "+packageName:
+		return fmt.Sprintf("%s:\n  Installed: %s\n  Candidate: %s\n  Version table:\n     %s 500\n        500 https://ppa.launchpadcontent.net/mysteriumnetwork/node/ubuntu jammy/main amd64 Packages\n *** %s 100\n        100 /var/lib/dpkg/status\n", packageName, runner.installed, runner.candidate, runner.candidate, runner.installed), nil
 	case name == "dpkg-query":
 		if runner.installedCandidate {
 			return runner.candidate, nil
@@ -54,13 +54,13 @@ func (runner *fakeRunner) Output(_ context.Context, name string, args ...string)
 		return runner.installed, nil
 	case name == "apt-mark":
 		if runner.held {
-			return PackageName + "\n", nil
+			return packageName + "\n", nil
 		}
 		return "", nil
 	case name == "dpkg" && joined == "--print-architecture":
 		return "amd64\n", nil
 	case name == "apt-cache" && strings.HasPrefix(joined, "show --no-all-versions"):
-		return fmt.Sprintf("Package: %s\nArchitecture: amd64\nVersion: %s\nFilename: pool/main/m/myst/myst_%s_amd64.deb\nSHA256: %s\n", PackageName, runner.candidate, runner.candidate, testSHA256), nil
+		return fmt.Sprintf("Package: %s\nArchitecture: amd64\nVersion: %s\nFilename: pool/main/m/myst/myst_%s_amd64.deb\nSHA256: %s\n", packageName, runner.candidate, runner.candidate, testSHA256), nil
 	case name == "apt-get" && strings.Contains(joined, "Acquire::ForceHash=sha256 --print-uris download"):
 		return fmt.Sprintf("'https://ppa.launchpadcontent.net/mysteriumnetwork/node/ubuntu/pool/main/m/myst/myst_%s_amd64.deb' myst.deb 123 SHA256:%s\n", runner.candidate, testSHA256), nil
 	default:
@@ -118,7 +118,7 @@ func TestUpdaterRejectsUnexpectedRepositoryOrigin(t *testing.T) {
 	updater := testUpdater(runner)
 	err := updater.Run(context.Background())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), RepositoryOrigin)
+	assert.Contains(t, err.Error(), repositoryOrigin)
 	assert.False(t, runner.installedCandidate)
 }
 
