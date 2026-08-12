@@ -1,4 +1,5 @@
 go/src/github.com/mysteriumnetwork/node/build/myst/myst usr/bin
+go/src/github.com/mysteriumnetwork/node/build/myst/myst-updater usr/lib/mysterium-node
 
 go/src/github.com/mysteriumnetwork/node/bin/package/config/linux/* etc/mysterium-node
 go/src/github.com/mysteriumnetwork/node/bin/package/config/common/* etc/mysterium-node

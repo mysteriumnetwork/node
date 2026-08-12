@@ -24,6 +24,7 @@ Depends:
  ca-certificates,
  iptables,
  iproute2,
+ apt (>= 1.1),
  wireguard,
 Description: Mysterium Node - VPN server and client for Mysterium Network
  Mysterium Node - decentralized VPN built on blockchain

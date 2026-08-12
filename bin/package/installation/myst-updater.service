@@ -1,0 +1,23 @@
+[Unit]
+Description=Mysterium Node authenticated package updater
+Documentation=https://github.com/mysteriumnetwork/node
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/myst-updater
+ExecStart=/usr/lib/mysterium-node/myst-updater
+TimeoutStartSec=25min
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+Nice=10
+IOSchedulingClass=idle
+

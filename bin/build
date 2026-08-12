@@ -44,6 +44,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+if [[ "$GOOS" == "linux" ]]; then
+    echo "Compiling 'myst-updater' for '$GOOS/$GOARCH'.."
+    go build -ldflags="$LD_FLAGS" $STATIC_OPTS -o $GOBIN/myst-updater cmd/myst_updater/main.go
+    if [ $? -ne 0 ]; then
+        print_error "Updater compile failed!"
+        exit 1
+    fi
+fi
+
 mkdir -p $GOBIN/config
 copy_config $GOOS $GOBIN
-
