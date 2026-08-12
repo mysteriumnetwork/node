@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 
+	"github.com/mysteriumnetwork/go-rest/apierror"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -85,7 +86,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				runtimeBackend: di.RuntimeServiceBackend,
 			}
 			go func() {
-				cp := control.NewControlPlane(di.BrokerConnection, cmdService.tequilapi, di.RuntimeServiceBackend)
+				cp := control.NewControlPlane(di.BrokerConnection, cmdService.tequilapi, di.RuntimeServiceBackend, di.RuntimeServiceInstaller)
 				quit <- cmdService.Run(ctx, cp)
 				cp.Stop()
 			}()
@@ -240,9 +241,20 @@ func (sc *serviceCommand) tryRememberTOS(ctx *cli.Context, errCh chan error) {
 
 func (sc *serviceCommand) runService(request contract.ServiceStartRequest) {
 	_, err := sc.tequilapi.ServiceStart(request)
-	if err != nil {
-		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", request.Type)
+	if err == nil {
+		return
 	}
+
+	// Runtime services persisted as active are restored concurrently with this
+	// list, so one of the two starts is told the service is already running.
+	// That is the point of the check, not a reason to bring the node down.
+	var apiErr *apierror.APIError
+	if errors.As(err, &apiErr) && apiErr.Err.Code == contract.ErrCodeServiceRunning {
+		log.Info().Str("service", request.Type).Msg("Service is already running; start request skipped")
+		return
+	}
+
+	sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", request.Type)
 }
 
 func hasAcceptedTOS(ctx *cli.Context) error {

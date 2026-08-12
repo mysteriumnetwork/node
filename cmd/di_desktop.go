@@ -275,6 +275,12 @@ func (di *Dependencies) bootstrapServiceRuntime(nodeOptions node.Options, resour
 	if di.RuntimeServiceBackend == nil {
 		di.RuntimeServiceBackend = runtime_service_impl.NewBackend(nodeOptions.Directories.Data)
 	}
+	if di.RuntimeServiceInstaller == nil {
+		di.RuntimeServiceInstaller = runtime_service_impl.NewInstaller(
+			di.RuntimeServiceBackend,
+			di.runtimeServiceRegistry(),
+		)
+	}
 	di.ServiceRegistry.Register(
 		runtime_service.ServiceType,
 		func(serviceType string, serviceOptions service.Options) (service.Service, error) {
@@ -322,7 +328,7 @@ func (di *Dependencies) bootstrapServiceRuntime(nodeOptions node.Options, resour
 				return nil, errors.New("runtime workloads are unavailable on mobile nodes")
 			}
 
-			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, serviceName, networkService), nil
+			return runtime_service_impl.NewManager(di.RuntimeServiceBackend, serviceName, networkService, di.runtimeReconciler(), di.shuttingDown.Load), nil
 		},
 	)
 }

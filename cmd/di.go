@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"reflect"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -143,6 +144,11 @@ type Dependencies struct {
 
 	dnsProxy *dns.Proxy
 
+	// shuttingDown distinguishes services stopped because the node process is
+	// exiting from services an operator stopped. Runtime services must survive
+	// the former and stay down after the latter.
+	shuttingDown atomic.Bool
+
 	PolicyOracle   *localcopy.Oracle
 	PolicyProvider policy.Provider
 
@@ -159,6 +165,10 @@ type Dependencies struct {
 	ServiceSessions       *service.SessionPool
 	ServiceFirewall       firewall.IncomingTrafficFirewall
 	RuntimeServiceBackend runtime_service_impl.Backend
+	// RuntimeServiceInstaller admits only the workloads the corporate service
+	// registry lists. It stays nil when no registry is configured, and every
+	// runtime create is then refused.
+	RuntimeServiceInstaller runtime_service_impl.Installer
 
 	WireguardClientFactory *endpoint.WgClientFactory
 
@@ -416,6 +426,11 @@ func (di *Dependencies) registerNoopConnection() {
 
 // Shutdown stops container
 func (di *Dependencies) Shutdown() (err error) {
+	// Services stopped from here are stopped because the process is exiting,
+	// not because an operator asked for them to stay down. Runtime services
+	// read this to keep their desired state intact across a restart.
+	di.shuttingDown.Store(true)
+
 	var errs []error
 	defer func() {
 		for i := range errs {

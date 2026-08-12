@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	runtime_service "github.com/mysteriumnetwork/runtime/service"
@@ -16,26 +17,53 @@ func TestParseJSONStartOptionsRejectsDefinitionOverrides(t *testing.T) {
 }
 
 func TestParseJSONCreateOptionsRejectsUnknownFields(t *testing.T) {
-	raw := json.RawMessage(`{"oci_artifact":"example.invalid/x@sha256:abc","rootfs":"/host"}`)
+	raw := json.RawMessage(`{"name":"cdp","rootfs":"/host"}`)
 	if _, err := ParseJSONCreateOptions(raw); err == nil {
 		t.Fatal("expected rootfs override to be rejected")
 	}
 }
 
-func TestParseJSONCreateOptionsAcceptsMinimumRuntimeLevel(t *testing.T) {
+func TestParseJSONCreateOptionsRejectsCallerChosenArtifact(t *testing.T) {
+	raw := json.RawMessage(`{"name":"cdp","oci_artifact":"example.invalid/x@sha256:abc"}`)
+	_, err := ParseJSONCreateOptions(raw)
+	if err == nil {
+		t.Fatal("expected a caller-supplied OCI artifact to be rejected")
+	}
+	if !strings.Contains(err.Error(), "service registry") {
+		t.Fatalf("expected the error to point at the service registry, got %v", err)
+	}
+}
+
+func TestParseJSONCreateOptionsAcceptsNameOnlyRequest(t *testing.T) {
 	raw := json.RawMessage(`{
-		"oci_artifact":"example.invalid/x@sha256:abc",
+		"name":"cdp",
 		"minimum_runtime_level":"unisolated"
 	}`)
 	options, err := ParseJSONCreateOptions(raw)
 	if err != nil {
 		t.Fatalf("unexpected create options error: %v", err)
 	}
+	if options.Name != "cdp" {
+		t.Fatalf("expected service name cdp, got %q", options.Name)
+	}
 	if options.MinimumRuntimeLevel != RuntimeLevelUnisolated {
 		t.Fatalf("expected unisolated minimum runtime level, got %q", options.MinimumRuntimeLevel)
 	}
-	if options.runtimeOptions().MinimumRuntimeLevel != runtime_service.RuntimeLevelUnisolated {
+
+	approved := ApprovedCreateOptions{CreateOptions: options, ociArtifact: "example.invalid/x@sha256:abc"}
+	if approved.runtimeOptions().MinimumRuntimeLevel != runtime_service.RuntimeLevelUnisolated {
 		t.Fatal("minimum runtime level was not forwarded to the runtime")
+	}
+	if approved.runtimeOptions().OCIArtifact != "example.invalid/x@sha256:abc" {
+		t.Fatal("approved artifact was not forwarded to the runtime")
+	}
+}
+
+// A create that names the service through the service type carries no options
+// at all, and must not be treated as a malformed request.
+func TestParseJSONCreateOptionsAcceptsAbsentOptions(t *testing.T) {
+	if _, err := ParseJSONCreateOptions(nil); err != nil {
+		t.Fatalf("expected absent create options to be accepted: %v", err)
 	}
 }
 

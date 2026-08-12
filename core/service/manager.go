@@ -50,6 +50,8 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type")
 	// ErrUnsupportedAccessPolicy indicates that manager tried to create service with unsupported access policy
 	ErrUnsupportedAccessPolicy = errors.New("unsupported access policy")
+	// ErrorAlreadyRunning indicates that the provider already runs this service type.
+	ErrorAlreadyRunning = errors.New("service is already running")
 )
 
 const (
@@ -133,6 +135,15 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		"policyIDs":   policyIDs,
 		"options":     options,
 	}).Msg("Starting service")
+
+	// Claimed before anything is built and held until the instance is in the
+	// pool, so no two starts of the same service can overlap and publish
+	// duplicate proposals over one shared workload.
+	if err := manager.servicePool.Reserve(providerID, serviceType); err != nil {
+		return id, err
+	}
+	defer manager.servicePool.Release(providerID, serviceType)
+
 	service, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return id, err

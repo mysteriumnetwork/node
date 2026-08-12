@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -192,6 +193,11 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 	if err == service.ErrorLocation {
 		c.Error(apierror.Unprocessable("Cannot detect location", contract.ErrCodeServiceLocation))
 		return
+	} else if errors.Is(err, service.ErrorAlreadyRunning) {
+		// The manager is the authority here: the check above can be overtaken by
+		// a start that is already in flight.
+		c.Error(apierror.Unprocessable("Service already running", contract.ErrCodeServiceRunning))
+		return
 	} else if err != nil {
 		c.Error(apierror.Internal("Cannot start service: "+err.Error(), contract.ErrCodeServiceStart))
 		return
@@ -206,7 +212,7 @@ func (se *ServiceEndpoint) ServiceStart(c *gin.Context) {
 		if err == service.ErrorLocation {
 			c.Error(apierror.Unprocessable("Cannot detect location", contract.ErrCodeServiceLocation))
 			return
-		} else if err != nil {
+		} else if err != nil && !errors.Is(err, service.ErrorAlreadyRunning) {
 			c.Error(apierror.Internal("Cannot start service: "+err.Error(), contract.ErrCodeServiceStart))
 			return
 		}

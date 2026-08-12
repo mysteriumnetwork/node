@@ -17,12 +17,23 @@ type diagnosticsBackend struct {
 	simple   runtime_capabilities.RuntimeCapabilities
 	detailed runtime_capabilities.DetailedCapabilities
 	dataDir  string
+	touched  bool
 }
 
-func (backend *diagnosticsBackend) Create(runtime_service.CreateOptions) error { return nil }
-func (backend *diagnosticsBackend) Delete(string) error                        { return nil }
-func (backend *diagnosticsBackend) Start(string) error                         { return nil }
-func (backend *diagnosticsBackend) Stop(string) error                          { return nil }
+func (backend *diagnosticsBackend) Create(runtime_service.ApprovedCreateOptions) error { return nil }
+func (backend *diagnosticsBackend) Delete(string) error                                { return nil }
+func (backend *diagnosticsBackend) Start(string) error {
+	backend.touched = true
+	return nil
+}
+func (backend *diagnosticsBackend) Stop(string) error {
+	backend.touched = true
+	return nil
+}
+func (backend *diagnosticsBackend) SetDesiredState(string, runtime_service.ServiceState) error {
+	backend.touched = true
+	return nil
+}
 func (backend *diagnosticsBackend) Get(string) (runtime_service.ServiceInfo, bool, error) {
 	return runtime_service.ServiceInfo{}, false, nil
 }
@@ -61,6 +72,17 @@ func TestStatusOutputsCapabilitiesDetailsAndRuntimeJSON(t *testing.T) {
 	}
 	if actual.Runtime.Level != runtime_service.RuntimeLevelUnavailable || len(actual.Runtime.BlockingReasons) != 1 {
 		t.Fatalf("unexpected overall runtime status: %#v", actual.Runtime)
+	}
+}
+
+// Diagnostics probe the host without starting the node, so inspecting runtime
+// status must never reconcile workloads the way a runtime service init does.
+func TestStatusDoesNotTouchWorkloads(t *testing.T) {
+	backend := &diagnosticsBackend{}
+	runCommand(t, backend, "node", "runtime", "status")
+
+	if backend.touched {
+		t.Fatal("runtime status started or stopped workloads; diagnostics must not change host state")
 	}
 }
 

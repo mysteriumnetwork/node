@@ -70,33 +70,6 @@ func NewManager(
 	)
 }
 
-// NewManagerWithForwardPort is retained for source compatibility. Without an
-// isolated dialer it cannot expose a local process as a runtime service.
-func NewManagerWithForwardPort(
-	ipResolver ip.Resolver,
-	country string,
-	natService nat.NATService,
-	eventBus eventbus.EventBus,
-	trafficFirewall firewall.IncomingTrafficFirewall,
-	resourcesAllocator *resources.Allocator,
-	wgClientFactory *endpoint.WgClientFactory,
-	dnsProxy *dns.Proxy,
-	forwardServicePort int,
-) *Manager {
-	return NewManagerWithServiceForwarding(
-		ipResolver,
-		country,
-		natService,
-		eventBus,
-		trafficFirewall,
-		resourcesAllocator,
-		wgClientFactory,
-		dnsProxy,
-		forwardServicePort,
-		nil,
-	)
-}
-
 // NewManagerWithServiceForwarding creates a WireGuard service whose optional
 // TCP forwarding terminates only on the tunnel gateway and dials directly into
 // an isolated workload.

@@ -47,14 +47,23 @@ type ControlPlane struct {
 	api            *client.Client
 	identity       string
 	runtimeBackend runtime_service_options.Backend
+	// runtimeInstaller is the only way a control message can install a
+	// workload: it admits nothing the corporate service registry does not list.
+	runtimeInstaller runtime_service_options.Installer
 }
 
 // NewControlPlane creates a new control plane
-func NewControlPlane(connection nats.Connection, api *client.Client, runtimeBackend runtime_service_options.Backend) *ControlPlane {
+func NewControlPlane(
+	connection nats.Connection,
+	api *client.Client,
+	runtimeBackend runtime_service_options.Backend,
+	runtimeInstaller runtime_service_options.Installer,
+) *ControlPlane {
 	return &ControlPlane{
-		nats:           nats.NewReceiver(connection, communication.NewCodecJSON(), ""),
-		api:            api,
-		runtimeBackend: runtimeBackend,
+		nats:             nats.NewReceiver(connection, communication.NewCodecJSON(), ""),
+		api:              api,
+		runtimeBackend:   runtimeBackend,
+		runtimeInstaller: runtimeInstaller,
 	}
 }
 

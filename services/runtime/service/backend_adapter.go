@@ -15,7 +15,7 @@ func newBackendAdapter(backend runtime_service.Backend) Backend {
 	return &backendAdapter{backend: backend}
 }
 
-func (adapter *backendAdapter) Create(options CreateOptions) error {
+func (adapter *backendAdapter) Create(options ApprovedCreateOptions) error {
 	return adapter.backend.Create(options.runtimeOptions())
 }
 
@@ -29,6 +29,10 @@ func (adapter *backendAdapter) Start(name string) error {
 
 func (adapter *backendAdapter) Stop(name string) error {
 	return adapter.backend.Stop(name)
+}
+
+func (adapter *backendAdapter) SetDesiredState(name string, state ServiceState) error {
+	return adapter.backend.SetDesiredState(name, state)
 }
 
 func (adapter *backendAdapter) Get(name string) (ServiceInfo, bool, error) {
@@ -59,6 +63,7 @@ func (adapter *backendAdapter) List() ([]ServiceInfo, error) {
 		result = append(result, ServiceInfo{
 			Name:    info.Name,
 			State:   ServiceState(info.State),
+			Desired: ServiceState(info.Desired),
 			Options: optionsFromRuntime(info.Options),
 		})
 	}

@@ -19,7 +19,6 @@ package control
 
 import (
 	"encoding/json"
-	"regexp"
 	"strings"
 
 	"github.com/mysteriumnetwork/node/services"
@@ -198,8 +197,8 @@ func (c *ControlPlane) stopService(id string) error {
 }
 
 func (c *ControlPlane) createRuntimeService(request controlMessageItem) error {
-	if c.runtimeBackend == nil {
-		return errors.New("runtime backend is not configured")
+	if c.runtimeInstaller == nil {
+		return errors.New("runtime service registry is not configured; runtime services cannot be created")
 	}
 
 	runtimeInput, err := c.parseRuntimeCreateOptions(request)
@@ -212,7 +211,9 @@ func (c *ControlPlane) createRuntimeService(request controlMessageItem) error {
 		return err
 	}
 
-	return c.runtimeBackend.Create(toRuntimeServiceOptions(serviceType, runtimeInput))
+	// The installer resolves this name against the service registry; a name it
+	// does not publish never reaches the runtime backend.
+	return c.runtimeInstaller.Install(toRuntimeServiceOptions(serviceType, runtimeInput))
 }
 
 func (c *ControlPlane) resolveRuntimeServiceForDelete(request controlMessageItem) (string, error) {
@@ -232,11 +233,10 @@ func (c *ControlPlane) resolveRuntimeServiceForDelete(request controlMessageItem
 	return serviceType, nil
 }
 
+// parseRuntimeCreateOptions reads the create contract. Options may be absent
+// entirely when the request names the service as runtime-<name>: with the
+// artifact coming from the registry, the name is all a create needs.
 func (c *ControlPlane) parseRuntimeCreateOptions(request controlMessageItem) (RuntimeServiceOptions, error) {
-	if len(request.Options) == 0 {
-		return RuntimeServiceOptions{}, errors.New("runtime create options are required")
-	}
-
 	options, err := runtime_service_options.ParseJSONCreateOptions(request.Options)
 	if err != nil {
 		return RuntimeServiceOptions{}, errors.Wrap(err, "failed to parse runtime service options")
@@ -269,8 +269,6 @@ func (c *ControlPlane) getRuntimeService(serviceType string) (runtime_service_op
 	return runtime_service_options.Options{}, false
 }
 
-var runtimeNameSanitizer = regexp.MustCompile(`[^a-z0-9_-]+`)
-
 func resolveRuntimeServiceType(serviceType, name string) (string, error) {
 	if strings.HasPrefix(serviceType, runtime_service.ServiceTypePrefix) {
 		return serviceType, nil
@@ -280,19 +278,14 @@ func resolveRuntimeServiceType(serviceType, name string) (string, error) {
 		return "", errors.Errorf("runtime command requires service runtime or runtime-<name>, got %q", serviceType)
 	}
 
-	normalized := normalizeRuntimeServiceName(name)
+	// Normalized the same way the service registry indexes its entries, so a
+	// service is reachable by the name an operator reads there.
+	normalized := runtime_service.NormalizeServiceType(name)
 	if normalized == "" {
 		return "", errors.New("runtime service name is required")
 	}
 
-	return runtime_service.ServiceTypePrefix + normalized, nil
-}
-
-func normalizeRuntimeServiceName(name string) string {
-	normalized := strings.ToLower(strings.TrimSpace(name))
-	normalized = runtimeNameSanitizer.ReplaceAllString(normalized, "-")
-	normalized = strings.Trim(normalized, "-")
-	return normalized
+	return normalized, nil
 }
 
 func validateRuntimeCommand(currentServices []contract.ServiceInfoDTO, request controlMessageItem) error {

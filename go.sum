@@ -1171,6 +1171,8 @@ github.com/mysteriumnetwork/runtime v0.0.0-20260803091813-e397aa10b6fc h1:F+kW+d
 github.com/mysteriumnetwork/runtime v0.0.0-20260803091813-e397aa10b6fc/go.mod h1:SxReXD8H2q74dQx3kW9ZmVcj6qm++zhsSt0pvQgBn+c=
 github.com/mysteriumnetwork/runtime v0.0.0-20260804151938-dda6538c8d70 h1:lkod/eTsVKX4mb1jPrueqTPSLHVDx9Q454qUaIdwO8M=
 github.com/mysteriumnetwork/runtime v0.0.0-20260804151938-dda6538c8d70/go.mod h1:SxReXD8H2q74dQx3kW9ZmVcj6qm++zhsSt0pvQgBn+c=
+github.com/mysteriumnetwork/runtime v0.0.0-20260810134426-c740465fd781 h1:twUEktBudNL9wwMcrdFcb/S0ttX10wMVvpT5h+iibf0=
+github.com/mysteriumnetwork/runtime v0.0.0-20260810134426-c740465fd781/go.mod h1:OLJp03KIMoSEATSHAdgrJ89L8FbsAS2it+T2K8sTIug=
 github.com/mysteriumnetwork/terms v0.0.53 h1:QI49mqts3MBdbusj7zXmgViLDt6AMyrMaXJyEZ2YY4c=
 github.com/mysteriumnetwork/terms v0.0.53/go.mod h1:xWwHA/G22cDBqaCT95KyZUTDzgScDIF7waiufaadD2o=
 github.com/mysteriumnetwork/wireguard-go v0.0.0-20240416113031-406b13e8996a h1:ywGIJr95r+O+GQCY2WVqIT80AWlD44jpkI5qMIaFfOI=

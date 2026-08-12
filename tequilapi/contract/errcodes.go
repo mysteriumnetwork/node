@@ -101,6 +101,18 @@ const (
 	ErrCodeServiceStart    = "err_service_start"
 	ErrCodeServiceStop     = "err_service_stop"
 
+	// Runtime services
+
+	ErrCodeRuntimeUnavailable   = "err_runtime_unavailable"
+	ErrCodeRuntimeNotConfigured = "err_runtime_not_configured"
+	ErrCodeRuntimeInactive      = "err_runtime_inactive"
+	ErrCodeRuntimeStatus        = "err_runtime_status"
+	ErrCodeRuntimeList          = "err_runtime_list"
+	ErrCodeRuntimeGet           = "err_runtime_get"
+	ErrCodeRuntimeInstall       = "err_runtime_install"
+	ErrCodeRuntimeNotListed     = "err_runtime_not_listed"
+	ErrCodeRuntimeDelete        = "err_runtime_delete"
+
 	// Sessions
 
 	ErrCodeSessionList         = "err_session_list"

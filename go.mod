@@ -22,6 +22,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang/protobuf v1.5.3
+	github.com/google/go-containerregistry v0.21.7
 	github.com/google/go-github/v28 v28.1.1
 	github.com/google/go-github/v35 v35.2.0
 	github.com/huin/goupnp v1.3.0
@@ -44,7 +45,7 @@ require (
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20220318151501-96eedb692646
 	github.com/mysteriumnetwork/metrics v0.0.19
 	github.com/mysteriumnetwork/payments v1.0.1-0.20231124140312-2092954a0c54
-	github.com/mysteriumnetwork/runtime v0.0.0-20260804151938-dda6538c8d70
+	github.com/mysteriumnetwork/runtime v0.0.0-20260810134426-c740465fd781
 	github.com/mysteriumnetwork/terms v0.0.53
 	github.com/nats-io/nats.go v1.31.0
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
@@ -143,7 +144,6 @@ require (
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-containerregistry v0.21.7 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect

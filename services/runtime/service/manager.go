@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/p2p"
 	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
 	runtime_capabilities "github.com/mysteriumnetwork/runtime/capabilities"
@@ -30,9 +31,13 @@ const (
 	ServiceStatePassive ServiceState = runtime_lib_service.ServiceStatePassive
 )
 
+// ServiceInfo describes a runtime service. State is what the workload is doing
+// now; Desired is the intent recorded by the runtime backend, which survives a
+// node restart and drives what gets started again on boot.
 type ServiceInfo struct {
 	Name    string       `json:"name"`
 	State   ServiceState `json:"state"`
+	Desired ServiceState `json:"desired_state"`
 	Options Options      `json:"options,omitempty"`
 }
 
@@ -64,10 +69,16 @@ func UnavailableReason(backend Backend) (string, bool) {
 }
 
 type Backend interface {
-	Create(options CreateOptions) error
+	// Create installs a definition that has been approved against the service
+	// registry. Its argument can only be produced by an Installer, so no
+	// caller can install a workload the registry does not list.
+	Create(options ApprovedCreateOptions) error
 	Delete(name string) error
 	Start(name string) error
 	Stop(name string) error
+	// SetDesiredState records whether a service should be running. Stop only
+	// stops the workload; it does not mean the service should stay down.
+	SetDesiredState(name string, state ServiceState) error
 	Get(name string) (ServiceInfo, bool, error)
 	DialTCP(name string, port int) (net.Conn, error)
 	List() ([]ServiceInfo, error)
@@ -76,11 +87,22 @@ type Backend interface {
 	Capabilities() (runtime_capabilities.RuntimeCapabilities, runtime_capabilities.DetailedCapabilities)
 }
 
+// Reconciler restores runtime workloads to their persisted desired state. It
+// runs once, when the parent runtime service is up, and is given that service's
+// provider identity so it can start runtime-* services the same way a
+// control-plane start does.
+type Reconciler func(providerID identity.Identity)
+
 type Manager struct {
 	backend        Backend
 	name           string
 	networkService service.Service
-	isBaseRuntime  bool
+	reconcile      Reconciler
+	// shuttingDown reports whether the node process itself is going down. A
+	// service stopped because the node is exiting must come back on the next
+	// start; one an operator stopped must not.
+	shuttingDown  func() bool
+	isBaseRuntime bool
 
 	stateMu       sync.Mutex
 	stopRequested bool
@@ -90,11 +112,19 @@ type Manager struct {
 	done     chan struct{}
 }
 
-func NewManager(backend Backend, name string, networkService service.Service) *Manager {
+func NewManager(
+	backend Backend,
+	name string,
+	networkService service.Service,
+	reconcile Reconciler,
+	shuttingDown func() bool,
+) *Manager {
 	return &Manager{
 		backend:        backend,
 		name:           name,
 		networkService: networkService,
+		reconcile:      reconcile,
+		shuttingDown:   shuttingDown,
 		done:           make(chan struct{}),
 	}
 }
@@ -119,6 +149,12 @@ func (manager *Manager) Serve(instance *service.Instance) error {
 			manager.stateMu.Unlock()
 			if stopped {
 				return nil
+			}
+			// Serve runs after the parent runtime service is registered, so
+			// this is the first point where runtime-* services can be started
+			// through the node the way the control plane starts them.
+			if manager.reconcile != nil {
+				manager.reconcile(instance.ProviderID)
 			}
 			<-manager.done
 			return nil
@@ -186,29 +222,15 @@ func (manager *Manager) stopWorkload() error {
 	manager.started = false
 	name := manager.name
 	manager.stateMu.Unlock()
-	return manager.backend.Stop(name)
-}
 
-func (manager *Manager) List() ([]ServiceInfo, error) {
-	if manager.backend == nil {
-		return nil, nil
+	if err := manager.backend.Stop(name); err != nil {
+		return err
 	}
-	return manager.backend.List()
-}
-
-func (manager *Manager) Status() RuntimeStatus {
-	if manager.backend == nil {
-		return RuntimeStatus{
-			Level:           RuntimeLevelUnavailable,
-			BlockingReasons: []string{"runtime backend is not configured"},
-		}
+	// Both a node shutdown and an operator stop reach this same call, so the
+	// backend cannot tell them apart. Only the latter means the service should
+	// stay down across a restart.
+	if manager.shuttingDown != nil && manager.shuttingDown() {
+		return nil
 	}
-	return manager.backend.Status()
-}
-
-func (manager *Manager) Capabilities() (runtime_capabilities.RuntimeCapabilities, runtime_capabilities.DetailedCapabilities) {
-	if manager.backend == nil {
-		return runtime_capabilities.Detect()
-	}
-	return manager.backend.Capabilities()
+	return manager.backend.SetDesiredState(name, ServiceStatePassive)
 }

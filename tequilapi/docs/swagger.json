@@ -2074,6 +2074,213 @@
         }
       }
     },
+    "/runtime/services": {
+      "get": {
+        "description": "Lists every installed runtime workload definition, running or not. GET /services only reports running instances.",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "List of installed runtime services",
+        "operationId": "runtimeServiceList",
+        "responses": {
+          "200": {
+            "description": "List of installed runtime services",
+            "schema": {
+              "$ref": "#/definitions/RuntimeServiceListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "503": {
+            "description": "Node was built or configured without runtime support",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Installs the workload the service registry publishes under the given name. The artifact cannot be chosen by the caller: it is resolved and digest-pinned by the registry, so a name the registry does not list is refused. Installing does not start the service; start it through POST /services with the returned name as the type.\n",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "Installs a runtime service",
+        "operationId": "runtimeServiceInstall",
+        "parameters": [
+          {
+            "description": "Name of the registry entry to install",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/RuntimeServiceInstallRequestDTO"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Runtime service installed",
+            "schema": {
+              "$ref": "#/definitions/RuntimeServiceInfoDTO"
+            }
+          },
+          "400": {
+            "description": "Failed to parse or request validation failed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "422": {
+            "description": "Runtime service cannot be installed in the node's current state",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "503": {
+            "description": "Node was built or configured without runtime support",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/runtime/services/{name}": {
+      "get": {
+        "description": "Returns one installed runtime workload definition. The name may be given with or without the runtime- prefix.",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "Installed runtime service",
+        "operationId": "runtimeServiceGet",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Runtime service name, with or without the runtime- prefix",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Installed runtime service",
+            "schema": {
+              "$ref": "#/definitions/RuntimeServiceInfoDTO"
+            }
+          },
+          "400": {
+            "description": "Invalid service name",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "404": {
+            "description": "No such runtime service is installed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "503": {
+            "description": "Node was built or configured without runtime support",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Stops the service if it is running and removes its definition. Deleting is not the same as stopping: a stopped service can be started again, a deleted one has to be installed again first.\n",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "Deletes a runtime service",
+        "operationId": "runtimeServiceDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Runtime service name, with or without the runtime- prefix",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Runtime service deletion initiated"
+          },
+          "400": {
+            "description": "Invalid service name",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "404": {
+            "description": "No such runtime service is installed",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "422": {
+            "description": "Runtime service cannot be deleted in the node's current state",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          },
+          "503": {
+            "description": "Node was built or configured without runtime support",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
+    "/runtime/status": {
+      "get": {
+        "description": "Reports whether workloads can run on this host, at which isolation level, and what is blocking them when they cannot.",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "Runtime availability",
+        "operationId": "runtimeStatus",
+        "responses": {
+          "200": {
+            "description": "Runtime status",
+            "schema": {
+              "$ref": "#/definitions/RuntimeStatusDTO"
+            }
+          },
+          "503": {
+            "description": "Node was built or configured without runtime support",
+            "schema": {
+              "$ref": "#/definitions/APIError"
+            }
+          }
+        }
+      }
+    },
     "/services": {
       "get": {
         "description": "ServiceList provides a list of running services on the node.",
@@ -3523,6 +3730,11 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "CapabilityStatus": {
+      "type": "string",
+      "title": "CapabilityStatus represents the outcome of probing a specific runtime capability.",
+      "x-go-package": "github.com/mysteriumnetwork/runtime/capabilities"
+    },
     "ChainSummary": {
       "type": "object",
       "title": "ChainSummary represents a response for token rewards.",
@@ -3927,6 +4139,46 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "DetailedCapabilities": {
+      "type": "object",
+      "title": "DetailedCapabilities provides granular status reporting (supported, unsupported, or permission denied) for each feature.",
+      "properties": {
+        "cgroup_v2": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "ipc_namespaces": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "mount_namespaces": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "network_namespaces": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "no_new_privileges": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "pid_namespaces": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "read_only_rootfs": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "seccomp": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "user_namespaces": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "userns_mappings": {
+          "$ref": "#/definitions/CapabilityStatus"
+        },
+        "writable_cgroup_tree": {
+          "$ref": "#/definitions/CapabilityStatus"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/runtime/capabilities"
     },
     "DownloadNodeUIRequest": {
       "description": "DownloadNodeUIRequest request for downloading NodeUI version",
@@ -4474,6 +4726,10 @@
       "x-go-name": "IdentityUnlockRequest",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "IsolationProfile": {
+      "type": "object",
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
+    },
     "LatestReleaseResponse": {
       "description": "LatestReleaseResponse latest release info",
       "type": "object",
@@ -4739,6 +4995,38 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "Options": {
+      "description": "Options is the normalized, immutable service definition returned by the\nruntime backend after the artifact manifest has been validated.",
+      "type": "object",
+      "properties": {
+        "isolation": {
+          "$ref": "#/definitions/IsolationProfile"
+        },
+        "minimum_runtime_level": {
+          "$ref": "#/definitions/RuntimeLevel"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "oci_artifact": {
+          "type": "string",
+          "x-go-name": "OCIArtifact"
+        },
+        "process": {
+          "$ref": "#/definitions/ProcessDefinition"
+        },
+        "resource_limits": {
+          "$ref": "#/definitions/ResourceLimits"
+        },
+        "service_port": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ServicePort"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
+    },
     "PageableDTO": {
       "type": "object",
       "title": "PageableDTO holds pagination information.",
@@ -4976,6 +5264,10 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProcessDefinition": {
+      "type": "object",
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
     },
     "ProposalDTO": {
       "type": "object",
@@ -5282,6 +5574,161 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
     },
+    "ResourceLimits": {
+      "type": "object",
+      "title": "ResourceLimits describe mandatory runtime resource constraints.",
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
+    },
+    "RuntimeCapabilities": {
+      "type": "object",
+      "title": "RuntimeCapabilities represents a simplified boolean view of runtime capabilities available for workload execution.",
+      "properties": {
+        "cgroup_v2": {
+          "type": "boolean",
+          "x-go-name": "CgroupV2"
+        },
+        "ipc_namespaces": {
+          "type": "boolean",
+          "x-go-name": "IPCNamespaces"
+        },
+        "mount_namespaces": {
+          "type": "boolean",
+          "x-go-name": "MountNamespaces"
+        },
+        "network_namespaces": {
+          "type": "boolean",
+          "x-go-name": "NetworkNamespaces"
+        },
+        "no_new_privileges": {
+          "type": "boolean",
+          "x-go-name": "NoNewPrivileges"
+        },
+        "pid_namespaces": {
+          "type": "boolean",
+          "x-go-name": "PIDNamespaces"
+        },
+        "read_only_rootfs": {
+          "type": "boolean",
+          "x-go-name": "ReadOnlyRootFS"
+        },
+        "seccomp": {
+          "type": "boolean",
+          "x-go-name": "Seccomp"
+        },
+        "user_namespaces": {
+          "type": "boolean",
+          "x-go-name": "UserNamespaces"
+        },
+        "userns_mappings": {
+          "type": "boolean",
+          "x-go-name": "UserNSMappings"
+        },
+        "writable_cgroup_tree": {
+          "type": "boolean",
+          "x-go-name": "WritableCgroupTree"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/runtime/capabilities"
+    },
+    "RuntimeLevel": {
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
+    },
+    "RuntimeServiceInfoDTO": {
+      "description": "RuntimeServiceInfoDTO describes a runtime workload definition installed on\nthe node.",
+      "type": "object",
+      "properties": {
+        "desired_state": {
+          "$ref": "#/definitions/ServiceState"
+        },
+        "name": {
+          "description": "Canonical runtime-\u003cname\u003e service type. This is the value to pass as\n\"type\" when starting the service through POST /services.",
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "runtime-cdp"
+        },
+        "options": {
+          "$ref": "#/definitions/Options"
+        },
+        "service_id": {
+          "description": "ID of the running node-side service instance, empty when the service is\nnot running. Use it to stop the service through DELETE /services/:id.",
+          "type": "string",
+          "x-go-name": "ServiceID",
+          "example": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+        },
+        "state": {
+          "$ref": "#/definitions/ServiceState"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "RuntimeServiceInstallRequestDTO": {
+      "description": "The artifact is never named here: it is resolved from the service registry\nby name, so a caller cannot install a workload the registry does not publish.",
+      "type": "object",
+      "title": "RuntimeServiceInstallRequest requests installation of a runtime workload.",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "minimum_runtime_level": {
+          "$ref": "#/definitions/RuntimeLevel"
+        },
+        "name": {
+          "description": "Name of the service as the service registry publishes it. It is\nnormalized to the canonical runtime-\u003cname\u003e service type, so both \"cdp\"\nand \"runtime-cdp\" name the same service.",
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "cdp"
+        }
+      },
+      "x-go-name": "RuntimeServiceInstallRequest",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "RuntimeServiceListResponse": {
+      "description": "RuntimeServiceListResponse is a list of installed runtime workload\ndefinitions, running or not.",
+      "type": "object",
+      "properties": {
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuntimeServiceInfoDTO"
+          },
+          "x-go-name": "Services"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "RuntimeStatus": {
+      "type": "object",
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
+    },
+    "RuntimeStatusDTO": {
+      "description": "RuntimeStatusDTO reports whether this host can run workloads at all, and how\ncompletely it can isolate them.",
+      "type": "object",
+      "properties": {
+        "available": {
+          "description": "Whether workloads can be run on this host.",
+          "type": "boolean",
+          "x-go-name": "Available",
+          "example": true
+        },
+        "capabilities": {
+          "$ref": "#/definitions/RuntimeCapabilities"
+        },
+        "detailed_capabilities": {
+          "$ref": "#/definitions/DetailedCapabilities"
+        },
+        "reason": {
+          "description": "Why workloads cannot be run, empty when they can.",
+          "type": "string",
+          "x-go-name": "Reason",
+          "example": "user namespaces are unavailable"
+        },
+        "runtime": {
+          "$ref": "#/definitions/RuntimeStatus"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ServiceAccessPolicies": {
       "description": "ServiceAccessPolicies represents the access controls for service start",
       "type": "object",
@@ -5328,7 +5775,7 @@
           "example": "Running"
         },
         "type": {
-          "description": "service type. Possible values are \"openvpn\", \"wireguard\" and \"noop\"",
+          "description": "service type. Possible values are \"openvpn\", \"wireguard\", \"noop\", \"runtime\" and dynamically created runtime-backed types like \"runtime-cdp\"",
           "type": "string",
           "x-go-name": "Type",
           "example": "openvpn"
@@ -5406,7 +5853,7 @@
           "example": "0x0000000000000000000000000000000000000002"
         },
         "type": {
-          "description": "service type. Possible values are \"openvpn\", \"wireguard\" and \"noop\"",
+          "description": "service type. Possible values are \"openvpn\", \"wireguard\", \"noop\", \"runtime\" and dynamically created runtime-backed types like \"runtime-cdp\"",
           "type": "string",
           "x-go-name": "Type",
           "example": "openvpn"
@@ -5414,6 +5861,10 @@
       },
       "x-go-name": "ServiceStartRequest",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ServiceState": {
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/services/runtime/service"
     },
     "ServiceStatisticsDTO": {
       "description": "ServiceStatisticsDTO shows the successful and attempted connection count",

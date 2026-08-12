@@ -13,18 +13,35 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	runtime_service "github.com/mysteriumnetwork/runtime/service"
 )
 
 // CreateOptions is the complete caller-controlled input for installing a
-// runtime service. Workload execution, networking, and resource policy are
-// read from the immutable manifest in the OCI artifact.
+// runtime service: which approved service to install, and optionally a
+// stricter isolation floor to install it under. It deliberately cannot name an
+// artifact - that comes from the service registry - and workload execution,
+// networking, and resource policy are read from the immutable manifest in the
+// OCI artifact.
 type CreateOptions struct {
 	Name                string       `json:"name,omitempty"`
-	OCIArtifact         string       `json:"oci_artifact"`
 	MinimumRuntimeLevel RuntimeLevel `json:"minimum_runtime_level,omitempty"`
+}
+
+// ApprovedCreateOptions is a create request that has been resolved against the
+// service registry. Its artifact field is unexported so that the only way to
+// obtain one is through an Installer, which makes it impossible for a caller
+// outside this package to hand the backend a workload of its own choosing.
+type ApprovedCreateOptions struct {
+	CreateOptions
+	ociArtifact string
+}
+
+// OCIArtifact is the digest-pinned artifact the registry approved.
+func (options ApprovedCreateOptions) OCIArtifact() string {
+	return options.ociArtifact
 }
 
 // StartOptions intentionally has no fields. A start request selects an
@@ -83,26 +100,35 @@ func ParseJSONStartOptions(request *json.RawMessage) (service.Options, error) {
 	return StartOptions{}, nil
 }
 
-// ParseJSONCreateOptions accepts only the artifact reference, optional name,
-// and minimum runtime policy. Unknown fields are rejected so unsafe older
-// contracts cannot silently regain effect.
+// ParseJSONCreateOptions accepts only the service name and minimum runtime
+// policy. Unknown fields are rejected so unsafe older contracts cannot
+// silently regain effect; in particular an oci_artifact sent by a control
+// message is refused rather than ignored, because a caller that believes it
+// chose the workload must be told that it did not.
 func ParseJSONCreateOptions(request json.RawMessage) (CreateOptions, error) {
 	var options CreateOptions
+	if len(bytes.TrimSpace(request)) == 0 {
+		return options, nil
+	}
+
 	decoder := json.NewDecoder(bytes.NewReader(request))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&options); err != nil {
+		if strings.Contains(err.Error(), `"oci_artifact"`) {
+			return options, fmt.Errorf(
+				"oci_artifact cannot be set on a runtime create request; " +
+					"workloads are installed by name from the service registry",
+			)
+		}
 		return options, err
-	}
-	if options.OCIArtifact == "" {
-		return options, fmt.Errorf("oci_artifact is required")
 	}
 	return options, nil
 }
 
-func (options CreateOptions) runtimeOptions() runtime_service.CreateOptions {
+func (options ApprovedCreateOptions) runtimeOptions() runtime_service.CreateOptions {
 	return runtime_service.CreateOptions{
 		Name:                options.Name,
-		OCIArtifact:         options.OCIArtifact,
+		OCIArtifact:         options.ociArtifact,
 		MinimumRuntimeLevel: options.MinimumRuntimeLevel,
 	}
 }

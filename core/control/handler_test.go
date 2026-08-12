@@ -119,18 +119,16 @@ func TestValidateRuntimeCommand_CreateRequiresRuntimeActive(t *testing.T) {
 
 func TestToRuntimeServiceOptions_MapsOnlyCreateContract(t *testing.T) {
 	options := toRuntimeServiceOptions("runtime-cdp", RuntimeServiceOptions{
-		OCIArtifact:         "example.com/runtime/cdp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		Name:                "cdp",
 		MinimumRuntimeLevel: runtime_service_options.RuntimeLevelUnisolated,
 	})
 
 	expected := runtime_service_options.CreateOptions{
 		Name:                "runtime-cdp",
-		OCIArtifact:         "example.com/runtime/cdp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		MinimumRuntimeLevel: runtime_service_options.RuntimeLevelUnisolated,
 	}
 
 	if options.Name != expected.Name ||
-		options.OCIArtifact != expected.OCIArtifact ||
 		options.MinimumRuntimeLevel != expected.MinimumRuntimeLevel {
 		t.Fatalf("runtime options were not mapped completely: %#v", options)
 	}
@@ -139,13 +137,82 @@ func TestToRuntimeServiceOptions_MapsOnlyCreateContract(t *testing.T) {
 func TestParseRuntimeCreateOptions_RejectsHostControlledExecution(t *testing.T) {
 	_, err := (&ControlPlane{}).parseRuntimeCreateOptions(controlMessageItem{
 		Options: json.RawMessage(`{
-			"oci_artifact": "example.com/runtime/cdp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			"name": "cdp",
 			"exec": ["/bin/sh"]
 		}`),
 	})
 	if err == nil {
 		t.Fatal("expected host-controlled exec to be rejected")
 	}
+}
+
+// The artifact is what the registry approves; a control message that tries to
+// pick one is refused outright rather than having the field ignored.
+func TestParseRuntimeCreateOptions_RejectsCallerChosenArtifact(t *testing.T) {
+	_, err := (&ControlPlane{}).parseRuntimeCreateOptions(controlMessageItem{
+		Options: json.RawMessage(`{
+			"name": "cdp",
+			"oci_artifact": "example.com/runtime/cdp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+		}`),
+	})
+	if err == nil {
+		t.Fatal("expected a caller-supplied OCI artifact to be rejected")
+	}
+}
+
+func TestCreateRuntimeService_InstallsRegistryServiceByName(t *testing.T) {
+	installer := &recordingInstaller{}
+	controlPlane := &ControlPlane{runtimeInstaller: installer}
+
+	err := controlPlane.createRuntimeService(controlMessageItem{
+		Service: "runtime",
+		Command: "create",
+		Options: json.RawMessage(`{"name":"CDP Browser"}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected create error: %v", err)
+	}
+	if len(installer.installed) != 1 || installer.installed[0].Name != "runtime-cdp-browser" {
+		t.Fatalf("unexpected install requests: %#v", installer.installed)
+	}
+}
+
+// A create for an already-prefixed service type needs no options at all: the
+// name is the whole request now that the artifact comes from the registry.
+func TestCreateRuntimeService_InstallsPrefixedServiceWithoutOptions(t *testing.T) {
+	installer := &recordingInstaller{}
+	controlPlane := &ControlPlane{runtimeInstaller: installer}
+
+	err := controlPlane.createRuntimeService(controlMessageItem{
+		Service: "runtime-cdp",
+		Command: "create",
+	})
+	if err != nil {
+		t.Fatalf("unexpected create error: %v", err)
+	}
+	if len(installer.installed) != 1 || installer.installed[0].Name != "runtime-cdp" {
+		t.Fatalf("unexpected install requests: %#v", installer.installed)
+	}
+}
+
+func TestCreateRuntimeService_FailsWithoutRegistry(t *testing.T) {
+	err := (&ControlPlane{}).createRuntimeService(controlMessageItem{
+		Service: "runtime-cdp",
+		Command: "create",
+	})
+	if err == nil {
+		t.Fatal("expected create to be refused when no service registry is configured")
+	}
+}
+
+type recordingInstaller struct {
+	installed []runtime_service_options.CreateOptions
+	err       error
+}
+
+func (installer *recordingInstaller) Install(options runtime_service_options.CreateOptions) error {
+	installer.installed = append(installer.installed, options)
+	return installer.err
 }
 
 func TestRejectRuntimeCommandOptions(t *testing.T) {

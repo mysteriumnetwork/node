@@ -74,6 +74,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForConnectionLocation(di.IPResolver, di.LocationResolver, di.LocationResolver),
 			tequilapi_endpoints.AddRoutesForProposals(di.ProposalRepository, di.PricingHelper, di.LocationResolver, di.FilterPresetStorage, di.NATProber),
 			tequilapi_endpoints.AddRoutesForService(di.ServicesManager, services.JSONParsersByType, di.ProposalRepository, tequilaApiClient),
+			tequilapi_endpoints.AddRoutesForRuntime(di.RuntimeServiceBackend, di.RuntimeServiceInstaller, di.ServicesManager),
 			tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, config.GetString(config.FlagAccessPolicyAddress)),
 			tequilapi_endpoints.AddRoutesForNAT(di.StateKeeper, di.NATProber),
 			tequilapi_endpoints.AddRoutesForNodeUI(versionmanager.NewVersionManager(di.UIServer, di.HTTPClient, di.uiVersionConfig)),

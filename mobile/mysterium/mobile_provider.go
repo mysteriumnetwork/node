@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/datatransfer"
 	"github.com/mysteriumnetwork/node/services/dvpn"
 	"github.com/mysteriumnetwork/node/services/monitoring"
-	"github.com/mysteriumnetwork/node/services/runtime"
 	"github.com/mysteriumnetwork/node/services/scraping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 )
@@ -100,17 +99,19 @@ func (mb *MobileNode) StartProvider() {
 		}
 	}
 
+	// One service that cannot start must not keep the others down: the set is
+	// what the user asked to run, not a transaction.
 	for serviceType := range serviceTypesSet {
 		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
-			log.Error().Err(err).Msg("GetStartOptions failed")
-			return
+			log.Error().Err(err).Str("service", serviceType).Msg("GetStartOptions failed")
+			continue
 		}
 
 		_, err = mb.servicesManager.Start(identity.Identity{Address: providerID}, serviceType, serviceOpts.AccessPolicyList, serviceOpts.TypeOptions)
 		if err != nil {
-			log.Error().Err(err).Msg("servicesManager.Start failed")
-			return
+			log.Error().Err(err).Str("service", serviceType).Msg("servicesManager.Start failed")
+			continue
 		}
 	}
 }
@@ -156,8 +157,11 @@ func SetFlagLauncherVersion(val string) {
 	config.Current.SetDefault(config.FlagLauncherVersion.Name, val)
 }
 
+// getAllServiceTypes lists the services a mobile node can offer. Runtime
+// services are left out: a mobile node has no workload backend to run them on,
+// so advertising one only lets it be selected and then fail to start.
 func getAllServiceTypes() []string {
-	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType, monitoring.ServiceType, runtime.ServiceType}
+	return []string{wireguard.ServiceType, scraping.ServiceType, datatransfer.ServiceType, dvpn.ServiceType, monitoring.ServiceType}
 }
 
 // GetServiceTypes returns all possible service types

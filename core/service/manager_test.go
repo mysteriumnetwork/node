@@ -154,6 +154,86 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	assert.True(t, matchFound)
 }
 
+// A runtime service restored on boot and the same service started from the
+// configured list race each other, so rejecting the second start has to be
+// decided by the manager rather than by a check the caller made earlier.
+func TestManager_StartRefusesConcurrentDuplicateOfSameService(t *testing.T) {
+	registry := NewRegistry()
+	registry.Register(serviceType, func(serviceType string, options Options) (Service, error) {
+		return &serviceFake{mockProcess: make(chan struct{})}, nil
+	})
+
+	discovery := mockDiscovery{}
+	manager := NewManager(
+		registry,
+		MockDiscoveryFactoryFunc(&discovery),
+		mocks.NewEventBus(),
+		mockPolicyOracle,
+		mockPolicyProvider,
+		&mockP2PListener{}, nil, nil,
+		mockLocationResolver{},
+	)
+
+	providerID := identity.FromAddress(proposalMock.ProviderID)
+	const starts = 8
+	results := make(chan error, starts)
+	begin := make(chan struct{})
+	for i := 0; i < starts; i++ {
+		go func() {
+			<-begin
+			_, err := manager.Start(providerID, serviceType, nil, struct{}{})
+			results <- err
+		}()
+	}
+	close(begin)
+
+	started := 0
+	for i := 0; i < starts; i++ {
+		err := <-results
+		if err == nil {
+			started++
+			continue
+		}
+		assert.ErrorIs(t, err, ErrorAlreadyRunning)
+	}
+
+	assert.Equal(t, 1, started)
+	assert.Len(t, manager.servicePool.List(), 1)
+}
+
+// A refused start must not leave a claim behind, or the service could never be
+// started again after it is stopped.
+func TestManager_StartIsPossibleAgainAfterStop(t *testing.T) {
+	registry := NewRegistry()
+	registry.Register(serviceType, func(serviceType string, options Options) (Service, error) {
+		return &serviceFake{mockProcess: make(chan struct{})}, nil
+	})
+
+	discovery := mockDiscovery{}
+	manager := NewManager(
+		registry,
+		MockDiscoveryFactoryFunc(&discovery),
+		mocks.NewEventBus(),
+		mockPolicyOracle,
+		mockPolicyProvider,
+		&mockP2PListener{}, nil, nil,
+		mockLocationResolver{},
+	)
+
+	providerID := identity.FromAddress(proposalMock.ProviderID)
+	id, err := manager.Start(providerID, serviceType, nil, struct{}{})
+	assert.NoError(t, err)
+
+	_, err = manager.Start(providerID, serviceType, nil, struct{}{})
+	assert.ErrorIs(t, err, ErrorAlreadyRunning)
+
+	assert.NoError(t, manager.Stop(id))
+	discovery.Wait()
+
+	_, err = manager.Start(providerID, serviceType, nil, struct{}{})
+	assert.NoError(t, err)
+}
+
 type mockP2PListener struct {
 }
 

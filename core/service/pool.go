@@ -39,6 +39,11 @@ type ID string
 type Pool struct {
 	eventPublisher Publisher
 	instances      map[ID]*Instance
+	// starting holds the provider/service pairs a start is already underway
+	// for. An instance only enters instances once it is fully built, so
+	// without this a concurrent start of the same service sees nothing
+	// running and proceeds too.
+	starting map[string]struct{}
 	sync.Mutex
 }
 
@@ -52,7 +57,45 @@ func NewPool(eventPublisher Publisher) *Pool {
 	return &Pool{
 		eventPublisher: eventPublisher,
 		instances:      make(map[ID]*Instance),
+		starting:       make(map[string]struct{}),
 	}
+}
+
+// Reserve claims a provider/service pair for a start that is about to begin,
+// or reports ErrorAlreadyRunning when that service is already running or
+// starting. Claiming and checking under one lock is what makes "is it running?"
+// and "start it" a single step, so a runtime service restored on boot and the
+// same service started from the configured list cannot both come up.
+//
+// The claim must be released with Release once the instance is in the pool.
+func (p *Pool) Reserve(providerID identity.Identity, serviceType string) error {
+	p.Lock()
+	defer p.Unlock()
+
+	key := serviceKey(providerID, serviceType)
+	if _, starting := p.starting[key]; starting {
+		return ErrorAlreadyRunning
+	}
+	for _, instance := range p.instances {
+		if serviceKey(instance.ProviderID, instance.Type) == key {
+			return ErrorAlreadyRunning
+		}
+	}
+
+	p.starting[key] = struct{}{}
+	return nil
+}
+
+// Release drops the claim taken by Reserve.
+func (p *Pool) Release(providerID identity.Identity, serviceType string) {
+	p.Lock()
+	defer p.Unlock()
+
+	delete(p.starting, serviceKey(providerID, serviceType))
+}
+
+func serviceKey(providerID identity.Identity, serviceType string) string {
+	return providerID.Address + "|" + serviceType
 }
 
 // Add registers a service to running instances pool
