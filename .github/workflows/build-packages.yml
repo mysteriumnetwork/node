@@ -20,7 +20,7 @@ env:
 
 jobs:
   setup-env:
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-latest-l
 
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +81,7 @@ jobs:
           go run mage.go -v MakeBucket
 
   build-packages:
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-latest-l
     needs: [setup-env]
 
     strategy:
@@ -123,7 +123,7 @@ jobs:
           sudo -E env "PATH=$PATH" bash -lc 'source env.sh && go run mage.go -v ${{ matrix.platform }}'
 
   build-swagger:
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-latest-l
     needs: [setup-env, build-packages]
 
     steps:
@@ -157,7 +157,7 @@ jobs:
       github.ref_type == 'tag'
 
   cleanup-env:
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-latest-l
     needs: [release]
     if: |
       always() &&
