@@ -18,6 +18,7 @@
 package packages
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -402,8 +403,28 @@ func packageDebian(binaryPath, arch string) error {
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
 	}
+	updaterPath := path.Join("build", "myst", "myst-updater")
+	if _, err := os.Stat(updaterPath); errors.Is(err, os.ErrNotExist) {
+		goArch := arch
+		extraEnvs := map[string]string{}
+		switch arch {
+		case "armhf":
+			goArch = "arm"
+		case "armv6l":
+			goArch = "arm"
+			extraEnvs["GOARM"] = "6"
+		}
+
+		if err := buildBinaryFor(path.Join("cmd", "myst_updater", "main.go"), "myst_updater", "linux", goArch, extraEnvs, true); err != nil {
+			return err
+		}
+		updaterPath = path.Join("build", "myst_updater", "myst_updater")
+	} else if err != nil {
+		return err
+	}
 	envs := map[string]string{
-		"BINARY": binaryPath,
+		"BINARY":         binaryPath,
+		"UPDATER_BINARY": updaterPath,
 	}
 
 	if gopath, _ := sh.Output("go", "env", "GOPATH"); gopath != "" {
