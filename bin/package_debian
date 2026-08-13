@@ -64,6 +64,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --depends "iproute2" \
         --depends "sudo" \
         --depends "debconf" \
+        --depends "apt (>= 1.1)" \
         --depends "wireguard" \
         --deb-templates bin/package/installation/templates \
         --before-install bin/package/installation/pre-install.sh \
@@ -71,6 +72,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --after-remove bin/package/installation/post-uninstall.sh \
         -s dir -t deb \
         ${BINARY}=${OS_DIR_BIN}/myst \
+        build/myst/myst-updater=/usr/lib/mysterium-node/myst-updater \
         bin/package/config/linux/=${OS_DIR_CONFIG}/ \
         bin/package/config/common/=${OS_DIR_CONFIG}/ \
         bin/package/sudoers/=${OS_DIR_SUDOERS}/ \

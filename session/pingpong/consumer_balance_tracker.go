@@ -247,20 +247,25 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 }
 
 func (cbt *ConsumerBalanceTracker) handleUnlockEvent(data identity.AppEventIdentityUnlock) {
-	err := cbt.recoverGrandTotalPromised(data.ChainID, data.ID)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
-	}
-
 	status, err := cbt.registry.GetRegistrationStatus(data.ChainID, data.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover get registration status")
 	}
 
-	switch status {
-	case registry.InProgress:
+	// ConsumerTotalsStorage.Store publishes GrandTotalChanged asynchronously.
+	// Establish the transactor bounty first so that event cannot race with this
+	// initialization and replace the in-progress balance with an unregistered
+	// blockchain balance.
+	if status == registry.InProgress {
 		cbt.alignWithTransactor(data.ChainID, data.ID)
-	default:
+	}
+
+	err = cbt.recoverGrandTotalPromised(data.ChainID, data.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
+	}
+
+	if status != registry.InProgress {
 		cbt.ForceBalanceUpdate(data.ChainID, data.ID)
 	}
 

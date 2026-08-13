@@ -1,0 +1,8 @@
+# Set to false to disable automatic package updates without disabling the timer.
+MYST_UPDATER_ENABLED=true
+
+# The updater only accepts an HTTP healthcheck on 127.0.0.1.
+MYST_UPDATER_HEALTHCHECK_URL=http://127.0.0.1:4050/healthcheck
+MYST_UPDATER_HEALTHCHECK_TIMEOUT=2m
+MYST_UPDATER_COMMAND_TIMEOUT=20m
+

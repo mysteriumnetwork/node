@@ -14,6 +14,8 @@ fi
 function disable_systemd {
     system_service=/lib/systemd/system/mysterium-node.service
     system_consumer=/lib/systemd/system/mysterium-consumer.service
+    updater_service=/lib/systemd/system/myst-updater.service
+    updater_timer=/lib/systemd/system/myst-updater.timer
     if [ ! -e $system_service ]; then
         return
     fi
@@ -22,7 +24,10 @@ function disable_systemd {
     systemctl disable mysterium-node
     systemctl stop mysterium-consumer
     systemctl disable mysterium-consumer
-    rm -f $system_service $system_consumer
+    systemctl stop myst-updater.timer
+    systemctl disable myst-updater.timer
+    rm -f $system_service $system_consumer $updater_service $updater_timer
+    systemctl daemon-reload
 }
 
 function disable_update_rcd {
@@ -52,11 +57,11 @@ if [[ -f /etc/redhat-release ]]; then
 	    disable_chkconfig
 	fi
     fi
-elif [[ -f /etc/lsb-release ]]; then
+elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     if [[ "$1" != "upgrade" ]]; then
 	# Remove/purge
-	rm -f /etc/default/mysterium-node
+	rm -f /etc/default/mysterium-node /etc/default/myst-updater
 
 	which systemctl &>/dev/null
 	if [[ $? -eq 0 ]]; then

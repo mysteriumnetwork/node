@@ -73,6 +73,33 @@ Access service logs:
 docker logs -f myst
 ```
 
+### Debian package automatic updates
+
+New `myst` DEB installations include `myst-updater.timer`. The timer checks the
+stable Mysterium Launchpad PPA every 6–12 hours and installs a newer authenticated
+package when one is available. The updater rejects downgrades, held packages,
+unexpected repositories, architectures, package paths, and artifact hashes. After
+installation it verifies both the installed package version and the running node's
+`/healthcheck` version.
+
+Check the updater manually without installing anything:
+
+```bash
+sudo /usr/lib/mysterium-node/myst-updater --check-only
+```
+
+Inspect its schedule and logs:
+
+```bash
+systemctl list-timers myst-updater.timer
+journalctl -u myst-updater.service
+```
+
+Automatic updates can be disabled by setting `MYST_UPDATER_ENABLED=false` in
+`/etc/default/myst-updater`. APT continues to perform the repository signature
+and package-index hash verification; the updater never enables insecure or
+unauthenticated repository modes.
+
 ### Further information
 
 More installation options are described in the [installation guides](https://help.mystnodes.com/en/?q=installation).

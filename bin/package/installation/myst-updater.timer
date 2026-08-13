@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodically check for authenticated Mysterium Node updates
+
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=6h
+RandomizedDelaySec=6h
+Persistent=true
+Unit=myst-updater.service
+
+[Install]
+WantedBy=timers.target
+

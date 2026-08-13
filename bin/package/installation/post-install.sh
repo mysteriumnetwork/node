@@ -22,11 +22,15 @@ function install_initd {
 }
 
 function install_systemd {
-    printf "Installing systemd script '$OS_DIR_SYSTEMD/mysterium-node.service'..\n" \
+    printf "Installing systemd services for Mysterium Node..\n" \
         && cp -f $OS_DIR_INSTALLATION/mysterium-node.service $OS_DIR_SYSTEMD/mysterium-node.service \
         && cp -f $OS_DIR_INSTALLATION/mysterium-consumer.service $OS_DIR_SYSTEMD/mysterium-consumer.service \
+        && cp -f $OS_DIR_INSTALLATION/myst-updater.service $OS_DIR_SYSTEMD/myst-updater.service \
+        && cp -f $OS_DIR_INSTALLATION/myst-updater.timer $OS_DIR_SYSTEMD/myst-updater.timer \
+        && systemctl daemon-reload \
         && systemctl enable systemd-networkd.service \
         && systemctl enable mysterium-node \
+        && systemctl enable --now myst-updater.timer \
         && systemctl restart mysterium-node
 }
 
@@ -75,6 +79,9 @@ ensure_paths
 # Add defaults file, if it doesn't exist
 if [[ ! -f $DAEMON_DEFAULT ]]; then
     cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
+fi
+if [[ ! -f /etc/default/myst-updater ]]; then
+    cp $OS_DIR_INSTALLATION/myst-updater.default /etc/default/myst-updater
 fi
 
 # TODO remove temporary fix for starting all services instead of wireguard.
