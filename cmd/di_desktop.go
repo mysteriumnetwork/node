@@ -275,10 +275,13 @@ func (di *Dependencies) bootstrapServiceRuntime(nodeOptions node.Options, resour
 	if di.RuntimeServiceBackend == nil {
 		di.RuntimeServiceBackend = runtime_service_impl.NewBackend(nodeOptions.Directories.Data)
 	}
+	if di.RuntimeServiceRegistry == nil {
+		di.RuntimeServiceRegistry = di.runtimeServiceRegistry()
+	}
 	if di.RuntimeServiceInstaller == nil {
 		di.RuntimeServiceInstaller = runtime_service_impl.NewInstaller(
 			di.RuntimeServiceBackend,
-			di.runtimeServiceRegistry(),
+			di.RuntimeServiceRegistry,
 		)
 	}
 	di.ServiceRegistry.Register(

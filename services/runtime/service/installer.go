@@ -26,11 +26,11 @@ import (
 	"github.com/mysteriumnetwork/node/services/runtime/registry"
 )
 
-// Registry lists the workloads this node is permitted to install.
+// Registry returns the cached, authoritative snapshot of workloads this node
+// is permitted to run. Installation and reconciliation select definitions from
+// the same snapshot shape so both enforce names and immutable artifact digests.
 type Registry interface {
-	// Lookup returns the approved definition published for a service name, or
-	// an error wrapping registry.ErrNotListed when there is none.
-	Lookup(serviceName string) (registry.Service, error)
+	ListServices() ([]registry.Service, error)
 }
 
 // Installer turns a create request into an installed workload. It is the only
@@ -72,7 +72,11 @@ func (installer *registryInstaller) Install(options CreateOptions) error {
 		return errors.New("runtime service name is required")
 	}
 
-	entry, err := installer.registry.Lookup(options.Name)
+	services, err := installer.registry.ListServices()
+	if err != nil {
+		return err
+	}
+	entry, err := registry.SelectService(services, options.Name)
 	if err != nil {
 		return err
 	}

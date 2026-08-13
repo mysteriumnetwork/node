@@ -113,13 +113,39 @@ func (di *Dependencies) startReconciledRuntimeService(providerID identity.Identi
 	}
 }
 
+// startRuntimeRegistryReconciliation keeps the installed workloads in step with
+// the service registry for as long as the parent runtime service runs. A
+// service the registry stops publishing is no longer approved for this node, so
+// it has to stop running here as well.
+func (di *Dependencies) startRuntimeRegistryReconciliation(stopped <-chan struct{}) {
+	if di.RuntimeServiceBackend == nil || di.ServicesManager == nil {
+		return
+	}
+
+	// Without a registry the node has no statement of what is approved, and one
+	// that removed services on that basis would empty itself the moment its
+	// registry was misconfigured.
+	if di.RuntimeServiceRegistry == nil {
+		log.Info().Msg("No runtime service registry configured; installed runtime services will not be reconciled")
+		return
+	}
+
+	reconciler := runtime_service_impl.NewRegistryReconciler(
+		di.RuntimeServiceBackend,
+		di.RuntimeServiceRegistry,
+		di.ServicesManager,
+	)
+	go reconciler.Run(stopped)
+}
+
 // runtimeReconciler returns the reconciler the parent runtime service runs once
 // it is up, or nil when this node cannot run workloads at all.
 func (di *Dependencies) runtimeReconciler() runtime_service_impl.Reconciler {
-	return func(providerID identity.Identity) {
+	return func(providerID identity.Identity, stopped <-chan struct{}) {
 		if _, unavailable := runtime_service_impl.UnavailableReason(di.RuntimeServiceBackend); unavailable {
 			return
 		}
 		di.reconcileRuntimeServices(providerID)
+		di.startRuntimeRegistryReconciliation(stopped)
 	}
 }

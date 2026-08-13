@@ -122,7 +122,7 @@ func TestManagerStopDuringStartCleansUpStartedWorkload(t *testing.T) {
 // and it must hand over the identity the workloads are published under.
 func TestParentRuntimeServiceReconcilesOnce(t *testing.T) {
 	reconciled := make(chan identity.Identity, 2)
-	manager := NewManager(&lifecycleBackend{}, "", nil, func(providerID identity.Identity) {
+	manager := NewManager(&lifecycleBackend{}, "", nil, func(providerID identity.Identity, stopped <-chan struct{}) {
 		reconciled <- providerID
 	}, nil)
 
@@ -170,7 +170,7 @@ func TestRuntimeWorkloadServiceDoesNotReconcile(t *testing.T) {
 		desiredSet:   make(chan ServiceState, 1),
 	}
 	close(backend.releaseStart)
-	manager := NewManager(backend, "", nil, func(providerID identity.Identity) {
+	manager := NewManager(backend, "", nil, func(providerID identity.Identity, stopped <-chan struct{}) {
 		reconciled <- providerID
 	}, nil)
 

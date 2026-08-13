@@ -91,7 +91,12 @@ type Backend interface {
 // runs once, when the parent runtime service is up, and is given that service's
 // provider identity so it can start runtime-* services the same way a
 // control-plane start does.
-type Reconciler func(providerID identity.Identity)
+//
+// The stopped channel is closed when the parent runtime service stops. Work the
+// reconciler keeps doing afterwards - the periodic sync against the service
+// registry - is bounded by it, so nothing keeps managing workloads once the
+// service that fronts them is gone.
+type Reconciler func(providerID identity.Identity, stopped <-chan struct{})
 
 type Manager struct {
 	backend        Backend
@@ -154,7 +159,7 @@ func (manager *Manager) Serve(instance *service.Instance) error {
 			// this is the first point where runtime-* services can be started
 			// through the node the way the control plane starts them.
 			if manager.reconcile != nil {
-				manager.reconcile(instance.ProviderID)
+				manager.reconcile(instance.ProviderID, manager.done)
 			}
 			<-manager.done
 			return nil

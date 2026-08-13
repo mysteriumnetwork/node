@@ -80,6 +80,41 @@ func (service Service) ServiceType() string {
 	return runtime_service.NormalizeServiceType(service.Name)
 }
 
+// SelectService returns the single valid definition for serviceName from one
+// registry snapshot. Entries with unusable names do not affect other services,
+// while duplicate definitions are refused because there is no safe one to
+// choose.
+func SelectService(services []Service, serviceName string) (Service, error) {
+	serviceType := runtime_service.NormalizeServiceType(serviceName)
+	if serviceType == "" {
+		return Service{}, errors.New("runtime service name is required")
+	}
+
+	var selected Service
+	matches := 0
+	for _, candidate := range services {
+		if candidate.ServiceType() != serviceType {
+			continue
+		}
+		selected = candidate
+		matches++
+	}
+
+	switch matches {
+	case 0:
+		return Service{}, errors.Wrapf(ErrNotListed, "runtime service %q", serviceType)
+	case 1:
+		if err := selected.validate(hostOS, hostArchitecture); err != nil {
+			return Service{}, err
+		}
+		return selected, nil
+	default:
+		return Service{}, errors.Errorf(
+			"runtime service registry lists %d conflicting entries for %q", matches, serviceType,
+		)
+	}
+}
+
 // ArtifactFor returns the digest-pinned OCI reference to install on the given
 // platform. An entry that lists platform-specific artifacts must cover the
 // host platform; falling back to a link built for another platform would

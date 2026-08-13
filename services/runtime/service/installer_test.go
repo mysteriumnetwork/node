@@ -58,17 +58,20 @@ func (backend *installerBackend) Get(name string) (ServiceInfo, bool, error) {
 }
 
 type fakeRegistry struct {
-	entry  registry.Service
-	err    error
-	looked []string
+	entry registry.Service
+	err   error
+	calls int
 }
 
-func (fake *fakeRegistry) Lookup(serviceName string) (registry.Service, error) {
-	fake.looked = append(fake.looked, serviceName)
+func (fake *fakeRegistry) ListServices() ([]registry.Service, error) {
+	fake.calls++
 	if fake.err != nil {
-		return registry.Service{}, fake.err
+		return nil, fake.err
 	}
-	return fake.entry, nil
+	if fake.entry.ServiceType() == "" {
+		return nil, nil
+	}
+	return []registry.Service{fake.entry}, nil
 }
 
 func approvedEntry() registry.Service {
@@ -115,7 +118,7 @@ func TestInstallUsesTheArtifactTheRegistryPinned(t *testing.T) {
 
 func TestInstallRefusesServiceThatIsNotListed(t *testing.T) {
 	backend := &installerBackend{}
-	installer := NewInstaller(backend, &fakeRegistry{err: registry.ErrNotListed})
+	installer := NewInstaller(backend, &fakeRegistry{})
 
 	err := installer.Install(CreateOptions{Name: "runtime-miner"})
 	if !errors.Is(err, registry.ErrNotListed) {

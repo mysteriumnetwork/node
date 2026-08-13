@@ -22,8 +22,10 @@ import (
 	"net/http/httptest"
 	goruntime "runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -81,11 +83,19 @@ func clientFor(t *testing.T, server *httptest.Server) *Client {
 	return client
 }
 
-func TestLookupResolvesServiceByAnyFormOfItsName(t *testing.T) {
+func lookup(client *Client, serviceName string) (Service, error) {
+	services, err := client.ListServices()
+	if err != nil {
+		return Service{}, err
+	}
+	return SelectService(services, serviceName)
+}
+
+func TestSelectServiceResolvesAnyFormOfItsName(t *testing.T) {
 	client, _ := testClient(t, listing(cdpEntry("cdp")))
 
 	for _, requested := range []string{"cdp", "CDP", " CDP ", "runtime-cdp"} {
-		service, err := client.Lookup(requested)
+		service, err := lookup(client, requested)
 		if err != nil {
 			t.Fatalf("lookup of %q failed: %v", requested, err)
 		}
@@ -105,7 +115,7 @@ func TestLookupResolvesServiceByAnyFormOfItsName(t *testing.T) {
 // Pins the shape the registry actually serves: entries wrapped under
 // "services", with the manifest schema version carried by the API version
 // rather than repeated in each entry.
-func TestLookupReadsTheDeployedListing(t *testing.T) {
+func TestListServicesReadsTheDeployedListing(t *testing.T) {
 	client, _ := testClient(t, `{
 		"services": [
 			{
@@ -121,7 +131,7 @@ func TestLookupReadsTheDeployedListing(t *testing.T) {
 		]
 	}`)
 
-	service, err := client.Lookup("cdp")
+	service, err := lookup(client, "cdp")
 	if err != nil {
 		t.Fatalf("lookup of a wrapped listing failed: %v", err)
 	}
@@ -136,10 +146,10 @@ func TestLookupReadsTheDeployedListing(t *testing.T) {
 	}
 }
 
-func TestLookupRefusesServiceThatIsNotListed(t *testing.T) {
+func TestSelectServiceRefusesServiceThatIsNotListed(t *testing.T) {
 	client, requests := testClient(t, listing(cdpEntry("cdp")))
 
-	_, err := client.Lookup("miner")
+	_, err := lookup(client, "miner")
 	if !errors.Is(err, ErrNotListed) {
 		t.Fatalf("expected an unlisted service to be refused, got %v", err)
 	}
@@ -149,27 +159,27 @@ func TestLookupRefusesServiceThatIsNotListed(t *testing.T) {
 	}
 }
 
-// A name missing from a cached listing may simply be newer than the cache, so
-// a service is only refused after the registry itself has been asked again.
-func TestLookupRevalidatesAMissAgainstTheRegistry(t *testing.T) {
+// Misses use the same cached snapshot as hits. This bounds registry traffic
+// when several callers ask about absent services during one cache window.
+func TestListServicesCachesSelectionMisses(t *testing.T) {
 	client, requests := testClient(t, listing(cdpEntry("cdp")))
 
-	if _, err := client.Lookup("cdp"); err != nil {
+	if _, err := lookup(client, "cdp"); err != nil {
 		t.Fatalf("lookup failed: %v", err)
 	}
-	if _, err := client.Lookup("miner"); !errors.Is(err, ErrNotListed) {
+	if _, err := lookup(client, "miner"); !errors.Is(err, ErrNotListed) {
 		t.Fatalf("expected an unlisted service to be refused, got %v", err)
 	}
-	if atomic.LoadInt64(requests) != 2 {
-		t.Fatalf("expected the cached miss to be revalidated, saw %d requests", atomic.LoadInt64(requests))
+	if atomic.LoadInt64(requests) != 1 {
+		t.Fatalf("expected the miss to use the cached snapshot, saw %d requests", atomic.LoadInt64(requests))
 	}
 }
 
-func TestLookupServesRepeatedHitsFromCache(t *testing.T) {
+func TestListServicesServesRepeatedSelectionsFromCache(t *testing.T) {
 	client, requests := testClient(t, listing(cdpEntry("cdp")))
 
 	for i := 0; i < 3; i++ {
-		if _, err := client.Lookup("cdp"); err != nil {
+		if _, err := lookup(client, "cdp"); err != nil {
 			t.Fatalf("lookup failed: %v", err)
 		}
 	}
@@ -178,20 +188,20 @@ func TestLookupServesRepeatedHitsFromCache(t *testing.T) {
 	}
 }
 
-func TestLookupRejectsMutableArtifactReference(t *testing.T) {
+func TestSelectServiceRejectsMutableArtifactReference(t *testing.T) {
 	client, _ := testClient(t, listing(`{
 		"name": "cdp",
 		"oci_artifact": "example.com/runtime/cdp:latest",
 		"manifest": {"service": {"protocol": "tcp", "internal_port": 9222}}
 	}`))
 
-	_, err := client.Lookup("cdp")
+	_, err := lookup(client, "cdp")
 	if err == nil || !strings.Contains(err.Error(), "digest") {
 		t.Fatalf("expected a tag-based artifact to be rejected, got %v", err)
 	}
 }
 
-func TestLookupRejectsUnusableManifest(t *testing.T) {
+func TestSelectServiceRejectsUnusableManifest(t *testing.T) {
 	tests := map[string]string{
 		"non tcp service":   `{"service": {"protocol": "udp", "internal_port": 9222}}`,
 		"port out of range": `{"service": {"protocol": "tcp", "internal_port": 0}}`,
@@ -204,41 +214,201 @@ func TestLookupRejectsUnusableManifest(t *testing.T) {
 			"manifest": `+manifest+`
 		}`))
 
-		if _, err := client.Lookup("cdp"); err == nil {
+		if _, err := lookup(client, "cdp"); err == nil {
 			t.Fatalf("expected %s to be rejected", description)
 		}
 	}
 }
 
-func TestLookupRefusesAmbiguousEntries(t *testing.T) {
+func TestSelectServiceRefusesAmbiguousEntries(t *testing.T) {
 	client, _ := testClient(t, listing(cdpEntry("cdp")+","+cdpEntry("CDP")))
 
-	_, err := client.Lookup("cdp")
+	_, err := lookup(client, "cdp")
 	if err == nil || !strings.Contains(err.Error(), "conflicting") {
 		t.Fatalf("expected conflicting entries to be refused, got %v", err)
 	}
 }
 
 // One unusable entry must not make the rest of the registry unreachable.
-func TestLookupIgnoresEntriesWithoutUsableNames(t *testing.T) {
+func TestSelectServiceIgnoresEntriesWithoutUsableNames(t *testing.T) {
 	client, _ := testClient(t, listing(`{"name": "---"},`+cdpEntry("cdp")))
 
-	if _, err := client.Lookup("cdp"); err != nil {
+	if _, err := lookup(client, "cdp"); err != nil {
 		t.Fatalf("lookup failed alongside an unusable entry: %v", err)
 	}
 }
 
-func TestLookupReportsRegistryFailures(t *testing.T) {
+func TestListServicesReportsRegistryFailures(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		response.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()
 
 	client := clientFor(t, server)
-	if _, err := client.Lookup("cdp"); err == nil {
+	if _, err := lookup(client, "cdp"); err == nil {
 		t.Fatal("expected a failing registry to fail the lookup")
 	} else if errors.Is(err, ErrNotListed) {
 		t.Fatalf("a failing registry must not read as an unlisted service: %v", err)
+	}
+}
+
+func TestListServicesReturnsPublishedDefinitions(t *testing.T) {
+	client, _ := testClient(t, listing(cdpEntry("CDP")+","+cdpEntry("runtime-miner")+`,{"name": "---"}`))
+
+	services, err := client.ListServices()
+	if err != nil {
+		t.Fatalf("listing failed: %v", err)
+	}
+
+	if len(services) != 3 {
+		t.Fatalf("listed %d definitions, expected 3", len(services))
+	}
+	if selected, err := SelectService(services, "cdp"); err != nil || selected.ServiceType() != "runtime-cdp" {
+		t.Fatalf("failed to select cdp from the snapshot: %#v, %v", selected, err)
+	}
+	if selected, err := SelectService(services, "miner"); err != nil || selected.ServiceType() != "runtime-miner" {
+		t.Fatalf("failed to select miner from the snapshot: %#v, %v", selected, err)
+	}
+}
+
+func TestListServicesUsesTheCache(t *testing.T) {
+	client, requests := testClient(t, listing(cdpEntry("cdp")))
+
+	for i := 0; i < 3; i++ {
+		if _, err := client.ListServices(); err != nil {
+			t.Fatalf("listing failed: %v", err)
+		}
+	}
+	if atomic.LoadInt64(requests) != 1 {
+		t.Fatalf("expected one registry request during the cache window, saw %d", atomic.LoadInt64(requests))
+	}
+}
+
+func TestListServicesRefreshesAnExpiredCache(t *testing.T) {
+	client, requests := testClient(t, listing(cdpEntry("cdp")))
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	client.now = func() time.Time { return now }
+
+	if _, err := client.ListServices(); err != nil {
+		t.Fatalf("initial listing failed: %v", err)
+	}
+	now = now.Add(defaultCacheTTL)
+	if _, err := client.ListServices(); err != nil {
+		t.Fatalf("refreshed listing failed: %v", err)
+	}
+	if atomic.LoadInt64(requests) != 2 {
+		t.Fatalf("expected an expired snapshot to be refreshed, saw %d requests", atomic.LoadInt64(requests))
+	}
+}
+
+func TestListServicesCoalescesConcurrentCacheMisses(t *testing.T) {
+	client, requests := testClient(t, listing(cdpEntry("cdp")))
+
+	const callers = 20
+	start := make(chan struct{})
+	errs := make(chan error, callers)
+	var wait sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			<-start
+			_, err := client.ListServices()
+			errs <- err
+		}()
+	}
+	close(start)
+	wait.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent listing failed: %v", err)
+		}
+	}
+	if atomic.LoadInt64(requests) != 1 {
+		t.Fatalf("concurrent cache misses made %d registry requests, expected 1", atomic.LoadInt64(requests))
+	}
+}
+
+func TestListServicesCachesRegistryFailures(t *testing.T) {
+	var requests int64
+	server := httptest.NewTLSServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt64(&requests, 1)
+		response.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	client := clientFor(t, server)
+
+	for i := 0; i < 3; i++ {
+		if services, err := client.ListServices(); err == nil {
+			t.Fatalf("failing registry listed %v", services)
+		}
+	}
+	if atomic.LoadInt64(&requests) != 1 {
+		t.Fatalf("cached registry failure made %d requests, expected 1", atomic.LoadInt64(&requests))
+	}
+}
+
+// A registry that is unreachable or unhealthy must fail the listing: read as an
+// empty registry, it would remove every workload the node runs.
+func TestListServicesFailsRatherThanReportingAnEmptyRegistry(t *testing.T) {
+	for description, status := range map[string]int{
+		"server error":  http.StatusInternalServerError,
+		"not found":     http.StatusNotFound,
+		"unauthorized":  http.StatusUnauthorized,
+		"service moved": http.StatusNoContent,
+	} {
+		server := httptest.NewTLSServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+			response.WriteHeader(status)
+		}))
+
+		services, err := clientFor(t, server).ListServices()
+		server.Close()
+
+		if err == nil {
+			t.Fatalf("a %s response listed %v instead of failing", description, services)
+		}
+		if services != nil {
+			t.Fatalf("a %s response returned a partial listing %v", description, services)
+		}
+	}
+}
+
+// Removal is driven by this listing, so malformed success responses must not
+// be interpreted as an authoritative empty registry. An explicit empty array
+// remains valid: it is how the registry deliberately withdraws every service.
+func TestListServicesRejectsMalformedSuccessfulListing(t *testing.T) {
+	tests := map[string]string{
+		"missing services":       `{}`,
+		"null services":          `{"services": null}`,
+		"non-array services":     `{"services": {}}`,
+		"second JSON document":   listing("") + `{}`,
+		"trailing invalid data":  listing("") + `not-json`,
+		"response over size cap": listing("") + strings.Repeat(" ", maxResponseSize),
+	}
+
+	for description, body := range tests {
+		t.Run(description, func(t *testing.T) {
+			client, _ := testClient(t, body)
+
+			services, err := client.ListServices()
+			if err == nil {
+				t.Fatalf("malformed response listed %v instead of failing", services)
+			}
+			if services != nil {
+				t.Fatalf("malformed response returned a partial listing %v", services)
+			}
+		})
+	}
+
+	client, _ := testClient(t, listing(""))
+	services, err := client.ListServices()
+	if err != nil {
+		t.Fatalf("an explicit empty services array failed: %v", err)
+	}
+	if len(services) != 0 {
+		t.Fatalf("an explicit empty services array listed %v", services)
 	}
 }
 

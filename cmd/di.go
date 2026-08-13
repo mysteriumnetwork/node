@@ -160,15 +160,13 @@ type Dependencies struct {
 	MultiConnectionManager connection.MultiManager
 	ConnectionRegistry     *connection.Registry
 
-	ServicesManager       *service.Manager
-	ServiceRegistry       *service.Registry
-	ServiceSessions       *service.SessionPool
-	ServiceFirewall       firewall.IncomingTrafficFirewall
-	RuntimeServiceBackend runtime_service_impl.Backend
-	// RuntimeServiceInstaller admits only the workloads the corporate service
-	// registry lists. It stays nil when no registry is configured, and every
-	// runtime create is then refused.
+	ServicesManager         *service.Manager
+	ServiceRegistry         *service.Registry
+	ServiceSessions         *service.SessionPool
+	ServiceFirewall         firewall.IncomingTrafficFirewall
+	RuntimeServiceBackend   runtime_service_impl.Backend
 	RuntimeServiceInstaller runtime_service_impl.Installer
+	RuntimeServiceRegistry  runtime_service_impl.Registry
 
 	WireguardClientFactory *endpoint.WgClientFactory
 

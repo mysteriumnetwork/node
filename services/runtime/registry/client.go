@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -27,8 +28,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
-	runtime_service "github.com/mysteriumnetwork/node/services/runtime"
 )
 
 const (
@@ -39,8 +38,8 @@ const (
 	requestTimeout = 15 * time.Second
 	// maxResponseSize caps what a registry response can cost this node.
 	maxResponseSize = 4 << 20
-	// defaultCacheTTL keeps repeated creates off the network without letting a
-	// node act on a stale allow list for long.
+	// defaultCacheTTL keeps repeated consumers and retries off the network
+	// without letting a node act on a stale allow list for long.
 	defaultCacheTTL = time.Minute
 )
 
@@ -52,7 +51,8 @@ type Client struct {
 	now      func() time.Time
 
 	mu        sync.Mutex
-	services  map[string][]Service
+	services  []Service
+	fetchErr  error
 	fetchedAt time.Time
 }
 
@@ -99,87 +99,44 @@ func servicesEndpoint(address string) (string, error) {
 	return parsed.String(), nil
 }
 
-// Lookup returns the registry entry that installs as the given service name.
-// It answers ErrNotListed for anything the registry does not publish, which is
-// what keeps a create request from installing an arbitrary workload.
-func (client *Client) Lookup(serviceName string) (Service, error) {
-	serviceType := runtime_service.NormalizeServiceType(serviceName)
-	if serviceType == "" {
-		return Service{}, errors.New("runtime service name is required")
-	}
-
-	services, cached, err := client.snapshot(false)
+// ListServices returns one cached snapshot of the definitions the registry
+// publishes. Consumers select and validate entries from this same snapshot, so
+// installation and reconciliation agree on both names and artifact digests.
+func (client *Client) ListServices() ([]Service, error) {
+	services, err := client.snapshot()
 	if err != nil {
-		return Service{}, err
+		return nil, err
 	}
-	entry, found, err := selectService(services, serviceType)
-	if err != nil {
-		return Service{}, err
-	}
-	if !found && cached {
-		// A name missing from a cached listing may simply be newer than the
-		// cache, so a miss is confirmed against the registry itself before a
-		// legitimate service is refused.
-		if services, _, err = client.snapshot(true); err != nil {
-			return Service{}, err
-		}
-		if entry, found, err = selectService(services, serviceType); err != nil {
-			return Service{}, err
-		}
-	}
-	if !found {
-		return Service{}, errors.Wrapf(ErrNotListed, "runtime service %q", serviceType)
-	}
-
-	if err := entry.validate(hostOS, hostArchitecture); err != nil {
-		return Service{}, err
-	}
-	return entry, nil
+	return append([]Service(nil), services...), nil
 }
 
-func selectService(services map[string][]Service, serviceType string) (Service, bool, error) {
-	entries := services[serviceType]
-	switch len(entries) {
-	case 0:
-		return Service{}, false, nil
-	case 1:
-		return entries[0], true, nil
-	default:
-		// Two entries claiming one service type make the approved workload
-		// ambiguous, and guessing between them is exactly what this gate exists
-		// to prevent.
-		return Service{}, false, errors.Errorf(
-			"runtime service registry lists %d conflicting entries for %q", len(entries), serviceType,
-		)
-	}
-}
-
-// snapshot returns the current listing and reports whether it was served from
-// cache without touching the registry.
-func (client *Client) snapshot(force bool) (map[string][]Service, bool, error) {
+// snapshot returns the current listing. The lock intentionally covers the
+// fetch: concurrent callers share one request instead of stampeding the
+// registry when the cache expires.
+func (client *Client) snapshot() ([]Service, error) {
 	client.mu.Lock()
-	cached := client.services
-	fresh := client.now().Sub(client.fetchedAt) < client.ttl
-	client.mu.Unlock()
+	defer client.mu.Unlock()
 
-	if !force && cached != nil && fresh {
-		return cached, true, nil
+	if !client.fetchedAt.IsZero() && client.now().Sub(client.fetchedAt) < client.ttl {
+		return client.services, client.fetchErr
 	}
 
 	services, err := client.fetch()
+	client.fetchedAt = client.now()
 	if err != nil {
-		return nil, false, err
+		// Cache the failure, not the previous listing. Callers must never act on
+		// stale approval data, but they also should not hammer an unhealthy
+		// registry until this short retry window expires.
+		client.fetchErr = err
+		return nil, err
 	}
 
-	client.mu.Lock()
 	client.services = services
-	client.fetchedAt = client.now()
-	client.mu.Unlock()
-
-	return services, false, nil
+	client.fetchErr = nil
+	return services, nil
 }
 
-func (client *Client) fetch() (map[string][]Service, error) {
+func (client *Client) fetch() ([]Service, error) {
 	response, err := client.http.Get(client.endpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to reach runtime service registry")
@@ -190,35 +147,51 @@ func (client *Client) fetch() (map[string][]Service, error) {
 		return nil, errors.Errorf("runtime service registry returned status %d", response.StatusCode)
 	}
 
-	services, err := decodeListing(io.LimitReader(response.Body, maxResponseSize+1))
+	services, err := decodeListing(response.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	return indexServices(services), nil
+	return services, nil
 }
 
 // decodeListing reads the listing envelope the registry serves.
 func decodeListing(body io.Reader) ([]Service, error) {
-	var envelope struct {
-		Services []Service `json:"services"`
-	}
-	if err := json.NewDecoder(body).Decode(&envelope); err != nil {
+	contents, err := io.ReadAll(io.LimitReader(body, maxResponseSize+1))
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to read runtime service registry listing")
 	}
-	return envelope.Services, nil
-}
-
-func indexServices(services []Service) map[string][]Service {
-	indexed := make(map[string][]Service, len(services))
-	for _, service := range services {
-		serviceType := service.ServiceType()
-		if serviceType == "" {
-			// Kept out of the index rather than rejected outright: an entry the
-			// node cannot address at all must not break lookups of the rest.
-			continue
-		}
-		indexed[serviceType] = append(indexed[serviceType], service)
+	if len(contents) > maxResponseSize {
+		return nil, errors.Errorf("runtime service registry listing exceeds %d bytes", maxResponseSize)
 	}
-	return indexed
+
+	var envelope struct {
+		// RawMessage distinguishes a deliberately empty array from a missing or
+		// null field. Only the former is an authoritative statement that no
+		// workloads are currently approved.
+		Services json.RawMessage `json:"services"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(contents))
+	if err := decoder.Decode(&envelope); err != nil {
+		return nil, errors.Wrap(err, "failed to read runtime service registry listing")
+	}
+
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return nil, errors.New("runtime service registry listing contains more than one JSON document")
+		}
+		return nil, errors.Wrap(err, "runtime service registry listing contains trailing data")
+	}
+
+	servicesJSON := bytes.TrimSpace(envelope.Services)
+	if len(servicesJSON) == 0 || bytes.Equal(servicesJSON, []byte("null")) {
+		return nil, errors.New("runtime service registry listing must contain a non-null services array")
+	}
+
+	var services []Service
+	if err := json.Unmarshal(servicesJSON, &services); err != nil {
+		return nil, errors.Wrap(err, "failed to read runtime service registry services")
+	}
+	return services, nil
 }
