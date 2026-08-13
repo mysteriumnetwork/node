@@ -23,6 +23,7 @@ OS_DIR_DOC="/usr/share/doc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
 OS_DIR_SUDOERS="/etc/sudoers.d"
 BINARY=${BINARY:-"build/myst/myst"}
+UPDATER_BINARY=${UPDATER_BINARY:-"build/myst/myst-updater"}
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
@@ -72,7 +73,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --after-remove bin/package/installation/post-uninstall.sh \
         -s dir -t deb \
         ${BINARY}=${OS_DIR_BIN}/myst \
-        build/myst/myst-updater=/usr/lib/mysterium-node/myst-updater \
+        ${UPDATER_BINARY}=/usr/lib/mysterium-node/myst-updater \
         bin/package/config/linux/=${OS_DIR_CONFIG}/ \
         bin/package/config/common/=${OS_DIR_CONFIG}/ \
         bin/package/sudoers/=${OS_DIR_SUDOERS}/ \
