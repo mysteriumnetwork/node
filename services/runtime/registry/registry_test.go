@@ -17,15 +17,21 @@
 
 package registry
 
-import "testing"
+import (
+	"strings"
+	"testing"
 
-func TestArtifactForPrefersTheHostPlatform(t *testing.T) {
+	"github.com/pkg/errors"
+)
+
+const arm64Artifact = "example.com/runtime/cdp@sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+
+func TestArtifactForSelectsTheRequestedPlatform(t *testing.T) {
 	service := Service{
-		Name:        "cdp",
-		OCIArtifact: "example.com/runtime/cdp@sha256:index",
+		Name: "cdp",
 		Artifacts: []Artifact{
-			{OS: "linux", Architecture: "arm64", OCIArtifact: "example.com/runtime/cdp@sha256:arm64"},
-			{OS: "Linux", Architecture: "AMD64", OCIArtifact: "example.com/runtime/cdp@sha256:amd64"},
+			{OS: "linux", Architecture: "arm64", Reference: arm64Artifact},
+			{OS: "linux", Architecture: "amd64", Reference: cdpArtifact},
 		},
 	}
 
@@ -33,35 +39,99 @@ func TestArtifactForPrefersTheHostPlatform(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected artifact error: %v", err)
 	}
-	if artifact != "example.com/runtime/cdp@sha256:amd64" {
+	if artifact != cdpArtifact {
 		t.Fatalf("expected the amd64 artifact, got %q", artifact)
 	}
 }
 
-// An entry that lists platforms but not this one has nothing installable here;
-// falling back to another platform's link would install an unrunnable workload.
-func TestArtifactForFailsOnUncoveredPlatform(t *testing.T) {
+func TestArtifactForReportsAnUnsupportedPlatform(t *testing.T) {
 	service := Service{
 		Name:      "cdp",
-		Artifacts: []Artifact{{OS: "linux", Architecture: "arm64", OCIArtifact: "example.com/runtime/cdp@sha256:arm64"}},
+		Artifacts: []Artifact{{OS: "linux", Architecture: "arm64", Reference: arm64Artifact}},
 	}
 
-	if _, err := service.ArtifactFor("linux", "amd64"); err == nil {
-		t.Fatal("expected an uncovered platform to fail")
+	_, err := service.ArtifactFor("linux", "amd64")
+	if !errors.Is(err, ErrPlatformNotSupported) {
+		t.Fatalf("expected an unsupported platform error, got %v", err)
 	}
 }
 
-func TestArtifactForFallsBackToPlatformAgnosticLink(t *testing.T) {
+func TestArtifactForRequiresAnExplicitArtifactList(t *testing.T) {
+	_, err := (Service{Name: "cdp"}).ArtifactFor("linux", "amd64")
+	if err == nil || !strings.Contains(err.Error(), "at least one artifact") {
+		t.Fatalf("expected a missing artifact list to fail the definition, got %v", err)
+	}
+}
+
+func TestArtifactForRejectsIncompletePlatforms(t *testing.T) {
 	service := Service{
-		Name:        "cdp",
-		OCIArtifact: "example.com/runtime/cdp@sha256:index",
+		Name:      "cdp",
+		Artifacts: []Artifact{{Architecture: "amd64", Reference: cdpArtifact}},
 	}
 
-	artifact, err := service.ArtifactFor("linux", "amd64")
-	if err != nil {
-		t.Fatalf("unexpected artifact error: %v", err)
+	if _, err := service.ArtifactFor("linux", "amd64"); err == nil || !strings.Contains(err.Error(), "both os and architecture") {
+		t.Fatalf("expected an incomplete platform to fail, got %v", err)
 	}
-	if artifact != "example.com/runtime/cdp@sha256:index" {
-		t.Fatalf("expected the platform-agnostic artifact, got %q", artifact)
+}
+
+func TestArtifactForRejectsDuplicatePlatforms(t *testing.T) {
+	service := Service{
+		Name: "cdp",
+		Artifacts: []Artifact{
+			{OS: "linux", Architecture: "amd64", Reference: cdpArtifact},
+			{OS: "linux", Architecture: "amd64", Reference: arm64Artifact},
+		},
+	}
+
+	if _, err := service.ArtifactFor("linux", "amd64"); err == nil || !strings.Contains(err.Error(), "conflicting artifacts") {
+		t.Fatalf("expected duplicate platforms to fail, got %v", err)
+	}
+}
+
+func TestArtifactForRejectsNonCanonicalPlatforms(t *testing.T) {
+	service := Service{
+		Name:      "cdp",
+		Artifacts: []Artifact{{OS: "Linux", Architecture: "AMD64", Reference: cdpArtifact}},
+	}
+
+	if _, err := service.ArtifactFor("linux", "amd64"); err == nil || !strings.Contains(err.Error(), "canonical lowercase") {
+		t.Fatalf("expected a non-canonical platform to fail, got %v", err)
+	}
+}
+
+// Every artifact belongs to one registry definition, so a malformed reference
+// for another platform makes that definition invalid rather than lying dormant
+// until a node of that architecture asks for it.
+func TestArtifactForValidatesEveryPublishedReference(t *testing.T) {
+	service := Service{
+		Name: "cdp",
+		Artifacts: []Artifact{
+			{OS: "linux", Architecture: "amd64", Reference: cdpArtifact},
+			{OS: "linux", Architecture: "arm64", Reference: "example.com/runtime/cdp:latest"},
+		},
+	}
+
+	if _, err := service.ArtifactFor("linux", "amd64"); err == nil || !strings.Contains(err.Error(), "digest-pinned") {
+		t.Fatalf("expected the mutable reference to fail the definition, got %v", err)
+	}
+}
+
+func TestArtifactForAcceptsOneMultiPlatformIndexForSeveralPlatforms(t *testing.T) {
+	service := Service{
+		Name: "cdp",
+		Artifacts: []Artifact{
+			{OS: "linux", Architecture: "amd64", Reference: cdpArtifact},
+			{OS: "linux", Architecture: "arm64", Reference: cdpArtifact},
+		},
+	}
+
+	for _, architecture := range []string{"amd64", "arm64"} {
+		artifact, err := service.ArtifactFor("linux", architecture)
+		if err != nil {
+			t.Fatalf("failed to select the shared index for %s: %v", architecture, err)
+		}
+		if artifact != cdpArtifact {
+			t.Fatalf("selected %q for %s, expected %q", artifact, architecture, cdpArtifact)
+		}
 	}
 }

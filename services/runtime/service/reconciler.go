@@ -138,7 +138,9 @@ func (reconciler *RegistryReconciler) Reconcile() {
 			continue
 		}
 		entry, selectionErr := registry.SelectService(listed, info.Name)
-		if selectionErr != nil && !errors.Is(selectionErr, registry.ErrNotListed) {
+		withdrawn := errors.Is(selectionErr, registry.ErrNotListed) ||
+			errors.Is(selectionErr, registry.ErrPlatformNotSupported)
+		if selectionErr != nil && !withdrawn {
 			// An invalid or ambiguous definition does not prove that the service
 			// was withdrawn. Leave it untouched until the registry is repaired.
 			log.Warn().Err(selectionErr).Str("service", info.Name).
@@ -147,6 +149,9 @@ func (reconciler *RegistryReconciler) Reconcile() {
 		}
 
 		reason := "service is not listed"
+		if errors.Is(selectionErr, registry.ErrPlatformNotSupported) {
+			reason = "service is not published for this platform"
+		}
 		if selectionErr == nil {
 			artifact, artifactErr := entry.ArtifactFor(runtime.GOOS, runtime.GOARCH)
 			if artifactErr != nil {

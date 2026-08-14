@@ -75,7 +75,14 @@ func (fake *fakeRegistry) ListServices() ([]registry.Service, error) {
 }
 
 func approvedEntry() registry.Service {
-	entry := registry.Service{Name: "cdp", OCIArtifact: approvedArtifact}
+	entry := registry.Service{
+		Name: "cdp",
+		Artifacts: []registry.Artifact{{
+			OS:           goruntime.GOOS,
+			Architecture: goruntime.GOARCH,
+			Reference:    approvedArtifact,
+		}},
+	}
 	entry.Manifest.SchemaVersion = 1
 	entry.Manifest.Service.Protocol = "tcp"
 	entry.Manifest.Service.InternalPort = 9222
@@ -265,11 +272,10 @@ func TestInstallTakesTheStricterIsolationFloor(t *testing.T) {
 
 func TestInstallFailsOnAPlatformTheEntryDoesNotCover(t *testing.T) {
 	entry := approvedEntry()
-	entry.OCIArtifact = ""
 	entry.Artifacts = []registry.Artifact{{
 		OS:           "plan9",
 		Architecture: "sparc",
-		OCIArtifact:  approvedArtifact,
+		Reference:    approvedArtifact,
 	}}
 	if goruntime.GOOS == "plan9" {
 		t.Skip("test platform must not be covered by the entry")

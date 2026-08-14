@@ -47,16 +47,23 @@ type Manifest = runtime_lib_service.Manifest
 // RuntimeLevel is the isolation floor a workload may demand.
 type RuntimeLevel = runtime_lib_service.RuntimeLevel
 
-// ErrNotListed reports that a service is absent from the registry, which is
-// the normal answer for a create request the node must refuse.
-var ErrNotListed = errors.New("service is not listed in the runtime service registry")
+var (
+	// ErrNotListed reports that a service is absent from the registry, which is
+	// the normal answer for a create request the node must refuse.
+	ErrNotListed = errors.New("service is not listed in the runtime service registry")
+	// ErrPlatformNotSupported reports that a listed service does not publish an
+	// artifact for this node's platform. Reconciliation treats this as an
+	// intentional withdrawal from that platform, rather than malformed data.
+	ErrPlatformNotSupported = errors.New("platform is not supported by the runtime service registry")
+)
 
-// Artifact is one platform-specific OCI link of a registry entry. Registries
-// that publish a single multi-platform index use Service.OCIArtifact instead.
+// Artifact is one platform-specific, immutable OCI reference. A multi-platform
+// index can be listed for several platforms by repeating its digest-pinned
+// reference in each corresponding entry.
 type Artifact struct {
-	OS           string `json:"os,omitempty"`
-	Architecture string `json:"architecture,omitempty"`
-	OCIArtifact  string `json:"oci_artifact"`
+	OS           string `json:"os"`
+	Architecture string `json:"architecture"`
+	Reference    string `json:"reference"`
 }
 
 // Service is one entry of the registry. Unknown fields are tolerated on
@@ -64,12 +71,9 @@ type Artifact struct {
 // for humans, and none of it can reach the runtime, because only the fields
 // below are ever read.
 type Service struct {
-	Name string `json:"name"`
-	// OCIArtifact is the platform-agnostic link, normally a multi-platform
-	// index. Artifacts, when present, takes precedence for a matching platform.
-	OCIArtifact string     `json:"oci_artifact,omitempty"`
-	Artifacts   []Artifact `json:"artifacts,omitempty"`
-	Manifest    Manifest   `json:"manifest"`
+	Name      string     `json:"name"`
+	Artifacts []Artifact `json:"artifacts"`
+	Manifest  Manifest   `json:"manifest"`
 	// MinimumRuntimeLevel lets the registry demand a stricter isolation floor
 	// than the requester asked for. It can only tighten, never loosen.
 	MinimumRuntimeLevel RuntimeLevel `json:"minimum_runtime_level,omitempty"`
@@ -115,30 +119,63 @@ func SelectService(services []Service, serviceName string) (Service, error) {
 	}
 }
 
-// ArtifactFor returns the digest-pinned OCI reference to install on the given
-// platform. An entry that lists platform-specific artifacts must cover the
-// host platform; falling back to a link built for another platform would
-// install a workload that cannot run.
+// ArtifactFor returns the single digest-pinned OCI reference the service
+// publishes for the given platform. The registry contract is deliberately
+// strict: every entry must describe a complete, unique platform and every
+// reference must be immutable, even when it targets another platform.
 func (service Service) ArtifactFor(os, architecture string) (string, error) {
-	var fallback string
-	for _, artifact := range service.Artifacts {
-		if artifact.OS == "" && artifact.Architecture == "" {
-			if fallback == "" {
-				fallback = artifact.OCIArtifact
-			}
-			continue
+	if len(service.Artifacts) == 0 {
+		return "", errors.Errorf("registry entry %q must publish at least one artifact", service.Name)
+	}
+
+	seen := make(map[string]struct{}, len(service.Artifacts))
+	selected := ""
+	for index, artifact := range service.Artifacts {
+		artifactOS := strings.TrimSpace(artifact.OS)
+		artifactArchitecture := strings.TrimSpace(artifact.Architecture)
+		if artifactOS == "" || artifactArchitecture == "" {
+			return "", errors.Errorf(
+				"registry entry %q artifact %d must declare both os and architecture",
+				service.Name, index,
+			)
 		}
-		if strings.EqualFold(artifact.OS, os) && strings.EqualFold(artifact.Architecture, architecture) {
-			return artifact.OCIArtifact, nil
+		if artifact.OS != strings.ToLower(artifactOS) ||
+			artifact.Architecture != strings.ToLower(artifactArchitecture) {
+			return "", errors.Errorf(
+				"registry entry %q artifact %d must use canonical lowercase os and architecture",
+				service.Name, index,
+			)
+		}
+
+		platform := artifact.OS + "/" + artifact.Architecture
+		if _, exists := seen[platform]; exists {
+			return "", errors.Errorf(
+				"registry entry %q lists conflicting artifacts for %s",
+				service.Name, platform,
+			)
+		}
+		seen[platform] = struct{}{}
+
+		if _, err := name.NewDigest(artifact.Reference, name.StrictValidation); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"registry entry %q artifact for %s must use a digest-pinned reference",
+				service.Name, platform,
+			)
+		}
+		if artifact.OS == os && artifact.Architecture == architecture {
+			selected = artifact.Reference
 		}
 	}
-	if fallback == "" {
-		fallback = service.OCIArtifact
+
+	if selected == "" {
+		return "", errors.Wrapf(
+			ErrPlatformNotSupported,
+			"registry entry %q publishes no artifact for %s/%s",
+			service.Name, os, architecture,
+		)
 	}
-	if fallback == "" {
-		return "", errors.Errorf("registry entry %q has no OCI artifact for %s/%s", service.Name, os, architecture)
-	}
-	return fallback, nil
+	return selected, nil
 }
 
 // validate rejects entries the node must not act on. It runs at lookup rather
@@ -149,12 +186,8 @@ func (service Service) validate(os, architecture string) error {
 		return errors.Errorf("registry entry has an unusable service name %q", service.Name)
 	}
 
-	artifact, err := service.ArtifactFor(os, architecture)
-	if err != nil {
+	if _, err := service.ArtifactFor(os, architecture); err != nil {
 		return err
-	}
-	if _, err := name.NewDigest(artifact, name.StrictValidation); err != nil {
-		return errors.Wrapf(err, "registry entry %q must pin its OCI artifact by digest", service.Name)
 	}
 
 	return service.validateManifest()

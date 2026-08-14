@@ -41,7 +41,11 @@ func cdpEntry(name string) string {
 	return `{
 		"name": "` + name + `",
 		"description": "ignored by the node",
-		"oci_artifact": "` + cdpArtifact + `",
+		"artifacts": [{
+			"os": "` + goruntime.GOOS + `",
+			"architecture": "` + goruntime.GOARCH + `",
+			"reference": "` + cdpArtifact + `"
+		}],
 		"manifest": {
 			"service": {"protocol": "tcp", "internal_port": 9222},
 			"resources": {"cpu": "1", "memory": "512MiB", "disk": "512MiB", "pids": 128}
@@ -121,7 +125,18 @@ func TestListServicesReadsTheDeployedListing(t *testing.T) {
 			{
 				"name": "cdp",
 				"description": "Lightpanda-based CDP test service",
-				"oci_artifact": "`+cdpArtifact+`",
+				"artifacts": [
+					{
+						"os": "`+goruntime.GOOS+`",
+						"architecture": "`+goruntime.GOARCH+`",
+						"reference": "`+cdpArtifact+`"
+					},
+					{
+						"os": "unsupported-test-os",
+						"architecture": "unsupported-test-architecture",
+						"reference": "`+cdpArtifact+`"
+					}
+				],
 				"minimum_runtime_level": "unisolated",
 				"manifest": {
 					"service": {"protocol": "tcp", "internal_port": 9222},
@@ -143,6 +158,19 @@ func TestListServicesReadsTheDeployedListing(t *testing.T) {
 	}
 	if service.Manifest.Resources.Memory != "128MiB" || service.Manifest.Resources.Pids != 16 {
 		t.Fatalf("published resource limits were not read: %#v", service.Manifest.Resources)
+	}
+}
+
+func TestSelectServiceRejectsThePreReleaseSingularArtifactFormat(t *testing.T) {
+	client, _ := testClient(t, listing(`{
+		"name": "cdp",
+		"oci_artifact": "`+cdpArtifact+`",
+		"manifest": {"service": {"protocol": "tcp", "internal_port": 9222}}
+	}`))
+
+	_, err := lookup(client, "cdp")
+	if err == nil || errors.Is(err, ErrPlatformNotSupported) {
+		t.Fatalf("expected the old singular artifact format to be rejected, got %v", err)
 	}
 }
 
@@ -191,7 +219,11 @@ func TestListServicesServesRepeatedSelectionsFromCache(t *testing.T) {
 func TestSelectServiceRejectsMutableArtifactReference(t *testing.T) {
 	client, _ := testClient(t, listing(`{
 		"name": "cdp",
-		"oci_artifact": "example.com/runtime/cdp:latest",
+		"artifacts": [{
+			"os": "`+goruntime.GOOS+`",
+			"architecture": "`+goruntime.GOARCH+`",
+			"reference": "example.com/runtime/cdp:latest"
+		}],
 		"manifest": {"service": {"protocol": "tcp", "internal_port": 9222}}
 	}`))
 
@@ -210,7 +242,11 @@ func TestSelectServiceRejectsUnusableManifest(t *testing.T) {
 	for description, manifest := range tests {
 		client, _ := testClient(t, listing(`{
 			"name": "cdp",
-			"oci_artifact": "`+cdpArtifact+`",
+			"artifacts": [{
+				"os": "`+goruntime.GOOS+`",
+				"architecture": "`+goruntime.GOARCH+`",
+				"reference": "`+cdpArtifact+`"
+			}],
 			"manifest": `+manifest+`
 		}`))
 

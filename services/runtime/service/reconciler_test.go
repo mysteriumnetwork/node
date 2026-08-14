@@ -270,7 +270,7 @@ func TestServiceWithWithdrawnArtifactIsRemovedAfterThresholdSyncs(t *testing.T) 
 		Options: Options{OCIArtifact: approvedArtifact},
 	}}}
 	entry := approvedEntry()
-	entry.OCIArtifact = replacementArtifact
+	entry.Artifacts[0].Reference = replacementArtifact
 	serviceRegistry := &listingRegistry{services: []registry.Service{entry}}
 	reconciler := newTestReconciler(backend, serviceRegistry, &fakeInstances{})
 
@@ -280,6 +280,48 @@ func TestServiceWithWithdrawnArtifactIsRemovedAfterThresholdSyncs(t *testing.T) 
 
 	if len(backend.deleted) != 1 || backend.deleted[0] != "runtime-cdp" {
 		t.Fatalf("deleted %v, expected the no-longer-approved artifact to be removed", backend.deleted)
+	}
+}
+
+func TestServiceWithdrawnFromTheHostPlatformIsRemovedAfterThresholdSyncs(t *testing.T) {
+	backend := &reconcileBackend{installed: []ServiceInfo{{
+		Name:    "runtime-cdp",
+		Options: Options{OCIArtifact: approvedArtifact},
+	}}}
+	entry := approvedEntry()
+	entry.Artifacts = []registry.Artifact{{
+		OS:           "unsupported-test-os",
+		Architecture: "unsupported-test-architecture",
+		Reference:    approvedArtifact,
+	}}
+	serviceRegistry := &listingRegistry{services: []registry.Service{entry}}
+	reconciler := newTestReconciler(backend, serviceRegistry, &fakeInstances{})
+
+	for i := 0; i < DefaultReconcileMissThreshold; i++ {
+		reconciler.Reconcile()
+	}
+
+	if len(backend.deleted) != 1 || backend.deleted[0] != "runtime-cdp" {
+		t.Fatalf("deleted %v, expected the unsupported platform workload to be removed", backend.deleted)
+	}
+}
+
+func TestMalformedPlatformDefinitionDoesNotAgeServiceOut(t *testing.T) {
+	backend := &reconcileBackend{installed: []ServiceInfo{{
+		Name:    "runtime-cdp",
+		Options: Options{OCIArtifact: approvedArtifact},
+	}}}
+	entry := approvedEntry()
+	entry.Artifacts = append(entry.Artifacts, entry.Artifacts[0])
+	serviceRegistry := &listingRegistry{services: []registry.Service{entry}}
+	reconciler := newTestReconciler(backend, serviceRegistry, &fakeInstances{})
+
+	for i := 0; i < DefaultReconcileMissThreshold*2; i++ {
+		reconciler.Reconcile()
+	}
+
+	if len(backend.deleted) != 0 {
+		t.Fatalf("deleted %v while the platform definition was malformed", backend.deleted)
 	}
 }
 
