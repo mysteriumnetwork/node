@@ -23,7 +23,13 @@ import (
 
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/stretchr/testify/assert"
+	"golang.zx2c4.com/wireguard/device"
 )
+
+func TestEffectiveMTU(t *testing.T) {
+	assert.Equal(t, device.DefaultMTU, effectiveMTU(0))
+	assert.Equal(t, 1280, effectiveMTU(1280))
+}
 
 func Test_ConfigureDevice_ConfigureErrors(t *testing.T) {
 
