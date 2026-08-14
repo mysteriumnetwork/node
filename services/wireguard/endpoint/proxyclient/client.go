@@ -65,7 +65,9 @@ func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
 	if err != nil {
 		return fmt.Errorf("could not parse DNS addr: %w", err)
 	}
-	tunnel, tnet, err := netstack.CreateNetTUN([]netip.Addr{localAddr}, []netip.Addr{dnsAddr}, device.DefaultMTU)
+	mtu := effectiveMTU(cfg.MTU)
+	log.Info().Int("mtu", mtu).Msg("Creating proxy-mode WireGuard netstack")
+	tunnel, tnet, err := netstack.CreateNetTUN([]netip.Addr{localAddr}, []netip.Addr{dnsAddr}, mtu)
 	if err != nil {
 		return fmt.Errorf("failed to create netstack device %s: %w", cfg.IfaceName, err)
 	}
@@ -92,6 +94,13 @@ func (c *client) ConfigureDevice(cfg wgcfg.DeviceConfig) error {
 	}
 
 	return nil
+}
+
+func effectiveMTU(configured int) int {
+	if configured > 0 {
+		return configured
+	}
+	return device.DefaultMTU
 }
 
 func (c *client) DestroyDevice(iface string) error {
