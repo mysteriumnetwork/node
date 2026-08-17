@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -94,6 +95,12 @@ func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
 func (c *client) configureDevice(config wgcfg.DeviceConfig) error {
 	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", config.IfaceName, config.Subnet.String()); err != nil {
 		return err
+	}
+
+	if config.MTU > 0 {
+		if err := cmdutil.SudoExec("ip", "link", "set", "dev", config.IfaceName, "mtu", strconv.Itoa(config.MTU)); err != nil {
+			return fmt.Errorf("could not set interface MTU to %d: %w", config.MTU, err)
+		}
 	}
 
 	peer, err := peerConfig(config.Peer)
