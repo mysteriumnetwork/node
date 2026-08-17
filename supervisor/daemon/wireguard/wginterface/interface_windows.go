@@ -22,7 +22,6 @@ import (
 	"net"
 
 	"github.com/rs/zerolog/log"
-	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
 
@@ -30,14 +29,16 @@ import (
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
+const windowsTunnelMTU = 1400
+
 func createTunnel(interfaceName string, dns []string) (tunnel tun.Device, _ string, err error) {
 	log.Info().Msg("Creating Wintun interface")
-	wintun, err := tun.CreateTUN(interfaceName, device.DefaultMTU)
+	wintun, err := tun.CreateTUN(interfaceName, windowsTunnelMTU)
 	if err != nil {
 		return nil, interfaceName, fmt.Errorf("could not create Wintun tunnel: %w", err)
 	}
 
-	cmd := fmt.Sprintf(`netsh interface ipv4 set subinterface "%s" mtu=%d store=persistent`, interfaceName, device.DefaultMTU)
+	cmd := fmt.Sprintf(`netsh interface ipv4 set subinterface "%s" mtu=%d store=persistent`, interfaceName, windowsTunnelMTU)
 	if _, err := cmdutil.PowerShell(cmd); err != nil {
 		return nil, interfaceName, fmt.Errorf("could not set MTU for tunnel: %w", err)
 	}
