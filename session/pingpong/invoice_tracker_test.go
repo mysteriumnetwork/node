@@ -729,6 +729,54 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 	}
 }
 
+func TestInvoiceTracker_handlePromiseErrorsReportsSuccessfulCompletion(t *testing.T) {
+	it := &InvoiceTracker{
+		stop:          make(chan struct{}),
+		promiseErrors: make(chan error, 1),
+	}
+
+	result := make(chan error)
+	close(result)
+
+	it.handlePromiseErrors(result)
+
+	assert.NoError(t, <-it.promiseErrors)
+}
+
+func TestInvoiceTracker_handlePromiseErrorsDoesNotReportSuccessAfterError(t *testing.T) {
+	it := &InvoiceTracker{
+		stop:          make(chan struct{}),
+		promiseErrors: make(chan error, 2),
+	}
+
+	result := make(chan error, 1)
+	result <- ErrHermesInternal
+	close(result)
+
+	it.handlePromiseErrors(result)
+
+	assert.ErrorIs(t, <-it.promiseErrors, ErrHermesInternal)
+	select {
+	case err := <-it.promiseErrors:
+		t.Fatalf("unexpected extra promise result: %v", err)
+	default:
+	}
+}
+
+func TestInvoiceTracker_handleHermesErrorResetsFailureCountOnSuccess(t *testing.T) {
+	it := &InvoiceTracker{
+		deps: InvoiceTrackerDeps{
+			MaxHermesFailureCount: 10,
+		},
+	}
+
+	assert.NoError(t, it.handleHermesError(ErrHermesInternal))
+	assert.Equal(t, uint64(1), it.hermesFailureCount)
+
+	assert.NoError(t, it.handleHermesError(nil))
+	assert.Zero(t, it.hermesFailureCount)
+}
+
 func TestInvoiceTracker_handleHermesError(t *testing.T) {
 	tests := []struct {
 		name                  string
