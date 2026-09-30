@@ -175,7 +175,7 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 	validationWG := sync.WaitGroup{}
 	validationWG.Add(1)
 	go func() {
-		trace := session.tracer.StartStage("Session validation")
+		trace := session.tracer.StartStage("Provider session validation")
 		validationError = manager.validateSession(session, prices)
 		session.tracer.EndStage(trace)
 		validationWG.Done()

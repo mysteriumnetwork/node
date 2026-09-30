@@ -299,13 +299,14 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err = di.handleConnStateChange(); err != nil {
 		return err
 	}
+	if err := di.subscribeNATStatusForPublicIP(); err != nil {
+		return err
+	}
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
 
 	config.Current.EnableEventPublishing(di.EventBus)
-
-	di.handleNATStatusForPublicIP()
 
 	log.Info().Msg("Mysterium node started!")
 	return nil
@@ -1103,7 +1104,16 @@ func (di *Dependencies) handleConnStateChange() error {
 	})
 }
 
-func (di *Dependencies) handleNATStatusForPublicIP() {
+// subscribeNATStatusForPublicIP reports the "public_ip" NAT traversal status once an identity
+// is unlocked. The quality metric derived from this event is owned and signed by that identity,
+// so it must not be published before an identity is available.
+func (di *Dependencies) subscribeNATStatusForPublicIP() error {
+	return di.EventBus.SubscribeAsync(identity.AppTopicIdentityUnlock, func(e identity.AppEventIdentityUnlock) {
+		di.handleNATStatusForPublicIP(e.ID.Address)
+	})
+}
+
+func (di *Dependencies) handleNATStatusForPublicIP(id string) {
 	outIP, err := di.IPResolver.GetOutboundIP()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get outbound IP address")
@@ -1115,7 +1125,7 @@ func (di *Dependencies) handleNATStatusForPublicIP() {
 	}
 
 	if outIP == pubIP && pubIP != "" {
-		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
+		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, "public_ip"))
 	}
 }
 

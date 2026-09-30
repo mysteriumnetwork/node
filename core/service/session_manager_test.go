@@ -139,7 +139,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 		for _, key := range []string{
 			"Provider connect",
 			"Provider session create",
-			"Session validation",
+			"Provider session validation",
 			"Provider session create (start)",
 			"Provider session create (payment)",
 			"Provider session create (configure)",
@@ -186,7 +186,7 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 		for _, key := range []string{
 			"Provider connect",
 			"Provider session create",
-			"Session validation",
+			"Provider session validation",
 			"Provider session create (start)",
 			"Provider session create (payment)",
 		} {
