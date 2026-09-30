@@ -426,8 +426,24 @@ func (it *InvoiceTracker) WaitFirstInvoice(wait time.Duration) error {
 }
 
 func (it *InvoiceTracker) handlePromiseErrors(ch <-chan error) {
+	hadResult := false
 	for err := range ch {
-		it.promiseErrors <- err
+		hadResult = true
+		select {
+		case it.promiseErrors <- err:
+		case <-it.stop:
+			return
+		}
+	}
+
+	// HermesPromiseHandler closes the channel without sending a value when a
+	// promise request completes successfully. Propagate that completion so the
+	// tracker can reset its consecutive Hermes failure count.
+	if !hadResult {
+		select {
+		case it.promiseErrors <- nil:
+		case <-it.stop:
+		}
 	}
 }
 
