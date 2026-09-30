@@ -88,10 +88,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 			tequilapi_endpoints.AddRoutesForCurrencyExchange(di.PilvytisAPI),
 			tequilapi_endpoints.AddRoutesForPilvytis(di.PilvytisAPI, di.PilvytisOrderIssuer, di.LocationResolver),
 			tequilapi_endpoints.AddRoutesForTerms,
-			tequilapi_endpoints.AddEntertainmentRoutes(entertainment.NewEstimator(
-				config.FlagPaymentPriceGiB.Value,
-				config.FlagPaymentPriceHour.Value,
-			)),
+			tequilapi_endpoints.AddEntertainmentRoutes(entertainment.NewMarketEstimator(di.PricingHelper)),
 			tequilapi_endpoints.AddRoutesForValidator,
 		},
 	)

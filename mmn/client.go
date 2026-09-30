@@ -64,7 +64,8 @@ type client struct {
 
 // ClaimNode does an HTTP call to MMN and registers node
 func (m *client) ClaimNode(info NodeClaimRequest) error {
-	log.Debug().Msgf("Registering node to MMN: %+v", info)
+	// APIKey is intentionally omitted: this request contains an MMN credential.
+	log.Debug().Msgf("Registering node to MMN: identity=%s vendor_id=%s os=%s arch=%s node_version=%s", info.Identity, info.VendorID, info.OS, info.Arch, info.NodeVersion)
 
 	id := identity.FromAddress(info.Identity)
 	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))

@@ -188,6 +188,13 @@ func TestUserConfig_Get(t *testing.T) {
 	assert.Equal(t, 1003, cfg.Get("openvpn.port"))
 }
 
+func TestSensitiveConfigKey(t *testing.T) {
+	assert.True(t, isSensitiveConfigKey("mmn.api-key"))
+	assert.True(t, isSensitiveConfigKey("service.api_key"))
+	assert.True(t, isSensitiveConfigKey("service.apikey"))
+	assert.False(t, isSensitiveConfigKey("mmn.api-address"))
+}
+
 func TestUserConfig_GetConfig(t *testing.T) {
 	cfg := NewConfig()
 

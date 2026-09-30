@@ -52,10 +52,11 @@ func (req *EntertainmentEstimateRequest) Bind(request *http.Request) *apierror.A
 // EntertainmentEstimateResponse represents estimated entertainment.
 // swagger:model EntertainmentEstimateResponse
 type EntertainmentEstimateResponse struct {
-	VideoMinutes    uint64  `json:"video_minutes"`
-	MusicMinutes    uint64  `json:"music_minutes"`
-	BrowsingMinutes uint64  `json:"browsing_minutes"`
-	TrafficMB       uint64  `json:"traffic_mb"`
-	PriceGiB        float64 `json:"price_gib"`
-	PriceMin        float64 `json:"price_min"`
+	VideoMinutes    uint64 `json:"video_minutes"`
+	MusicMinutes    uint64 `json:"music_minutes"`
+	BrowsingMinutes uint64 `json:"browsing_minutes"`
+	// TrafficMB is decimal MB; convert to GiB with TrafficMB * 1e6 / (1 << 30).
+	TrafficMB uint64  `json:"traffic_mb"`
+	PriceGiB  float64 `json:"price_gib"`
+	PriceMin  float64 `json:"price_min"`
 }

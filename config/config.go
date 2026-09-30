@@ -27,7 +27,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/utils/jsonutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
@@ -86,11 +85,9 @@ func (cfg *Config) LoadUserConfig(location string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to decode configuration file")
 	}
-	cfgJson, err := jsonutil.ToJson(cfg.user)
-	if err != nil {
-		return err
-	}
-	log.Info().Msg("User configuration loaded: \n" + cfgJson)
+	// Do not log the configuration contents. User configuration contains
+	// credentials (for example mmn.api-key) which must never reach logs.
+	log.Info().Msg("User configuration loaded")
 	return nil
 }
 
@@ -111,11 +108,8 @@ func (cfg *Config) SaveUserConfig() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to write configuration to file")
 	}
-	cfgJson, err := jsonutil.ToJson(cfg.user)
-	if err != nil {
-		return err
-	}
-	log.Info().Msg("User configuration written: \n" + cfgJson)
+	// Do not log the configuration contents. See LoadUserConfig.
+	log.Info().Msg("User configuration written")
 	return nil
 }
 
@@ -213,17 +207,35 @@ func (cfg *Config) Get(key string) interface{} {
 	defer cfg.mu.RUnlock()
 	cliValue := SearchMap(cfg.cli, segments)
 	if cliValue != nil {
-		log.Debug().Msgf("Returning CLI value %v:%v", key, cliValue)
+		logConfigValue("CLI", key, cliValue)
 		return copyValue(cliValue)
 	}
 	userValue := SearchMap(cfg.user, segments)
 	if userValue != nil {
-		log.Debug().Msgf("Returning user config value %v:%v", key, userValue)
+		logConfigValue("user config", key, userValue)
 		return copyValue(userValue)
 	}
 	defaultValue := SearchMap(cfg.defaults, segments)
-	log.Trace().Msgf("Returning default value %v:%v", key, defaultValue)
+	if isSensitiveConfigKey(key) {
+		log.Trace().Msgf("Returning default value %v:[REDACTED]", key)
+	} else {
+		log.Trace().Msgf("Returning default value %v:%v", key, defaultValue)
+	}
 	return copyValue(defaultValue)
+}
+
+func logConfigValue(source, key string, value interface{}) {
+	if isSensitiveConfigKey(key) {
+		log.Debug().Msgf("Returning %s value %v:[REDACTED]", source, key)
+		return
+	}
+	log.Debug().Msgf("Returning %s value %v:%v", source, key, value)
+}
+
+func isSensitiveConfigKey(key string) bool {
+	normalized := strings.ToLower(key)
+	normalized = strings.NewReplacer("-", "", "_", "", ".", "").Replace(normalized)
+	return strings.HasSuffix(normalized, "apikey")
 }
 
 // returns scalar values as is. deep-copies maps.

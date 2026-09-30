@@ -63,7 +63,10 @@ func (rc *Config) RefreshRemoteConfig() error {
 func (rc *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
 	value := config.SearchMap(rc.config, segments)
-	log.Debug().Msgf("Returning remote config value %v:%v", key, value)
+	// Remote configuration may contain credentials. Unlike the local Config,
+	// this package does not own a complete list of sensitive keys, so avoid
+	// logging values altogether.
+	log.Debug().Msgf("Returning remote config value for key %v", key)
 	return value
 }
 

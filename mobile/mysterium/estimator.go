@@ -24,9 +24,11 @@ type Estimates struct {
 	VideoMinutes    int64
 	MusicMinutes    int64
 	BrowsingMinutes int64
-	TrafficMB       int64
-	PricePerGB      float64
-	PricePerMin     float64
+	// TrafficMB is decimal MB; convert to GiB with TrafficMB * 1e6 / (1 << 30).
+	TrafficMB int64
+	// PricePerGB is MYST per GiB; the legacy field name is kept for mobile compatibility.
+	PricePerGB  float64
+	PricePerMin float64
 }
 
 func newEstimates(e entertainment.Estimates) *Estimates {

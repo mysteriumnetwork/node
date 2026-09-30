@@ -17,7 +17,13 @@
 
 package entertainment
 
-import "math"
+import (
+	"math"
+
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/rs/zerolog/log"
+)
 
 const (
 	video720pMBPerMin   = 15
@@ -30,18 +36,32 @@ type Estimates struct {
 	VideoMinutes    uint64
 	MusicMinutes    uint64
 	BrowsingMinutes uint64
-	TrafficMB       uint64
-	PricePerGiB     float64
-	PricePerMin     float64
+	// TrafficMB is decimal megabytes (1 MB = 1,000,000 bytes), not MiB.
+	TrafficMB   uint64
+	PricePerGiB float64
+	PricePerMin float64
 }
 
-// Estimator stores average provider prices to estimate entertainment estimates
+// PriceProvider supplies current consumer prices from the node's shared pricing cache.
+type PriceProvider interface {
+	GetCurrentPrice(nodeType, country, serviceType string) (market.Price, error)
+}
+
+// Estimator estimates usage from consumer prices.
 type Estimator struct {
+	prices      PriceProvider
 	pricePerGiB float64
 	pricePerMin float64
 }
 
-// NewEstimator constructor
+// NewMarketEstimator uses current residential WireGuard pricing on each estimate.
+// No destination is selected by these APIs, so use the market's global default
+// rather than a country-specific rate or the consumer's own location.
+func NewMarketEstimator(prices PriceProvider) *Estimator {
+	return &Estimator{prices: prices}
+}
+
+// NewEstimator constructs an estimator with explicit MYST/GiB and MYST/minute rates.
 func NewEstimator(pricePerGiB, pricePerMin float64) *Estimator {
 	return &Estimator{
 		pricePerGiB: pricePerGiB,
@@ -51,6 +71,24 @@ func NewEstimator(pricePerGiB, pricePerMin float64) *Estimator {
 
 // EstimatedEntertainment calculates average service times
 func (e *Estimator) EstimatedEntertainment(myst float64) Estimates {
+	if e.prices != nil {
+		price, err := e.prices.GetCurrentPrice("residential", "", "wireguard")
+		if err != nil {
+			log.Warn().Err(err).Msg("could not obtain entertainment pricing")
+			return Estimates{}
+		}
+		if price.PricePerGiB == nil || price.PricePerHour == nil {
+			return Estimates{}
+		}
+		// Keep rates local: estimates may run concurrently with pricing updates.
+		return NewEstimator(crypto.BigMystToFloat(price.PricePerGiB),
+			crypto.BigMystToFloat(price.PricePerHour)/60).EstimatedEntertainment(myst)
+	}
+	if myst < 0 || math.IsNaN(myst) || math.IsInf(myst, 0) ||
+		e.pricePerGiB <= 0 || math.IsNaN(e.pricePerGiB) || math.IsInf(e.pricePerGiB, 0) ||
+		e.pricePerMin < 0 || math.IsNaN(e.pricePerMin) || math.IsInf(e.pricePerMin, 0) {
+		return Estimates{}
+	}
 	return Estimates{
 		VideoMinutes:    e.minutes(myst, video720pMBPerMin),
 		MusicMinutes:    e.minutes(myst, audioNormalMBPerMin),

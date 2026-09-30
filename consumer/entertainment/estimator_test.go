@@ -18,7 +18,12 @@
 package entertainment
 
 import (
+	"errors"
+	"math"
 	"testing"
+
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,4 +50,59 @@ func TestEstimator(t *testing.T) {
 	assert.Less(t, uint64(0), e.VideoMinutes)
 	assert.Less(t, uint64(0), e.MusicMinutes)
 	assert.Less(t, uint64(0), e.BrowsingMinutes)
+}
+
+// The provider is queried for every estimate, so a market refresh is reflected
+// without restarting either the mobile node or TequilAPI.
+type testPriceProvider struct {
+	t     *testing.T
+	price market.Price
+	err   error
+}
+
+func (p *testPriceProvider) GetCurrentPrice(nodeType, country, serviceType string) (market.Price, error) {
+	assert.Equal(p.t, "residential", nodeType)
+	assert.Empty(p.t, country)
+	assert.Equal(p.t, "wireguard", serviceType)
+	return p.price, p.err
+}
+
+func TestMarketEstimator(t *testing.T) {
+	provider := &testPriceProvider{t: t, price: market.Price{
+		PricePerGiB:  crypto.FloatToBigMyst(3.73),
+		PricePerHour: crypto.FloatToBigMyst(0.06),
+	}}
+	estimator := NewMarketEstimator(provider)
+	estimate := estimator.EstimatedEntertainment(29.444)
+	assert.InDelta(t, 3.73, estimate.PricePerGiB, 1e-12)
+	assert.InDelta(t, 0.001, estimate.PricePerMin, 1e-12)
+	// Convert decimal MB back to GiB, allowing truncation of less than 1 MB.
+	assert.InDelta(t, 29.444/3.73, float64(estimate.TrafficMB)*1e6/(1<<30), 0.001)
+	assert.Equal(t, uint64(math.Floor(29.444/(15e6/(1<<30)*3.73+0.001))), estimate.VideoMinutes)
+
+	provider.price.PricePerGiB = crypto.FloatToBigMyst(7.46)
+	refreshed := estimator.EstimatedEntertainment(29.444)
+	assert.InDelta(t, float64(estimate.TrafficMB)/2, float64(refreshed.TrafficMB), 1)
+	assert.InDelta(t, 7.46, refreshed.PricePerGiB, 1e-12)
+}
+
+func TestEstimatorUnits(t *testing.T) {
+	assert.Equal(t, 1048.576, mib2MB(1000))
+	assert.Equal(t, 1000.0, mb2MiB(1048.576))
+	estimate := NewEstimator(1, 0).EstimatedEntertainment(1)
+	assert.Equal(t, uint64(1073), estimate.TrafficMB)  // 1 GiB = 1073.741824 MB
+	assert.Equal(t, uint64(71), estimate.VideoMinutes) // 15 decimal MB/minute
+}
+
+func TestMarketEstimatorUnavailablePrice(t *testing.T) {
+	provider := &testPriceProvider{t: t, err: errors.New("unavailable")}
+	assert.Equal(t, Estimates{}, NewMarketEstimator(provider).EstimatedEntertainment(29.444))
+	provider.err = nil
+	assert.Equal(t, Estimates{}, NewMarketEstimator(provider).EstimatedEntertainment(29.444))
+}
+
+func TestEstimatorInvalidAmount(t *testing.T) {
+	for _, amount := range []float64{-1, math.NaN(), math.Inf(1)} {
+		assert.Equal(t, Estimates{}, NewEstimator(3.73, 0).EstimatedEntertainment(amount))
+	}
 }
