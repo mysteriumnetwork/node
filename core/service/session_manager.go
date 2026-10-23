@@ -283,7 +283,17 @@ func (manager *SessionManager) validateSession(session *Session, prices market.P
 		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
 	}
 
-	return manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country, manager.service.Proposal.ServiceType)
+	serviceType := manager.service.Proposal.ServiceType
+	if err := manager.validatePrice(prices, manager.service.Proposal.Location.IPType, manager.service.Proposal.Location.Country, serviceType); err != nil {
+		log.Warn().
+			Str("consumer", session.ConsumerID.Address).
+			Str("service", serviceType).
+			Str("price", prices.String()).
+			Msg("Session price not listed by discovery, refused")
+		return err
+	}
+
+	return nil
 }
 
 func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, serviceType string) {

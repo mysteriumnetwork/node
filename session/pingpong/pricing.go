@@ -188,8 +188,10 @@ func (p *Pricer) IsPriceValid(in market.Price, nodeType string, country string, 
 		return true
 	}
 
-	// this is the fallback in case loading of prices fails.
-	return p.isCheaperThanDefault(in)
+	// Only the current or previous price is valid. Until prices are loaded from
+	// discovery, the current price is the built-in default, so a node that cannot
+	// reach discovery still accepts consumers using that default.
+	return false
 }
 
 func (p *Pricer) pricesEqual(api *market.Price, local market.Price) bool {
@@ -198,10 +200,6 @@ func (p *Pricer) pricesEqual(api *market.Price, local market.Price) bool {
 	}
 
 	return api.PricePerGiB.Cmp(local.PricePerGiB) == 0 && api.PricePerHour.Cmp(local.PricePerHour) == 0
-}
-
-func (p *Pricer) isCheaperThanDefault(in market.Price) bool {
-	return in.PricePerGiB.Cmp(defaultPrice.PricePerGiB) <= 0 && in.PricePerHour.Cmp(defaultPrice.PricePerHour) <= 0
 }
 
 // Subscribe subscribes to node events.
