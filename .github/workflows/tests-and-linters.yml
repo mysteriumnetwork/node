@@ -56,7 +56,7 @@ jobs:
         run: go run mage.go -v TestE2EShaper
 
   e2e-nat:
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
