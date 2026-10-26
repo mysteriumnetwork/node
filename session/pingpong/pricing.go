@@ -127,15 +127,30 @@ func (p *Pricer) getPriceForCountry(pricing market.LatestPrices, country string)
 
 func (p *Pricer) getCurrentByType(pricing market.LatestPrices, nodeType string, country string, serviceType string) *market.Price {
 	base := p.getPriceForCountry(pricing, country)
+	if base == nil {
+		return nil
+	}
+	return p.getByType(base.Current, nodeType, serviceType)
+}
+
+// getByType returns nil when part of the price data is missing, for example the
+// previous prices of a pricer that never loaded prices from discovery.
+func (p *Pricer) getByType(prices *market.PriceByType, nodeType string, serviceType string) *market.Price {
+	if prices == nil {
+		return nil
+	}
 	switch strings.ToLower(nodeType) {
 	case "residential", "cellular":
-		return p.getCurrentByServiceType(base.Current.Residential, serviceType)
+		return p.getCurrentByServiceType(prices.Residential, serviceType)
 	default:
-		return p.getCurrentByServiceType(base.Current.Other, serviceType)
+		return p.getCurrentByServiceType(prices.Other, serviceType)
 	}
 }
 
 func (p *Pricer) getCurrentByServiceType(pricingByServiceType *market.PriceByServiceType, serviceType string) *market.Price {
+	if pricingByServiceType == nil {
+		return nil
+	}
 	switch strings.ToLower(serviceType) {
 	case "wireguard":
 		return pricingByServiceType.Wireguard
@@ -152,12 +167,10 @@ func (p *Pricer) getCurrentByServiceType(pricingByServiceType *market.PriceBySer
 
 func (p *Pricer) getPreviousByType(pricing market.LatestPrices, nodeType string, country string, serviceType string) *market.Price {
 	base := p.getPriceForCountry(pricing, country)
-	switch strings.ToLower(nodeType) {
-	case "residential", "cellular":
-		return p.getCurrentByServiceType(base.Previous.Residential, serviceType)
-	default:
-		return p.getCurrentByServiceType(base.Previous.Other, serviceType)
+	if base == nil {
+		return nil
 	}
+	return p.getByType(base.Previous, nodeType, serviceType)
 }
 
 // IsPriceValid checks if the given price is valid or not.
@@ -175,8 +188,10 @@ func (p *Pricer) IsPriceValid(in market.Price, nodeType string, country string, 
 		return true
 	}
 
-	// this is the fallback in case loading of prices fails.
-	return p.isCheaperThanDefault(in)
+	// Only the current or previous price is valid. Until prices are loaded from
+	// discovery, the current price is the built-in default, so a node that cannot
+	// reach discovery still accepts consumers using that default.
+	return false
 }
 
 func (p *Pricer) pricesEqual(api *market.Price, local market.Price) bool {
@@ -185,10 +200,6 @@ func (p *Pricer) pricesEqual(api *market.Price, local market.Price) bool {
 	}
 
 	return api.PricePerGiB.Cmp(local.PricePerGiB) == 0 && api.PricePerHour.Cmp(local.PricePerHour) == 0
-}
-
-func (p *Pricer) isCheaperThanDefault(in market.Price) bool {
-	return in.PricePerGiB.Cmp(defaultPrice.PricePerGiB) <= 0 && in.PricePerHour.Cmp(defaultPrice.PricePerHour) <= 0
 }
 
 // Subscribe subscribes to node events.
