@@ -396,6 +396,17 @@ func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel)
 		}
 
 		log.Debug().Msgf("Received p2p keepalive ping with SessionID=%s from %s", ping.SessionID, c.PeerID().ToCommonAddress())
+		if ping.SessionID != "" {
+			s, found := manager.sessionStorage.Find(session.ID(ping.SessionID))
+			if !found || s.ConsumerID != c.PeerID() {
+				return c.Error(fmt.Errorf("session %s is not active", ping.SessionID))
+			}
+			select {
+			case <-s.Done():
+				return c.Error(fmt.Errorf("session %s is not active", ping.SessionID))
+			default:
+			}
+		}
 		return c.OK()
 	})
 
