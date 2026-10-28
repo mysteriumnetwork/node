@@ -139,6 +139,10 @@ func subscribeSessionAcknowledge(mng *SessionManager, ch p2p.ChannelHandler) {
 
 const bigIntBase int = 10
 
+// paymentMessageQueueTimeout matches how long the consumer waits for a reply
+// to a payment message (session/pingpong/exchange_messaging.go).
+const paymentMessageQueueTimeout = 20 * time.Second
+
 func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
 		var msg pb.ExchangeMessage
@@ -167,7 +171,16 @@ func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
 		}
 
-		mng.paymentEngineChan <- crypto.ExchangeMessage{
+		// Queue the message only for a consumer that has an active session of this
+		// service. After the session is closed nobody reads paymentEngineChan any
+		// more, so a late message would otherwise block this handler forever.
+		peer := c.PeerID()
+		if _, found := mng.sessionStorage.FindBy(FindOpts{Peer: &peer, ServiceType: mng.service.Proposal.ServiceType}); !found {
+			log.Debug().Msgf("Payment message from %s without an active session, rejected", peer.Address)
+			return fmt.Errorf("no active session for %s", peer.Address)
+		}
+
+		em := crypto.ExchangeMessage{
 			Promise: crypto.Promise{
 				ChannelID: msg.GetPromise().GetChannelID(),
 				Amount:    amount,
@@ -183,6 +196,13 @@ func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 			Signature:      msg.GetSignature(),
 			HermesID:       msg.GetHermesID(),
 			ChainID:        msg.GetChainID(),
+		}
+
+		// Never block for longer than the consumer waits for the reply.
+		select {
+		case mng.paymentEngineChan <- em:
+		case <-time.After(paymentMessageQueueTimeout):
+			return fmt.Errorf("payment message from %s was not accepted in time", peer.Address)
 		}
 
 		return nil
