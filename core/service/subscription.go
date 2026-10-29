@@ -141,7 +141,7 @@ const bigIntBase int = 10
 
 // paymentMessageQueueTimeout matches how long the consumer waits for a reply
 // to a payment message (session/pingpong/exchange_messaging.go).
-const paymentMessageQueueTimeout = 20 * time.Second
+var paymentMessageQueueTimeout = 20 * time.Second
 
 func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {

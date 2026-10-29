@@ -158,3 +158,58 @@ func TestSubscribeSessionPayments_RejectsMessagesWithoutActiveSession(t *testing
 		assert.True(t, rejected, "late payment message %d after close", i+1)
 	}
 }
+
+func TestSubscribeSessionPayments_GivesUpWhenQueueStaysFull(t *testing.T) {
+	// Example value: keep the test fast instead of waiting the real 20 s.
+	defaultTimeout := paymentMessageQueueTimeout
+	paymentMessageQueueTimeout = 50 * time.Millisecond
+	defer func() { paymentMessageQueueTimeout = defaultTimeout }()
+
+	publisher := mocks.NewEventBus()
+	sessionStore := NewSessionPool(publisher)
+	ch := &paymentTestChannel{
+		mockP2PChannel: mockP2PChannel{tracer: trace.NewTracer("Provider connect")},
+		handlers:       map[string]p2p.HandlerFunc{},
+	}
+	reftracker.Singleton().Put("channel:"+ch.ID(), 10*time.Second, func() { ch.Close() })
+
+	manager := NewSessionManager(
+		currentService,
+		sessionStore,
+		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage, _ market.Price) (PaymentEngine, error) {
+			// This engine never reads the payment channel.
+			return &mockBalanceTracker{}, nil
+		},
+		publisher,
+		ch,
+		DefaultConfig(),
+		&mockPriceValidator{toReturn: true},
+	)
+	subscribeSessionPayments(manager, ch)
+	h := ch.handler(p2p.TopicPaymentMessage)
+	require.NotNil(t, h)
+
+	_, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
+			Pricing: &pb.Pricing{
+				PerGib:  big.NewInt(1).Bytes(),
+				PerHour: big.NewInt(1).Bytes(),
+			},
+		},
+		ProposalID: int64(currentProposalID),
+	})
+	require.NoError(t, err)
+	defer sessionStore.GetAll()[0].Close()
+
+	// The first message fills the queue (buffer 1).
+	returned, rejected := callPaymentHandler(h, consumerID, time.Second)
+	assert.True(t, returned)
+	assert.False(t, rejected, "first payment message fits in the queue")
+
+	// Nobody reads the queue: the next message must give up instead of blocking.
+	returned, rejected = callPaymentHandler(h, consumerID, time.Second)
+	assert.True(t, returned, "handler must not block on a full queue")
+	assert.True(t, rejected, "payment message that could not be queued in time")
+}
