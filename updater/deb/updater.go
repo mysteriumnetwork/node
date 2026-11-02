@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -61,9 +62,10 @@ func secureEnvironment() []string {
 
 // Updater validates and installs a newer myst package through APT.
 type Updater struct {
-	config Config
-	runner commandRunner
-	client *http.Client
+	config         Config
+	runner         commandRunner
+	client         *http.Client
+	sourcePatterns []string
 }
 
 // New constructs a production updater.
@@ -95,6 +97,15 @@ func (updater *Updater) Run(ctx context.Context) error {
 	commandContext, cancel := context.WithTimeout(ctx, updater.config.CommandTimeout)
 	defer cancel()
 
+	patterns := updater.sourcePatterns
+	if patterns == nil {
+		patterns = legacyRepositoryPatterns
+	}
+	if path, found, err := legacyRepositorySourceFrom(patterns); err != nil {
+		return fmt.Errorf("could not inspect APT repository sources: %w", err)
+	} else if found {
+		return fmt.Errorf("legacy Mysterium HTTP repository found in %s: %s; migrate it manually to HTTPS with signed-by before retrying", path, legacyRepositoryURL)
+	}
 	if err := updater.aptGet(commandContext, "update"); err != nil {
 		return fmt.Errorf("could not refresh authenticated APT metadata: %w", err)
 	}
@@ -196,6 +207,50 @@ func (updater *Updater) Run(ctx context.Context) error {
 	}
 	log.Printf("successfully updated %s to %s", packageName, candidate)
 	return nil
+}
+
+const legacyRepositoryURL = "http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu"
+
+var legacyRepositoryPatterns = []string{
+	"/etc/apt/sources.list",
+	"/etc/apt/sources.list.d/*.list",
+	"/etc/apt/sources.list.d/*.sources",
+}
+
+func legacyRepositorySourceFrom(patterns []string) (string, bool, error) {
+	for _, pattern := range patterns {
+		paths, err := filepath.Glob(filepath.Clean(pattern))
+		if err != nil {
+			return "", false, err
+		}
+		for _, path := range paths {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return path, false, err
+			}
+			for _, stanza := range strings.Split(string(data), "\n\n") {
+				enabled := true
+				legacy := false
+				for _, line := range strings.Split(stanza, "\n") {
+					trimmed := strings.TrimSpace(line)
+					if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+						continue
+					}
+					if strings.HasPrefix(strings.ToLower(trimmed), "enabled:") &&
+						strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(strings.ToLower(trimmed), "enabled:")), "no") {
+						enabled = false
+					}
+					if strings.Contains(trimmed, legacyRepositoryURL) {
+						legacy = true
+					}
+				}
+				if enabled && legacy {
+					return path, true, nil
+				}
+			}
+		}
+	}
+	return "", false, nil
 }
 
 func (updater *Updater) aptGet(ctx context.Context, arguments ...string) error {
