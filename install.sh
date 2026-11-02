@@ -116,7 +116,7 @@ install_debian() {
 }
 
 configure_mysterium_repository() {
-    local key_temp keyring_temp key_stage source_stage fingerprint
+    local key_temp keyring_temp key_stage source_stage fingerprint suite
     key_temp=$(mktemp) || return 1
     keyring_temp=$(mktemp) || { rm -f "$key_temp"; return 1; }
     trap 'rm -f "${key_temp:-}" "${keyring_temp:-}" "${key_stage:-}" "${source_stage:-}"' RETURN
@@ -154,6 +154,14 @@ configure_mysterium_repository() {
         echo "Failed to stage the Mysterium keyring" >&2
         return 1
     fi
+	 suite=focal
+	 if [[ "${DISTRO:-}" == ubuntu ]]; then
+		 if [[ -z "${VERSION_CODENAME:-}" || ! "$VERSION_CODENAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
+			echo "Cannot configure Mysterium repository: invalid Ubuntu VERSION_CODENAME" >&2
+			return 1
+		 fi
+		 suite="$VERSION_CODENAME"
+	 fi
 	if [[ -e "$APT_SOURCE_DIR/mysterium.list" ]]; then
 		if [[ ! -f "$APT_SOURCE_DIR/mysterium.list" || ! -r "$APT_SOURCE_DIR/mysterium.list" ]]; then
 			echo "Cannot safely inspect the existing Mysterium repository definition" >&2
@@ -164,8 +172,10 @@ configure_mysterium_repository() {
 		awk '!/https?:\/\/(ppa\.mysterium\.network|ppa\.launchpad\.net)\/mysteriumnetwork\/node(-dev|-testnet3)?\/ubuntu/ { print }' \
 			"$APT_SOURCE_DIR/mysterium.list" > "$source_stage" || return 1
 	fi
-	printf 'deb [signed-by=%s/mysterium.gpg] %s focal main\n' "$APT_KEYRING_DIR" "$PPA_URL" >> "$source_stage" || return 1
-    mv -f "$key_stage" "$APT_KEYRING_DIR/mysterium.gpg" || {
+	printf 'deb [signed-by=%s/mysterium.gpg] %s %s main\n' "$APT_KEYRING_DIR" "$PPA_URL" "$suite" >> "$source_stage" || return 1
+	    # These are separate atomic renames, not a multi-file transaction; a
+	    # process failure between them can leave keyring and source out of sync.
+	    mv -f "$key_stage" "$APT_KEYRING_DIR/mysterium.gpg" || {
         echo "Failed to activate the Mysterium keyring; repository was not changed" >&2
         return 1
     }

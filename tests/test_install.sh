@@ -48,6 +48,7 @@ chmod +x "$mock"/*
 setup() {
  case_dir="$root/$1"; mkdir -p "$case_dir/keyrings" "$case_dir/sources"
  export PATH="$mock:$PATH" APT_KEYRING_DIR="$case_dir/keyrings" APT_SOURCE_DIR="$case_dir/sources" MYSTERIUM_INSTALLER_LIBRARY=1
+ unset DISTRO VERSION_CODENAME
  export MOCK_MV_COUNT_FILE="$case_dir/mv-count" MOCK_APT_LOG="$case_dir/apt.log"
  export MOCK_CURL_FAIL=0 MOCK_GPG_MODE=valid MOCK_INSTALL_FAIL=0 MOCK_MV_FAIL_ON=0; : >"$MOCK_APT_LOG"
 }
@@ -59,6 +60,17 @@ run_case() {
  case "$2" in snapshot) grep -Fq node-dev/ubuntu "$APT_SOURCE_DIR/mysterium.list";; testnet3) grep -Fq node-testnet3/ubuntu "$APT_SOURCE_DIR/mysterium.list";; *) grep -Fq mysteriumnetwork/node/ubuntu "$APT_SOURCE_DIR/mysterium.list";; esac
 }
 run_case stable-valid stable; run_case snapshot-valid snapshot; run_case testnet3-valid testnet3
+suite_case() {
+ setup "suite-$1"; DISTRO="$2" VERSION_CODENAME="$3" SNAPSHOT= NETWORK=; export DISTRO VERSION_CODENAME SNAPSHOT NETWORK
+ source "$PWD/install.sh"; configure_mysterium_repository
+ grep -Fq " $4 main" "$APT_SOURCE_DIR/mysterium.list"
+}
+suite_case ubuntu-jammy ubuntu jammy jammy
+suite_case ubuntu-noble ubuntu noble noble
+suite_case debian-bookworm debian bookworm focal
+suite_case raspbian-bullseye raspbian bullseye focal
+setup ubuntu-empty; DISTRO=ubuntu VERSION_CODENAME= SNAPSHOT= NETWORK=; export DISTRO VERSION_CODENAME SNAPSHOT NETWORK; source "$PWD/install.sh"; if configure_mysterium_repository; then exit 1; fi
+setup ubuntu-invalid; DISTRO=ubuntu VERSION_CODENAME='not valid' SNAPSHOT= NETWORK=; export DISTRO VERSION_CODENAME SNAPSHOT NETWORK; source "$PWD/install.sh"; if configure_mysterium_repository; then exit 1; fi
 for mode in wrong corrupt partial private extra; do
  setup "reject-$mode"; export MOCK_GPG_MODE=$mode; source "$PWD/install.sh"
  if configure_mysterium_repository; then exit 1; fi

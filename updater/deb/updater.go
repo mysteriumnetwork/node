@@ -101,10 +101,10 @@ func (updater *Updater) Run(ctx context.Context) error {
 	if patterns == nil {
 		patterns = legacyRepositoryPatterns
 	}
-	if path, found, err := legacyRepositorySourceFrom(patterns); err != nil {
+	if path, legacyURL, found, err := legacyRepositorySourceDetails(patterns); err != nil {
 		return fmt.Errorf("could not inspect APT repository sources: %w", err)
 	} else if found {
-		return fmt.Errorf("legacy Mysterium HTTP repository found in %s: %s; migrate it manually to HTTPS with signed-by before retrying", path, legacyRepositoryURL)
+		return fmt.Errorf("legacy Mysterium HTTP repository found in %s: %s; migrate it manually to HTTPS with signed-by before retrying", path, legacyURL)
 	}
 	if err := updater.aptGet(commandContext, "update"); err != nil {
 		return fmt.Errorf("could not refresh authenticated APT metadata: %w", err)
@@ -211,6 +211,12 @@ func (updater *Updater) Run(ctx context.Context) error {
 
 const legacyRepositoryURL = "http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu"
 
+var legacyRepositoryURLs = []string{
+	legacyRepositoryURL,
+	"http://ppa.launchpad.net/mysteriumnetwork/node-dev/ubuntu",
+	"http://ppa.launchpad.net/mysteriumnetwork/node-testnet3/ubuntu",
+}
+
 var legacyRepositoryPatterns = []string{
 	"/etc/apt/sources.list",
 	"/etc/apt/sources.list.d/*.list",
@@ -218,39 +224,64 @@ var legacyRepositoryPatterns = []string{
 }
 
 func legacyRepositorySourceFrom(patterns []string) (string, bool, error) {
+	path, _, found, err := legacyRepositorySourceDetails(patterns)
+	return path, found, err
+}
+
+func legacyRepositorySourceDetails(patterns []string) (string, string, bool, error) {
 	for _, pattern := range patterns {
 		paths, err := filepath.Glob(filepath.Clean(pattern))
 		if err != nil {
-			return "", false, err
+			return "", "", false, err
 		}
 		for _, path := range paths {
 			data, err := os.ReadFile(path)
 			if err != nil {
-				return path, false, err
+				return path, "", false, err
 			}
-			for _, stanza := range strings.Split(string(data), "\n\n") {
+			stanzas := make([]string, 0, 1)
+			current := make([]string, 0)
+			for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+				if strings.TrimSpace(line) == "" {
+					stanzas = append(stanzas, strings.Join(current, "\n"))
+					current = current[:0]
+					continue
+				}
+				current = append(current, line)
+			}
+			stanzas = append(stanzas, strings.Join(current, "\n"))
+			for _, stanza := range stanzas {
 				enabled := true
-				legacy := false
+				legacyURLFound := ""
 				for _, line := range strings.Split(stanza, "\n") {
 					trimmed := strings.TrimSpace(line)
 					if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 						continue
 					}
+					if comment := strings.IndexByte(trimmed, '#'); comment >= 0 {
+						trimmed = strings.TrimSpace(trimmed[:comment])
+						if trimmed == "" {
+							continue
+						}
+					}
 					if strings.HasPrefix(strings.ToLower(trimmed), "enabled:") &&
 						strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(strings.ToLower(trimmed), "enabled:")), "no") {
 						enabled = false
 					}
-					if strings.Contains(trimmed, legacyRepositoryURL) {
-						legacy = true
+					for _, legacyURL := range legacyRepositoryURLs {
+						if strings.Contains(trimmed, legacyURL) {
+							legacyURLFound = legacyURL
+							break
+						}
 					}
 				}
-				if enabled && legacy {
-					return path, true, nil
+				if enabled && legacyURLFound != "" {
+					return path, legacyURLFound, true, nil
 				}
 			}
 		}
 	}
-	return "", false, nil
+	return "", "", false, nil
 }
 
 func (updater *Updater) aptGet(ctx context.Context, arguments ...string) error {
