@@ -117,9 +117,12 @@ jobs:
           sudo apt-get install ruby-dev build-essential
           sudo gem i fpm -f
 
+      - name: Setup Android NDK
+        if: startsWith(matrix.platform, 'PackageAndroid')
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.1.12297006" > /dev/null
+
       - name: Build package
         run: |
-          unset CI # workaround for "PackageAndroid" target
           sudo -E env "PATH=$PATH" bash -lc 'source env.sh && go run mage.go -v ${{ matrix.platform }}'
 
   build-swagger:
