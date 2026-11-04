@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+case "${1:-provider}" in
+    provider) SCRIPT="bin/package_android_provider" ;;
+    consumer) SCRIPT="bin/package_android" ;;
+    *) echo "usage: $0 [provider|consumer]" >&2; exit 1 ;;
+esac
+
+IMAGE="mysterium-android-builder:local"
+
+docker build --platform linux/amd64 -t "$IMAGE" bin/package/android
+
+docker run --rm --platform linux/amd64 \
+    -v "$PWD":/src \
+    -v mysterium-android-gomod:/go/pkg/mod \
+    -v mysterium-android-gocache:/root/.cache/go-build \
+    -e BUILD_VERSION="${BUILD_VERSION:-0.0.0-local}" \
+    -e BUILD_BRANCH -e BUILD_COMMIT -e BUILD_NUMBER \
+    "$IMAGE" "$SCRIPT"

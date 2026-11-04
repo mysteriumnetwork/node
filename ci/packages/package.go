@@ -179,7 +179,7 @@ func PackageAndroid() error {
 	})
 	logconfig.Bootstrap()
 
-	if err := sh.RunV("bin/package_android"); err != nil {
+	if err := sh.RunV("bin/package_android_docker", "consumer"); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func PackageAndroidProvider() error {
 	})
 	logconfig.Bootstrap()
 
-	if err := sh.RunV("bin/package_android_provider"); err != nil {
+	if err := sh.RunV("bin/package_android_docker", "provider"); err != nil {
 		return err
 	}
 
