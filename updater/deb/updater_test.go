@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +30,8 @@ type fakeRunner struct {
 	held               bool
 	trusted            bool
 	installedCandidate bool
+	aptUpdateCalls     int
+	installCalls       int
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -72,6 +76,7 @@ func (runner *fakeRunner) Run(_ context.Context, name string, args ...string) er
 	joined := strings.Join(args, " ")
 	switch {
 	case name == "apt-get" && strings.HasSuffix(joined, " update"):
+		runner.aptUpdateCalls++
 		return nil
 	case name == "dpkg" && len(args) == 4 && args[0] == "--compare-versions":
 		if args[2] == "gt" && runner.candidate != runner.installed {
@@ -84,6 +89,7 @@ func (runner *fakeRunner) Run(_ context.Context, name string, args ...string) er
 	case name == "systemctl" && joined == "is-active --quiet mysterium-node.service":
 		return nil
 	case name == "apt-get" && strings.Contains(joined, " install "):
+		runner.installCalls++
 		runner.installedCandidate = true
 		return nil
 	default:
@@ -142,4 +148,135 @@ func TestUpdaterInstallsAndChecksExactRunningVersion(t *testing.T) {
 	})}
 	require.NoError(t, updater.Run(context.Background()))
 	assert.True(t, runner.installedCandidate)
+}
+
+func updaterWithSource(t *testing.T, contents string) []string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "mysterium.list")
+	if contents != "" {
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0644))
+	}
+	return []string{path}
+}
+
+func TestUpdaterRejectsLegacyHTTPBeforeAPTUpdate(t *testing.T) {
+	patterns := updaterWithSource(t, "deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu focal main\n")
+	runner := &fakeRunner{installed: "1.0", candidate: "1.1"}
+	updater := testUpdater(runner)
+	updater.sourcePatterns = patterns
+	err := updater.Run(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), legacyRepositoryURL)
+	assert.False(t, runner.installedCandidate)
+}
+
+func TestUpdaterRejectsAllLegacyChannelsBeforeAPTUpdate(t *testing.T) {
+	for _, legacyURL := range legacyRepositoryURLs {
+		t.Run(legacyURL, func(t *testing.T) {
+			runner := &fakeRunner{installed: "1.0", candidate: "1.1"}
+			updater := testUpdater(runner)
+			updater.sourcePatterns = updaterWithSource(t, "deb "+legacyURL+" focal main\n")
+			err := updater.Run(context.Background())
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), legacyURL)
+			assert.False(t, runner.installedCandidate)
+			assert.Zero(t, runner.aptUpdateCalls)
+			assert.Zero(t, runner.installCalls)
+		})
+	}
+}
+
+func TestLegacyRepositorySourceAllowsHTTPSChannelsAndIgnoresComments(t *testing.T) {
+	contents := "# deb http://ppa.launchpad.net/mysteriumnetwork/node-dev/ubuntu focal main\n"
+	for _, legacyURL := range legacyRepositoryURLs {
+		contents += "deb https://" + strings.TrimPrefix(legacyURL, "http://") + " focal main\n"
+	}
+	_, found, err := legacyRepositorySourceFrom(updaterWithSource(t, contents))
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestLegacyRepositorySourceDisabledDeb822AllChannels(t *testing.T) {
+	for _, legacyURL := range legacyRepositoryURLs[1:] {
+		t.Run(legacyURL, func(t *testing.T) {
+			contents := "Types: deb\nURIs: " + legacyURL + "\nSuites: focal\nComponents: main\nEnabled: no\n"
+			_, found, err := legacyRepositorySourceFrom(updaterWithSource(t, contents))
+			require.NoError(t, err)
+			assert.False(t, found)
+		})
+	}
+}
+
+func TestLegacyRepositorySourceHandlesCRLFAndWhitespaceStanzas(t *testing.T) {
+	contents := "Types: deb\r\nURIs: https://example.invalid/one\r\n\r\n  \r\nTypes: deb\r\nURIs: http://ppa.launchpad.net/mysteriumnetwork/node-testnet3/ubuntu\r\nEnabled: yes\r\n"
+	_, found, err := legacyRepositorySourceFrom(updaterWithSource(t, contents))
+	require.NoError(t, err)
+	assert.True(t, found)
+}
+
+func TestLegacyRepositorySourceIgnoresInlineComments(t *testing.T) {
+	contents := "Types: deb # http://ppa.launchpad.net/mysteriumnetwork/node-dev/ubuntu\nURIs: https://example.invalid/repo # http://ppa.launchpad.net/mysteriumnetwork/node-testnet3/ubuntu\nEnabled: yes\n"
+	_, found, err := legacyRepositorySourceFrom(updaterWithSource(t, contents))
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestLegacyRepositorySourceDisabledDeb822(t *testing.T) {
+	patterns := updaterWithSource(t, "Types: deb\nURIs: http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu\nSuites: focal\nComponents: main\nEnabled: no\n")
+	_, found, err := legacyRepositorySourceFrom(patterns)
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestLegacyRepositorySourceEnabledDeb822(t *testing.T) {
+	patterns := updaterWithSource(t, "Types: deb\nURIs: http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu\nSuites: focal\nComponents: main\nEnabled: yes\n")
+	path, found, err := legacyRepositorySourceFrom(patterns)
+	require.NoError(t, err)
+	assert.True(t, found)
+	assert.Equal(t, patterns[0], path)
+}
+
+func TestUpdaterRejectsLegacyDeb822WithoutInstalling(t *testing.T) {
+	patterns := updaterWithSource(t, "Types: deb\nURIs: http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu\nSuites: focal\nComponents: main\n")
+	runner := &fakeRunner{installed: "1.0", candidate: "1.1"}
+	updater := testUpdater(runner)
+	updater.sourcePatterns = patterns
+	require.Error(t, updater.Run(context.Background()))
+	assert.False(t, runner.installedCandidate)
+}
+
+func TestUpdaterAllowsHTTPSSourceDetection(t *testing.T) {
+	patterns := updaterWithSource(t, "deb [signed-by=/etc/apt/keyrings/mysterium.gpg] https://ppa.mysterium.network/mysteriumnetwork/node/ubuntu focal main\n")
+	runner := &fakeRunner{installed: "1.36.4+build1+jammy", candidate: "1.36.5+build2+jammy", trusted: true}
+	updater := testUpdater(runner)
+	updater.sourcePatterns = patterns
+	require.NoError(t, updater.Run(context.Background()))
+}
+
+func TestLegacyRepositorySourceAbsent(t *testing.T) {
+	patterns := updaterWithSource(t, "")
+	_, found, err := legacyRepositorySourceFrom(patterns)
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestLegacyRepositorySourceIgnoresCommentsAndFindsAdditionalFile(t *testing.T) {
+	dir := t.TempDir()
+	commented := filepath.Join(dir, "first.list")
+	active := filepath.Join(dir, "second.list")
+	require.NoError(t, os.WriteFile(commented, []byte("# deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu focal main\n"), 0644))
+	require.NoError(t, os.WriteFile(active, []byte("deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu focal main\n"), 0644))
+	path, found, err := legacyRepositorySourceFrom([]string{filepath.Join(dir, "*.list")})
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, active, path)
+}
+
+func TestLegacyRepositorySourceReadErrorFailsClosed(t *testing.T) {
+	dir := t.TempDir()
+	bad := filepath.Join(dir, "broken.list")
+	require.NoError(t, os.Mkdir(bad, 0755))
+	_, found, err := legacyRepositorySourceFrom([]string{filepath.Join(dir, "*.list")})
+	require.Error(t, err)
+	assert.False(t, found)
 }
