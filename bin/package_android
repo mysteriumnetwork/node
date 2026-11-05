@@ -4,36 +4,16 @@
 # Packaging script which creates Android AAR (Android Archive).
 #
 # Usage:
-#> bin/package_android <architecture>
-#
-# Package (specific architecture: arm64, arm):
-#> bin/package_android arm64
+#> bin/package_android
 
 set -e
 
 source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
-DIR_BUILD="build/package"
-OUT_BASENAME="mobile-node-${BUILD_VERSION}"
-OUT_FILENAME_AAR="${DIR_BUILD}/${OUT_BASENAME}.aar"
+OUT_FILENAME_AAR="build/package/mobile-node-${BUILD_VERSION}.aar"
 
-docker run --rm \
-    -v "$PWD"/$DIR_BUILD:/build \
-    -v "$PWD":/app \
-    -w /app \
-    -e OUT=$OUT_BASENAME \
-    -e FLAG_V=false \
-    -e FLAG_X=false \
-    -e FLAG_RACE=false \
-    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags) -checklinkname=0 -extldflags=-Wl,-z,max-page-size=16384" \
-    -e FLAG_BUILDMODE=default \
-    -e FLAG_TAGS="android" \
-    -e TARGETS=android/. \
-    -e EXT_GOPATH=/ext-go/1 \
-    -e GO111MODULE=on \
-    -e GOFLAGS=-mod=mod \
-    mysteriumnetwork/xgomobile:1.26.2 ./mobile/mysterium
+gomobile_bind_android "$OUT_FILENAME_AAR" "android"
 
 if [[ -f $OUT_FILENAME_AAR ]]; then
     print_success "Android package ${OUT_FILENAME_AAR} build complete!"
